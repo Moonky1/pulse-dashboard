@@ -65,6 +65,15 @@
 .reg-input:focus { border-color: #f97316; }
 .reg-input::placeholder { color: #4b5563; }
 
+.token-input {
+  text-align: center;
+  font-family: 'Sora', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: #f97316;
+}
+
 .team-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -85,24 +94,6 @@
 .t-name { font-size: 13px; font-weight: 600; color: #e5e7eb; margin-bottom: 2px; }
 .t-count { font-size: 11px; color: #6b7280; }
 .team-card.selected .t-name { color: #f97316; }
-
-.role-list { display: flex; flex-direction: column; gap: 10px; }
-.role-card {
-  background: #0d0f14;
-  border: 0.5px solid #2a2d38;
-  border-radius: 10px;
-  padding: 14px 18px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 500;
-  transition: border-color 0.15s, background 0.15s;
-}
-.role-card:hover { border-color: #f97316; }
-.role-card.selected { border-color: #f97316; background: #1a1310; color: #f97316; }
-.role-icon { font-size: 20px; }
 
 .sheet-note {
   margin-top: 10px;

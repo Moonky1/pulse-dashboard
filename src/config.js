@@ -2,7 +2,7 @@ export const APP_CONFIG = {
   appName: "Pulse",
   tagline: "Real-time agent performance tracking",
   dailyGoal: 20,
-  sheetUrl: "https://docs.google.com/spreadsheets/d/1QnqtYTYSsHDCDma14kWu38AkUa23TTKNlQzOPUJrrHI",
+  sheetUrl: "https://docs.google.com/spreadsheets/d/1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs",
   teams: [
     { id: "philippines", name: "Philippines",    code: "ph", agents: 82 },
     { id: "venezuela",   name: "Venezuela",       code: "ve", agents: 56 },
