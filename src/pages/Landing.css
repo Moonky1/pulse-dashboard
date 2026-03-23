@@ -1,0 +1,162 @@
+.landing {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.trail-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(249,115,22,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(249,115,22,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+  pointer-events: none;
+}
+
+.particles { position: absolute; inset: 0; pointer-events: none; }
+.particle {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: #f97316;
+  border-radius: 50%;
+  opacity: 0;
+  left: calc(var(--i) * 5.2% + 2%);
+  top: calc(var(--i) * 4.7% + 5%);
+  animation: float calc(4s + var(--i) * 0.3s) ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * 0.2s);
+}
+@keyframes float {
+  from { opacity: 0.15; transform: translateY(0) scale(1); }
+  to   { opacity: 0.6;  transform: translateY(-40px) scale(2); }
+}
+
+.landing-content {
+  text-align: center;
+  z-index: 3;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.landing-content.visible { opacity: 1; transform: translateY(0); }
+
+.kk-logo-img {
+  width: 140px;
+  height: auto;
+  margin: 0 auto 1.5rem;
+  display: block;
+  filter: drop-shadow(0 0 24px rgba(249,115,22,0.5));
+  animation: logoPulse 3s ease-in-out infinite;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@keyframes logoPulse {
+  0%, 100% { filter: drop-shadow(0 0 24px rgba(249,115,22,0.5)); }
+  50%       { filter: drop-shadow(0 0 48px rgba(249,115,22,0.9)); }
+}
+
+.landing-title {
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(56px, 12vw, 120px);
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.05em;
+  cursor: default;
+  transition: transform 0.15s ease;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: letterIn 0.5s ease forwards;
+  animation-delay: calc(0.3s + var(--d));
+  background: linear-gradient(135deg, #fff 40%, #f97316);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: transform 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.letter:hover {
+  transform: translateY(-8px) scale(1.1) !important;
+  filter: brightness(1.3);
+}
+@keyframes letterIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.landing-sub {
+  font-size: 16px;
+  color: #6b7280;
+  margin-bottom: 2.5rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 500;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.landing-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.stat { display: flex; flex-direction: column; align-items: center; }
+.stat strong { font-family: 'Sora',sans-serif; font-size: 28px; font-weight: 700; color: #f97316; }
+.stat span   { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-div    { width: 1px; height: 40px; background: #2a2d38; }
+
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 32px;
+  background: #181b23;
+  border: 0.5px solid #3a3d4a;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #e5e7eb;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.2s;
+  margin-bottom: 1.5rem;
+}
+.google-btn:hover {
+  border-color: #f97316;
+  background: #1e2230;
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(249,115,22,0.2);
+}
+.google-btn:active { transform: scale(0.97); }
+
+.landing-note {
+  font-size: 12px;
+  color: #4b5563;
+  user-select: none;
+  -webkit-user-select: none;
+}
