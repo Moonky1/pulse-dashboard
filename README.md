@@ -1,16 +1,37 @@
-# React + Vite
+# Pulse Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Real-time agent performance tracking built for call center team leaders and supervisors.
 
-Currently, two official plugins are available:
+## What it does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Live transfer metrics per agent pulled directly from Google Sheets
+- Team overview across all 6 regions (Philippines, Venezuela, Colombia, Mexico, Central America, Asia)
+- Daily goal tracking — flags who hit 20 English transfers, who's in progress, and who's at zero
+- Top 3 leaderboard per team (English, Spanish, Total)
+- Auto-refreshes every 60 seconds — no manual updates needed
 
-## React Compiler
+## Who it's for
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Team Leaders, Supervisors, and QA only. Users register once with Google and select their team permanently.
 
-## Expanding the ESLint configuration
+## Tech stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+React · Vite · React Router · Google Sheets CSV API · Vercel
+
+## Getting started
+```bash
+git clone https://github.com/Moonky1/pulse-dashboard.git
+cd pulse-dashboard
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` in Chrome.
+
+## Configuration
+
+Edit `src/config.js` to set your team names, daily goal target, and Google Sheet URL.
+
+---
+
+Built with ❤️ for Kampaign Kings
