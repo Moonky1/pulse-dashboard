@@ -228,3 +228,9 @@
   padding: 2px 8px; border-radius: 4px;
   font-size: 11px;
 }
+.dash-trail-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+}
