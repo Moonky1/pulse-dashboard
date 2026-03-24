@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { APP_CONFIG } from '../config'
 import { validateToken } from '../utils/token'
-import './register.css'
+import './Register.css'
 
 const STEPS = ['name', 'team', 'token']
 
