@@ -4,7 +4,7 @@ import Register  from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Admin     from './pages/Admin'
 
-function App() {
+function App() { 
   const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
 
   return (
