@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { APP_CONFIG } from '../config'
 import './dashboard.css'
@@ -31,16 +31,211 @@ async function fetchSheet(name) {
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 
+const RANGES = [
+  { label: '0',     min: 0,  max: 0,    color: '#f87171' },
+  { label: '1–4',   min: 1,  max: 4,    color: '#fb923c' },
+  { label: '5–9',   min: 5,  max: 9,    color: '#fbbf24' },
+  { label: '10–14', min: 10, max: 14,   color: '#a3e635' },
+  { label: '15–19', min: 15, max: 19,   color: '#34d399' },
+  { label: '20+',   min: 20, max: 9999, color: '#22c55e' },
+]
+
+// ── Emoji paths ───────────────────────────────────────────────────
+const E = {
+  goal:     '/emojis/goal.webp',
+  goal2:    '/emojis/goal2.webp',
+  goal3:    '/emojis/goal3.webp',
+  goal4:    '/emojis/goal4.webp',
+  medal1:   '/emojis/medal1.webp',
+  medal2:   '/emojis/medal2.webp',
+  medal3:   '/emojis/web3.webp',
+  zero:     '/emojis/zero.webp',
+  firework: '/emojis/firework.webp',
+}
+
+const Img = ({ src, size = 18 }) => (
+  <img src={src} width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle', objectFit: 'contain' }} />
+)
+
+// Top 3 medals for Asia tops
+const MEDALS = [E.medal1, E.medal2, E.medal3]
+
+// Team rank: #1=goal.webp, #2=goal3.webp, #3=goal4.webp, rest=#N text
+const getTeamRankBadge = (rank) => {
+  if (rank === 0) return <Img src={E.goal}  size={26} />
+  if (rank === 1) return <Img src={E.goal3} size={26} />
+  if (rank === 2) return <Img src={E.goal4} size={26} />
+  return <span style={{ color: '#6b7280', fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 14 }}>#{rank + 1}</span>
+}
+
+// ── Snapshot helpers ──────────────────────────────────────────────
+const todayKey = () => new Date().toISOString().slice(0, 10)
+
+const saveSnapshot = (generalData, asiaData) => {
+  const key = `pulse_snap_${todayKey()}`
+  try {
+    localStorage.setItem(key, JSON.stringify({ generalData, asiaData, savedAt: new Date().toISOString() }))
+  } catch(e) {}
+}
+
+const loadAllSnapshots = () => {
+  const snaps = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (k?.startsWith('pulse_snap_')) {
+      try {
+        const date = k.replace('pulse_snap_', '')
+        const data = JSON.parse(localStorage.getItem(k))
+        snaps.push({ date, ...data })
+      } catch(e) {}
+    }
+  }
+  return snaps.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+const formatDateLabel = (dateStr) => {
+  const today = todayKey()
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yKey = yesterday.toISOString().slice(0, 10)
+  if (dateStr === today) return 'Today'
+  if (dateStr === yKey) return 'Yesterday'
+  const [y, m, d] = dateStr.split('-')
+  return `${d}/${m}/${y}`
+}
+
+// ── Bar Chart ─────────────────────────────────────────────────────
+function BarChart({ agents, metric }) {
+  const [tooltip, setTooltip] = useState(null)
+
+  const buckets = RANGES.map(r => ({
+    ...r,
+    agentsInRange: agents.filter(a => a[metric] >= r.min && a[metric] <= r.max),
+    count: agents.filter(a => a[metric] >= r.min && a[metric] <= r.max).length,
+  }))
+  const maxCount = Math.max(...buckets.map(b => b.count), 1)
+
+  const handleMouseEnter = (e, bucket) => {
+    if (bucket.count === 0) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    setTooltip({ bucket, x: rect.left + rect.width / 2, y: rect.top })
+  }
+
+  return (
+    <div className="chart-wrap">
+      <div className="chart-bars">
+        {buckets.map((b, i) => (
+          <div
+            key={i}
+            className={`chart-col ${b.count > 0 ? 'chart-col-hoverable' : ''}`}
+            onMouseEnter={(e) => handleMouseEnter(e, b)}
+            onMouseLeave={() => setTooltip(null)}
+          >
+            <div className="bar-count">{b.count}</div>
+            <div className="bar-outer">
+              <div className="bar-inner" style={{ height: `${(b.count / maxCount) * 100}%`, background: b.color }} />
+            </div>
+            <div className="bar-label">{b.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {tooltip && (
+        <div className="bar-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
+          <div className="bar-tooltip-header" style={{ color: tooltip.bucket.color }}>
+            {tooltip.bucket.label} xfers
+            <span className="bar-tooltip-count">{tooltip.bucket.count} agent{tooltip.bucket.count !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="bar-tooltip-agents">
+            {tooltip.bucket.agentsInRange
+              .sort((a, b) => b[metric] - a[metric])
+              .map((a, i) => (
+                <div key={i} className="bar-tooltip-agent">
+                  <span className="bar-tooltip-name">{a.name}</span>
+                  <span className="bar-tooltip-val" style={{ color: tooltip.bucket.color }}>{a[metric]}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      <div className="chart-legend">
+        {RANGES.map((r, i) => (
+          <div key={i} className="legend-item">
+            <div className="legend-dot" style={{ background: r.color }} />
+            <span>{r.label} xfers</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────
 export default function Dashboard() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const canvasRef = useRef(null)
   const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
   const team = APP_CONFIG.teams.find(t => t.id === user?.team)
 
-  const [generalData, setGeneralData] = useState([])
-  const [asiaData, setAsiaData]       = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [lastUpdate, setLastUpdate]   = useState(null)
-  const [activeTab, setActiveTab]     = useState('general')
+  const [liveGeneral, setLiveGeneral]   = useState([])
+  const [liveAsia, setLiveAsia]         = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [lastUpdate, setLastUpdate]     = useState(null)
+  const [activeTab, setActiveTab]       = useState('general')
+  const [asiaView, setAsiaView]         = useState('stats')
+  const [chartMetric, setChartMetric]   = useState('english')
+  const [snapshots, setSnapshots]       = useState([])
+  const [selectedDate, setSelectedDate] = useState(todayKey())
+
+  const isToday     = selectedDate === todayKey()
+  const activeSnap  = isToday ? null : snapshots.find(s => s.date === selectedDate)
+  const generalData = isToday ? liveGeneral : (activeSnap?.generalData || [])
+  const asiaData    = isToday ? liveAsia    : (activeSnap?.asiaData    || [])
+
+  // Particles
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    canvas.width  = window.innerWidth
+    canvas.height = window.innerHeight
+    const particles = []
+    const onMove = (e) => {
+      for (let i = 0; i < 3; i++) {
+        particles.push({
+          x: e.clientX + (Math.random() - 0.5) * 20,
+          y: e.clientY + (Math.random() - 0.5) * 20,
+          size: Math.random() * 3 + 1, life: 1,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: (Math.random() - 0.5) * 1.5 - 0.5,
+        })
+      }
+    }
+    window.addEventListener('mousemove', onMove)
+    let raf
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i]
+        p.life -= 0.03; p.x += p.vx; p.y += p.vy
+        if (p.life <= 0) { particles.splice(i, 1); continue }
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(249,115,22,${p.life * 0.5})`
+        ctx.fill()
+      }
+      raf = requestAnimationFrame(draw)
+    }
+    draw()
+    const onResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('resize', onResize)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
 
   const loadData = async () => {
     try {
@@ -48,9 +243,11 @@ export default function Dashboard() {
         fetchSheet("WELL'S REPORT"),
         fetchSheet('AW GARRET ASIA LEXNER'),
       ])
-      setGeneralData(general)
-      setAsiaData(asia)
+      setLiveGeneral(general)
+      setLiveAsia(asia)
       setLastUpdate(new Date())
+      saveSnapshot(general, asia)
+      setSnapshots(loadAllSnapshots())
     } catch (e) {
       console.error('Error:', e)
     } finally {
@@ -59,29 +256,28 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    setSnapshots(loadAllSnapshots())
     loadData()
     const interval = setInterval(loadData, 60000)
     return () => clearInterval(interval)
   }, [])
 
-  const logout = () => {
-    localStorage.removeItem('pulse_user')
-    navigate('/')
-  }
+  const logout = () => { localStorage.removeItem('pulse_user'); navigate('/') }
 
-  // Parse WELL'S REPORT — only first 6 unique team rows (Garrett section)
   const teamRows = (() => {
     const found = []
     for (const row of generalData) {
       const name = row[0]?.toUpperCase().trim()
       if (TEAMS_ORDER.some(t => name === t)) {
         if (!found.find(f => f.name.toUpperCase() === name)) {
+          const rawSpanish = row[4]?.trim()
           found.push({
-            name:    row[0]?.trim() || '',
-            agents:  parseInt(row[2]) || 0,
-            english: parseInt(row[3]) || 0,
-            spanish: row[4] === '-' ? 0 : parseInt(row[4]) || 0,
-            total:   parseInt(row[5]) || 0,
+            name:      row[0]?.trim() || '',
+            agents:    parseInt(row[2]) || 0,
+            english:   parseInt(row[3]) || 0,
+            spanish:   parseInt(rawSpanish) || 0,
+            total:     parseInt(row[5]) || 0,
+            noSpanish: rawSpanish === '-' || rawSpanish === '' || !rawSpanish,
           })
         }
       }
@@ -92,9 +288,6 @@ export default function Dashboard() {
 
   const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
 
-  // Parse Asia agents
-  // Col A=name, B=ext, C=spanish, D=english, E=total
-  // Stop at "AGENT LOGGED IN" row
   const asiaAgents = (() => {
     const agents = []
     for (const row of asiaData) {
@@ -105,21 +298,20 @@ export default function Dashboard() {
         agents.push({
           name:    row[0]?.trim() || '',
           ext:     row[1]?.trim() || '',
-          spanish: parseInt(row[2]) || 0,  // C = Spanish
-          english: parseInt(row[3]) || 0,  // D = English
-          total:   parseInt(row[4]) || 0,  // E = Total
+          spanish: parseInt(row[2]) || 0,
+          english: parseInt(row[3]) || 0,
+          total:   parseInt(row[4]) || 0,
         })
       }
     }
     return agents
   })()
 
-  const goal        = APP_CONFIG.dailyGoal
-  const hitGoal     = asiaAgents.filter(a => a.english >= goal)
-  const atZero      = asiaAgents.filter(a => a.total === 0)
-  const top3English = [...asiaAgents].sort((a,b) => b.english - a.english).slice(0,3)
-  const top3Total   = [...asiaAgents].sort((a,b) => b.total   - a.total  ).slice(0,3)
-
+  const goal         = APP_CONFIG.dailyGoal
+  const hitGoal      = asiaAgents.filter(a => a.english >= goal)
+  const atZero       = asiaAgents.filter(a => a.total === 0)
+  const top3English  = [...asiaAgents].sort((a,b) => b.english - a.english).slice(0,3)
+  const top3Total    = [...asiaAgents].sort((a,b) => b.total   - a.total  ).slice(0,3)
   const totalEnglish = asiaAgents.reduce((s,a) => s + a.english, 0)
   const totalSpanish = asiaAgents.reduce((s,a) => s + a.spanish, 0)
   const totalXfers   = asiaAgents.reduce((s,a) => s + a.total, 0)
@@ -145,26 +337,27 @@ export default function Dashboard() {
            (team?.id === 'central'     && n.includes('CENTRAL'))
   }
 
-  const getRankStyle = (rank) => {
-    if (rank === 0) return { color: '#FFD700', fontWeight: 700 }
-    if (rank === 1) return { color: '#C0C0C0', fontWeight: 700 }
-    if (rank === 2) return { color: '#CD7F32', fontWeight: 700 }
-    return { color: '#6b7280' }
-  }
-
-  const getRankLabel = (rank) => {
-    if (rank === 0) return '🥇'
-    if (rank === 1) return '🥈'
-    if (rank === 2) return '🥉'
-    return `#${rank + 1}`
-  }
+  const dateTabs = (() => {
+    const dates = new Set(snapshots.map(s => s.date))
+    dates.add(todayKey())
+    return [...dates].sort((a, b) => b.localeCompare(a))
+  })()
 
   return (
     <div className="dash-root">
+      <canvas ref={canvasRef} className="dash-trail-canvas" />
 
+      {/* ── NAV ── */}
       <nav className="dash-nav">
         <div className="dash-nav-left">
-          <div className="nav-pulse-badge">P</div>
+          <div className="nav-logo-wrap">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="9" fill="#f97316" />
+              <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16"
+                stroke="white" strokeWidth="2.2" fill="none"
+                strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
           <span className="nav-appname">Pulse</span>
         </div>
         <div className="dash-nav-right">
@@ -172,7 +365,7 @@ export default function Dashboard() {
             <div className="nav-avatar">{user?.name?.[0]?.toUpperCase()}</div>
             <div className="nav-info">
               <span className="nav-name">{user?.name}</span>
-              <span className="nav-role">{team?.name} · {user?.role}</span>
+              <span className="nav-role">{team?.name} · Team Leader</span>
             </div>
           </div>
           {lastUpdate && (
@@ -184,6 +377,7 @@ export default function Dashboard() {
         </div>
       </nav>
 
+      {/* ── MAIN TABS ── */}
       <div className="dash-tabs">
         <button className={`dash-tab ${activeTab==='general'?'active':''}`} onClick={()=>setActiveTab('general')}>
           All Teams
@@ -193,31 +387,58 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {/* ── DATE TABS ── */}
+      <div className="date-tabs-bar">
+        <span className="date-tabs-label">📅</span>
+        <div className="date-tabs">
+          {dateTabs.map(date => (
+            <button
+              key={date}
+              className={`date-tab ${selectedDate === date ? 'active' : ''} ${date === todayKey() ? 'today' : ''}`}
+              onClick={() => setSelectedDate(date)}
+            >
+              {formatDateLabel(date)}
+              {date === todayKey() && <span className="date-tab-live">LIVE</span>}
+            </button>
+          ))}
+        </div>
+        {!isToday && activeSnap?.savedAt && (
+          <span className="date-snap-info">
+            Snapshot at {new Date(activeSnap.savedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+          </span>
+        )}
+      </div>
+
+      {/* ── CONTENT ── */}
       <div className="dash-content">
         {loading ? (
           <div className="dash-loading">
             <div className="dash-spinner" />
             <p>Loading live data...</p>
           </div>
+
         ) : activeTab === 'general' ? (
 
+          /* ══ ALL TEAMS ══ */
           <div className="fade-in">
             <h2 className="section-title">
               Auto Warranty Garrett — Teams Overview
-              <span className="live-badge">LIVE</span>
+              {isToday
+                ? <span className="live-badge">LIVE</span>
+                : <span className="date-badge">{formatDateLabel(selectedDate)}</span>
+              }
             </h2>
             {teamRows.length === 0 ? (
-              <p style={{color:'#6b7280'}}>No data found.</p>
+              <p style={{color:'#6b7280'}}>No data for this date.</p>
             ) : (
               <div className="teams-grid">
                 {teamRows.map((row, i) => {
                   const rank = teamsSorted.findIndex(t => t.name === row.name)
-                  const noSpanish = row.spanish === 0
                   return (
                     <div key={i} className={`team-card-dash ${isMyTeam(row.name) ? 'highlight' : ''}`}>
                       <div className="tc-header">
-                        <div className="tc-rank-badge" style={getRankStyle(rank)}>
-                          {getRankLabel(rank)}
+                        <div className="tc-rank-badge">
+                          {getTeamRankBadge(rank)}
                         </div>
                         <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="tc-flag" />
                         <div>
@@ -230,12 +451,10 @@ export default function Dashboard() {
                           <span className="tc-val english">{row.english.toLocaleString()}</span>
                           <span className="tc-label">English</span>
                         </div>
-                        {!noSpanish && (
-                          <div className="tc-stat">
-                            <span className="tc-val spanish">{row.spanish.toLocaleString()}</span>
-                            <span className="tc-label">Spanish</span>
-                          </div>
-                        )}
+                        <div className="tc-stat">
+                          <span className="tc-val spanish">{row.noSpanish ? '—' : row.spanish.toLocaleString()}</span>
+                          <span className="tc-label">Spanish</span>
+                        </div>
                         <div className="tc-stat">
                           <span className="tc-val total">{row.total.toLocaleString()}</span>
                           <span className="tc-label">Total</span>
@@ -250,11 +469,27 @@ export default function Dashboard() {
 
         ) : (
 
+          /* ══ ASIA DETAIL ══ */
           <div className="fade-in">
-            <h2 className="section-title">
-              Asia — Agent Detail <span className="live-badge">LIVE</span>
-            </h2>
+            <div className="asia-header-row">
+              <h2 className="section-title">
+                Asia — Agent Detail
+                {isToday
+                  ? <span className="live-badge">LIVE</span>
+                  : <span className="date-badge">{formatDateLabel(selectedDate)}</span>
+                }
+              </h2>
+              <div className="asia-view-tabs">
+                <button className={`view-tab ${asiaView==='stats'?'active':''}`} onClick={()=>setAsiaView('stats')}>
+                  📊 Stats
+                </button>
+                <button className={`view-tab ${asiaView==='charts'?'active':''}`} onClick={()=>setAsiaView('charts')}>
+                  📈 Charts
+                </button>
+              </div>
+            </div>
 
+            {/* Summary cards */}
             <div className="summary-grid">
               <div className="sum-card green">
                 <div className="sum-val">{hitGoal.length}</div>
@@ -274,79 +509,133 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="tops-row">
-              <div className="top-block">
-                <h3 className="top-title">🏆 Top English</h3>
-                {top3English.map((a,i) => (
-                  <div key={i} className="top-item">
-                    <span className="top-medal">{['🥇','🥈','🥉'][i]}</span>
-                    <span className="top-name">{a.name}</span>
-                    <span className="top-ext">#{a.ext}</span>
-                    <span className="top-score english">{a.english}</span>
+            {asiaView === 'stats' ? (
+              <>
+                <div className="tops-row">
+                  {/* Top English — medal emojis, goal2 in title */}
+                  <div className="top-block">
+                    <h3 className="top-title">
+                      <Img src={E.goal2} size={16} /> Top English
+                    </h3>
+                    {top3English.map((a,i) => (
+                      <div key={i} className="top-item">
+                        <span className="top-medal"><Img src={MEDALS[i]} size={18} /></span>
+                        <span className="top-name">{a.name}</span>
+                        <span className="top-ext">#{a.ext}</span>
+                        <span className="top-score english">{a.english}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="top-block">
-                <h3 className="top-title">🏆 Top Total (EN+SP)</h3>
-                {top3Total.map((a,i) => (
-                  <div key={i} className="top-item">
-                    <span className="top-medal">{['🥇','🥈','🥉'][i]}</span>
-                    <span className="top-name">{a.name}</span>
-                    <span className="top-ext">#{a.ext}</span>
-                    <span className="top-score total">{a.total}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="top-block red-block">
-                <h3 className="top-title">⚠ At Zero</h3>
-                {atZero.length === 0
-                  ? <p className="top-empty">Everyone has transfers! 🎉</p>
-                  : atZero.slice(0,3).map((a,i) => (
-                    <div key={i} className="top-item">
-                      <span className="top-name">{a.name}</span>
-                      <span className="top-ext">#{a.ext}</span>
-                      <span className="top-score red">0</span>
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
 
-            <div className="agent-table-wrap">
-              <table className="agent-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Agent</th>
-                    <th>Ext</th>
-                    <th>English</th>
-                    <th>Spanish</th>
-                    <th>Total</th>
-                    <th>Goal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...asiaAgents]
-                    .sort((a,b) => b.english - a.english)
-                    .map((a,i) => (
-                    <tr key={i} className={a.total===0 ? 'row-zero' : a.english>=goal ? 'row-goal' : ''}>
-                      <td style={getRankStyle(i)}>{getRankLabel(i)}</td>
-                      <td className="agent-name">{a.name}</td>
-                      <td className="agent-ext">{a.ext}</td>
-                      <td className="val-english">{a.english}</td>
-                      <td className="val-spanish">{a.spanish}</td>
-                      <td className="val-total">{a.total}</td>
-                      <td>
-                        {a.english >= goal
-                          ? <span className="badge-goal">✓ Goal</span>
-                          : <span className="badge-pending">{goal - a.english} left</span>
-                        }
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  {/* Top Total — medal emojis, goal2 in title */}
+                  <div className="top-block">
+                    <h3 className="top-title">
+                      <Img src={E.goal2} size={16} /> Top Total (EN+SP)
+                    </h3>
+                    {top3Total.map((a,i) => (
+                      <div key={i} className="top-item">
+                        <span className="top-medal"><Img src={MEDALS[i]} size={18} /></span>
+                        <span className="top-name">{a.name}</span>
+                        <span className="top-ext">#{a.ext}</span>
+                        <span className="top-score total">{a.total}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* At Zero — zero emoji in title, firework if none */}
+                  <div className="top-block red-block">
+                    <h3 className="top-title">
+                      <Img src={E.zero} size={16} /> At Zero
+                    </h3>
+                    {atZero.length === 0
+                      ? (
+                        <p className="top-empty">
+                          <Img src={E.firework} size={16} /> Everyone has transfers!
+                        </p>
+                      )
+                      : atZero.slice(0,3).map((a,i) => (
+                        <div key={i} className="top-item">
+                          <span className="top-name">{a.name}</span>
+                          <span className="top-ext">#{a.ext}</span>
+                          <span className="top-score red">0</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+
+                {/* Agent table — ranks as #1 #2 #3 text */}
+                <div className="agent-table-wrap">
+                  <table className="agent-table">
+                    <thead>
+                      <tr>
+                        <th>#</th><th>Agent</th><th>Ext</th>
+                        <th>English</th><th>Spanish</th><th>Total</th><th>Goal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...asiaAgents].sort((a,b) => b.english - a.english).map((a,i) => {
+                        const rankStyle =
+                          i === 0 ? { color: '#FFD700', fontWeight: 700 } :
+                          i === 1 ? { color: '#C0C0C0', fontWeight: 700 } :
+                          i === 2 ? { color: '#CD7F32', fontWeight: 700 } :
+                          { color: '#6b7280' }
+                        return (
+                          <tr key={i} className={a.total===0 ? 'row-zero' : a.english>=goal ? 'row-goal' : ''}>
+                            <td style={rankStyle}>#{i + 1}</td>
+                            <td className="agent-name">{a.name}</td>
+                            <td className="agent-ext">{a.ext}</td>
+                            <td className="val-english">{a.english}</td>
+                            <td className="val-spanish">{a.spanish}</td>
+                            <td className="val-total">{a.total}</td>
+                            <td>
+                              {a.english >= goal
+                                ? <span className="badge-goal">✓ Goal</span>
+                                : <span className="badge-pending">{goal - a.english} left</span>
+                              }
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+
+            ) : (
+              /* Charts view */
+              <div className="charts-section">
+                <div className="chart-controls">
+                  <span className="chart-label">Distribution by transfers:</span>
+                  <div className="metric-tabs">
+                    <button className={`metric-tab ${chartMetric==='english'?'active':''}`} onClick={()=>setChartMetric('english')}>English</button>
+                    <button className={`metric-tab ${chartMetric==='spanish'?'active':''}`} onClick={()=>setChartMetric('spanish')}>Spanish</button>
+                    <button className={`metric-tab ${chartMetric==='total'?'active':''}`} onClick={()=>setChartMetric('total')}>Total</button>
+                  </div>
+                </div>
+
+                <BarChart agents={asiaAgents} metric={chartMetric} />
+
+                <div className="chart-goal-row">
+                  <div className="goal-stat green-stat">
+                    <div className="goal-stat-val">{hitGoal.length}</div>
+                    <div className="goal-stat-label">
+                      <Img src={E.goal2} size={14} /> Reached goal (20+ EN)
+                    </div>
+                  </div>
+                  <div className="goal-stat yellow-stat">
+                    <div className="goal-stat-val">{asiaAgents.filter(a => a.english >= 15 && a.english < 20).length}</div>
+                    <div className="goal-stat-label">Almost there (15–19 EN)</div>
+                  </div>
+                  <div className="goal-stat red-stat">
+                    <div className="goal-stat-val">{atZero.length}</div>
+                    <div className="goal-stat-label">
+                      <Img src={E.zero} size={14} /> At zero
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
