@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Landing   from './pages/Landing'
+import Landing from './pages/Landing'
 import Register  from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Admin     from './pages/Admin'
