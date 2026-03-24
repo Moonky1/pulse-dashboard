@@ -31,6 +31,99 @@ async function fetchSheet(name) {
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 
+const RANGES = [
+  { label: '0',     min: 0,  max: 0,    color: '#f87171' },
+  { label: '1–4',   min: 1,  max: 4,    color: '#fb923c' },
+  { label: '5–9',   min: 5,  max: 9,    color: '#fbbf24' },
+  { label: '10–14', min: 10, max: 14,   color: '#a3e635' },
+  { label: '15–19', min: 15, max: 19,   color: '#34d399' },
+  { label: '20+',   min: 20, max: 9999, color: '#22c55e' },
+]
+
+const Img = ({ src, size = 18 }) => (
+  <img src={src} width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle', objectFit: 'contain' }} />
+)
+
+const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
+
+function BarChart({ agents, metric }) {
+  const [tooltip, setTooltip] = useState(null)
+
+  const buckets = RANGES.map(r => ({
+    ...r,
+    agentsInRange: agents.filter(a => a[metric] >= r.min && a[metric] <= r.max),
+    count: agents.filter(a => a[metric] >= r.min && a[metric] <= r.max).length,
+  }))
+  const maxCount = Math.max(...buckets.map(b => b.count), 1)
+
+  const handleMouseEnter = (e, bucket) => {
+    if (bucket.count === 0) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    setTooltip({ bucket, x: rect.left + rect.width / 2, y: rect.top })
+  }
+
+  const handleMouseLeave = () => setTooltip(null)
+
+  return (
+    <div className="chart-wrap">
+      <div className="chart-bars">
+        {buckets.map((b, i) => (
+          <div
+            key={i}
+            className={`chart-col ${b.count > 0 ? 'chart-col-hoverable' : ''}`}
+            onMouseEnter={(e) => handleMouseEnter(e, b)}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div className="bar-count">{b.count}</div>
+            <div className="bar-outer">
+              <div
+                className="bar-inner"
+                style={{ height: `${(b.count / maxCount) * 100}%`, background: b.color }}
+              />
+            </div>
+            <div className="bar-label">{b.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {tooltip && (
+        <div
+          className="bar-tooltip"
+          style={{ left: tooltip.x, top: tooltip.y }}
+        >
+          <div className="bar-tooltip-header" style={{ color: tooltip.bucket.color }}>
+            {tooltip.bucket.label} xfers
+            <span className="bar-tooltip-count">
+              {tooltip.bucket.count} agent{tooltip.bucket.count !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="bar-tooltip-agents">
+            {tooltip.bucket.agentsInRange
+              .sort((a, b) => b[metric] - a[metric])
+              .map((a, i) => (
+                <div key={i} className="bar-tooltip-agent">
+                  <span className="bar-tooltip-name">{a.name}</span>
+                  <span className="bar-tooltip-val" style={{ color: tooltip.bucket.color }}>
+                    {a[metric]}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      <div className="chart-legend">
+        {RANGES.map((r, i) => (
+          <div key={i} className="legend-item">
+            <div className="legend-dot" style={{ background: r.color }} />
+            <span>{r.label} xfers</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const navigate  = useNavigate()
   const canvasRef = useRef(null)
@@ -42,8 +135,9 @@ export default function Dashboard() {
   const [loading, setLoading]         = useState(true)
   const [lastUpdate, setLastUpdate]   = useState(null)
   const [activeTab, setActiveTab]     = useState('general')
+  const [asiaView, setAsiaView]       = useState('stats')
+  const [chartMetric, setChartMetric] = useState('english')
 
-  // Particle trail effect
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -64,7 +158,6 @@ export default function Dashboard() {
         })
       }
     }
-
     window.addEventListener('mousemove', onMove)
 
     let raf
@@ -90,7 +183,6 @@ export default function Dashboard() {
       canvas.height = window.innerHeight
     }
     window.addEventListener('resize', onResize)
-
     return () => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('resize', onResize)
@@ -206,9 +298,7 @@ export default function Dashboard() {
   }
 
   const getRankLabel = (rank) => {
-    if (rank === 0) return '🥇'
-    if (rank === 1) return '🥈'
-    if (rank === 2) return '🥉'
+    if (rank < 3) return <Img src={MEDALS[rank]} size={20} />
     return `#${rank + 1}`
   }
 
@@ -218,7 +308,19 @@ export default function Dashboard() {
 
       <nav className="dash-nav">
         <div className="dash-nav-left">
-          <div className="nav-pulse-badge">P</div>
+          <div className="nav-logo-wrap">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="9" fill="#f97316" />
+              <polyline
+                points="4,16 9,16 11,9 14,23 17,12 20,16 28,16"
+                stroke="white"
+                strokeWidth="2.2"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
           <span className="nav-appname">Pulse</span>
         </div>
         <div className="dash-nav-right">
@@ -304,9 +406,19 @@ export default function Dashboard() {
         ) : (
 
           <div className="fade-in">
-            <h2 className="section-title">
-              Asia — Agent Detail <span className="live-badge">LIVE</span>
-            </h2>
+            <div className="asia-header-row">
+              <h2 className="section-title">
+                Asia — Agent Detail <span className="live-badge">LIVE</span>
+              </h2>
+              <div className="asia-view-tabs">
+                <button className={`view-tab ${asiaView==='stats'?'active':''}`} onClick={()=>setAsiaView('stats')}>
+                  📊 Stats
+                </button>
+                <button className={`view-tab ${asiaView==='charts'?'active':''}`} onClick={()=>setAsiaView('charts')}>
+                  📈 Charts
+                </button>
+              </div>
+            </div>
 
             <div className="summary-grid">
               <div className="sum-card green">
@@ -327,79 +439,131 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="tops-row">
-              <div className="top-block">
-                <h3 className="top-title">🏆 Top English</h3>
-                {top3English.map((a,i) => (
-                  <div key={i} className="top-item">
-                    <span className="top-medal">{['🥇','🥈','🥉'][i]}</span>
-                    <span className="top-name">{a.name}</span>
-                    <span className="top-ext">#{a.ext}</span>
-                    <span className="top-score english">{a.english}</span>
+            {asiaView === 'stats' ? (
+              <>
+                <div className="tops-row">
+                  <div className="top-block">
+                    <h3 className="top-title">
+                      <Img src="/emojis/goal.webp" size={16} /> Top English
+                    </h3>
+                    {top3English.map((a,i) => (
+                      <div key={i} className="top-item">
+                        <span className="top-medal"><Img src={MEDALS[i]} size={18} /></span>
+                        <span className="top-name">{a.name}</span>
+                        <span className="top-ext">#{a.ext}</span>
+                        <span className="top-score english">{a.english}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="top-block">
-                <h3 className="top-title">🏆 Top Total (EN+SP)</h3>
-                {top3Total.map((a,i) => (
-                  <div key={i} className="top-item">
-                    <span className="top-medal">{['🥇','🥈','🥉'][i]}</span>
-                    <span className="top-name">{a.name}</span>
-                    <span className="top-ext">#{a.ext}</span>
-                    <span className="top-score total">{a.total}</span>
+                  <div className="top-block">
+                    <h3 className="top-title">
+                      <Img src="/emojis/goal.webp" size={16} /> Top Total (EN+SP)
+                    </h3>
+                    {top3Total.map((a,i) => (
+                      <div key={i} className="top-item">
+                        <span className="top-medal"><Img src={MEDALS[i]} size={18} /></span>
+                        <span className="top-name">{a.name}</span>
+                        <span className="top-ext">#{a.ext}</span>
+                        <span className="top-score total">{a.total}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="top-block red-block">
-                <h3 className="top-title">⚠ At Zero</h3>
-                {atZero.length === 0
-                  ? <p className="top-empty">Everyone has transfers! 🎉</p>
-                  : atZero.slice(0,3).map((a,i) => (
-                    <div key={i} className="top-item">
-                      <span className="top-name">{a.name}</span>
-                      <span className="top-ext">#{a.ext}</span>
-                      <span className="top-score red">0</span>
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
+                  <div className="top-block red-block">
+                    <h3 className="top-title">
+                      <Img src="/emojis/zero.webp" size={16} /> At Zero
+                    </h3>
+                    {atZero.length === 0
+                      ? (
+                        <p className="top-empty">
+                          <Img src="/emojis/firework.webp" size={16} /> Everyone has transfers!
+                        </p>
+                      )
+                      : atZero.slice(0,3).map((a,i) => (
+                        <div key={i} className="top-item">
+                          <span className="top-name">{a.name}</span>
+                          <span className="top-ext">#{a.ext}</span>
+                          <span className="top-score red">0</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
 
-            <div className="agent-table-wrap">
-              <table className="agent-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Agent</th>
-                    <th>Ext</th>
-                    <th>English</th>
-                    <th>Spanish</th>
-                    <th>Total</th>
-                    <th>Goal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...asiaAgents]
-                    .sort((a,b) => b.english - a.english)
-                    .map((a,i) => (
-                    <tr key={i} className={a.total===0 ? 'row-zero' : a.english>=goal ? 'row-goal' : ''}>
-                      <td style={getRankStyle(i)}>{getRankLabel(i)}</td>
-                      <td className="agent-name">{a.name}</td>
-                      <td className="agent-ext">{a.ext}</td>
-                      <td className="val-english">{a.english}</td>
-                      <td className="val-spanish">{a.spanish}</td>
-                      <td className="val-total">{a.total}</td>
-                      <td>
-                        {a.english >= goal
-                          ? <span className="badge-goal">✓ Goal</span>
-                          : <span className="badge-pending">{goal - a.english} left</span>
-                        }
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                <div className="agent-table-wrap">
+                  <table className="agent-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Agent</th>
+                        <th>Ext</th>
+                        <th>English</th>
+                        <th>Spanish</th>
+                        <th>Total</th>
+                        <th>Goal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...asiaAgents]
+                        .sort((a,b) => b.english - a.english)
+                        .map((a,i) => (
+                        <tr key={i} className={a.total===0 ? 'row-zero' : a.english>=goal ? 'row-goal' : ''}>
+                          <td style={getRankStyle(i)}>{getRankLabel(i)}</td>
+                          <td className="agent-name">{a.name}</td>
+                          <td className="agent-ext">{a.ext}</td>
+                          <td className="val-english">{a.english}</td>
+                          <td className="val-spanish">{a.spanish}</td>
+                          <td className="val-total">{a.total}</td>
+                          <td>
+                            {a.english >= goal
+                              ? <span className="badge-goal">✓ Goal</span>
+                              : <span className="badge-pending">{goal - a.english} left</span>
+                            }
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div className="charts-section">
+                <div className="chart-controls">
+                  <span className="chart-label">Distribution by transfers:</span>
+                  <div className="metric-tabs">
+                    <button className={`metric-tab ${chartMetric==='english'?'active':''}`} onClick={()=>setChartMetric('english')}>
+                      English
+                    </button>
+                    <button className={`metric-tab ${chartMetric==='spanish'?'active':''}`} onClick={()=>setChartMetric('spanish')}>
+                      Spanish
+                    </button>
+                    <button className={`metric-tab ${chartMetric==='total'?'active':''}`} onClick={()=>setChartMetric('total')}>
+                      Total
+                    </button>
+                  </div>
+                </div>
+
+                <BarChart agents={asiaAgents} metric={chartMetric} />
+
+                <div className="chart-goal-row">
+                  <div className="goal-stat green-stat">
+                    <div className="goal-stat-val">{hitGoal.length}</div>
+                    <div className="goal-stat-label">
+                      <Img src="/emojis/goal.webp" size={14} /> Reached goal (20+ EN)
+                    </div>
+                  </div>
+                  <div className="goal-stat yellow-stat">
+                    <div className="goal-stat-val">{asiaAgents.filter(a => a.english >= 15 && a.english < 20).length}</div>
+                    <div className="goal-stat-label">Almost there (15–19 EN)</div>
+                  </div>
+                  <div className="goal-stat red-stat">
+                    <div className="goal-stat-val">{atZero.length}</div>
+                    <div className="goal-stat-label">
+                      <Img src="/emojis/zero.webp" size={14} /> At zero
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
