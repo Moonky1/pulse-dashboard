@@ -25,7 +25,7 @@ export default function Register() {
         team: form.team,
         registeredAt: Date.now()
       }))
-      navigate('/dashboard')
+      window.location.href = '/dashboard'
       return
     }
     setStep(s => s + 1)
