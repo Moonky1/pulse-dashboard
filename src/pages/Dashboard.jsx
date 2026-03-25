@@ -28,8 +28,6 @@ async function fetchSheet(name) {
   return parseCSV(text)
 }
 
-// ── TEAM CONFIGS ─────────────────────────────────────────────
-// colEng/colSp/colTotal = column index in the LOGGED IN row
 const TEAM_CONFIGS = [
   { id:'philippines', name:'PHILIPPINES',    tab:'AW GARRET PHILIPPINES',                 hasSpanish:false, flag:'ph', colEng:2, colSp:null, colTotal:2 },
   { id:'venezuela',   name:'VENEZUELA',      tab:'AW GARRET VENEZUELA PATRICIA',          hasSpanish:true,  flag:'ve', colEng:3, colSp:4,    colTotal:5 },
@@ -40,28 +38,20 @@ const TEAM_CONFIGS = [
 
 function parseTeamSheet(rows, config) {
   const isAfter6pm = new Date().getHours() >= 18
-
   const loggedRows = rows.filter(row => {
     const cell = (row[0] || '').toLowerCase()
     return cell.includes('logged') || cell.includes('log in')
   })
-
   if (loggedRows.length === 0) return { agents:0, english:0, spanish:0, total:0, noSpanish:!config.hasSpanish }
-
   let english = 0, spanish = 0, total = 0
-
   for (const row of loggedRows) {
     english += parseInt(row[config.colEng])   || 0
     spanish += config.colSp != null ? (parseInt(row[config.colSp]) || 0) : 0
     total   += parseInt(row[config.colTotal]) || 0
   }
-
-  const agentRow = (isAfter6pm && loggedRows.length > 1)
-    ? loggedRows[loggedRows.length - 1]
-    : loggedRows[0]
+  const agentRow = (isAfter6pm && loggedRows.length > 1) ? loggedRows[loggedRows.length - 1] : loggedRows[0]
   const agentMatch = (agentRow[0] || '').match(/(\d+)/)
   const agents = agentMatch ? parseInt(agentMatch[1]) : 0
-
   return { agents, english, spanish, total, noSpanish: !config.hasSpanish }
 }
 
@@ -139,7 +129,6 @@ function BarChart({ agents, metric }) {
     count: agents.filter(a => a[metric] >= r.min && a[metric] <= r.max).length,
   }))
   const maxCount = Math.max(...buckets.map(b => b.count), 1)
-
   return (
     <div className="chart-wrap">
       <div className="chart-bars">
@@ -255,14 +244,13 @@ export default function Dashboard() {
         return { ...tc, ...parsed }
       })
 
-      // Asia — col C=spanish, col D=english, col E=total
-      // Sum from LOGGED IN row
+      // Asia — col C(2)=spanish, col D(3)=english, col E(4)=total
       const asiaLoggedRows = asiaRows.filter(row => {
         const cell = (row[0] || '').toLowerCase()
         return cell.includes('logged') || cell.includes('log in')
       })
 
-      let asiaEng = 0, asiaSp = 0, asiaTotal = 0, asiaAgents = 0
+      let asiaEng = 0, asiaSp = 0, asiaTotal = 0, asiaAgentsCount = 0
       if (asiaLoggedRows.length > 0) {
         for (const row of asiaLoggedRows) {
           asiaSp    += parseInt(row[2]) || 0
@@ -274,12 +262,12 @@ export default function Dashboard() {
           ? asiaLoggedRows[asiaLoggedRows.length - 1]
           : asiaLoggedRows[0]
         const m = (agentRow[0] || '').match(/(\d+)/)
-        asiaAgents = m ? parseInt(m[1]) : 0
+        asiaAgentsCount = m ? parseInt(m[1]) : 0
       }
 
       const asiaOverview = {
         id:'asia', name:'ASIA', flag:'cn', hasSpanish:true, noSpanish:false,
-        agents:asiaAgents, english:asiaEng, spanish:asiaSp, total:asiaTotal,
+        agents:asiaAgentsCount, english:asiaEng, spanish:asiaSp, total:asiaTotal,
       }
 
       const allTeams = [...teams, asiaOverview]
@@ -323,11 +311,11 @@ export default function Dashboard() {
     return agents
   })()
 
-  const goal        = APP_CONFIG.dailyGoal
-  const hitGoal     = asiaAgents.filter(a => a.english >= goal)
-  const atZero      = asiaAgents.filter(a => a.total === 0)
-  const top3English = [...asiaAgents].sort((a,b) => b.english-a.english).slice(0,3)
-  const top3Total   = [...asiaAgents].sort((a,b) => b.total-a.total).slice(0,3)
+  const goal         = APP_CONFIG.dailyGoal
+  const hitGoal      = asiaAgents.filter(a => a.english >= goal)
+  const atZero       = asiaAgents.filter(a => a.total === 0)
+  const top3English  = [...asiaAgents].sort((a,b) => b.english-a.english).slice(0,3)
+  const top3Spanish  = [...asiaAgents].sort((a,b) => b.spanish-a.spanish).slice(0,3)
   const totalEnglish = asiaAgents.reduce((s,a) => s+a.english, 0)
   const totalSpanish = asiaAgents.reduce((s,a) => s+a.spanish, 0)
   const totalXfers   = asiaAgents.reduce((s,a) => s+a.total,   0)
@@ -434,7 +422,7 @@ export default function Dashboard() {
               <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
               <div className="sum-card orange"><div className="sum-val">{asiaAgents.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
               <div className="sum-card red"><div className="sum-val">{atZero.length}</div><div className="sum-label">At Zero</div></div>
-              <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">EN: {totalEnglish} · SP: {totalSpanish} · Total: {totalXfers}</div></div>
+              <div className="sum-card blue"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">EN: {totalEnglish} · SP: {totalSpanish} · Total: {totalXfers}</div></div>
             </div>
 
             {asiaView==='stats' ? (
@@ -445,8 +433,8 @@ export default function Dashboard() {
                     {top3English.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score english">{a.english}</span></div>))}
                   </div>
                   <div className="top-block">
-                    <h3 className="top-title"><Img src={E.goal} size={16}/> Top Total (EN+SP)</h3>
-                    {top3Total.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score total">{a.total}</span></div>))}
+                    <h3 className="top-title"><Img src={E.goal} size={16}/> Top Spanish</h3>
+                    {top3Spanish.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score spanish">{a.spanish}</span></div>))}
                   </div>
                   <div className="top-block red-block">
                     <h3 className="top-title"><Img src={E.zero} size={16}/> At Zero</h3>
@@ -497,5 +485,5 @@ export default function Dashboard() {
         )}
       </div>
     </div>
-  )    
+  )
 }
