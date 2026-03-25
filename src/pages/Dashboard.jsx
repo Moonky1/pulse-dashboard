@@ -28,43 +28,7 @@ async function fetchSheet(name) {
   return parseCSV(text)
 }
 
-function isLoggedRow(cell) {
-  const c = (cell || '').trim().toLowerCase()
-  return c.includes('agent') || c.includes('total transfer') || c.includes('logee') || c.includes('logged')
-}
-
-const TEAM_CONFIGS = [
-  { id:'philippines', name:'PHILIPPINES',    tab:'AW GARRET PHILIPPINES',                 hasSpanish:false, flag:'ph', colEng:2, colSp:null, colTotal:2 },
-  { id:'venezuela',   name:'VENEZUELA',      tab:'AW GARRET VENEZUELA PATRICIA',          hasSpanish:true,  flag:'ve', colEng:2, colSp:3,    colTotal:4 },
-  { id:'colombia',    name:'COLOMBIA',       tab:'AW GARRET COLOMBIA JUAN GARCIA',        hasSpanish:true,  flag:'co', colEng:3, colSp:4,    colTotal:5 },
-  { id:'mexico',      name:'MEXICO BAJA',    tab:'AW GARRET BAJA MX KEVIN',               hasSpanish:false, flag:'mx', colEng:2, colSp:null, colTotal:2 },
-  { id:'central',     name:'CENTRAL AMERICA',tab:'AW GARRET CENTRAL AMERICA - CAROLINA', hasSpanish:true,  flag:'hn', colEng:3, colSp:4,    colTotal:5 },
-]
-
-function parseTeamSheet(rows, config) {
-  const isAfter6pm = new Date().getHours() >= 18
-  const loggedRows = rows.filter(row => isLoggedRow(row[0] || ''))
-  if (loggedRows.length === 0) return { agents:0, english:0, spanish:0, total:0, noSpanish:!config.hasSpanish }
-
-  let english = 0, spanish = 0, total = 0
-  for (const row of loggedRows) {
-    // Get all numeric values from the row (skip col 0 which is the label)
-    const nums = row.slice(1).map(c => parseInt((c||'').replace(/,/g,''))).filter(n => !isNaN(n) && n > 0)
-    if (config.hasSpanish) {
-      english += nums[0] || 0
-      spanish += nums[1] || 0
-      total   += nums[2] || 0
-    } else {
-      english += nums[0] || 0
-      total   += nums[0] || 0
-    }
-  }
-
-  const agentRow = (isAfter6pm && loggedRows.length > 1) ? loggedRows[loggedRows.length - 1] : loggedRows[0]
-  const agentMatch = (agentRow[0] || '').match(/(\d+)/)
-  const agents = agentMatch ? parseInt(agentMatch[1]) : 0
-  return { agents, english, spanish, total, noSpanish: !config.hasSpanish }
-}
+const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 
 const RANGES = [
   { label:'0',     min:0,  max:0,    color:'#f87171' },
@@ -96,9 +60,9 @@ const getTeamRankBadge = (rank) => {
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 
-const saveSnapshot = (teamsData, asiaData, asiaOverview) => {
+const saveSnapshot = (generalData, asiaData) => {
   const key = `pulse_snap_${todayKey()}`
-  try { localStorage.setItem(key, JSON.stringify({ teamsData, asiaData, asiaOverview, savedAt: new Date().toISOString() })) } catch(e) {}
+  try { localStorage.setItem(key, JSON.stringify({ generalData, asiaData, savedAt: new Date().toISOString() })) } catch(e) {}
 }
 
 const loadAllSnapshots = () => {
@@ -181,22 +145,20 @@ export default function Dashboard() {
   const team = APP_CONFIG.teams.find(t => t.id === user?.team)
   const roleLabel = user?.role === 'supervisor' ? 'Supervisor' : user?.role === 'qa' ? 'QA' : user?.role === 'leader' ? 'Team Leader' : 'Member'
 
-  const [liveTeams, setLiveTeams]               = useState([])
-  const [liveAsia, setLiveAsia]                 = useState([])
-  const [liveAsiaOverview, setLiveAsiaOverview] = useState(null)
-  const [loading, setLoading]                   = useState(true)
-  const [lastUpdate, setLastUpdate]             = useState(null)
-  const [activeTab, setActiveTab]               = useState('general')
-  const [asiaView, setAsiaView]                 = useState('stats')
-  const [chartMetric, setChartMetric]           = useState('english')
-  const [snapshots, setSnapshots]               = useState([])
-  const [selectedDate, setSelectedDate]         = useState(todayKey())
+  const [liveGeneral, setLiveGeneral] = useState([])
+  const [liveAsia, setLiveAsia]       = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [lastUpdate, setLastUpdate]   = useState(null)
+  const [activeTab, setActiveTab]     = useState('general')
+  const [asiaView, setAsiaView]       = useState('stats')
+  const [chartMetric, setChartMetric] = useState('english')
+  const [snapshots, setSnapshots]     = useState([])
+  const [selectedDate, setSelectedDate] = useState(todayKey())
 
-  const isToday      = selectedDate === todayKey()
-  const activeSnap   = isToday ? null : snapshots.find(s => s.date === selectedDate)
-  const teamsData    = isToday ? liveTeams        : (activeSnap?.teamsData    || [])
-  const asiaData     = isToday ? liveAsia         : (activeSnap?.asiaData     || [])
-  const asiaOverview = isToday ? liveAsiaOverview : (activeSnap?.asiaOverview || null)
+  const isToday    = selectedDate === todayKey()
+  const activeSnap = isToday ? null : snapshots.find(s => s.date === selectedDate)
+  const generalData = isToday ? liveGeneral : (activeSnap?.generalData || [])
+  const asiaData    = isToday ? liveAsia    : (activeSnap?.asiaData    || [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -230,36 +192,12 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [philRows, venezRows, colombRows, mexRows, centralRows, asiaRows] = await Promise.all([
-        fetchSheet('AW GARRET PHILIPPINES'),
-        fetchSheet('AW GARRET VENEZUELA PATRICIA'),
-        fetchSheet('AW GARRET COLOMBIA JUAN GARCIA'),
-        fetchSheet('AW GARRET BAJA MX KEVIN'),
-        fetchSheet('AW GARRET CENTRAL AMERICA - CAROLINA'),
+      const [general, asia] = await Promise.all([
+        fetchSheet("WELL'S REPORT"),
         fetchSheet('AW GARRET ASIA LEXNER'),
       ])
-
-      const rawSheets = [philRows, venezRows, colombRows, mexRows, centralRows]
-      const teams = TEAM_CONFIGS.map((tc, i) => ({ ...tc, ...parseTeamSheet(rawSheets[i], tc) }))
-
-      const asiaLoggedRows = asiaRows.filter(row => isLoggedRow(row[0] || ''))
-      let asiaEng = 0, asiaSp = 0, asiaTotal = 0, asiaAgentsCount = 0
-      if (asiaLoggedRows.length > 0) {
-        for (const row of asiaLoggedRows) {
-          asiaSp    += parseInt(row[2]) || 0
-          asiaEng   += parseInt(row[3]) || 0
-          asiaTotal += parseInt(row[4]) || 0
-        }
-        const isAfter6pm = new Date().getHours() >= 18
-        const agentRow = (isAfter6pm && asiaLoggedRows.length > 1) ? asiaLoggedRows[asiaLoggedRows.length - 1] : asiaLoggedRows[0]
-        const m = (agentRow[0] || '').match(/(\d+)/)
-        asiaAgentsCount = m ? parseInt(m[1]) : 0
-      }
-
-      const asiaOv = { id:'asia', name:'ASIA', flag:'cn', hasSpanish:true, noSpanish:false, agents:asiaAgentsCount, english:asiaEng, spanish:asiaSp, total:asiaTotal }
-      const allTeams = [...teams, asiaOv]
-      setLiveTeams(allTeams); setLiveAsia(asiaRows); setLiveAsiaOverview(asiaOv)
-      setLastUpdate(new Date()); saveSnapshot(allTeams, asiaRows, asiaOv); setSnapshots(loadAllSnapshots())
+      setLiveGeneral(general); setLiveAsia(asia); setLastUpdate(new Date())
+      saveSnapshot(general, asia); setSnapshots(loadAllSnapshots())
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -272,15 +210,45 @@ export default function Dashboard() {
 
   const logout = () => { localStorage.removeItem('pulse_user'); window.location.href = '/' }
 
-  const teamsSorted = [...teamsData].sort((a, b) => b.english - a.english)
+  // ── Well's Report: col A=team, C=agents, D=english, E=spanish, F=total ──
+  const teamRows = (() => {
+    const found = []
+    for (const row of generalData) {
+      const name = row[0]?.toUpperCase().trim()
+      if (TEAMS_ORDER.some(t => name === t)) {
+        if (!found.find(f => f.name.toUpperCase() === name)) {
+          const rawSpanish = row[4]?.trim()
+          found.push({
+            name: row[0]?.trim()||'',
+            agents: parseInt(row[2])||0,
+            english: parseInt(row[3])||0,
+            spanish: parseInt(rawSpanish)||0,
+            total: parseInt(row[5])||0,
+            noSpanish: rawSpanish==='-'||rawSpanish===''||!rawSpanish,
+          })
+        }
+      }
+      if (found.length === 6) break
+    }
+    return found
+  })()
 
+  const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
+
+  // ── Asia agents from individual tab ──
   const asiaAgents = (() => {
     const agents = []
     for (const row of asiaData) {
-      if (isLoggedRow(row[0] || '')) break
+      const name = (row[0]||'').toUpperCase().trim()
+      if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) break
       const ext = parseInt(row[1])
-      if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0] || '').length > 1) {
-        agents.push({ name: row[0]?.trim()||'', ext: row[1]?.trim()||'', spanish: parseInt(row[2])||0, english: parseInt(row[3])||0, total: parseInt(row[4])||0 })
+      if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0]||'').length > 1) {
+        agents.push({
+          name: row[0]?.trim()||'', ext: row[1]?.trim()||'',
+          spanish: parseInt(row[2])||0,
+          english: parseInt(row[3])||0,
+          total:   parseInt(row[4])||0,
+        })
       }
     }
     return agents
@@ -291,11 +259,24 @@ export default function Dashboard() {
   const atZero      = asiaAgents.filter(a => a.total === 0)
   const top3English = [...asiaAgents].sort((a,b) => b.english-a.english).slice(0,3)
   const top3Spanish = [...asiaAgents].sort((a,b) => b.spanish-a.spanish).slice(0,3)
-  const totalEnglish = asiaOverview?.english || 0
-  const totalSpanish = asiaOverview?.spanish || 0
-  const totalXfers   = asiaOverview?.total   || 0
+  const totalEnglish = asiaAgents.reduce((s,a) => s+a.english, 0)
+  const totalSpanish = asiaAgents.reduce((s,a) => s+a.spanish, 0)
+  const totalXfers   = asiaAgents.reduce((s,a) => s+a.total,   0)
 
-  const isMyTeam = (teamId) => team?.id === teamId
+  const getFlag = (name) => {
+    const n = name.toUpperCase()
+    if (n.includes('PHIL')) return 'ph'; if (n.includes('VENE')) return 've'
+    if (n.includes('COLOM')) return 'co'; if (n.includes('MEXICO')) return 'mx'
+    if (n.includes('CENTRAL')) return 'hn'; if (n.includes('ASIA')) return 'cn'
+    return 'un'
+  }
+
+  const isMyTeam = (name) => {
+    const n = name.toUpperCase()
+    return (team?.id==='asia'&&n.includes('ASIA'))||(team?.id==='philippines'&&n.includes('PHIL'))||
+           (team?.id==='venezuela'&&n.includes('VENE'))||(team?.id==='colombia'&&n.includes('COLOM'))||
+           (team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))
+  }
 
   const dateTabs = (() => {
     const dates = new Set(snapshots.map(s => s.date)); dates.add(todayKey())
@@ -358,10 +339,10 @@ export default function Dashboard() {
             {teamsSorted.length===0 ? <p style={{color:'#6b7280'}}>No data for this date.</p> : (
               <div className="teams-grid">
                 {teamsSorted.map((row, rank) => (
-                  <div key={rank} className={`team-card-dash ${isMyTeam(row.id)?'highlight':''}`}>
+                  <div key={rank} className={`team-card-dash ${isMyTeam(row.name)?'highlight':''}`}>
                     <div className="tc-header">
                       <div className="tc-rank-badge">{getTeamRankBadge(rank)}</div>
-                      <img src={`https://flagcdn.com/w40/${row.flag}.png`} alt="" className="tc-flag"/>
+                      <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="tc-flag"/>
                       <div>
                         <div className="tc-name">{row.name}</div>
                         <div className="tc-agents">{row.agents} agents active</div>
@@ -369,7 +350,7 @@ export default function Dashboard() {
                     </div>
                     <div className="tc-stats">
                       <div className="tc-stat"><span className="tc-val english">{row.english.toLocaleString()}</span><span className="tc-label">English</span></div>
-                      <div className="tc-stat"><span className="tc-val spanish">{row.noSpanish ? '—' : row.spanish.toLocaleString()}</span><span className="tc-label">Spanish</span></div>
+                      <div className="tc-stat"><span className="tc-val spanish">{row.noSpanish?'—':row.spanish.toLocaleString()}</span><span className="tc-label">Spanish</span></div>
                       <div className="tc-stat"><span className="tc-val total">{row.total.toLocaleString()}</span><span className="tc-label">Total</span></div>
                     </div>
                   </div>
