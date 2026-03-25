@@ -236,13 +236,21 @@ export default function Dashboard() {
   const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
 
   // ── Asia agents from individual tab ──
-  const asiaAgents = (() => {
-    const agents = []
-    for (const row of asiaData) {
-      const name = (row[0]||'').toUpperCase().trim()
-      if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) break
-      const ext = parseInt(row[1])
-      if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0]||'').length > 1) {
+const asiaAgents = (() => {
+  const agents = []
+  for (const row of asiaData) {
+    const name = (row[0]||'').toUpperCase().trim()
+    // Skip logged rows but DON'T break — continue to read second table
+    if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) continue
+    const ext = parseInt(row[1])
+    if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0]||'').length > 1) {
+      const existing = agents.find(a => a.ext === row[1]?.trim())
+      if (existing) {
+        // Same agent in second table — add their new transfers
+        existing.spanish += parseInt(row[2])||0
+        existing.english += parseInt(row[3])||0
+        existing.total   += parseInt(row[4])||0
+      } else {
         agents.push({
           name: row[0]?.trim()||'', ext: row[1]?.trim()||'',
           spanish: parseInt(row[2])||0,
@@ -251,8 +259,9 @@ export default function Dashboard() {
         })
       }
     }
-    return agents
-  })()
+  }
+  return agents
+})()
 
   const goal        = APP_CONFIG.dailyGoal
   const hitGoal     = asiaAgents.filter(a => a.english >= goal)
