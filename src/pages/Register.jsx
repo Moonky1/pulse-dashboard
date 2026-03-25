@@ -56,8 +56,10 @@ export default function Register() {
       setSaving(true)
       const roleLabel = ROLES.find(r => r.id === role)?.label || role
       const teamLabel = APP_CONFIG.teams.find(t => t.id === team)?.name || team
-      await saveToSheets({ name, team: teamLabel, role: roleLabel })
-      localStorage.setItem('pulse_user', JSON.stringify({ name, team, role, registeredAt: Date.now() }))
+      await saveToSheets({ name: name.trim(), team: teamLabel, role: roleLabel })
+      localStorage.setItem('pulse_user', JSON.stringify({
+        name: name.trim(), team, role, registeredAt: Date.now(),
+      }))
       window.location.href = '/dashboard'
     }
   }
@@ -85,6 +87,9 @@ export default function Register() {
               onKeyDown={e => e.key === 'Enter' && next()}
               autoFocus
             />
+            <div className="role-warning" style={{ marginTop: 12 }}>
+              📝 <strong>Remember this name exactly.</strong> You'll use it to sign in later.
+            </div>
           </div>
         )}
 
@@ -104,9 +109,7 @@ export default function Register() {
                 >
                   <span className="role-icon">{r.icon}</span>
                   <span className="role-label">{r.label}</span>
-                  {role === r.id && (
-                    <span className="role-check">✓</span>
-                  )}
+                  {role === r.id && <span className="role-check">✓</span>}
                 </div>
               ))}
             </div>
@@ -162,6 +165,15 @@ export default function Register() {
             {saving ? 'Entering...' : step === STEPS.length - 1 ? 'Enter Pulse →' : 'Continue →'}
           </button>
         </div>
+
+        {step === 0 && (
+          <p style={{ textAlign:'center', marginTop:'1rem', fontSize:12, color:'#6b7280' }}>
+            Already registered?{' '}
+            <span onClick={()=>window.location.href='/signin'} style={{ color:'#f97316', cursor:'pointer', textDecoration:'underline' }}>
+              Sign in instead
+            </span>
+          </p>
+        )}
       </div>
     </div>
   )

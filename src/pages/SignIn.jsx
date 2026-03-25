@@ -1,97 +1,108 @@
 import { useState } from 'react'
-import { validateToken } from '../utils/token'
 import './Register.css'
 
-export default function SignIn() {
-  const [name, setName]   = useState('')
-  const [token, setToken] = useState('')
-  const [step, setStep]   = useState(0) // 0=name, 1=token
-  const [error, setError] = useState('')
+const SHEET_ID = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 
-  const next = () => {
+// Team name → team id mapping
+const TEAM_MAP = {
+  'Philippines':     'philippines',
+  'Venezuela':       'venezuela',
+  'Colombia':        'colombia',
+  'Mexico Baja':     'mexico',
+  'Central America': 'central',
+  'Asia':            'asia',
+}
+
+const ROLE_MAP = {
+  'Supervisor':   'supervisor',
+  'QA':           'qa',
+  'Team Leader':  'leader',
+}
+
+export default function SignIn() {
+  const [name, setName]       = useState('')
+  const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSignIn = async () => {
+    if (!name.trim()) return setError('Enter your name')
+    setLoading(true)
     setError('')
-    if (step === 0) {
-      if (!name.trim()) return setError('Enter your name')
-      return setStep(1)
-    }
-    if (step === 1) {
-      if (!token.trim()) return setError('Enter the access token')
-      if (!validateToken(token)) return setError('Invalid token — ask your admin for the current code')
-      // Preserve existing role/team if same user
-      const existing = JSON.parse(localStorage.getItem('pulse_user') || 'null')
-      const sameUser = existing?.name?.toLowerCase() === name.trim().toLowerCase()
+
+    try {
+      // Fetch registered users from Sheet
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1&t=${Date.now()}`
+      const res = await fetch(url)
+      const text = await res.text()
+      const rows = text.trim().split('\n').slice(1).map(row => {
+        const cols = row.split(',').map(c => c.replace(/"/g,'').trim())
+        return { name: cols[0], team: cols[1], role: cols[2] }
+      }).filter(r => r.name && r.name !== 'Name')
+
+      // Find user by name (case insensitive)
+      const found = rows.find(r => r.name.toLowerCase() === name.trim().toLowerCase())
+
+      if (!found) {
+        setError('Name not found. Check spelling or register first.')
+        setLoading(false)
+        return
+      }
+
+      // Map team and role back to IDs
+      const teamId = Object.entries(TEAM_MAP).find(([k]) => k.toLowerCase() === found.team?.toLowerCase())?.[1] || null
+      const roleId = Object.entries(ROLE_MAP).find(([k]) => k.toLowerCase() === found.role?.toLowerCase())?.[1] || null
+
       localStorage.setItem('pulse_user', JSON.stringify({
-        name: name.trim(),
-        team: sameUser ? existing.team : null,
-        role: sameUser ? existing.role : null,
-        registeredAt: sameUser ? existing.registeredAt : Date.now(),
+        name: found.name,
+        team: teamId,
+        role: roleId,
+        registeredAt: Date.now(),
       }))
       window.location.href = '/dashboard'
+
+    } catch(e) {
+      console.error(e)
+      setError('Connection error. Try again.')
+      setLoading(false)
     }
   }
-
-  const progress = step === 0 ? 0 : 100
 
   return (
     <div className="reg-wrap">
       <div className="reg-card">
         <div className="reg-header">
           <div className="reg-logo">P</div>
-          <div className="prog-bar"><div className="prog-fill" style={{ width: `${progress}%` }} /></div>
-          <div className="reg-step">{step + 1} / 2</div>
+          <div className="prog-bar"><div className="prog-fill" style={{ width: '100%' }} /></div>
+          <div className="reg-step">Sign In</div>
         </div>
 
-        {step === 0 && (
-          <div className="reg-body">
-            <h2>Welcome back</h2>
-            <p>Enter your name to continue</p>
-            <input
-              className="reg-input"
-              placeholder="Your name"
-              value={name}
-              onChange={e => { setName(e.target.value); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && next()}
-              autoFocus
-            />
+        <div className="reg-body">
+          <h2>Welcome back</h2>
+          <p>Enter the name you registered with</p>
+          <input
+            className="reg-input"
+            placeholder="Your name"
+            value={name}
+            onChange={e => { setName(e.target.value); setError('') }}
+            onKeyDown={e => e.key === 'Enter' && handleSignIn()}
+            autoFocus
+          />
+          <div className="sheet-note" style={{ marginTop: 10 }}>
+            Your name must match exactly as you registered it.
           </div>
-        )}
-
-        {step === 1 && (
-          <div className="reg-body">
-            <h2>Access token</h2>
-            <p>Enter the 6-digit code from your admin</p>
-            <input
-              className="reg-input token-input"
-              placeholder="000000"
-              value={token}
-              onChange={e => { setToken(e.target.value.replace(/\D/g,'').slice(0,6)); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && next()}
-              maxLength={6}
-              autoFocus
-            />
-            <div className="sheet-note">
-              This code changes every 5 minutes. Contact your Team Leader if you don't have it.
-            </div>
-          </div>
-        )}
+        </div>
 
         {error && <div className="reg-error">{error}</div>}
 
         <div className="reg-actions">
-          {step > 0 && (
-            <button className="btn-back" onClick={() => { setStep(0); setError('') }}>← Back</button>
-          )}
-          <button className="btn-next" onClick={next}>
-            {step === 1 ? 'Enter Pulse →' : 'Continue →'}
+          <button className="btn-next" onClick={handleSignIn} disabled={loading}>
+            {loading ? 'Checking...' : 'Enter Pulse →'}
           </button>
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: 12, color: '#6b7280' }}>
+        <p style={{ textAlign:'center', marginTop:'1rem', fontSize:12, color:'#6b7280' }}>
           New here?{' '}
-          <span
-            onClick={() => window.location.href = '/register'}
-            style={{ color: '#f97316', cursor: 'pointer', textDecoration: 'underline' }}
-          >
+          <span onClick={()=>window.location.href='/register'} style={{ color:'#f97316', cursor:'pointer', textDecoration:'underline' }}>
             Register instead
           </span>
         </p>
