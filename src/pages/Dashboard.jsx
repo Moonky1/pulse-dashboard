@@ -28,18 +28,18 @@ async function fetchSheet(name) {
   return parseCSV(text)
 }
 
+// ── Detección robusta: la celda debe EMPEZAR con número seguido de "agent" ──
+function isLoggedRow(cell) {
+  return /^\d+\s*agent/i.test((cell || '').trim())
+}
+
 const TEAM_CONFIGS = [
   { id:'philippines', name:'PHILIPPINES',    tab:'AW GARRET PHILIPPINES',                 hasSpanish:false, flag:'ph', colEng:2, colSp:null, colTotal:2 },
   { id:'venezuela',   name:'VENEZUELA',      tab:'AW GARRET VENEZUELA PATRICIA',          hasSpanish:true,  flag:'ve', colEng:2, colSp:3,    colTotal:4 },
-  { id:'colombia',    name:'COLOMBIA',       tab:'AW GARRET COLOMBIA JUAN GARCIA',        hasSpanish:true,  flag:'co', colEng:3, colSp:4,    colTotal:5 },
-  { id:'mexico',      name:'MEXICO BAJA',    tab:'AW GARRET BAJA MX KEVIN',               hasSpanish:false, flag:'mx', colEng:3, colSp:null, colTotal:3 },
-  { id:'central',     name:'CENTRAL AMERICA',tab:'AW GARRET CENTRAL AMERICA - CAROLINA', hasSpanish:true,  flag:'hn', colEng:3, colSp:4,    colTotal:5 },
+  { id:'colombia',    name:'COLOMBIA',       tab:'AW GARRET COLOMBIA JUAN GARCIA',        hasSpanish:true,  flag:'co', colEng:2, colSp:3,    colTotal:4 },
+  { id:'mexico',      name:'MEXICO BAJA',    tab:'AW GARRET BAJA MX KEVIN',               hasSpanish:false, flag:'mx', colEng:2, colSp:null, colTotal:2 },
+  { id:'central',     name:'CENTRAL AMERICA',tab:'AW GARRET CENTRAL AMERICA - CAROLINA', hasSpanish:true,  flag:'hn', colEng:2, colSp:3,    colTotal:4 },
 ]
-
-function isLoggedRow(cell) {
-  const c = cell.toLowerCase()
-  return c.includes('logged') || c.includes('log in') || c.includes('logee')
-}
 
 function parseTeamSheet(rows, config) {
   const isAfter6pm = new Date().getHours() >= 18
@@ -48,13 +48,13 @@ function parseTeamSheet(rows, config) {
 
   let english = 0, spanish = 0, total = 0
   for (const row of loggedRows) {
-    english += parseInt(row[config.colEng])                              || 0
+    english += parseInt(row[config.colEng])                               || 0
     spanish += config.colSp != null ? (parseInt(row[config.colSp]) || 0) : 0
-    total   += parseInt(row[config.colTotal])                            || 0
+    total   += parseInt(row[config.colTotal])                             || 0
   }
 
   const agentRow = (isAfter6pm && loggedRows.length > 1) ? loggedRows[loggedRows.length - 1] : loggedRows[0]
-  const agentMatch = (agentRow[0] || '').match(/(\d+)/)
+  const agentMatch = (agentRow[0] || '').match(/^(\d+)/)
   const agents = agentMatch ? parseInt(agentMatch[1]) : 0
   return { agents, english, spanish, total, noSpanish: !config.hasSpanish }
 }
@@ -69,21 +69,15 @@ const RANGES = [
 ]
 
 const E = {
-  goal:     '/emojis/goal.webp',
-  goal1:    '/emojis/goal1.webp',
-  goal3:    '/emojis/goal3.webp',
-  goal4:    '/emojis/goal4.webp',
-  medal1:   '/emojis/medal1.webp',
-  medal2:   '/emojis/medal2.webp',
-  medal3:   '/emojis/web3.webp',
-  zero:     '/emojis/zero.webp',
-  firework: '/emojis/firework.webp',
+  goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp',
+  goal3:'/emojis/goal3.webp', goal4:'/emojis/goal4.webp',
+  medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp',
+  medal3:'/emojis/web3.webp', zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
 }
 
 const Img = ({ src, size = 18 }) => (
   <img src={src} width={size} height={size} style={{ display:'inline-block', verticalAlign:'middle', objectFit:'contain' }} />
 )
-
 const MEDALS = [E.medal1, E.medal2, E.medal3]
 
 const getTeamRankBadge = (rank) => {
@@ -137,11 +131,9 @@ function BarChart({ agents, metric }) {
     <div className="chart-wrap">
       <div className="chart-bars">
         {buckets.map((b, i) => (
-          <div key={i}
-            className={`chart-col ${b.count > 0 ? 'chart-col-hoverable' : ''}`}
+          <div key={i} className={`chart-col ${b.count > 0 ? 'chart-col-hoverable' : ''}`}
             onMouseEnter={(e) => { if (!b.count) return; const r = e.currentTarget.getBoundingClientRect(); setTooltip({ bucket:b, x:r.left+r.width/2, y:r.top }) }}
-            onMouseLeave={() => setTooltip(null)}
-          >
+            onMouseLeave={() => setTooltip(null)}>
             <div className="bar-count">{b.count}</div>
             <div className="bar-outer"><div className="bar-inner" style={{ height:`${(b.count/maxCount)*100}%`, background:b.color }} /></div>
             <div className="bar-label">{b.label}</div>
@@ -180,11 +172,7 @@ export default function Dashboard() {
   const canvasRef = useRef(null)
   const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
   const team = APP_CONFIG.teams.find(t => t.id === user?.team)
-
-  const roleLabel = user?.role === 'supervisor' ? 'Supervisor'
-                  : user?.role === 'qa'         ? 'QA'
-                  : user?.role === 'leader'      ? 'Team Leader'
-                  : 'Member'
+  const roleLabel = user?.role === 'supervisor' ? 'Supervisor' : user?.role === 'qa' ? 'QA' : user?.role === 'leader' ? 'Team Leader' : 'Member'
 
   const [liveTeams, setLiveTeams]               = useState([])
   const [liveAsia, setLiveAsia]                 = useState([])
@@ -245,9 +233,7 @@ export default function Dashboard() {
       ])
 
       const rawSheets = [philRows, venezRows, colombRows, mexRows, centralRows]
-      const teams = TEAM_CONFIGS.map((tc, i) => ({
-        ...tc, ...parseTeamSheet(rawSheets[i], tc)
-      }))
+      const teams = TEAM_CONFIGS.map((tc, i) => ({ ...tc, ...parseTeamSheet(rawSheets[i], tc) }))
 
       // Asia — col C(2)=spanish, col D(3)=english, col E(4)=total
       const asiaLoggedRows = asiaRows.filter(row => isLoggedRow(row[0] || ''))
@@ -259,54 +245,32 @@ export default function Dashboard() {
           asiaTotal += parseInt(row[4]) || 0
         }
         const isAfter6pm = new Date().getHours() >= 18
-        const agentRow = (isAfter6pm && asiaLoggedRows.length > 1)
-          ? asiaLoggedRows[asiaLoggedRows.length - 1] : asiaLoggedRows[0]
-        const m = (agentRow[0] || '').match(/(\d+)/)
+        const agentRow = (isAfter6pm && asiaLoggedRows.length > 1) ? asiaLoggedRows[asiaLoggedRows.length - 1] : asiaLoggedRows[0]
+        const m = (agentRow[0] || '').match(/^(\d+)/)
         asiaAgentsCount = m ? parseInt(m[1]) : 0
       }
 
-      const asiaOv = {
-        id:'asia', name:'ASIA', flag:'cn', hasSpanish:true, noSpanish:false,
-        agents:asiaAgentsCount, english:asiaEng, spanish:asiaSp, total:asiaTotal,
-      }
-
+      const asiaOv = { id:'asia', name:'ASIA', flag:'cn', hasSpanish:true, noSpanish:false, agents:asiaAgentsCount, english:asiaEng, spanish:asiaSp, total:asiaTotal }
       const allTeams = [...teams, asiaOv]
-      setLiveTeams(allTeams)
-      setLiveAsia(asiaRows)
-      setLiveAsiaOverview(asiaOv)
-      setLastUpdate(new Date())
-      saveSnapshot(allTeams, asiaRows, asiaOv)
-      setSnapshots(loadAllSnapshots())
+      setLiveTeams(allTeams); setLiveAsia(asiaRows); setLiveAsiaOverview(asiaOv)
+      setLastUpdate(new Date()); saveSnapshot(allTeams, asiaRows, asiaOv); setSnapshots(loadAllSnapshots())
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
   }
 
-  useEffect(() => {
-    setSnapshots(loadAllSnapshots()); loadData()
-    const interval = setInterval(loadData, 60000)
-    return () => clearInterval(interval)
-  }, [])
+  useEffect(() => { setSnapshots(loadAllSnapshots()); loadData(); const interval = setInterval(loadData, 60000); return () => clearInterval(interval) }, [])
 
-  const logout = () => {
-    localStorage.removeItem('pulse_user')
-    window.location.href = '/'
-  }
+  const logout = () => { localStorage.removeItem('pulse_user'); window.location.href = '/' }
 
   const teamsSorted = [...teamsData].sort((a, b) => b.english - a.english)
 
   const asiaAgents = (() => {
     const agents = []
     for (const row of asiaData) {
-      const name = (row[0] || '').toUpperCase().trim()
       if (isLoggedRow(row[0] || '')) break
       const ext = parseInt(row[1])
       if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0] || '').length > 1) {
-        agents.push({
-          name: row[0]?.trim() || '', ext: row[1]?.trim() || '',
-          spanish: parseInt(row[2]) || 0,
-          english: parseInt(row[3]) || 0,
-          total:   parseInt(row[4]) || 0,
-        })
+        agents.push({ name: row[0]?.trim()||'', ext: row[1]?.trim()||'', spanish: parseInt(row[2])||0, english: parseInt(row[3])||0, total: parseInt(row[4])||0 })
       }
     }
     return agents
@@ -331,7 +295,6 @@ export default function Dashboard() {
   return (
     <div className="dash-root">
       <canvas ref={canvasRef} className="dash-trail-canvas" />
-
       <nav className="dash-nav">
         <div className="dash-nav-left">
           <div className="nav-logo-wrap">
@@ -376,7 +339,6 @@ export default function Dashboard() {
       <div className="dash-content">
         {loading ? (
           <div className="dash-loading"><div className="dash-spinner"/><p>Loading live data...</p></div>
-
         ) : activeTab==='general' ? (
           <div className="fade-in">
             <h2 className="section-title">
@@ -405,7 +367,6 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-
         ) : (
           <div className="fade-in">
             <div className="asia-header-row">
@@ -418,14 +379,12 @@ export default function Dashboard() {
                 <button className={`view-tab ${asiaView==='charts'?'active':''}`} onClick={()=>setAsiaView('charts')}>📈 Charts</button>
               </div>
             </div>
-
             <div className="summary-grid">
               <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
               <div className="sum-card orange"><div className="sum-val">{asiaAgents.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
               <div className="sum-card red"><div className="sum-val">{atZero.length}</div><div className="sum-label">At Zero</div></div>
               <div className="sum-card blue"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">EN: {totalEnglish} · SP: {totalSpanish} · Total: {totalXfers}</div></div>
             </div>
-
             {asiaView==='stats' ? (
               <>
                 <div className="tops-row">
