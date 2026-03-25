@@ -29,7 +29,7 @@ async function fetchSheet(name) {
 }
 
 function isLoggedRow(cell) {
-  return (cell || '').toLowerCase().includes('agent')
+  return /^\d+\s*agent/i.test((cell || '').trim())
 }
 
 const TEAM_CONFIGS = [
