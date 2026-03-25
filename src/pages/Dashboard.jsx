@@ -237,16 +237,26 @@ export default function Dashboard() {
 
   // ── Asia agents from individual tab ──
 const asiaAgents = (() => {
+  const isAfter6pm = new Date().getHours() >= 18
   const agents = []
+  let passedFirstLogged = false
+
   for (const row of asiaData) {
     const name = (row[0]||'').toUpperCase().trim()
-    // Skip logged rows but DON'T break — continue to read second table
-    if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) continue
     const ext = parseInt(row[1])
-    if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0]||'').length > 1) {
+
+    // Detect logged row
+    if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) {
+      passedFirstLogged = true
+      continue
+    }
+
+    // Skip non-agent rows (headers, empty, OT TAKERS label, etc.)
+    if (isNaN(ext) || ext <= 1000 || ext >= 9999 || (row[0]||'').length <= 1) continue
+
+    if (!passedFirstLogged || isAfter6pm) {
       const existing = agents.find(a => a.ext === row[1]?.trim())
       if (existing) {
-        // Same agent in second table — add their new transfers
         existing.spanish += parseInt(row[2])||0
         existing.english += parseInt(row[3])||0
         existing.total   += parseInt(row[4])||0
