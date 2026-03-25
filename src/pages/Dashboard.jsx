@@ -29,18 +29,16 @@ async function fetchSheet(name) {
 }
 
 // ── TEAM CONFIGS ─────────────────────────────────────────────
+// colEng/colSp/colTotal = column index in the LOGGED IN row
 const TEAM_CONFIGS = [
-  { id: 'philippines', name: 'PHILIPPINES',    tab: 'AW GARRET PHILIPPINES',                   hasSpanish: false, flag: 'ph' },
-  { id: 'venezuela',   name: 'VENEZUELA',      tab: 'AW GARRET VENEZUELA PATRICIA',            hasSpanish: true,  flag: 've' },
-  { id: 'colombia',    name: 'COLOMBIA',       tab: 'AW GARRET COLOMBIA JUAN GARCIA',          hasSpanish: true,  flag: 'co' },
-  { id: 'mexico',      name: 'MEXICO BAJA',    tab: 'AW GARRET BAJA MX KEVIN',                 hasSpanish: false, flag: 'mx' },
-  { id: 'central',     name: 'CENTRAL AMERICA',tab: 'AW GARRET CENTRAL AMERICA - CAROLINA',   hasSpanish: true,  flag: 'hn' },
+  { id:'philippines', name:'PHILIPPINES',    tab:'AW GARRET PHILIPPINES',                 hasSpanish:false, flag:'ph', colEng:2, colSp:null, colTotal:2 },
+  { id:'venezuela',   name:'VENEZUELA',      tab:'AW GARRET VENEZUELA PATRICIA',          hasSpanish:true,  flag:'ve', colEng:3, colSp:4,    colTotal:5 },
+  { id:'colombia',    name:'COLOMBIA',       tab:'AW GARRET COLOMBIA JUAN GARCIA',        hasSpanish:true,  flag:'co', colEng:3, colSp:4,    colTotal:5 },
+  { id:'mexico',      name:'MEXICO BAJA',    tab:'AW GARRET BAJA MX KEVIN',               hasSpanish:false, flag:'mx', colEng:3, colSp:null, colTotal:3 },
+  { id:'central',     name:'CENTRAL AMERICA',tab:'AW GARRET CENTRAL AMERICA - CAROLINA', hasSpanish:true,  flag:'hn', colEng:3, colSp:4,    colTotal:5 },
 ]
 
-// ── PARSE TEAM SHEET ─────────────────────────────────────────
-// Finds all "LOGGED IN / LOG IN" rows and sums transfers.
-// Agents: before 6pm = first logged row count, after = last logged row count.
-function parseTeamSheet(rows, hasSpanish) {
+function parseTeamSheet(rows, config) {
   const isAfter6pm = new Date().getHours() >= 18
 
   const loggedRows = rows.filter(row => {
@@ -48,41 +46,32 @@ function parseTeamSheet(rows, hasSpanish) {
     return cell.includes('logged') || cell.includes('log in')
   })
 
-  if (loggedRows.length === 0) return { agents: 0, english: 0, spanish: 0, total: 0, noSpanish: !hasSpanish }
+  if (loggedRows.length === 0) return { agents:0, english:0, spanish:0, total:0, noSpanish:!config.hasSpanish }
 
   let english = 0, spanish = 0, total = 0
 
   for (const row of loggedRows) {
-    if (hasSpanish) {
-      // col index 2 = english, 3 = spanish, 4 = total
-      english += parseInt(row[2]) || 0
-      spanish += parseInt(row[3]) || 0
-      total   += parseInt(row[4]) || 0
-    } else {
-      // col index 2 = total (english only)
-      const val = parseInt(row[2]) || 0
-      english += val
-      total   += val
-    }
+    english += parseInt(row[config.colEng])   || 0
+    spanish += config.colSp != null ? (parseInt(row[config.colSp]) || 0) : 0
+    total   += parseInt(row[config.colTotal]) || 0
   }
 
-  // Agents count
   const agentRow = (isAfter6pm && loggedRows.length > 1)
     ? loggedRows[loggedRows.length - 1]
     : loggedRows[0]
   const agentMatch = (agentRow[0] || '').match(/(\d+)/)
   const agents = agentMatch ? parseInt(agentMatch[1]) : 0
 
-  return { agents, english, spanish, total, noSpanish: !hasSpanish }
+  return { agents, english, spanish, total, noSpanish: !config.hasSpanish }
 }
 
 const RANGES = [
-  { label: '0',     min: 0,  max: 0,    color: '#f87171' },
-  { label: '1–4',   min: 1,  max: 4,    color: '#fb923c' },
-  { label: '5–9',   min: 5,  max: 9,    color: '#fbbf24' },
-  { label: '10–14', min: 10, max: 14,   color: '#a3e635' },
-  { label: '15–19', min: 15, max: 19,   color: '#34d399' },
-  { label: '20+',   min: 20, max: 9999, color: '#22c55e' },
+  { label:'0',     min:0,  max:0,    color:'#f87171' },
+  { label:'1–4',   min:1,  max:4,    color:'#fb923c' },
+  { label:'5–9',   min:5,  max:9,    color:'#fbbf24' },
+  { label:'10–14', min:10, max:14,   color:'#a3e635' },
+  { label:'15–19', min:15, max:19,   color:'#34d399' },
+  { label:'20+',   min:20, max:9999, color:'#22c55e' },
 ]
 
 const E = {
@@ -157,7 +146,7 @@ function BarChart({ agents, metric }) {
         {buckets.map((b, i) => (
           <div key={i}
             className={`chart-col ${b.count > 0 ? 'chart-col-hoverable' : ''}`}
-            onMouseEnter={(e) => { if (!b.count) return; const r = e.currentTarget.getBoundingClientRect(); setTooltip({ bucket: b, x: r.left + r.width/2, y: r.top }) }}
+            onMouseEnter={(e) => { if (!b.count) return; const r = e.currentTarget.getBoundingClientRect(); setTooltip({ bucket:b, x:r.left+r.width/2, y:r.top }) }}
             onMouseLeave={() => setTooltip(null)}
           >
             <div className="bar-count">{b.count}</div>
@@ -216,12 +205,9 @@ export default function Dashboard() {
 
   const isToday    = selectedDate === todayKey()
   const activeSnap = isToday ? null : snapshots.find(s => s.date === selectedDate)
+  const teamsData  = isToday ? liveTeams : (activeSnap?.teamsData || [])
+  const asiaData   = isToday ? liveAsia  : (activeSnap?.asiaData  || [])
 
-  // ── Active data (live or snapshot) ───────────────────────────
-  const teamsData = isToday ? liveTeams : (activeSnap?.teamsData || [])
-  const asiaData  = isToday ? liveAsia  : (activeSnap?.asiaData  || [])
-
-  // ── Mouse trail canvas ────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -252,7 +238,6 @@ export default function Dashboard() {
     return () => { window.removeEventListener('mousemove',onMove); window.removeEventListener('resize',onResize); cancelAnimationFrame(raf) }
   }, [])
 
-  // ── Load data from individual team tabs ───────────────────────
   const loadData = async () => {
     try {
       const [philRows, venezRows, colombRows, mexRows, centralRows, asiaRows] = await Promise.all([
@@ -264,40 +249,40 @@ export default function Dashboard() {
         fetchSheet('AW GARRET ASIA LEXNER'),
       ])
 
-      const rawByConfig = [philRows, venezRows, colombRows, mexRows, centralRows]
-
-      // Parse each team
+      const rawSheets = [philRows, venezRows, colombRows, mexRows, centralRows]
       const teams = TEAM_CONFIGS.map((tc, i) => {
-        const parsed = parseTeamSheet(rawByConfig[i], tc.hasSpanish)
+        const parsed = parseTeamSheet(rawSheets[i], tc)
         return { ...tc, ...parsed }
       })
 
-      // Asia overview: sum from individual agents
-      const asiaAgentsParsed = []
-      for (const row of asiaRows) {
-        const name = (row[0] || '').toUpperCase().trim()
-        if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) break
-        const ext = parseInt(row[1])
-        if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0] || '').length > 1) {
-          asiaAgentsParsed.push({
-            name: row[0]?.trim() || '',
-            ext: row[1]?.trim() || '',
-            spanish: parseInt(row[2]) || 0,
-            english: parseInt(row[3]) || 0,
-            total:   parseInt(row[4]) || 0,
-          })
+      // Asia — col C=spanish, col D=english, col E=total
+      // Sum from LOGGED IN row
+      const asiaLoggedRows = asiaRows.filter(row => {
+        const cell = (row[0] || '').toLowerCase()
+        return cell.includes('logged') || cell.includes('log in')
+      })
+
+      let asiaEng = 0, asiaSp = 0, asiaTotal = 0, asiaAgents = 0
+      if (asiaLoggedRows.length > 0) {
+        for (const row of asiaLoggedRows) {
+          asiaSp    += parseInt(row[2]) || 0
+          asiaEng   += parseInt(row[3]) || 0
+          asiaTotal += parseInt(row[4]) || 0
         }
+        const isAfter6pm = new Date().getHours() >= 18
+        const agentRow = (isAfter6pm && asiaLoggedRows.length > 1)
+          ? asiaLoggedRows[asiaLoggedRows.length - 1]
+          : asiaLoggedRows[0]
+        const m = (agentRow[0] || '').match(/(\d+)/)
+        asiaAgents = m ? parseInt(m[1]) : 0
       }
+
       const asiaOverview = {
-        id: 'asia', name: 'ASIA', flag: 'cn', hasSpanish: false, noSpanish: true,
-        agents:  asiaAgentsParsed.length,
-        english: asiaAgentsParsed.reduce((s,a) => s+a.english, 0),
-        spanish: 0,
-        total:   asiaAgentsParsed.reduce((s,a) => s+a.total, 0),
+        id:'asia', name:'ASIA', flag:'cn', hasSpanish:true, noSpanish:false,
+        agents:asiaAgents, english:asiaEng, spanish:asiaSp, total:asiaTotal,
       }
 
       const allTeams = [...teams, asiaOverview]
-
       setLiveTeams(allTeams)
       setLiveAsia(asiaRows)
       setLastUpdate(new Date())
@@ -318,10 +303,8 @@ export default function Dashboard() {
     window.location.href = '/'
   }
 
-  // ── Teams sorted by English ───────────────────────────────────
   const teamsSorted = [...teamsData].sort((a, b) => b.english - a.english)
 
-  // ── Asia agents for detail view ───────────────────────────────
   const asiaAgents = (() => {
     const agents = []
     for (const row of asiaData) {
@@ -331,21 +314,23 @@ export default function Dashboard() {
       if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0] || '').length > 1) {
         agents.push({
           name: row[0]?.trim() || '', ext: row[1]?.trim() || '',
-          spanish: parseInt(row[2]) || 0, english: parseInt(row[3]) || 0, total: parseInt(row[4]) || 0,
+          spanish: parseInt(row[2]) || 0,
+          english: parseInt(row[3]) || 0,
+          total:   parseInt(row[4]) || 0,
         })
       }
     }
     return agents
   })()
 
-  const goal         = APP_CONFIG.dailyGoal
-  const hitGoal      = asiaAgents.filter(a => a.english >= goal)
-  const atZero       = asiaAgents.filter(a => a.total === 0)
-  const top3English  = [...asiaAgents].sort((a,b) => b.english-a.english).slice(0,3)
-  const top3Total    = [...asiaAgents].sort((a,b) => b.total-a.total).slice(0,3)
+  const goal        = APP_CONFIG.dailyGoal
+  const hitGoal     = asiaAgents.filter(a => a.english >= goal)
+  const atZero      = asiaAgents.filter(a => a.total === 0)
+  const top3English = [...asiaAgents].sort((a,b) => b.english-a.english).slice(0,3)
+  const top3Total   = [...asiaAgents].sort((a,b) => b.total-a.total).slice(0,3)
   const totalEnglish = asiaAgents.reduce((s,a) => s+a.english, 0)
   const totalSpanish = asiaAgents.reduce((s,a) => s+a.spanish, 0)
-  const totalXfers   = asiaAgents.reduce((s,a) => s+a.total, 0)
+  const totalXfers   = asiaAgents.reduce((s,a) => s+a.total,   0)
 
   const isMyTeam = (teamId) => team?.id === teamId
 
