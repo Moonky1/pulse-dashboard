@@ -29,7 +29,8 @@ async function fetchSheet(name) {
 }
 
 function isLoggedRow(cell) {
-  return /^\d+\s*agent/i.test((cell || '').trim())
+  const c = (cell || '').trim().toLowerCase()
+  return c.includes('agent') && (c.includes('logged') || c.includes('log in') || c.includes('logee'))
 }
 
 const TEAM_CONFIGS = [
@@ -37,7 +38,7 @@ const TEAM_CONFIGS = [
   { id:'venezuela',   name:'VENEZUELA',      tab:'AW GARRET VENEZUELA PATRICIA',          hasSpanish:true,  flag:'ve', colEng:2, colSp:3,    colTotal:4 },
   { id:'colombia',    name:'COLOMBIA',       tab:'AW GARRET COLOMBIA JUAN GARCIA',        hasSpanish:true,  flag:'co', colEng:3, colSp:4,    colTotal:5 },
   { id:'mexico',      name:'MEXICO BAJA',    tab:'AW GARRET BAJA MX KEVIN',               hasSpanish:false, flag:'mx', colEng:2, colSp:null, colTotal:2 },
-  { id:'central',     name:'CENTRAL AMERICA',tab:'AW GARRET CENTRAL AMERICA - CAROLINA', hasSpanish:true,  flag:'hn', colEng:2, colSp:3,    colTotal:4 },
+  { id:'central',     name:'CENTRAL AMERICA',tab:'AW GARRET CENTRAL AMERICA - CAROLINA', hasSpanish:true,  flag:'hn', colEng:3, colSp:4,    colTotal:5 },
 ]
 
 function parseTeamSheet(rows, config) {
