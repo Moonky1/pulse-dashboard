@@ -28,7 +28,53 @@ async function fetchSheet(name) {
   return parseCSV(text)
 }
 
-const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
+// ── TEAM CONFIGS ─────────────────────────────────────────────
+const TEAM_CONFIGS = [
+  { id: 'philippines', name: 'PHILIPPINES',    tab: 'AW GARRET PHILIPPINES',                   hasSpanish: false, flag: 'ph' },
+  { id: 'venezuela',   name: 'VENEZUELA',      tab: 'AW GARRET VENEZUELA PATRICIA',            hasSpanish: true,  flag: 've' },
+  { id: 'colombia',    name: 'COLOMBIA',       tab: 'AW GARRET COLOMBIA JUAN GARCIA',          hasSpanish: true,  flag: 'co' },
+  { id: 'mexico',      name: 'MEXICO BAJA',    tab: 'AW GARRET BAJA MX KEVIN',                 hasSpanish: false, flag: 'mx' },
+  { id: 'central',     name: 'CENTRAL AMERICA',tab: 'AW GARRET CENTRAL AMERICA - CAROLINA',   hasSpanish: true,  flag: 'hn' },
+]
+
+// ── PARSE TEAM SHEET ─────────────────────────────────────────
+// Finds all "LOGGED IN / LOG IN" rows and sums transfers.
+// Agents: before 6pm = first logged row count, after = last logged row count.
+function parseTeamSheet(rows, hasSpanish) {
+  const isAfter6pm = new Date().getHours() >= 18
+
+  const loggedRows = rows.filter(row => {
+    const cell = (row[0] || '').toLowerCase()
+    return cell.includes('logged') || cell.includes('log in')
+  })
+
+  if (loggedRows.length === 0) return { agents: 0, english: 0, spanish: 0, total: 0, noSpanish: !hasSpanish }
+
+  let english = 0, spanish = 0, total = 0
+
+  for (const row of loggedRows) {
+    if (hasSpanish) {
+      // col index 2 = english, 3 = spanish, 4 = total
+      english += parseInt(row[2]) || 0
+      spanish += parseInt(row[3]) || 0
+      total   += parseInt(row[4]) || 0
+    } else {
+      // col index 2 = total (english only)
+      const val = parseInt(row[2]) || 0
+      english += val
+      total   += val
+    }
+  }
+
+  // Agents count
+  const agentRow = (isAfter6pm && loggedRows.length > 1)
+    ? loggedRows[loggedRows.length - 1]
+    : loggedRows[0]
+  const agentMatch = (agentRow[0] || '').match(/(\d+)/)
+  const agents = agentMatch ? parseInt(agentMatch[1]) : 0
+
+  return { agents, english, spanish, total, noSpanish: !hasSpanish }
+}
 
 const RANGES = [
   { label: '0',     min: 0,  max: 0,    color: '#f87171' },
@@ -40,11 +86,10 @@ const RANGES = [
 ]
 
 const E = {
-  goal:     '/emojis/goal.webp',    // títulos Top
-  goal1:    '/emojis/goal1.webp',   // #1 team rank
-  goal2:    '/emojis/goal2.webp',   // no usado
-  goal3:    '/emojis/goal3.webp',   // #2 team rank
-  goal4:    '/emojis/goal4.webp',   // #3 team rank
+  goal:     '/emojis/goal.webp',
+  goal1:    '/emojis/goal1.webp',
+  goal3:    '/emojis/goal3.webp',
+  goal4:    '/emojis/goal4.webp',
   medal1:   '/emojis/medal1.webp',
   medal2:   '/emojis/medal2.webp',
   medal3:   '/emojis/web3.webp',
@@ -53,7 +98,7 @@ const E = {
 }
 
 const Img = ({ src, size = 18 }) => (
-  <img src={src} width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle', objectFit: 'contain' }} />
+  <img src={src} width={size} height={size} style={{ display:'inline-block', verticalAlign:'middle', objectFit:'contain' }} />
 )
 
 const MEDALS = [E.medal1, E.medal2, E.medal3]
@@ -62,14 +107,14 @@ const getTeamRankBadge = (rank) => {
   if (rank === 0) return <Img src={E.goal1} size={26} />
   if (rank === 1) return <Img src={E.goal3} size={26} />
   if (rank === 2) return <Img src={E.goal4} size={26} />
-  return <span style={{ color: '#6b7280', fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 14 }}>#{rank + 1}</span>
+  return <span style={{ color:'#6b7280', fontFamily:"'Sora',sans-serif", fontWeight:700, fontSize:14 }}>#{rank+1}</span>
 }
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 
-const saveSnapshot = (generalData, asiaData) => {
+const saveSnapshot = (teamsData, asiaData) => {
   const key = `pulse_snap_${todayKey()}`
-  try { localStorage.setItem(key, JSON.stringify({ generalData, asiaData, savedAt: new Date().toISOString() })) } catch(e) {}
+  try { localStorage.setItem(key, JSON.stringify({ teamsData, asiaData, savedAt: new Date().toISOString() })) } catch(e) {}
 }
 
 const loadAllSnapshots = () => {
@@ -116,14 +161,14 @@ function BarChart({ agents, metric }) {
             onMouseLeave={() => setTooltip(null)}
           >
             <div className="bar-count">{b.count}</div>
-            <div className="bar-outer"><div className="bar-inner" style={{ height: `${(b.count/maxCount)*100}%`, background: b.color }} /></div>
+            <div className="bar-outer"><div className="bar-inner" style={{ height:`${(b.count/maxCount)*100}%`, background:b.color }} /></div>
             <div className="bar-label">{b.label}</div>
           </div>
         ))}
       </div>
       {tooltip && (
-        <div className="bar-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
-          <div className="bar-tooltip-header" style={{ color: tooltip.bucket.color }}>
+        <div className="bar-tooltip" style={{ left:tooltip.x, top:tooltip.y }}>
+          <div className="bar-tooltip-header" style={{ color:tooltip.bucket.color }}>
             {tooltip.bucket.label} xfers
             <span className="bar-tooltip-count">{tooltip.bucket.count} agent{tooltip.bucket.count !== 1 ? 's' : ''}</span>
           </div>
@@ -131,7 +176,7 @@ function BarChart({ agents, metric }) {
             {tooltip.bucket.agentsInRange.sort((a,b) => b[metric]-a[metric]).map((a,i) => (
               <div key={i} className="bar-tooltip-agent">
                 <span className="bar-tooltip-name">{a.name}</span>
-                <span className="bar-tooltip-val" style={{ color: tooltip.bucket.color }}>{a[metric]}</span>
+                <span className="bar-tooltip-val" style={{ color:tooltip.bucket.color }}>{a[metric]}</span>
               </div>
             ))}
           </div>
@@ -140,7 +185,7 @@ function BarChart({ agents, metric }) {
       <div className="chart-legend">
         {RANGES.map((r,i) => (
           <div key={i} className="legend-item">
-            <div className="legend-dot" style={{ background: r.color }} />
+            <div className="legend-dot" style={{ background:r.color }} />
             <span>{r.label} xfers</span>
           </div>
         ))}
@@ -159,7 +204,7 @@ export default function Dashboard() {
                   : user?.role === 'leader'      ? 'Team Leader'
                   : 'Member'
 
-  const [liveGeneral, setLiveGeneral]   = useState([])
+  const [liveTeams, setLiveTeams]       = useState([])
   const [liveAsia, setLiveAsia]         = useState([])
   const [loading, setLoading]           = useState(true)
   const [lastUpdate, setLastUpdate]     = useState(null)
@@ -169,11 +214,14 @@ export default function Dashboard() {
   const [snapshots, setSnapshots]       = useState([])
   const [selectedDate, setSelectedDate] = useState(todayKey())
 
-  const isToday     = selectedDate === todayKey()
-  const activeSnap  = isToday ? null : snapshots.find(s => s.date === selectedDate)
-  const generalData = isToday ? liveGeneral : (activeSnap?.generalData || [])
-  const asiaData    = isToday ? liveAsia    : (activeSnap?.asiaData    || [])
+  const isToday    = selectedDate === todayKey()
+  const activeSnap = isToday ? null : snapshots.find(s => s.date === selectedDate)
 
+  // ── Active data (live or snapshot) ───────────────────────────
+  const teamsData = isToday ? liveTeams : (activeSnap?.teamsData || [])
+  const asiaData  = isToday ? liveAsia  : (activeSnap?.asiaData  || [])
+
+  // ── Mouse trail canvas ────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -204,14 +252,57 @@ export default function Dashboard() {
     return () => { window.removeEventListener('mousemove',onMove); window.removeEventListener('resize',onResize); cancelAnimationFrame(raf) }
   }, [])
 
+  // ── Load data from individual team tabs ───────────────────────
   const loadData = async () => {
     try {
-      const [general, asia] = await Promise.all([
-        fetchSheet("WELL'S REPORT"),
+      const [philRows, venezRows, colombRows, mexRows, centralRows, asiaRows] = await Promise.all([
+        fetchSheet('AW GARRET PHILIPPINES'),
+        fetchSheet('AW GARRET VENEZUELA PATRICIA'),
+        fetchSheet('AW GARRET COLOMBIA JUAN GARCIA'),
+        fetchSheet('AW GARRET BAJA MX KEVIN'),
+        fetchSheet('AW GARRET CENTRAL AMERICA - CAROLINA'),
         fetchSheet('AW GARRET ASIA LEXNER'),
       ])
-      setLiveGeneral(general); setLiveAsia(asia); setLastUpdate(new Date())
-      saveSnapshot(general, asia); setSnapshots(loadAllSnapshots())
+
+      const rawByConfig = [philRows, venezRows, colombRows, mexRows, centralRows]
+
+      // Parse each team
+      const teams = TEAM_CONFIGS.map((tc, i) => {
+        const parsed = parseTeamSheet(rawByConfig[i], tc.hasSpanish)
+        return { ...tc, ...parsed }
+      })
+
+      // Asia overview: sum from individual agents
+      const asiaAgentsParsed = []
+      for (const row of asiaRows) {
+        const name = (row[0] || '').toUpperCase().trim()
+        if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) break
+        const ext = parseInt(row[1])
+        if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0] || '').length > 1) {
+          asiaAgentsParsed.push({
+            name: row[0]?.trim() || '',
+            ext: row[1]?.trim() || '',
+            spanish: parseInt(row[2]) || 0,
+            english: parseInt(row[3]) || 0,
+            total:   parseInt(row[4]) || 0,
+          })
+        }
+      }
+      const asiaOverview = {
+        id: 'asia', name: 'ASIA', flag: 'cn', hasSpanish: false, noSpanish: true,
+        agents:  asiaAgentsParsed.length,
+        english: asiaAgentsParsed.reduce((s,a) => s+a.english, 0),
+        spanish: 0,
+        total:   asiaAgentsParsed.reduce((s,a) => s+a.total, 0),
+      }
+
+      const allTeams = [...teams, asiaOverview]
+
+      setLiveTeams(allTeams)
+      setLiveAsia(asiaRows)
+      setLastUpdate(new Date())
+      saveSnapshot(allTeams, asiaRows)
+      setSnapshots(loadAllSnapshots())
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -227,36 +318,21 @@ export default function Dashboard() {
     window.location.href = '/'
   }
 
-  const teamRows = (() => {
-    const found = []
-    for (const row of generalData) {
-      const name = row[0]?.toUpperCase().trim()
-      if (TEAMS_ORDER.some(t => name === t)) {
-        if (!found.find(f => f.name.toUpperCase() === name)) {
-          const rawSpanish = row[4]?.trim()
-          found.push({
-            name: row[0]?.trim()||'', agents: parseInt(row[2])||0,
-            english: parseInt(row[3])||0, spanish: parseInt(rawSpanish)||0,
-            total: parseInt(row[5])||0,
-            noSpanish: rawSpanish==='-'||rawSpanish===''||!rawSpanish,
-          })
-        }
-      }
-      if (found.length === 6) break
-    }
-    return found
-  })()
+  // ── Teams sorted by English ───────────────────────────────────
+  const teamsSorted = [...teamsData].sort((a, b) => b.english - a.english)
 
-  const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
-
+  // ── Asia agents for detail view ───────────────────────────────
   const asiaAgents = (() => {
     const agents = []
     for (const row of asiaData) {
-      const name = row[0]?.toUpperCase().trim()
-      if (name?.includes('AGENT LOGGED')||name?.includes('LOGGED IN')) break
+      const name = (row[0] || '').toUpperCase().trim()
+      if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) break
       const ext = parseInt(row[1])
-      if (!isNaN(ext)&&ext>1000&&ext<9999&&row[0]?.length>1) {
-        agents.push({ name: row[0]?.trim()||'', ext: row[1]?.trim()||'', spanish: parseInt(row[2])||0, english: parseInt(row[3])||0, total: parseInt(row[4])||0 })
+      if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0] || '').length > 1) {
+        agents.push({
+          name: row[0]?.trim() || '', ext: row[1]?.trim() || '',
+          spanish: parseInt(row[2]) || 0, english: parseInt(row[3]) || 0, total: parseInt(row[4]) || 0,
+        })
       }
     }
     return agents
@@ -271,20 +347,7 @@ export default function Dashboard() {
   const totalSpanish = asiaAgents.reduce((s,a) => s+a.spanish, 0)
   const totalXfers   = asiaAgents.reduce((s,a) => s+a.total, 0)
 
-  const getFlag = (name) => {
-    const n = name.toUpperCase()
-    if (n.includes('PHIL')) return 'ph'; if (n.includes('VENE')) return 've'
-    if (n.includes('COLOM')) return 'co'; if (n.includes('MEXICO')) return 'mx'
-    if (n.includes('CENTRAL')) return 'hn'; if (n.includes('ASIA')) return 'cn'
-    return 'un'
-  }
-
-  const isMyTeam = (name) => {
-    const n = name.toUpperCase()
-    return (team?.id==='asia'&&n.includes('ASIA'))||(team?.id==='philippines'&&n.includes('PHIL'))||
-           (team?.id==='venezuela'&&n.includes('VENE'))||(team?.id==='colombia'&&n.includes('COLOM'))||
-           (team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))
-  }
+  const isMyTeam = (teamId) => team?.id === teamId
 
   const dateTabs = (() => {
     const dates = new Set(snapshots.map(s => s.date)); dates.add(todayKey())
@@ -329,11 +392,11 @@ export default function Dashboard() {
           {dateTabs.map(date => (
             <button key={date} className={`date-tab ${selectedDate===date?'active':''} ${date===todayKey()?'today':''}`} onClick={()=>setSelectedDate(date)}>
               {formatDateLabel(date)}
-              {date===todayKey()&&<span className="date-tab-live">LIVE</span>}
+              {date===todayKey() && <span className="date-tab-live">LIVE</span>}
             </button>
           ))}
         </div>
-        {!isToday&&activeSnap?.savedAt&&<span className="date-snap-info">Snapshot at {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
+        {!isToday && activeSnap?.savedAt && <span className="date-snap-info">Snapshot at {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
       </div>
 
       <div className="dash-content">
@@ -344,15 +407,15 @@ export default function Dashboard() {
           <div className="fade-in">
             <h2 className="section-title">
               Auto Warranty Garrett — Teams Overview
-              {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}
+              {isToday ? <span className="live-badge">LIVE</span> : <span className="date-badge">{formatDateLabel(selectedDate)}</span>}
             </h2>
             {teamsSorted.length===0 ? <p style={{color:'#6b7280'}}>No data for this date.</p> : (
               <div className="teams-grid">
                 {teamsSorted.map((row, rank) => (
-                  <div key={rank} className={`team-card-dash ${isMyTeam(row.name)?'highlight':''}`}>
+                  <div key={rank} className={`team-card-dash ${isMyTeam(row.id)?'highlight':''}`}>
                     <div className="tc-header">
                       <div className="tc-rank-badge">{getTeamRankBadge(rank)}</div>
-                      <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="tc-flag"/>
+                      <img src={`https://flagcdn.com/w40/${row.flag}.png`} alt="" className="tc-flag"/>
                       <div>
                         <div className="tc-name">{row.name}</div>
                         <div className="tc-agents">{row.agents} agents active</div>
@@ -360,7 +423,7 @@ export default function Dashboard() {
                     </div>
                     <div className="tc-stats">
                       <div className="tc-stat"><span className="tc-val english">{row.english.toLocaleString()}</span><span className="tc-label">English</span></div>
-                      <div className="tc-stat"><span className="tc-val spanish">{row.noSpanish?'—':row.spanish.toLocaleString()}</span><span className="tc-label">Spanish</span></div>
+                      <div className="tc-stat"><span className="tc-val spanish">{row.noSpanish ? '—' : row.spanish.toLocaleString()}</span><span className="tc-label">Spanish</span></div>
                       <div className="tc-stat"><span className="tc-val total">{row.total.toLocaleString()}</span><span className="tc-label">Total</span></div>
                     </div>
                   </div>
@@ -374,7 +437,7 @@ export default function Dashboard() {
             <div className="asia-header-row">
               <h2 className="section-title">
                 Asia — Agent Detail
-                {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}
+                {isToday ? <span className="live-badge">LIVE</span> : <span className="date-badge">{formatDateLabel(selectedDate)}</span>}
               </h2>
               <div className="asia-view-tabs">
                 <button className={`view-tab ${asiaView==='stats'?'active':''}`} onClick={()=>setAsiaView('stats')}>📊 Stats</button>
