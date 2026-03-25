@@ -30,30 +30,29 @@ async function fetchSheet(name) {
 
 const TEAM_CONFIGS = [
   { id:'philippines', name:'PHILIPPINES',    tab:'AW GARRET PHILIPPINES',                 hasSpanish:false, flag:'ph', colEng:2, colSp:null, colTotal:2 },
-  { id:'venezuela',   name:'VENEZUELA',      tab:'AW GARRET VENEZUELA PATRICIA',          hasSpanish:true,  flag:'ve', colEng:3, colSp:4,    colTotal:5 },
+  { id:'venezuela',   name:'VENEZUELA',      tab:'AW GARRET VENEZUELA PATRICIA',          hasSpanish:true,  flag:'ve', colEng:2, colSp:3,    colTotal:4 },
   { id:'colombia',    name:'COLOMBIA',       tab:'AW GARRET COLOMBIA JUAN GARCIA',        hasSpanish:true,  flag:'co', colEng:3, colSp:4,    colTotal:5 },
-  { id:'mexico',      name:'MEXICO BAJA',    tab:'AW GARRET BAJA MX KEVIN',               hasSpanish:false, flag:'mx', colEng:2, colSp:null, colTotal:2 },
+  { id:'mexico',      name:'MEXICO BAJA',    tab:'AW GARRET BAJA MX KEVIN',               hasSpanish:false, flag:'mx', colEng:3, colSp:null, colTotal:3 },
   { id:'central',     name:'CENTRAL AMERICA',tab:'AW GARRET CENTRAL AMERICA - CAROLINA', hasSpanish:true,  flag:'hn', colEng:3, colSp:4,    colTotal:5 },
 ]
 
+function isLoggedRow(cell) {
+  const c = cell.toLowerCase()
+  return c.includes('logged') || c.includes('log in') || c.includes('logee')
+}
+
 function parseTeamSheet(rows, config) {
   const isAfter6pm = new Date().getHours() >= 18
-  const loggedRows = rows.filter(row => {
-    const cell = (row[0] || '').toLowerCase()
-    return cell.includes('logged') || cell.includes('log in')
-  })
+  const loggedRows = rows.filter(row => isLoggedRow(row[0] || ''))
   if (loggedRows.length === 0) return { agents:0, english:0, spanish:0, total:0, noSpanish:!config.hasSpanish }
+
   let english = 0, spanish = 0, total = 0
   for (const row of loggedRows) {
-    if (config.hasSpanish) {
-      english += parseInt(row[config.colEng])   || 0
-      spanish += parseInt(row[config.colSp])    || 0
-      total   += parseInt(row[config.colTotal]) || 0
-    } else {
-      const nums = row.map(c => parseInt(c)).filter(n => !isNaN(n) && n > 0)
-      if (nums.length > 0) { const val = nums[nums.length - 1]; english += val; total += val }
-    }
+    english += parseInt(row[config.colEng])                              || 0
+    spanish += config.colSp != null ? (parseInt(row[config.colSp]) || 0) : 0
+    total   += parseInt(row[config.colTotal])                            || 0
   }
+
   const agentRow = (isAfter6pm && loggedRows.length > 1) ? loggedRows[loggedRows.length - 1] : loggedRows[0]
   const agentMatch = (agentRow[0] || '').match(/(\d+)/)
   const agents = agentMatch ? parseInt(agentMatch[1]) : 0
@@ -187,22 +186,22 @@ export default function Dashboard() {
                   : user?.role === 'leader'      ? 'Team Leader'
                   : 'Member'
 
-  const [liveTeams, setLiveTeams]           = useState([])
-  const [liveAsia, setLiveAsia]             = useState([])
+  const [liveTeams, setLiveTeams]               = useState([])
+  const [liveAsia, setLiveAsia]                 = useState([])
   const [liveAsiaOverview, setLiveAsiaOverview] = useState(null)
-  const [loading, setLoading]               = useState(true)
-  const [lastUpdate, setLastUpdate]         = useState(null)
-  const [activeTab, setActiveTab]           = useState('general')
-  const [asiaView, setAsiaView]             = useState('stats')
-  const [chartMetric, setChartMetric]       = useState('english')
-  const [snapshots, setSnapshots]           = useState([])
-  const [selectedDate, setSelectedDate]     = useState(todayKey())
+  const [loading, setLoading]                   = useState(true)
+  const [lastUpdate, setLastUpdate]             = useState(null)
+  const [activeTab, setActiveTab]               = useState('general')
+  const [asiaView, setAsiaView]                 = useState('stats')
+  const [chartMetric, setChartMetric]           = useState('english')
+  const [snapshots, setSnapshots]               = useState([])
+  const [selectedDate, setSelectedDate]         = useState(todayKey())
 
-  const isToday    = selectedDate === todayKey()
-  const activeSnap = isToday ? null : snapshots.find(s => s.date === selectedDate)
-  const teamsData      = isToday ? liveTeams        : (activeSnap?.teamsData     || [])
-  const asiaData       = isToday ? liveAsia         : (activeSnap?.asiaData      || [])
-  const asiaOverview   = isToday ? liveAsiaOverview : (activeSnap?.asiaOverview  || null)
+  const isToday      = selectedDate === todayKey()
+  const activeSnap   = isToday ? null : snapshots.find(s => s.date === selectedDate)
+  const teamsData    = isToday ? liveTeams        : (activeSnap?.teamsData    || [])
+  const asiaData     = isToday ? liveAsia         : (activeSnap?.asiaData     || [])
+  const asiaOverview = isToday ? liveAsiaOverview : (activeSnap?.asiaOverview || null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -246,17 +245,12 @@ export default function Dashboard() {
       ])
 
       const rawSheets = [philRows, venezRows, colombRows, mexRows, centralRows]
-      const teams = TEAM_CONFIGS.map((tc, i) => {
-        const parsed = parseTeamSheet(rawSheets[i], tc)
-        return { ...tc, ...parsed }
-      })
+      const teams = TEAM_CONFIGS.map((tc, i) => ({
+        ...tc, ...parseTeamSheet(rawSheets[i], tc)
+      }))
 
       // Asia — col C(2)=spanish, col D(3)=english, col E(4)=total
-      const asiaLoggedRows = asiaRows.filter(row => {
-        const cell = (row[0] || '').toLowerCase()
-        return cell.includes('logged') || cell.includes('log in')
-      })
-
+      const asiaLoggedRows = asiaRows.filter(row => isLoggedRow(row[0] || ''))
       let asiaEng = 0, asiaSp = 0, asiaTotal = 0, asiaAgentsCount = 0
       if (asiaLoggedRows.length > 0) {
         for (const row of asiaLoggedRows) {
@@ -266,8 +260,7 @@ export default function Dashboard() {
         }
         const isAfter6pm = new Date().getHours() >= 18
         const agentRow = (isAfter6pm && asiaLoggedRows.length > 1)
-          ? asiaLoggedRows[asiaLoggedRows.length - 1]
-          : asiaLoggedRows[0]
+          ? asiaLoggedRows[asiaLoggedRows.length - 1] : asiaLoggedRows[0]
         const m = (agentRow[0] || '').match(/(\d+)/)
         asiaAgentsCount = m ? parseInt(m[1]) : 0
       }
@@ -301,12 +294,11 @@ export default function Dashboard() {
 
   const teamsSorted = [...teamsData].sort((a, b) => b.english - a.english)
 
-  // Individual agents for table and tops
   const asiaAgents = (() => {
     const agents = []
     for (const row of asiaData) {
       const name = (row[0] || '').toUpperCase().trim()
-      if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) break
+      if (isLoggedRow(row[0] || '')) break
       const ext = parseInt(row[1])
       if (!isNaN(ext) && ext > 1000 && ext < 9999 && (row[0] || '').length > 1) {
         agents.push({
@@ -325,8 +317,6 @@ export default function Dashboard() {
   const atZero      = asiaAgents.filter(a => a.total === 0)
   const top3English = [...asiaAgents].sort((a,b) => b.english-a.english).slice(0,3)
   const top3Spanish = [...asiaAgents].sort((a,b) => b.spanish-a.spanish).slice(0,3)
-
-  // Use overview totals (from LOGGED IN) for summary cards — same as All Teams
   const totalEnglish = asiaOverview?.english || 0
   const totalSpanish = asiaOverview?.spanish || 0
   const totalXfers   = asiaOverview?.total   || 0
