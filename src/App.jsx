@@ -3,6 +3,7 @@ import Landing   from './pages/Landing'
 import Register  from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Admin     from './pages/Admin'
+import SignIn from './pages/SignIn'
 
 function App() {
   const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
@@ -14,6 +15,7 @@ function App() {
         <Route path="/register"  element={user ? <Navigate to="/dashboard" /> : <Register />} />
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
         <Route path="/admin"     element={<Admin />} />
+        <Route path="/signin" element={user ? <Navigate to="/dashboard" /> : <SignIn />} />  
       </Routes>
     </BrowserRouter>
   )
