@@ -30,26 +30,12 @@
   font-weight: 800; font-size: 18px; color: #fff;
   flex-shrink: 0;
 }
-.prog-bar {
-  flex: 1; height: 3px;
-  background: #2a2d38;
-  border-radius: 2px;
-  overflow: hidden;
-}
-.prog-fill {
-  height: 100%;
-  background: #f97316;
-  border-radius: 2px;
-  transition: width 0.4s ease;
-}
+.prog-bar { flex: 1; height: 3px; background: #2a2d38; border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; background: #f97316; border-radius: 2px; transition: width 0.4s ease; }
 .reg-step { font-size: 12px; color: #6b7280; flex-shrink: 0; }
 
-.reg-body h2 {
-  font-family: 'Sora', sans-serif;
-  font-size: 22px; font-weight: 700;
-  margin-bottom: 6px;
-}
-.reg-body p { font-size: 13px; color: #6b7280; margin-bottom: 1.5rem; }
+.reg-body h2 { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.reg-body p  { font-size: 13px; color: #6b7280; margin-bottom: 1.5rem; }
 
 .reg-input {
   width: 100%;
@@ -75,13 +61,20 @@
   color: #f97316;
 }
 
-/* ── ROLE GRID ── */
-.role-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 4px;
+/* ── ROLE WARNING ── */
+.role-warning {
+  font-size: 12px;
+  color: #fbbf24;
+  background: #1a1a0d;
+  border: 0.5px solid #4a4a1a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
 }
+.role-warning strong { color: #f97316; }
+
+/* ── ROLE GRID ── */
+.role-grid { display: flex; flex-direction: column; gap: 10px; }
 .role-card {
   display: flex;
   align-items: center;
@@ -93,41 +86,22 @@
   cursor: pointer;
   transition: all 0.15s;
   user-select: none;
-  position: relative;
 }
-.role-card:hover {
-  border-color: #f97316;
-  background: #141720;
-}
-.role-card.selected {
-  border-color: #f97316;
-  background: #1a1310;
-}
-.role-icon { font-size: 22px; flex-shrink: 0; }
-.role-label {
-  font-size: 15px;
-  font-weight: 500;
-  color: #e5e7eb;
-  flex: 1;
-}
+.role-card:hover { border-color: #f97316; background: #141720; }
+.role-card.selected { border-color: #f97316; background: #1a1310; }
+.role-icon  { font-size: 22px; flex-shrink: 0; }
+.role-label { font-size: 15px; font-weight: 500; color: #e5e7eb; flex: 1; }
 .role-card.selected .role-label { color: #f97316; }
 .role-check {
   width: 22px; height: 22px;
   background: #f97316;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
+  color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0;
 }
 
 /* ── TEAM GRID ── */
-.team-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
+.team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .team-card {
   background: #0d0f14;
   border: 0.5px solid #2a2d38;
@@ -140,8 +114,8 @@
 }
 .team-card:hover { border-color: #f97316; }
 .team-card.selected { border-color: #f97316; background: #1a1310; }
-.t-flag { width: 36px; height: auto; border-radius: 3px; margin-bottom: 8px; }
-.t-name { font-size: 13px; font-weight: 600; color: #e5e7eb; margin-bottom: 2px; }
+.t-flag  { width: 36px; height: auto; border-radius: 3px; margin-bottom: 8px; }
+.t-name  { font-size: 13px; font-weight: 600; color: #e5e7eb; margin-bottom: 2px; }
 .t-count { font-size: 11px; color: #6b7280; }
 .team-card.selected .t-name { color: #f97316; }
 
@@ -155,18 +129,9 @@
   padding: 10px 14px;
 }
 
-.reg-error {
-  margin-top: 1rem;
-  font-size: 13px;
-  color: #f97316;
-  text-align: center;
-}
+.reg-error { margin-top: 1rem; font-size: 13px; color: #f97316; text-align: center; }
 
-.reg-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 1.5rem;
-}
+.reg-actions { display: flex; gap: 10px; margin-top: 1.5rem; }
 .btn-back {
   padding: 12px 20px;
   background: transparent;
@@ -179,15 +144,12 @@
 }
 .btn-back:hover { border-color: #f97316; color: #f97316; }
 .btn-next {
-  flex: 1;
-  padding: 12px;
+  flex: 1; padding: 12px;
   background: #f97316;
-  border: none;
-  border-radius: 10px;
+  border: none; border-radius: 10px;
   color: #fff;
   font-family: 'Sora', sans-serif;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 600; font-size: 14px;
   cursor: pointer;
   transition: background 0.15s, transform 0.1s;
 }

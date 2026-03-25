@@ -39,30 +39,24 @@ export default function Landing() {
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
     const particles = []
-
     const onMove = (e) => {
       for (let i = 0; i < 3; i++) {
         particles.push({
           x: e.clientX + (Math.random() - 0.5) * 20,
           y: e.clientY + (Math.random() - 0.5) * 20,
-          size: Math.random() * 3 + 1,
-          life: 1,
+          size: Math.random() * 3 + 1, life: 1,
           vx: (Math.random() - 0.5) * 1.5,
           vy: (Math.random() - 0.5) * 1.5 - 0.5,
         })
       }
     }
-
     window.addEventListener('mousemove', onMove)
-
     let raf
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i]
-        p.life -= 0.03
-        p.x += p.vx
-        p.y += p.vy
+        p.life -= 0.03; p.x += p.vx; p.y += p.vy
         if (p.life <= 0) { particles.splice(i, 1); continue }
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
@@ -72,13 +66,8 @@ export default function Landing() {
       raf = requestAnimationFrame(draw)
     }
     draw()
-
-    const onResize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-    }
+    const onResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
     window.addEventListener('resize', onResize)
-
     return () => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('resize', onResize)
@@ -115,9 +104,14 @@ export default function Landing() {
           <div className="stat"><strong>6</strong><span>Teams</span></div>
         </div>
 
-  <button className="google-btn" onClick={() => navigate('/register')}>
-  Iniciar sesión →
-</button>
+        <div className="landing-buttons">
+          <button className="btn-register" onClick={() => navigate('/register')}>
+            Registrarse
+          </button>
+          <button className="btn-signin" onClick={() => navigate('/signin')}>
+            Iniciar sesión
+          </button>
+        </div>
 
         <p className="landing-note">For Supervisors, QA & Team Leaders only</p>
       </div>

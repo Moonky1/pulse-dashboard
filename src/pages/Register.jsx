@@ -24,10 +24,14 @@ export default function Register() {
 
   const saveToSheets = async (data) => {
     try {
+      const formData = new URLSearchParams()
+      formData.append('name', data.name)
+      formData.append('team', data.team)
+      formData.append('role', data.role)
       await fetch(SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        method: 'POST',
+        mode: 'no-cors',
+        body: formData,
       })
     } catch(e) { console.error(e) }
   }
@@ -88,17 +92,21 @@ export default function Register() {
           <div className="reg-body">
             <h2>Select your role</h2>
             <p>Choose your position in the team</p>
+            <div className="role-warning">
+              ⚠️ Your role <strong>cannot be changed</strong> later. Only an admin can modify it.
+            </div>
             <div className="role-grid">
               {ROLES.map(r => (
                 <div
                   key={r.id}
                   className={`role-card${role === r.id ? ' selected' : ''}`}
                   onClick={() => { setRole(r.id); setError('') }}
-                  style={{ cursor: 'pointer' }}
                 >
                   <span className="role-icon">{r.icon}</span>
                   <span className="role-label">{r.label}</span>
-                  {role === r.id && <span className="role-check">✓</span>}
+                  {role === r.id && (
+                    <span className="role-check">✓</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -108,14 +116,13 @@ export default function Register() {
         {step === 2 && (
           <div className="reg-body">
             <h2>Select your team</h2>
-            <p>This cannot be changed later</p>
+            <p>Your team will be highlighted in the dashboard</p>
             <div className="team-grid">
               {APP_CONFIG.teams.map(t => (
                 <div
                   key={t.id}
                   className={`team-card${team === t.id ? ' selected' : ''}`}
                   onClick={() => { setTeam(t.id); setError('') }}
-                  style={{ cursor: 'pointer' }}
                 >
                   <img className="t-flag" src={`https://flagcdn.com/w40/${t.code}.png`} alt={t.name} />
                   <div className="t-name">{t.name}</div>
