@@ -373,8 +373,9 @@ export default function Dashboard() {
 <div className="summary-grid">
   <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
   <div className="sum-card orange"><div className="sum-val">{asiaAgents.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-  <div className="sum-card teal"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
-  <div className="sum-card blue"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">EN: {totalEnglish} · SP: {totalSpanish} · Total: {totalXfers}</div></div>
+  <div className="sum-card purple"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
+  <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
+  <div className="sum-card gold"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
 </div>
             {asiaView==='stats' ? (
               <>
