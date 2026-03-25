@@ -3,7 +3,7 @@ import { APP_CONFIG } from '../config'
 import { validateToken } from '../utils/token'
 import './Register.css'
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxMYoW8aLdaXUOOuRDkTgU38XTKJj5CMr0fiy7Z3AFCtasJKbzy0VLuc5RWcDC5OCZZ/exec'
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxfy-YHAlpYBPc4dx-tvCe3GBglkate8r6-4ymIyEaK7lCs7kkU-1iBGgse0c-SxZEw/exec'
 
 const ROLES = [
   { id: 'supervisor', label: 'Supervisor',  icon: '🧑‍💼' },
