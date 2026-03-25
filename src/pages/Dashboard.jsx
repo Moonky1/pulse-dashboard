@@ -153,7 +153,6 @@ export default function Dashboard() {
   const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
   const team = APP_CONFIG.teams.find(t => t.id === user?.team)
 
-  // ── Rol desde localStorage ──
   const roleLabel = user?.role === 'supervisor' ? 'Supervisor'
                   : user?.role === 'qa'         ? 'QA'
                   : user?.role === 'leader'      ? 'Team Leader'
@@ -222,7 +221,6 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [])
 
-  // ── Logout → fuerza ir al inicio ──
   const logout = () => {
     localStorage.removeItem('pulse_user')
     window.location.href = '/'
@@ -248,7 +246,8 @@ export default function Dashboard() {
     return found
   })()
 
-  const teamsSorted = [...teamRows].sort((a,b) => b.english - a.english)
+  // ── Sort teams by English rank — so grid shows 1,2,3 / 4,5,6 ──
+  const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
 
   const asiaAgents = (() => {
     const agents = []
@@ -311,7 +310,6 @@ export default function Dashboard() {
             <div className="nav-avatar">{user?.name?.[0]?.toUpperCase()}</div>
             <div className="nav-info">
               <span className="nav-name">{user?.name}</span>
-              {/* Rol dinámico desde localStorage */}
               <span className="nav-role">{team?.name} · {roleLabel}</span>
             </div>
           </div>
@@ -320,7 +318,6 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* Tab dice "Asia" no "Asia Detail" */}
       <div className="dash-tabs">
         <button className={`dash-tab ${activeTab==='general'?'active':''}`} onClick={()=>setActiveTab('general')}>All Teams</button>
         <button className={`dash-tab ${activeTab==='asia'?'active':''}`} onClick={()=>setActiveTab('asia')}>🌏 Asia</button>
@@ -349,25 +346,26 @@ export default function Dashboard() {
               Auto Warranty Garrett — Teams Overview
               {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}
             </h2>
-            {teamRows.length===0 ? <p style={{color:'#6b7280'}}>No data for this date.</p> : (
+            {teamsSorted.length===0 ? <p style={{color:'#6b7280'}}>No data for this date.</p> : (
               <div className="teams-grid">
-                {teamRows.map((row,i) => {
-                  const rank = teamsSorted.findIndex(t => t.name===row.name)
-                  return (
-                    <div key={i} className={`team-card-dash ${isMyTeam(row.name)?'highlight':''}`}>
-                      <div className="tc-header">
-                        <div className="tc-rank-badge">{getTeamRankBadge(rank)}</div>
-                        <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="tc-flag"/>
-                        <div><div className="tc-name">{row.name}</div><div className="tc-agents">{row.agents} agents active</div></div>
-                      </div>
-                      <div className="tc-stats">
-                        <div className="tc-stat"><span className="tc-val english">{row.english.toLocaleString()}</span><span className="tc-label">English</span></div>
-                        <div className="tc-stat"><span className="tc-val spanish">{row.noSpanish?'—':row.spanish.toLocaleString()}</span><span className="tc-label">Spanish</span></div>
-                        <div className="tc-stat"><span className="tc-val total">{row.total.toLocaleString()}</span><span className="tc-label">Total</span></div>
+                {/* Now iterating teamsSorted so grid shows #1,#2,#3 top row, #4,#5,#6 bottom */}
+                {teamsSorted.map((row, rank) => (
+                  <div key={rank} className={`team-card-dash ${isMyTeam(row.name)?'highlight':''}`}>
+                    <div className="tc-header">
+                      <div className="tc-rank-badge">{getTeamRankBadge(rank)}</div>
+                      <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="tc-flag"/>
+                      <div>
+                        <div className="tc-name">{row.name}</div>
+                        <div className="tc-agents">{row.agents} agents active</div>
                       </div>
                     </div>
-                  )
-                })}
+                    <div className="tc-stats">
+                      <div className="tc-stat"><span className="tc-val english">{row.english.toLocaleString()}</span><span className="tc-label">English</span></div>
+                      <div className="tc-stat"><span className="tc-val spanish">{row.noSpanish?'—':row.spanish.toLocaleString()}</span><span className="tc-label">Spanish</span></div>
+                      <div className="tc-stat"><span className="tc-val total">{row.total.toLocaleString()}</span><span className="tc-label">Total</span></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -411,7 +409,6 @@ export default function Dashboard() {
                     }
                   </div>
                 </div>
-
                 <div className="agent-table-wrap">
                   <table className="agent-table">
                     <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th><th>Spanish</th><th>Total</th><th>Goal</th></tr></thead>
