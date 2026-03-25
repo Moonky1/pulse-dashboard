@@ -29,7 +29,8 @@ async function fetchSheet(name) {
 }
 
 function isLoggedRow(cell) {
-  return /^\d/.test((cell || '').trim()) && (cell || '').toLowerCase().includes('agent')
+  const c = (cell || '').trim().toLowerCase()
+  return c.includes('agent') || c.includes('total transfer') || c.includes('logee') || c.includes('logged')
 }
 
 const TEAM_CONFIGS = [
