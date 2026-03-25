@@ -40,10 +40,11 @@ const RANGES = [
 ]
 
 const E = {
-  goal:     '/emojis/goal.webp',
-  goal2:    '/emojis/goal2.webp',
-  goal3:    '/emojis/goal3.webp',
-  goal4:    '/emojis/goal4.webp',
+  goal:     '/emojis/goal.webp',    // títulos Top
+  goal1:    '/emojis/goal1.webp',   // #1 team rank
+  goal2:    '/emojis/goal2.webp',   // no usado
+  goal3:    '/emojis/goal3.webp',   // #2 team rank
+  goal4:    '/emojis/goal4.webp',   // #3 team rank
   medal1:   '/emojis/medal1.webp',
   medal2:   '/emojis/medal2.webp',
   medal3:   '/emojis/web3.webp',
@@ -58,7 +59,7 @@ const Img = ({ src, size = 18 }) => (
 const MEDALS = [E.medal1, E.medal2, E.medal3]
 
 const getTeamRankBadge = (rank) => {
-  if (rank === 0) return <Img src={E.goal}  size={26} />
+  if (rank === 0) return <Img src={E.goal1} size={26} />
   if (rank === 1) return <Img src={E.goal3} size={26} />
   if (rank === 2) return <Img src={E.goal4} size={26} />
   return <span style={{ color: '#6b7280', fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 14 }}>#{rank + 1}</span>
@@ -246,7 +247,6 @@ export default function Dashboard() {
     return found
   })()
 
-  // ── Sort teams by English rank — so grid shows 1,2,3 / 4,5,6 ──
   const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
 
   const asiaAgents = (() => {
@@ -348,7 +348,6 @@ export default function Dashboard() {
             </h2>
             {teamsSorted.length===0 ? <p style={{color:'#6b7280'}}>No data for this date.</p> : (
               <div className="teams-grid">
-                {/* Now iterating teamsSorted so grid shows #1,#2,#3 top row, #4,#5,#6 bottom */}
                 {teamsSorted.map((row, rank) => (
                   <div key={rank} className={`team-card-dash ${isMyTeam(row.name)?'highlight':''}`}>
                     <div className="tc-header">
@@ -394,11 +393,11 @@ export default function Dashboard() {
               <>
                 <div className="tops-row">
                   <div className="top-block">
-                    <h3 className="top-title"><Img src={E.goal2} size={16}/> Top English</h3>
+                    <h3 className="top-title"><Img src={E.goal} size={16}/> Top English</h3>
                     {top3English.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score english">{a.english}</span></div>))}
                   </div>
                   <div className="top-block">
-                    <h3 className="top-title"><Img src={E.goal2} size={16}/> Top Total (EN+SP)</h3>
+                    <h3 className="top-title"><Img src={E.goal} size={16}/> Top Total (EN+SP)</h3>
                     {top3Total.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score total">{a.total}</span></div>))}
                   </div>
                   <div className="top-block red-block">
@@ -440,7 +439,7 @@ export default function Dashboard() {
                 </div>
                 <BarChart agents={asiaAgents} metric={chartMetric}/>
                 <div className="chart-goal-row">
-                  <div className="goal-stat green-stat"><div className="goal-stat-val">{hitGoal.length}</div><div className="goal-stat-label"><Img src={E.goal2} size={14}/> Reached goal (20+ EN)</div></div>
+                  <div className="goal-stat green-stat"><div className="goal-stat-val">{hitGoal.length}</div><div className="goal-stat-label"><Img src={E.goal} size={14}/> Reached goal (20+ EN)</div></div>
                   <div className="goal-stat yellow-stat"><div className="goal-stat-val">{asiaAgents.filter(a=>a.english>=15&&a.english<20).length}</div><div className="goal-stat-label">Almost there (15–19 EN)</div></div>
                   <div className="goal-stat red-stat"><div className="goal-stat-val">{atZero.length}</div><div className="goal-stat-label"><Img src={E.zero} size={14}/> At zero</div></div>
                 </div>
