@@ -40,12 +40,71 @@ const RANGES = [
   { label: '20+',   min: 20, max: 9999, color: '#22c55e' },
 ]
 
+// ── Emoji paths ───────────────────────────────────────────────────
+const E = {
+  goal:     '/emojis/goal.webp',
+  goal2:    '/emojis/goal2.webp',
+  goal3:    '/emojis/goal3.webp',
+  goal4:    '/emojis/goal4.webp',
+  medal1:   '/emojis/medal1.webp',
+  medal2:   '/emojis/medal2.webp',
+  medal3:   '/emojis/web3.webp',
+  zero:     '/emojis/zero.webp',
+  firework: '/emojis/firework.webp',
+}
+
 const Img = ({ src, size = 18 }) => (
   <img src={src} width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle', objectFit: 'contain' }} />
 )
 
-const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
+// Top 3 medals for Asia tops
+const MEDALS = [E.medal1, E.medal2, E.medal3]
 
+// Team rank: #1=goal.webp, #2=goal3.webp, #3=goal4.webp, rest=#N text
+const getTeamRankBadge = (rank) => {
+  if (rank === 0) return <Img src={E.goal}  size={26} />
+  if (rank === 1) return <Img src={E.goal3} size={26} />
+  if (rank === 2) return <Img src={E.goal4} size={26} />
+  return <span style={{ color: '#6b7280', fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 14 }}>#{rank + 1}</span>
+}
+
+// ── Snapshot helpers ──────────────────────────────────────────────
+const todayKey = () => new Date().toISOString().slice(0, 10)
+
+const saveSnapshot = (generalData, asiaData) => {
+  const key = `pulse_snap_${todayKey()}`
+  try {
+    localStorage.setItem(key, JSON.stringify({ generalData, asiaData, savedAt: new Date().toISOString() }))
+  } catch(e) {}
+}
+
+const loadAllSnapshots = () => {
+  const snaps = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (k?.startsWith('pulse_snap_')) {
+      try {
+        const date = k.replace('pulse_snap_', '')
+        const data = JSON.parse(localStorage.getItem(k))
+        snaps.push({ date, ...data })
+      } catch(e) {}
+    }
+  }
+  return snaps.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+const formatDateLabel = (dateStr) => {
+  const today = todayKey()
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yKey = yesterday.toISOString().slice(0, 10)
+  if (dateStr === today) return 'Today'
+  if (dateStr === yKey) return 'Yesterday'
+  const [y, m, d] = dateStr.split('-')
+  return `${d}/${m}/${y}`
+}
+
+// ── Bar Chart ─────────────────────────────────────────────────────
 function BarChart({ agents, metric }) {
   const [tooltip, setTooltip] = useState(null)
 
@@ -62,8 +121,6 @@ function BarChart({ agents, metric }) {
     setTooltip({ bucket, x: rect.left + rect.width / 2, y: rect.top })
   }
 
-  const handleMouseLeave = () => setTooltip(null)
-
   return (
     <div className="chart-wrap">
       <div className="chart-bars">
@@ -72,14 +129,11 @@ function BarChart({ agents, metric }) {
             key={i}
             className={`chart-col ${b.count > 0 ? 'chart-col-hoverable' : ''}`}
             onMouseEnter={(e) => handleMouseEnter(e, b)}
-            onMouseLeave={handleMouseLeave}
+            onMouseLeave={() => setTooltip(null)}
           >
             <div className="bar-count">{b.count}</div>
             <div className="bar-outer">
-              <div
-                className="bar-inner"
-                style={{ height: `${(b.count / maxCount) * 100}%`, background: b.color }}
-              />
+              <div className="bar-inner" style={{ height: `${(b.count / maxCount) * 100}%`, background: b.color }} />
             </div>
             <div className="bar-label">{b.label}</div>
           </div>
@@ -87,15 +141,10 @@ function BarChart({ agents, metric }) {
       </div>
 
       {tooltip && (
-        <div
-          className="bar-tooltip"
-          style={{ left: tooltip.x, top: tooltip.y }}
-        >
+        <div className="bar-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
           <div className="bar-tooltip-header" style={{ color: tooltip.bucket.color }}>
             {tooltip.bucket.label} xfers
-            <span className="bar-tooltip-count">
-              {tooltip.bucket.count} agent{tooltip.bucket.count !== 1 ? 's' : ''}
-            </span>
+            <span className="bar-tooltip-count">{tooltip.bucket.count} agent{tooltip.bucket.count !== 1 ? 's' : ''}</span>
           </div>
           <div className="bar-tooltip-agents">
             {tooltip.bucket.agentsInRange
@@ -103,9 +152,7 @@ function BarChart({ agents, metric }) {
               .map((a, i) => (
                 <div key={i} className="bar-tooltip-agent">
                   <span className="bar-tooltip-name">{a.name}</span>
-                  <span className="bar-tooltip-val" style={{ color: tooltip.bucket.color }}>
-                    {a[metric]}
-                  </span>
+                  <span className="bar-tooltip-val" style={{ color: tooltip.bucket.color }}>{a[metric]}</span>
                 </div>
               ))}
           </div>
@@ -124,20 +171,29 @@ function BarChart({ agents, metric }) {
   )
 }
 
+// ── Main Dashboard ────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate  = useNavigate()
   const canvasRef = useRef(null)
   const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
   const team = APP_CONFIG.teams.find(t => t.id === user?.team)
 
-  const [generalData, setGeneralData] = useState([])
-  const [asiaData, setAsiaData]       = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [lastUpdate, setLastUpdate]   = useState(null)
-  const [activeTab, setActiveTab]     = useState('general')
-  const [asiaView, setAsiaView]       = useState('stats')
-  const [chartMetric, setChartMetric] = useState('english')
+  const [liveGeneral, setLiveGeneral]   = useState([])
+  const [liveAsia, setLiveAsia]         = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [lastUpdate, setLastUpdate]     = useState(null)
+  const [activeTab, setActiveTab]       = useState('general')
+  const [asiaView, setAsiaView]         = useState('stats')
+  const [chartMetric, setChartMetric]   = useState('english')
+  const [snapshots, setSnapshots]       = useState([])
+  const [selectedDate, setSelectedDate] = useState(todayKey())
 
+  const isToday     = selectedDate === todayKey()
+  const activeSnap  = isToday ? null : snapshots.find(s => s.date === selectedDate)
+  const generalData = isToday ? liveGeneral : (activeSnap?.generalData || [])
+  const asiaData    = isToday ? liveAsia    : (activeSnap?.asiaData    || [])
+
+  // Particles
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -145,29 +201,24 @@ export default function Dashboard() {
     canvas.width  = window.innerWidth
     canvas.height = window.innerHeight
     const particles = []
-
     const onMove = (e) => {
       for (let i = 0; i < 3; i++) {
         particles.push({
           x: e.clientX + (Math.random() - 0.5) * 20,
           y: e.clientY + (Math.random() - 0.5) * 20,
-          size: Math.random() * 3 + 1,
-          life: 1,
+          size: Math.random() * 3 + 1, life: 1,
           vx: (Math.random() - 0.5) * 1.5,
           vy: (Math.random() - 0.5) * 1.5 - 0.5,
         })
       }
     }
     window.addEventListener('mousemove', onMove)
-
     let raf
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i]
-        p.life -= 0.03
-        p.x += p.vx
-        p.y += p.vy
+        p.life -= 0.03; p.x += p.vx; p.y += p.vy
         if (p.life <= 0) { particles.splice(i, 1); continue }
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
@@ -177,11 +228,7 @@ export default function Dashboard() {
       raf = requestAnimationFrame(draw)
     }
     draw()
-
-    const onResize = () => {
-      canvas.width  = window.innerWidth
-      canvas.height = window.innerHeight
-    }
+    const onResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
     window.addEventListener('resize', onResize)
     return () => {
       window.removeEventListener('mousemove', onMove)
@@ -196,9 +243,11 @@ export default function Dashboard() {
         fetchSheet("WELL'S REPORT"),
         fetchSheet('AW GARRET ASIA LEXNER'),
       ])
-      setGeneralData(general)
-      setAsiaData(asia)
+      setLiveGeneral(general)
+      setLiveAsia(asia)
       setLastUpdate(new Date())
+      saveSnapshot(general, asia)
+      setSnapshots(loadAllSnapshots())
     } catch (e) {
       console.error('Error:', e)
     } finally {
@@ -207,15 +256,13 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    setSnapshots(loadAllSnapshots())
     loadData()
     const interval = setInterval(loadData, 60000)
     return () => clearInterval(interval)
   }, [])
 
-  const logout = () => {
-    localStorage.removeItem('pulse_user')
-    navigate('/')
-  }
+  const logout = () => { localStorage.removeItem('pulse_user'); navigate('/') }
 
   const teamRows = (() => {
     const found = []
@@ -290,35 +337,25 @@ export default function Dashboard() {
            (team?.id === 'central'     && n.includes('CENTRAL'))
   }
 
-  const getRankStyle = (rank) => {
-    if (rank === 0) return { color: '#FFD700', fontWeight: 700 }
-    if (rank === 1) return { color: '#C0C0C0', fontWeight: 700 }
-    if (rank === 2) return { color: '#CD7F32', fontWeight: 700 }
-    return { color: '#6b7280' }
-  }
-
-  const getRankLabel = (rank) => {
-    if (rank < 3) return <Img src={MEDALS[rank]} size={20} />
-    return `#${rank + 1}`
-  }
+  const dateTabs = (() => {
+    const dates = new Set(snapshots.map(s => s.date))
+    dates.add(todayKey())
+    return [...dates].sort((a, b) => b.localeCompare(a))
+  })()
 
   return (
     <div className="dash-root">
       <canvas ref={canvasRef} className="dash-trail-canvas" />
 
+      {/* ── NAV ── */}
       <nav className="dash-nav">
         <div className="dash-nav-left">
           <div className="nav-logo-wrap">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="32" height="32" rx="9" fill="#f97316" />
-              <polyline
-                points="4,16 9,16 11,9 14,23 17,12 20,16 28,16"
-                stroke="white"
-                strokeWidth="2.2"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16"
+                stroke="white" strokeWidth="2.2" fill="none"
+                strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <span className="nav-appname">Pulse</span>
@@ -340,6 +377,7 @@ export default function Dashboard() {
         </div>
       </nav>
 
+      {/* ── MAIN TABS ── */}
       <div className="dash-tabs">
         <button className={`dash-tab ${activeTab==='general'?'active':''}`} onClick={()=>setActiveTab('general')}>
           All Teams
@@ -349,21 +387,49 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {/* ── DATE TABS ── */}
+      <div className="date-tabs-bar">
+        <span className="date-tabs-label">📅</span>
+        <div className="date-tabs">
+          {dateTabs.map(date => (
+            <button
+              key={date}
+              className={`date-tab ${selectedDate === date ? 'active' : ''} ${date === todayKey() ? 'today' : ''}`}
+              onClick={() => setSelectedDate(date)}
+            >
+              {formatDateLabel(date)}
+              {date === todayKey() && <span className="date-tab-live">LIVE</span>}
+            </button>
+          ))}
+        </div>
+        {!isToday && activeSnap?.savedAt && (
+          <span className="date-snap-info">
+            Snapshot at {new Date(activeSnap.savedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+          </span>
+        )}
+      </div>
+
+      {/* ── CONTENT ── */}
       <div className="dash-content">
         {loading ? (
           <div className="dash-loading">
             <div className="dash-spinner" />
             <p>Loading live data...</p>
           </div>
+
         ) : activeTab === 'general' ? (
 
+          /* ══ ALL TEAMS ══ */
           <div className="fade-in">
             <h2 className="section-title">
               Auto Warranty Garrett — Teams Overview
-              <span className="live-badge">LIVE</span>
+              {isToday
+                ? <span className="live-badge">LIVE</span>
+                : <span className="date-badge">{formatDateLabel(selectedDate)}</span>
+              }
             </h2>
             {teamRows.length === 0 ? (
-              <p style={{color:'#6b7280'}}>No data found.</p>
+              <p style={{color:'#6b7280'}}>No data for this date.</p>
             ) : (
               <div className="teams-grid">
                 {teamRows.map((row, i) => {
@@ -371,8 +437,8 @@ export default function Dashboard() {
                   return (
                     <div key={i} className={`team-card-dash ${isMyTeam(row.name) ? 'highlight' : ''}`}>
                       <div className="tc-header">
-                        <div className="tc-rank-badge" style={getRankStyle(rank)}>
-                          {getRankLabel(rank)}
+                        <div className="tc-rank-badge">
+                          {getTeamRankBadge(rank)}
                         </div>
                         <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="tc-flag" />
                         <div>
@@ -386,9 +452,7 @@ export default function Dashboard() {
                           <span className="tc-label">English</span>
                         </div>
                         <div className="tc-stat">
-                          <span className="tc-val spanish">
-                            {row.noSpanish ? '—' : row.spanish.toLocaleString()}
-                          </span>
+                          <span className="tc-val spanish">{row.noSpanish ? '—' : row.spanish.toLocaleString()}</span>
                           <span className="tc-label">Spanish</span>
                         </div>
                         <div className="tc-stat">
@@ -405,10 +469,15 @@ export default function Dashboard() {
 
         ) : (
 
+          /* ══ ASIA DETAIL ══ */
           <div className="fade-in">
             <div className="asia-header-row">
               <h2 className="section-title">
-                Asia — Agent Detail <span className="live-badge">LIVE</span>
+                Asia — Agent Detail
+                {isToday
+                  ? <span className="live-badge">LIVE</span>
+                  : <span className="date-badge">{formatDateLabel(selectedDate)}</span>
+                }
               </h2>
               <div className="asia-view-tabs">
                 <button className={`view-tab ${asiaView==='stats'?'active':''}`} onClick={()=>setAsiaView('stats')}>
@@ -420,6 +489,7 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Summary cards */}
             <div className="summary-grid">
               <div className="sum-card green">
                 <div className="sum-val">{hitGoal.length}</div>
@@ -442,9 +512,10 @@ export default function Dashboard() {
             {asiaView === 'stats' ? (
               <>
                 <div className="tops-row">
+                  {/* Top English — medal emojis, goal2 in title */}
                   <div className="top-block">
                     <h3 className="top-title">
-                      <Img src="/emojis/goal.webp" size={16} /> Top English
+                      <Img src={E.goal2} size={16} /> Top English
                     </h3>
                     {top3English.map((a,i) => (
                       <div key={i} className="top-item">
@@ -455,9 +526,11 @@ export default function Dashboard() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Top Total — medal emojis, goal2 in title */}
                   <div className="top-block">
                     <h3 className="top-title">
-                      <Img src="/emojis/goal.webp" size={16} /> Top Total (EN+SP)
+                      <Img src={E.goal2} size={16} /> Top Total (EN+SP)
                     </h3>
                     {top3Total.map((a,i) => (
                       <div key={i} className="top-item">
@@ -468,14 +541,16 @@ export default function Dashboard() {
                       </div>
                     ))}
                   </div>
+
+                  {/* At Zero — zero emoji in title, firework if none */}
                   <div className="top-block red-block">
                     <h3 className="top-title">
-                      <Img src="/emojis/zero.webp" size={16} /> At Zero
+                      <Img src={E.zero} size={16} /> At Zero
                     </h3>
                     {atZero.length === 0
                       ? (
                         <p className="top-empty">
-                          <Img src="/emojis/firework.webp" size={16} /> Everyone has transfers!
+                          <Img src={E.firework} size={16} /> Everyone has transfers!
                         </p>
                       )
                       : atZero.slice(0,3).map((a,i) => (
@@ -489,56 +564,53 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Agent table — ranks as #1 #2 #3 text */}
                 <div className="agent-table-wrap">
                   <table className="agent-table">
                     <thead>
                       <tr>
-                        <th>#</th>
-                        <th>Agent</th>
-                        <th>Ext</th>
-                        <th>English</th>
-                        <th>Spanish</th>
-                        <th>Total</th>
-                        <th>Goal</th>
+                        <th>#</th><th>Agent</th><th>Ext</th>
+                        <th>English</th><th>Spanish</th><th>Total</th><th>Goal</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {[...asiaAgents]
-                        .sort((a,b) => b.english - a.english)
-                        .map((a,i) => (
-                        <tr key={i} className={a.total===0 ? 'row-zero' : a.english>=goal ? 'row-goal' : ''}>
-                          <td style={getRankStyle(i)}>{getRankLabel(i)}</td>
-                          <td className="agent-name">{a.name}</td>
-                          <td className="agent-ext">{a.ext}</td>
-                          <td className="val-english">{a.english}</td>
-                          <td className="val-spanish">{a.spanish}</td>
-                          <td className="val-total">{a.total}</td>
-                          <td>
-                            {a.english >= goal
-                              ? <span className="badge-goal">✓ Goal</span>
-                              : <span className="badge-pending">{goal - a.english} left</span>
-                            }
-                          </td>
-                        </tr>
-                      ))}
+                      {[...asiaAgents].sort((a,b) => b.english - a.english).map((a,i) => {
+                        const rankStyle =
+                          i === 0 ? { color: '#FFD700', fontWeight: 700 } :
+                          i === 1 ? { color: '#C0C0C0', fontWeight: 700 } :
+                          i === 2 ? { color: '#CD7F32', fontWeight: 700 } :
+                          { color: '#6b7280' }
+                        return (
+                          <tr key={i} className={a.total===0 ? 'row-zero' : a.english>=goal ? 'row-goal' : ''}>
+                            <td style={rankStyle}>#{i + 1}</td>
+                            <td className="agent-name">{a.name}</td>
+                            <td className="agent-ext">{a.ext}</td>
+                            <td className="val-english">{a.english}</td>
+                            <td className="val-spanish">{a.spanish}</td>
+                            <td className="val-total">{a.total}</td>
+                            <td>
+                              {a.english >= goal
+                                ? <span className="badge-goal">✓ Goal</span>
+                                : <span className="badge-pending">{goal - a.english} left</span>
+                              }
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
               </>
+
             ) : (
+              /* Charts view */
               <div className="charts-section">
                 <div className="chart-controls">
                   <span className="chart-label">Distribution by transfers:</span>
                   <div className="metric-tabs">
-                    <button className={`metric-tab ${chartMetric==='english'?'active':''}`} onClick={()=>setChartMetric('english')}>
-                      English
-                    </button>
-                    <button className={`metric-tab ${chartMetric==='spanish'?'active':''}`} onClick={()=>setChartMetric('spanish')}>
-                      Spanish
-                    </button>
-                    <button className={`metric-tab ${chartMetric==='total'?'active':''}`} onClick={()=>setChartMetric('total')}>
-                      Total
-                    </button>
+                    <button className={`metric-tab ${chartMetric==='english'?'active':''}`} onClick={()=>setChartMetric('english')}>English</button>
+                    <button className={`metric-tab ${chartMetric==='spanish'?'active':''}`} onClick={()=>setChartMetric('spanish')}>Spanish</button>
+                    <button className={`metric-tab ${chartMetric==='total'?'active':''}`} onClick={()=>setChartMetric('total')}>Total</button>
                   </div>
                 </div>
 
@@ -548,7 +620,7 @@ export default function Dashboard() {
                   <div className="goal-stat green-stat">
                     <div className="goal-stat-val">{hitGoal.length}</div>
                     <div className="goal-stat-label">
-                      <Img src="/emojis/goal.webp" size={14} /> Reached goal (20+ EN)
+                      <Img src={E.goal2} size={14} /> Reached goal (20+ EN)
                     </div>
                   </div>
                   <div className="goal-stat yellow-stat">
@@ -558,7 +630,7 @@ export default function Dashboard() {
                   <div className="goal-stat red-stat">
                     <div className="goal-stat-val">{atZero.length}</div>
                     <div className="goal-stat-label">
-                      <Img src="/emojis/zero.webp" size={14} /> At zero
+                      <Img src={E.zero} size={14} /> At zero
                     </div>
                   </div>
                 </div>
