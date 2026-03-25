@@ -269,3 +269,5 @@
 
 /* ── MISC ── */
 .dash-trail-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
+.sum-card.teal { background: #0d1a1a; border-color: #1a4a4a; }
+.sum-card.teal .sum-val { color: #2dd4bf; }

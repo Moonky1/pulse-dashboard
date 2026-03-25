@@ -370,12 +370,12 @@ export default function Dashboard() {
                 <button className={`view-tab ${asiaView==='charts'?'active':''}`} onClick={()=>setAsiaView('charts')}>📈 Charts</button>
               </div>
             </div>
-            <div className="summary-grid">
-              <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
-              <div className="sum-card orange"><div className="sum-val">{asiaAgents.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-              <div className="sum-card red"><div className="sum-val">{atZero.length}</div><div className="sum-label">At Zero</div></div>
-              <div className="sum-card blue"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">EN: {totalEnglish} · SP: {totalSpanish} · Total: {totalXfers}</div></div>
-            </div>
+<div className="summary-grid">
+  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+  <div className="sum-card orange"><div className="sum-val">{asiaAgents.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
+  <div className="sum-card teal"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
+  <div className="sum-card blue"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">EN: {totalEnglish} · SP: {totalSpanish} · Total: {totalXfers}</div></div>
+</div>
             {asiaView==='stats' ? (
               <>
                 <div className="tops-row">
