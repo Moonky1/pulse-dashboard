@@ -28,15 +28,14 @@ async function fetchSheet(name) {
   return parseCSV(text)
 }
 
-// ── Detección robusta: la celda debe EMPEZAR con número seguido de "agent" ──
 function isLoggedRow(cell) {
-  return /^\d+\s*agent/i.test((cell || '').trim())
+  return (cell || '').toLowerCase().includes('agent')
 }
 
 const TEAM_CONFIGS = [
   { id:'philippines', name:'PHILIPPINES',    tab:'AW GARRET PHILIPPINES',                 hasSpanish:false, flag:'ph', colEng:2, colSp:null, colTotal:2 },
   { id:'venezuela',   name:'VENEZUELA',      tab:'AW GARRET VENEZUELA PATRICIA',          hasSpanish:true,  flag:'ve', colEng:2, colSp:3,    colTotal:4 },
-  { id:'colombia',    name:'COLOMBIA',       tab:'AW GARRET COLOMBIA JUAN GARCIA',        hasSpanish:true,  flag:'co', colEng:2, colSp:3,    colTotal:4 },
+  { id:'colombia',    name:'COLOMBIA',       tab:'AW GARRET COLOMBIA JUAN GARCIA',        hasSpanish:true,  flag:'co', colEng:3, colSp:4,    colTotal:5 },
   { id:'mexico',      name:'MEXICO BAJA',    tab:'AW GARRET BAJA MX KEVIN',               hasSpanish:false, flag:'mx', colEng:2, colSp:null, colTotal:2 },
   { id:'central',     name:'CENTRAL AMERICA',tab:'AW GARRET CENTRAL AMERICA - CAROLINA', hasSpanish:true,  flag:'hn', colEng:2, colSp:3,    colTotal:4 },
 ]
@@ -54,7 +53,7 @@ function parseTeamSheet(rows, config) {
   }
 
   const agentRow = (isAfter6pm && loggedRows.length > 1) ? loggedRows[loggedRows.length - 1] : loggedRows[0]
-  const agentMatch = (agentRow[0] || '').match(/^(\d+)/)
+  const agentMatch = (agentRow[0] || '').match(/(\d+)/)
   const agents = agentMatch ? parseInt(agentMatch[1]) : 0
   return { agents, english, spanish, total, noSpanish: !config.hasSpanish }
 }
@@ -235,7 +234,6 @@ export default function Dashboard() {
       const rawSheets = [philRows, venezRows, colombRows, mexRows, centralRows]
       const teams = TEAM_CONFIGS.map((tc, i) => ({ ...tc, ...parseTeamSheet(rawSheets[i], tc) }))
 
-      // Asia — col C(2)=spanish, col D(3)=english, col E(4)=total
       const asiaLoggedRows = asiaRows.filter(row => isLoggedRow(row[0] || ''))
       let asiaEng = 0, asiaSp = 0, asiaTotal = 0, asiaAgentsCount = 0
       if (asiaLoggedRows.length > 0) {
@@ -246,7 +244,7 @@ export default function Dashboard() {
         }
         const isAfter6pm = new Date().getHours() >= 18
         const agentRow = (isAfter6pm && asiaLoggedRows.length > 1) ? asiaLoggedRows[asiaLoggedRows.length - 1] : asiaLoggedRows[0]
-        const m = (agentRow[0] || '').match(/^(\d+)/)
+        const m = (agentRow[0] || '').match(/(\d+)/)
         asiaAgentsCount = m ? parseInt(m[1]) : 0
       }
 
@@ -258,7 +256,11 @@ export default function Dashboard() {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { setSnapshots(loadAllSnapshots()); loadData(); const interval = setInterval(loadData, 60000); return () => clearInterval(interval) }, [])
+  useEffect(() => {
+    setSnapshots(loadAllSnapshots()); loadData()
+    const interval = setInterval(loadData, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   const logout = () => { localStorage.removeItem('pulse_user'); window.location.href = '/' }
 
