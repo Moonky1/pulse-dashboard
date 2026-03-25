@@ -48,9 +48,16 @@ function parseTeamSheet(rows, config) {
 
   let english = 0, spanish = 0, total = 0
   for (const row of loggedRows) {
-    english += parseInt(row[config.colEng])                               || 0
-    spanish += config.colSp != null ? (parseInt(row[config.colSp]) || 0) : 0
-    total   += parseInt(row[config.colTotal])                             || 0
+    // Get all numeric values from the row (skip col 0 which is the label)
+    const nums = row.slice(1).map(c => parseInt((c||'').replace(/,/g,''))).filter(n => !isNaN(n) && n > 0)
+    if (config.hasSpanish) {
+      english += nums[0] || 0
+      spanish += nums[1] || 0
+      total   += nums[2] || 0
+    } else {
+      english += nums[0] || 0
+      total   += nums[0] || 0
+    }
   }
 
   const agentRow = (isAfter6pm && loggedRows.length > 1) ? loggedRows[loggedRows.length - 1] : loggedRows[0]
