@@ -3,7 +3,7 @@ import { APP_CONFIG } from '../config'
 import { validateToken } from '../utils/token'
 import './Register.css'
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxfy-YHAlpYBPc4dx-tvCe3GBglkate8r6-4ymIyEaK7lCs7kkU-1iBGgse0c-SxZEw/exec'
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwI-WMSEXr90lx1M1aEmW_7NX8DRCsMggxG-NcLh6Kb3q-k7qzxs_wuW1N1f-1EuvYe/exec'
 
 const ROLES = [
   { id: 'supervisor', label: 'Supervisor',  icon: '🧑‍💼' },
@@ -24,16 +24,11 @@ export default function Register() {
 
   const saveToSheets = async (data) => {
     try {
-      const formData = new URLSearchParams()
-      formData.append('name', data.name)
-      formData.append('team', data.team)
-      formData.append('role', data.role)
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: formData,
-      })
-    } catch(e) { console.error(e) }
+      const url = `${SCRIPT_URL}?name=${encodeURIComponent(data.name)}&team=${encodeURIComponent(data.team)}&role=${encodeURIComponent(data.role)}`
+      await fetch(url, { mode: 'no-cors' })
+    } catch(e) {
+      console.error('Sheet error:', e)
+    }
   }
 
   const next = async () => {
