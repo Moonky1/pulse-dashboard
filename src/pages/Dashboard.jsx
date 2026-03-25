@@ -239,35 +239,34 @@ export default function Dashboard() {
 const asiaAgents = (() => {
   const isAfter6pm = new Date().getHours() >= 18
   const agents = []
-  let passedFirstLogged = false
+  let tableCount = 0
 
   for (const row of asiaData) {
     const name = (row[0]||'').toUpperCase().trim()
     const ext = parseInt(row[1])
 
-    // Detect logged row
     if (name.includes('AGENT LOGGED') || name.includes('LOGGED IN')) {
-      passedFirstLogged = true
+      tableCount++
       continue
     }
 
-    // Skip non-agent rows (headers, empty, OT TAKERS label, etc.)
+    // Solo leer tabla 2 después de las 6pm
+    if (tableCount >= 1 && !isAfter6pm) continue
+
+    // Skip headers y filas no-agentes
     if (isNaN(ext) || ext <= 1000 || ext >= 9999 || (row[0]||'').length <= 1) continue
 
-    if (!passedFirstLogged || isAfter6pm) {
-      const existing = agents.find(a => a.ext === row[1]?.trim())
-      if (existing) {
-        existing.spanish += parseInt(row[2])||0
-        existing.english += parseInt(row[3])||0
-        existing.total   += parseInt(row[4])||0
-      } else {
-        agents.push({
-          name: row[0]?.trim()||'', ext: row[1]?.trim()||'',
-          spanish: parseInt(row[2])||0,
-          english: parseInt(row[3])||0,
-          total:   parseInt(row[4])||0,
-        })
-      }
+    const sp = parseInt(row[2])||0
+    const en = parseInt(row[3])||0
+    const to = parseInt(row[4])||0
+
+    const existing = agents.find(a => a.ext === row[1]?.trim())
+    if (existing) {
+      existing.spanish += sp
+      existing.english += en
+      existing.total   += to
+    } else {
+      agents.push({ name: row[0]?.trim()||'', ext: row[1]?.trim()||'', spanish: sp, english: en, total: to })
     }
   }
   return agents
