@@ -6,18 +6,15 @@ const SHEET_ID         = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const USERS_SHEET_ID   = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
 
-// totalIdx = 0-based row index in CSV = Sheets row number - 1
-// 23/03: C65 → idx 64 | 20/03: C64 → idx 63 | 19/03: C67 → idx 66
-// 18/03: C65 → idx 64 | 17/03: C67 → idx 66 | 16/03: C73 → idx 72
 const HISTORY_DATES = [
-  { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026', totalIdx: null }, // auto
-  { isoDate:'2026-03-16', tab:'16032026', slackLabel:'16/03/2026', totalIdx: 72   }, // row 73
-  { isoDate:'2026-03-17', tab:'17032026', slackLabel:'17/03/2026', totalIdx: 66   }, // row 67
-  { isoDate:'2026-03-18', tab:'18032026', slackLabel:'18/03/2026', totalIdx: 64   }, // row 65
-  { isoDate:'2026-03-19', tab:'19032026', slackLabel:'19/03/2026', totalIdx: 66   }, // row 67
-  { isoDate:'2026-03-20', tab:'20032026', slackLabel:'20/03/2026', totalIdx: 63   }, // row 64
-  { isoDate:'2026-03-21', tab:'21032026', slackLabel:'21/03/2026', totalIdx: null }, // auto
-  { isoDate:'2026-03-23', tab:'23032026', slackLabel:'23/03/2026', totalIdx: 64   }, // row 65
+  { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026' },
+  { isoDate:'2026-03-16', tab:'16032026', slackLabel:'16/03/2026' },
+  { isoDate:'2026-03-17', tab:'17032026', slackLabel:'17/03/2026' },
+  { isoDate:'2026-03-18', tab:'18032026', slackLabel:'18/03/2026' },
+  { isoDate:'2026-03-19', tab:'19032026', slackLabel:'19/03/2026' },
+  { isoDate:'2026-03-20', tab:'20032026', slackLabel:'20/03/2026' },
+  { isoDate:'2026-03-21', tab:'21032026', slackLabel:'21/03/2026' },
+  { isoDate:'2026-03-23', tab:'23032026', slackLabel:'23/03/2026' },
 ]
 const HISTORY_ISO_SET = new Set(HISTORY_DATES.map(d => d.isoDate))
 
@@ -47,15 +44,13 @@ async function fetchSheet(sheetId, name) {
 
 const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
 
-const countPhones = (cell) => {
-  if (!cell) return 0
-  return cell.split('/').filter(p => p.trim().length > 0).length || 1
-}
-
+// Each phone number separated by / = 1 phone
 const extractPhones = (cell) => {
   if (!cell) return []
-  return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length > 0)
+  return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length >= 7)
 }
+
+const countPhones = (cell) => extractPhones(cell).length || (cell?.trim() ? 1 : 0)
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 
@@ -118,49 +113,55 @@ const formatDateLabel = (dateStr) => {
   return `${d}/${m}/${y}`
 }
 
-// Parse history sheet using exact 0-based row index for totals
-function parseHistorySheet(rows, totalIdx) {
+// Parse history sheet — find "XX AGENT LOGGED IN" row for totals, read everything above it for agents
+// The "AGENT LOGGED IN" row has: col[2]=Spanish, col[3]=English, col[4]=Total
+// We always compute total = Spanish + English to be safe
+function parseHistorySheet(rows) {
   const agents = []
-  let totals = {spanish:0,english:0,total:0,activeAgents:0}
+  let totals = {spanish:0, english:0, total:0, activeAgents:0}
+  let foundTotal = false
 
-  // If exact index given, read that row directly
-  if (totalIdx !== null && totalIdx !== undefined && rows[totalIdx]) {
-    const tRow = rows[totalIdx]
-    const sp = safeInt(tRow[2])  // col C
-    const en = safeInt(tRow[3])  // col D
-    totals = { spanish: sp, english: en, total: sp + en, activeAgents: 0 }
+  for (let i = 0; i < rows.length; i++) {
+    const row    = rows[i]
+    const cell0  = (row[0]||'').trim()
+    const cell0U = cell0.toUpperCase()
 
-    // Parse agents from rows above totalIdx
-    for (let i = 0; i < totalIdx; i++) {
-      const row    = rows[i]
-      const name   = (row[0]||'').trim()
-      const nameUp = name.toUpperCase()
-      if (nameUp.includes('MANAGEMENT')||nameUp.includes('CALLS')||nameUp.includes('TRANSFERS')||nameUp.includes('LEXNER')||name.length<=1) continue
-      const ext = safeInt(row[1])
-      if (ext < 1000 || ext > 9999) continue
-      const sp2 = safeInt(row[2]), en2 = safeInt(row[3])
-      agents.push({name, ext:String(ext), spanish:sp2, english:en2, total:sp2+en2})
+    // The AGENT LOGGED IN row — read totals from this row
+    if (cell0U.includes('AGENT') && cell0U.includes('LOGGED')) {
+      const sp = safeInt(row[2])  // col C = Spanish
+      const en = safeInt(row[3])  // col D = English
+      totals = { spanish: sp, english: en, total: sp + en, activeAgents: agents.length }
+      foundTotal = true
+      break
     }
-    totals.activeAgents = agents.length
-  } else {
-    // Auto-detect: find "AGENT LOGGED" row
-    for (const row of rows) {
-      const name   = (row[0]||'').trim()
-      const nameUp = name.toUpperCase()
-      if (nameUp.includes('AGENT') && nameUp.includes('LOGGED')) {
-        const sp = safeInt(row[2]), en = safeInt(row[3])
-        totals = {activeAgents: agents.length, spanish:sp, english:en, total:sp+en}
-        break
-      }
-      if (nameUp.includes('MANAGEMENT')||nameUp.includes('CALLS')||nameUp.includes('TRANSFERS')||nameUp.includes('LEXNER')||name.length<=1) continue
-      const ext = safeInt(row[1])
-      if (ext < 1000 || ext > 9999) continue
-      const sp = safeInt(row[2]), en = safeInt(row[3])
-      agents.push({name, ext:String(ext), spanish:sp, english:en, total:sp+en})
-    }
+
+    // Skip header rows and irrelevant rows
+    if (
+      cell0U.includes('MANAGEMENT') ||
+      cell0U.includes('CALL') ||
+      cell0U.includes('TRANSFER') ||
+      cell0U.includes('LEXNER') ||
+      cell0U.includes('GENERAL') ||
+      cell0.length <= 1
+    ) continue
+
+    // Must have a 4-digit extension in col B
+    const ext = safeInt(row[1])
+    if (ext < 1000 || ext > 9999) continue
+
+    const sp = safeInt(row[2])  // col C = Spanish
+    const en = safeInt(row[3])  // col D = English
+    agents.push({ name: cell0, ext: String(ext), spanish: sp, english: en, total: sp + en })
   }
 
-  return {agents, totals}
+  // Fallback: sum agents if AGENT LOGGED row wasn't found
+  if (!foundTotal) {
+    const sp = agents.reduce((s,a) => s+a.spanish, 0)
+    const en = agents.reduce((s,a) => s+a.english, 0)
+    totals = { spanish: sp, english: en, total: sp+en, activeAgents: agents.length }
+  }
+
+  return { agents, totals }
 }
 
 function BarChart({agents, metric}) {
@@ -304,13 +305,12 @@ export default function Dashboard() {
     return ()=>clearInterval(iv)
   },[])
 
-  // Load history via gviz — same endpoint that works
   useEffect(()=>{
     if (!isHistDate||!histMeta||histCache[selectedDate]) return
     setHistLoading(true)
     fetchSheet(HISTORY_SHEET_ID, histMeta.tab)
       .then(rows => {
-        const parsed = parseHistorySheet(rows, histMeta.totalIdx)
+        const parsed = parseHistorySheet(rows)
         setHistCache(c=>({...c,[selectedDate]:parsed}))
       })
       .catch(console.error)
@@ -390,15 +390,15 @@ export default function Dashboard() {
   const top3English = [...asiaAgentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
   const top3Spanish = [...asiaAgentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3)
 
-  // ── Slacks ──
+  // ── Slacks — cada número de teléfono = 1 report ──
   const slackLabelForDate = (iso) => {
     const hd=HISTORY_DATES.find(d=>d.isoDate===iso)
     if (hd) return hd.slackLabel
     const [y,m,d]=iso.split('-')
     return `${d}/${m}/${y}`
   }
-  const currentSlackLabel  = slackLabelForDate(selectedDate)
-  const slackRowsForDate   = slacksData.filter(r => r[0]?.trim() === currentSlackLabel)
+  const currentSlackLabel = slackLabelForDate(selectedDate)
+  const slackRowsForDate  = slacksData.filter(r => r[0]?.trim() === currentSlackLabel)
 
   const buildSlackAgents = (rows) => {
     const map = {}
@@ -406,14 +406,24 @@ export default function Dashboard() {
       const agent=(row[1]||'').trim(), opener=(row[2]||'').trim(), call=(row[3]||'').trim()
       if (!agent) continue
       if (!map[agent]) map[agent]={agent,opener,reports:0,phones:[]}
-      map[agent].reports+=1
-      extractPhones(call).forEach(p=>{ if(p && !map[agent].phones.includes(p)) map[agent].phones.push(p) })
+      // Each phone number = 1 report
+      const phones = extractPhones(call)
+      if (phones.length > 0) {
+        map[agent].reports += phones.length
+        phones.forEach(p=>{ if(!map[agent].phones.includes(p)) map[agent].phones.push(p) })
+      } else if (call.trim()) {
+        // Raw call without tel: prefix
+        map[agent].reports += 1
+        const raw = call.trim()
+        if (!map[agent].phones.includes(raw)) map[agent].phones.push(raw)
+      }
     }
     return Object.values(map).sort((a,b)=>b.reports-a.reports)
   }
+
   const slackAgentsForDate  = buildSlackAgents(slackRowsForDate)
   const topAgent            = slackAgentsForDate[0] || null
-  const totalReportsForDate = slackRowsForDate.length
+  const totalReportsForDate = slackAgentsForDate.reduce((s,a)=>s+a.reports,0)
 
   const getFlag = (name) => {
     const n=name.toUpperCase()
@@ -500,7 +510,7 @@ export default function Dashboard() {
               Auto Warranty Garrett — Teams Overview
               {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}
             </h2>
-            {teamsSorted.length===0?<p style={{color:'#6b7280'}}>No data for this date.</p>:(
+            {teamsSorted.length===0?<p style={{color:'#6b7280'}}>No data.</p>:(
               <div className="teams-grid">
                 {teamsSorted.map((row,rank)=>(
                   <div key={rank} className={`team-card-dash ${isMyTeam(row.name)?'highlight':''}`}>
