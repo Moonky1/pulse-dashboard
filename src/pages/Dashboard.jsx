@@ -154,6 +154,8 @@ export default function Dashboard() {
   const [chartMetric, setChartMetric] = useState('english')
   const [snapshots, setSnapshots]     = useState([])
   const [selectedDate, setSelectedDate] = useState(todayKey())
+  const [editingAgent, setEditingAgent] = useState(null)
+  const [editForm, setEditForm]         = useState({})
 
   const isToday    = selectedDate === todayKey()
   const activeSnap = isToday ? null : snapshots.find(s => s.date === selectedDate)
@@ -235,61 +237,80 @@ export default function Dashboard() {
 
   const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
 
-  // ── Asia agents from individual tab ──
-const asiaAgents = (() => {
-  const isAfter6pm = new Date().getHours() >= 18
-  const agents = []
-  let inTable2 = false
+  // ── Asia agents ──
+  const asiaAgents = (() => {
+    const isAfter6pm = new Date().getHours() >= 18
+    const agents = []
+    let inTable2 = false
 
-  for (const row of asiaData) {
-    const name = (row[0]||'').trim()
-    const nameUp = name.toUpperCase()
+    for (const row of asiaData) {
+      const name = (row[0]||'').trim()
+      const nameUp = name.toUpperCase()
 
-    if (nameUp.includes('REMOVED') || nameUp.includes('REMOVE')) break
-    if (nameUp.includes('AGENT LOGGED') || nameUp.includes('LOGGED IN')) {
-      inTable2 = true
-      continue
+      if (nameUp.includes('REMOVED') || nameUp.includes('REMOVE')) break
+      if (nameUp.includes('AGENT LOGGED') || nameUp.includes('LOGGED IN')) {
+        inTable2 = true
+        continue
+      }
+      if (inTable2 && !isAfter6pm) continue
+      if (name.length <= 1) continue
+
+      let ext, sp, en, to
+
+      if (inTable2) {
+        // OT TAKERS: columna MANAGEMENT extra → shift +1
+        ext = parseInt(row[1])
+        sp  = parseInt(row[3])||0
+        en  = parseInt(row[4])||0
+        to  = parseInt(row[5])||0
+      } else {
+        ext = parseInt(row[1])
+        sp  = parseInt(row[2])||0
+        en  = parseInt(row[3])||0
+        to  = parseInt(row[4])||0
+      }
+
+      if (isNaN(ext) || ext < 1000 || ext > 9999) continue
+
+      const existing = agents.find(a => a.ext === String(ext))
+      if (existing) {
+        existing.spanish += sp
+        existing.english += en
+        existing.total   += to
+      } else {
+        agents.push({ name, ext: String(ext), spanish: sp, english: en, total: to })
+      }
     }
-    if (inTable2 && !isAfter6pm) continue
-    if (name.length <= 1) continue
+    return agents
+  })()
 
-    let ext, sp, en, to
+  // ── Aplicar overrides manuales para días pasados ──
+  const asiaAgentsFinal = (() => {
+    if (isToday) return asiaAgents
+    const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`) || '{}')
+    return asiaAgents.map(a => overrides[a.ext] ? { ...a, ...overrides[a.ext] } : a)
+  })()
 
-    if (inTable2) {
-      // OT TAKERS tiene columna MANAGEMENT extra → shift de +1
-      ext = parseInt(row[1])
-      sp  = parseInt(row[3])||0
-      en  = parseInt(row[4])||0
-      to  = parseInt(row[5])||0
-    } else {
-      ext = parseInt(row[1])
-      sp  = parseInt(row[2])||0
-      en  = parseInt(row[3])||0
-      to  = parseInt(row[4])||0
-    }
-
-    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
-
-    const existing = agents.find(a => a.ext === String(ext))
-    if (existing) {
-      existing.spanish += sp
-      existing.english += en
-      existing.total   += to
-    } else {
-      agents.push({ name, ext: String(ext), spanish: sp, english: en, total: to })
-    }
+  // ── Guardar edición manual en localStorage ──
+  const saveAgentEdit = () => {
+    const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`) || '{}')
+    const sp = parseInt(editForm.spanish)||0
+    const en = parseInt(editForm.english)||0
+    const to = parseInt(editForm.total)||0
+    overrides[editingAgent.ext] = { name: editingAgent.name, spanish: sp, english: en, total: to }
+    localStorage.setItem(`pulse_overrides_${selectedDate}`, JSON.stringify(overrides))
+    setEditingAgent(null)
+    setSnapshots(loadAllSnapshots())
   }
-  return agents
-})()
 
   const goal        = APP_CONFIG.dailyGoal
-  const hitGoal     = asiaAgents.filter(a => a.english >= goal)
-  const atZero      = asiaAgents.filter(a => a.total === 0)
-  const top3English = [...asiaAgents].sort((a,b) => b.english-a.english).slice(0,3)
-  const top3Spanish = [...asiaAgents].sort((a,b) => b.spanish-a.spanish).slice(0,3)
-  const totalEnglish = asiaAgents.reduce((s,a) => s+a.english, 0)
-  const totalSpanish = asiaAgents.reduce((s,a) => s+a.spanish, 0)
-  const totalXfers   = asiaAgents.reduce((s,a) => s+a.total,   0)
+  const hitGoal     = asiaAgentsFinal.filter(a => a.english >= goal)
+  const atZero      = asiaAgentsFinal.filter(a => a.total === 0)
+  const top3English = [...asiaAgentsFinal].sort((a,b) => b.english-a.english).slice(0,3)
+  const top3Spanish = [...asiaAgentsFinal].sort((a,b) => b.spanish-a.spanish).slice(0,3)
+  const totalEnglish = asiaAgentsFinal.reduce((s,a) => s+a.english, 0)
+  const totalSpanish = asiaAgentsFinal.reduce((s,a) => s+a.spanish, 0)
+  const totalXfers   = asiaAgentsFinal.reduce((s,a) => s+a.total,   0)
 
   const getFlag = (name) => {
     const n = name.toUpperCase()
@@ -398,13 +419,15 @@ const asiaAgents = (() => {
                 <button className={`view-tab ${asiaView==='charts'?'active':''}`} onClick={()=>setAsiaView('charts')}>📈 Charts</button>
               </div>
             </div>
-<div className="summary-grid">
-  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
-  <div className="sum-card orange"><div className="sum-val">{asiaAgents.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-  <div className="sum-card purple"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
-  <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
-  <div className="sum-card gold"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
-</div>
+
+            <div className="summary-grid">
+              <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+              <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
+              <div className="sum-card purple"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
+              <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
+              <div className="sum-card gold"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
+            </div>
+
             {asiaView==='stats' ? (
               <>
                 <div className="tops-row">
@@ -428,13 +451,24 @@ const asiaAgents = (() => {
                   <table className="agent-table">
                     <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th><th>Spanish</th><th>Total</th><th>Goal</th></tr></thead>
                     <tbody>
-                      {[...asiaAgents].sort((a,b)=>b.english-a.english).map((a,i)=>{
+                      {[...asiaAgentsFinal].sort((a,b)=>b.english-a.english).map((a,i)=>{
                         const rs = i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
                         return (
                           <tr key={i} className={a.total===0?'row-zero':a.english>=goal?'row-goal':''}>
                             <td style={rs}>#{i+1}</td>
-                            <td className="agent-name">{a.name}</td><td className="agent-ext">{a.ext}</td>
-                            <td className="val-english">{a.english}</td><td className="val-spanish">{a.spanish}</td><td className="val-total">{a.total}</td>
+                            <td className="agent-name">
+                              {a.name}
+                              {!isToday && (
+                                <button
+                                  className="edit-agent-btn"
+                                  onClick={() => { setEditingAgent(a); setEditForm({ spanish: a.spanish, english: a.english, total: a.total }) }}
+                                >✏️</button>
+                              )}
+                            </td>
+                            <td className="agent-ext">{a.ext}</td>
+                            <td className="val-english">{a.english}</td>
+                            <td className="val-spanish">{a.spanish}</td>
+                            <td className="val-total">{a.total}</td>
                             <td>{a.english>=goal?<span className="badge-goal">✓ Goal</span>:<span className="badge-pending">{goal-a.english} left</span>}</td>
                           </tr>
                         )
@@ -453,10 +487,10 @@ const asiaAgents = (() => {
                     <button className={`metric-tab ${chartMetric==='total'?'active':''}`} onClick={()=>setChartMetric('total')}>Total</button>
                   </div>
                 </div>
-                <BarChart agents={asiaAgents} metric={chartMetric}/>
+                <BarChart agents={asiaAgentsFinal} metric={chartMetric}/>
                 <div className="chart-goal-row">
                   <div className="goal-stat green-stat"><div className="goal-stat-val">{hitGoal.length}</div><div className="goal-stat-label"><Img src={E.goal} size={14}/> Reached goal (20+ EN)</div></div>
-                  <div className="goal-stat yellow-stat"><div className="goal-stat-val">{asiaAgents.filter(a=>a.english>=15&&a.english<20).length}</div><div className="goal-stat-label">Almost there (15–19 EN)</div></div>
+                  <div className="goal-stat yellow-stat"><div className="goal-stat-val">{asiaAgentsFinal.filter(a=>a.english>=15&&a.english<20).length}</div><div className="goal-stat-label">Almost there (15–19 EN)</div></div>
                   <div className="goal-stat red-stat"><div className="goal-stat-val">{atZero.length}</div><div className="goal-stat-label"><Img src={E.zero} size={14}/> At zero</div></div>
                 </div>
               </div>
@@ -464,6 +498,33 @@ const asiaAgents = (() => {
           </div>
         )}
       </div>
+
+      {/* ── Modal edición agente (solo días pasados) ── */}
+      {editingAgent && (
+        <div className="edit-modal-overlay" onClick={() => setEditingAgent(null)}>
+          <div className="edit-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="edit-modal-title">Edit — {editingAgent.name} <span style={{color:'#6b7280',fontSize:12}}>#{editingAgent.ext}</span></h3>
+            <div className="edit-modal-fields">
+              <label>
+                English
+                <input type="number" value={editForm.english} onChange={e => setEditForm(f=>({...f, english: e.target.value}))}/>
+              </label>
+              <label>
+                Spanish
+                <input type="number" value={editForm.spanish} onChange={e => setEditForm(f=>({...f, spanish: e.target.value}))}/>
+              </label>
+              <label>
+                Total
+                <input type="number" value={editForm.total} onChange={e => setEditForm(f=>({...f, total: e.target.value}))}/>
+              </label>
+            </div>
+            <div className="edit-modal-actions">
+              <button className="btn-cancel" onClick={() => setEditingAgent(null)}>Cancel</button>
+              <button className="btn-save" onClick={saveAgentEdit}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
