@@ -244,27 +244,31 @@ const asiaAgents = (() => {
   for (const row of asiaData) {
     const name = (row[0]||'').trim()
     const nameUp = name.toUpperCase()
-    const ext = parseInt(row[1])
 
-    // Parar si encuentra sección de removed agents
     if (nameUp.includes('REMOVED') || nameUp.includes('REMOVE')) break
-
-    // Detectar fin de tabla 1
     if (nameUp.includes('AGENT LOGGED') || nameUp.includes('LOGGED IN')) {
       inTable2 = true
       continue
     }
-
-    // En tabla 2 solo entrar si es después de 6pm
     if (inTable2 && !isAfter6pm) continue
-
-    // Saltar headers, labels, filas sin extensión válida
-    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
     if (name.length <= 1) continue
 
-    const sp = parseInt(row[2])||0
-    const en = parseInt(row[3])||0
-    const to = parseInt(row[4])||0
+    let ext, sp, en, to
+
+    if (inTable2) {
+      // OT TAKERS tiene columna MANAGEMENT extra → shift de +1
+      ext = parseInt(row[1])
+      sp  = parseInt(row[3])||0
+      en  = parseInt(row[4])||0
+      to  = parseInt(row[5])||0
+    } else {
+      ext = parseInt(row[1])
+      sp  = parseInt(row[2])||0
+      en  = parseInt(row[3])||0
+      to  = parseInt(row[4])||0
+    }
+
+    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
 
     const existing = agents.find(a => a.ext === String(ext))
     if (existing) {
