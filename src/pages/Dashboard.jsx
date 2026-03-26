@@ -6,40 +6,23 @@ const SHEET_ID         = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const USERS_SHEET_ID   = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
 
-// totalRange = exact range where "XX AGENT LOGGED IN" row is
-// Per user: C=spanish, D=english, E=total
+// totalIdx = 0-based row index in CSV = Sheets row number - 1
+// 23/03: C65 → idx 64 | 20/03: C64 → idx 63 | 19/03: C67 → idx 66
+// 18/03: C65 → idx 64 | 17/03: C67 → idx 66 | 16/03: C73 → idx 72
 const HISTORY_DATES = [
-  { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026', totalRange:'C69:E69' },
-  { isoDate:'2026-03-16', tab:'16032026', slackLabel:'16/03/2026', totalRange:'C73:E73' },
-  { isoDate:'2026-03-17', tab:'17032026', slackLabel:'17/03/2026', totalRange:'C67:E67' },
-  { isoDate:'2026-03-18', tab:'18032026', slackLabel:'18/03/2026', totalRange:'C65:E65' },
-  { isoDate:'2026-03-19', tab:'19032026', slackLabel:'19/03/2026', totalRange:'C67:E67' },
-  { isoDate:'2026-03-20', tab:'20032026', slackLabel:'20/03/2026', totalRange:'C64:E64' },
-  { isoDate:'2026-03-21', tab:'21032026', slackLabel:'21/03/2026', totalRange:'C69:E69' },
-  { isoDate:'2026-03-23', tab:'23032026', slackLabel:'23/03/2026', totalRange:'C65:E65' },
+  { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026', totalIdx: null }, // auto
+  { isoDate:'2026-03-16', tab:'16032026', slackLabel:'16/03/2026', totalIdx: 72   }, // row 73
+  { isoDate:'2026-03-17', tab:'17032026', slackLabel:'17/03/2026', totalIdx: 66   }, // row 67
+  { isoDate:'2026-03-18', tab:'18032026', slackLabel:'18/03/2026', totalIdx: 64   }, // row 65
+  { isoDate:'2026-03-19', tab:'19032026', slackLabel:'19/03/2026', totalIdx: 66   }, // row 67
+  { isoDate:'2026-03-20', tab:'20032026', slackLabel:'20/03/2026', totalIdx: 63   }, // row 64
+  { isoDate:'2026-03-21', tab:'21032026', slackLabel:'21/03/2026', totalIdx: null }, // auto
+  { isoDate:'2026-03-23', tab:'23032026', slackLabel:'23/03/2026', totalIdx: 64   }, // row 65
 ]
 const HISTORY_ISO_SET = new Set(HISTORY_DATES.map(d => d.isoDate))
 
 const csvUrl = (sheetId, sheet) =>
   `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`
-
-// Fetch a specific range as CSV — returns first row of that range
-const fetchRange = async (sheetId, sheet, range) => {
-  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&sheet=${encodeURIComponent(sheet)}&range=${range}`
-  const res  = await fetch(url)
-  const text = await res.text()
-  // Parse first row
-  const row = []
-  let current = '', inQuotes = false
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] === '"') { inQuotes = !inQuotes; continue }
-    if (text[i] === ',' && !inQuotes) { row.push(current.trim()); current = ''; continue }
-    if (text[i] === '\n' || text[i] === '\r') break
-    current += text[i]
-  }
-  row.push(current.trim())
-  return row
-}
 
 function parseCSV(text) {
   return text.trim().split('\n').map(row => {
@@ -135,20 +118,49 @@ const formatDateLabel = (dateStr) => {
   return `${d}/${m}/${y}`
 }
 
-// Parse agent rows from full sheet (stops at AGENT LOGGED row)
-function parseAgentRows(rows) {
+// Parse history sheet using exact 0-based row index for totals
+function parseHistorySheet(rows, totalIdx) {
   const agents = []
-  for (const row of rows) {
-    const name = (row[0]||'').trim()
-    const nameUp = name.toUpperCase()
-    if (nameUp.includes('AGENT') && (nameUp.includes('LOGGED')||nameUp.includes('AGENT LOGGED'))) break
-    if (nameUp.includes('MANAGEMENT')||nameUp.includes('CALLS')||nameUp.includes('TRANSFERS')||name.length<=1) continue
-    const ext = safeInt(row[1])
-    if (ext < 1000 || ext > 9999) continue
-    const sp = safeInt(row[2]), en = safeInt(row[3])
-    agents.push({name, ext:String(ext), spanish:sp, english:en, total:sp+en})
+  let totals = {spanish:0,english:0,total:0,activeAgents:0}
+
+  // If exact index given, read that row directly
+  if (totalIdx !== null && totalIdx !== undefined && rows[totalIdx]) {
+    const tRow = rows[totalIdx]
+    const sp = safeInt(tRow[2])  // col C
+    const en = safeInt(tRow[3])  // col D
+    totals = { spanish: sp, english: en, total: sp + en, activeAgents: 0 }
+
+    // Parse agents from rows above totalIdx
+    for (let i = 0; i < totalIdx; i++) {
+      const row    = rows[i]
+      const name   = (row[0]||'').trim()
+      const nameUp = name.toUpperCase()
+      if (nameUp.includes('MANAGEMENT')||nameUp.includes('CALLS')||nameUp.includes('TRANSFERS')||nameUp.includes('LEXNER')||name.length<=1) continue
+      const ext = safeInt(row[1])
+      if (ext < 1000 || ext > 9999) continue
+      const sp2 = safeInt(row[2]), en2 = safeInt(row[3])
+      agents.push({name, ext:String(ext), spanish:sp2, english:en2, total:sp2+en2})
+    }
+    totals.activeAgents = agents.length
+  } else {
+    // Auto-detect: find "AGENT LOGGED" row
+    for (const row of rows) {
+      const name   = (row[0]||'').trim()
+      const nameUp = name.toUpperCase()
+      if (nameUp.includes('AGENT') && nameUp.includes('LOGGED')) {
+        const sp = safeInt(row[2]), en = safeInt(row[3])
+        totals = {activeAgents: agents.length, spanish:sp, english:en, total:sp+en}
+        break
+      }
+      if (nameUp.includes('MANAGEMENT')||nameUp.includes('CALLS')||nameUp.includes('TRANSFERS')||nameUp.includes('LEXNER')||name.length<=1) continue
+      const ext = safeInt(row[1])
+      if (ext < 1000 || ext > 9999) continue
+      const sp = safeInt(row[2]), en = safeInt(row[3])
+      agents.push({name, ext:String(ext), spanish:sp, english:en, total:sp+en})
+    }
   }
-  return agents
+
+  return {agents, totals}
 }
 
 function BarChart({agents, metric}) {
@@ -292,29 +304,17 @@ export default function Dashboard() {
     return ()=>clearInterval(iv)
   },[])
 
-  // Load history: fetch agents (full sheet) + totals (exact range)
+  // Load history via gviz — same endpoint that works
   useEffect(()=>{
     if (!isHistDate||!histMeta||histCache[selectedDate]) return
     setHistLoading(true)
-    Promise.all([
-      fetchSheet(HISTORY_SHEET_ID, histMeta.tab),
-      fetchRange(HISTORY_SHEET_ID, histMeta.tab, histMeta.totalRange),
-    ])
-    .then(([rows, totalRow]) => {
-      const agents = parseAgentRows(rows)
-      const sp = safeInt(totalRow[0])  // C = spanish
-      const en = safeInt(totalRow[1])  // D = english
-      const to = safeInt(totalRow[2])  // E = total (but we calc sp+en to be safe)
-      const totals = {
-        spanish: sp,
-        english: en,
-        total:   sp + en,
-        activeAgents: agents.length,
-      }
-      setHistCache(c=>({...c,[selectedDate]:{agents,totals}}))
-    })
-    .catch(console.error)
-    .finally(()=>setHistLoading(false))
+    fetchSheet(HISTORY_SHEET_ID, histMeta.tab)
+      .then(rows => {
+        const parsed = parseHistorySheet(rows, histMeta.totalIdx)
+        setHistCache(c=>({...c,[selectedDate]:parsed}))
+      })
+      .catch(console.error)
+      .finally(()=>setHistLoading(false))
   },[selectedDate])
 
   const logout = () => { localStorage.removeItem('pulse_user'); window.location.href='/' }
@@ -350,9 +350,8 @@ export default function Dashboard() {
     for (const row of asiaDataRaw) {
       const name=(row[0]||'').trim(), nameUp=name.toUpperCase()
       if (nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')) {
-        const numMatch=name.match(/^(\d+)/)
         const sp=safeInt(row[2]), en=safeInt(row[3])
-        totals={activeAgents:numMatch?parseInt(numMatch[1]):agents.length,spanish:sp,english:en,total:sp+en}
+        totals={activeAgents:agents.length,spanish:sp,english:en,total:sp+en}
         break
       }
       if (nameUp.includes('REMOVED')||nameUp.includes('REMOVE')) break
@@ -501,7 +500,7 @@ export default function Dashboard() {
               Auto Warranty Garrett — Teams Overview
               {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}
             </h2>
-            {teamsSorted.length===0 ? <p style={{color:'#6b7280'}}>No data for this date.</p> : (
+            {teamsSorted.length===0?<p style={{color:'#6b7280'}}>No data for this date.</p>:(
               <div className="teams-grid">
                 {teamsSorted.map((row,rank)=>(
                   <div key={rank} className={`team-card-dash ${isMyTeam(row.name)?'highlight':''}`}>
@@ -537,7 +536,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {asiaView !== 'slacks' && (
+            {asiaView!=='slacks' && (
               histLoading
                 ? <div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading historical data...</div>
                 : (
@@ -565,8 +564,8 @@ export default function Dashboard() {
                   <div className="top-block red-block">
                     <h3 className="top-title"><Img src={E.zero} size={16}/> At Zero</h3>
                     {atZero.length===0
-                      ? <p className="top-empty"><Img src={E.firework} size={16}/> Everyone has transfers!</p>
-                      : atZero.slice(0,3).map((a,i)=>(<div key={i} className="top-item"><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score red">0</span></div>))
+                      ?<p className="top-empty"><Img src={E.firework} size={16}/> Everyone has transfers!</p>
+                      :atZero.slice(0,3).map((a,i)=>(<div key={i} className="top-item"><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score red">0</span></div>))
                     }
                   </div>
                 </div>
@@ -576,13 +575,13 @@ export default function Dashboard() {
                       <tr>
                         <th>#</th><th>Agent</th><th>Ext</th>
                         <th>English</th><th>Spanish</th><th>Total</th><th>Goal</th>
-                        {showEditBtn && <th className="th-edit"></th>}
+                        {showEditBtn&&<th className="th-edit"></th>}
                       </tr>
                     </thead>
                     <tbody>
                       {[...asiaAgentsFinal].sort((a,b)=>b.english-a.english).map((a,i)=>{
                         const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
-                        return (
+                        return(
                           <tr key={i} className={a.total===0?'row-zero':a.english>=goal?'row-goal':''}>
                             <td style={rs}>#{i+1}</td>
                             <td className="agent-name">{a.name}</td>
@@ -591,7 +590,7 @@ export default function Dashboard() {
                             <td className="val-spanish">{a.spanish}</td>
                             <td className="val-total">{a.english+a.spanish}</td>
                             <td>{a.english>=goal?<span className="badge-goal">✓ Goal</span>:<span className="badge-pending">{goal-a.english} left</span>}</td>
-                            {showEditBtn && (
+                            {showEditBtn&&(
                               <td className="td-edit">
                                 <button className="edit-agent-btn" title="Edit" onClick={e=>{e.stopPropagation();setEditForm({spanish:a.spanish,english:a.english});setEditingAgent(a)}}>✏️</button>
                               </td>
@@ -631,17 +630,16 @@ export default function Dashboard() {
                   <div className="sum-card gold"><div className="sum-val">{totalReportsForDate}</div><div className="sum-label">Total Reports</div></div>
                   <div className="sum-card green">
                     {topAgent
-                      ? <><div className="sum-val" style={{fontSize:15,paddingTop:6,lineHeight:1.3}}>{topAgent.agent}</div><div className="sum-label">Top Agent ({topAgent.reports} reports)</div></>
-                      : <><div className="sum-val">—</div><div className="sum-label">Top Agent</div></>
+                      ?<><div className="sum-val" style={{fontSize:15,paddingTop:6,lineHeight:1.3}}>{topAgent.agent}</div><div className="sum-label">Top Agent ({topAgent.reports} reports)</div></>
+                      :<><div className="sum-val">—</div><div className="sum-label">Top Agent</div></>
                     }
                   </div>
                 </div>
-
-                {slackRowsForDate.length === 0 ? (
+                {slackRowsForDate.length===0?(
                   <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>
                     No slack reports for {formatDateLabel(selectedDate)}.
                   </div>
-                ) : (
+                ):(
                   <>
                     <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>
                       Agent Summary — {formatDateLabel(selectedDate)}
@@ -649,17 +647,13 @@ export default function Dashboard() {
                     <div className="agent-table-wrap">
                       <table className="agent-table">
                         <thead>
-                          <tr>
-                            <th>#</th><th>Agent</th><th>ID Opener</th>
-                            <th style={{textAlign:'center'}}>Reports</th>
-                            <th>Calls</th>
-                          </tr>
+                          <tr><th>#</th><th>Agent</th><th>ID Opener</th><th style={{textAlign:'center'}}>Reports</th><th>Calls</th></tr>
                         </thead>
                         <tbody>
                           {slackAgentsForDate.map((a,i)=>{
                             const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
-                            const isExpanded = expandedAgent===a.agent
-                            return (
+                            const isExpanded=expandedAgent===a.agent
+                            return(
                               <tr key={i}>
                                 <td style={rs}>#{i+1}</td>
                                 <td className="agent-name">{a.agent}</td>
@@ -667,12 +661,12 @@ export default function Dashboard() {
                                 <td style={{textAlign:'center',color:'#f97316',fontWeight:700,fontSize:15}}>{a.reports}</td>
                                 <td>
                                   <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                                    {(isExpanded ? a.phones : a.phones.slice(0,3)).map((p,j)=>(
+                                    {(isExpanded?a.phones:a.phones.slice(0,3)).map((p,j)=>(
                                       <span key={j} className="phone-chip">{p}</span>
                                     ))}
-                                    {a.phones.length > 3 && (
+                                    {a.phones.length>3&&(
                                       <button onClick={()=>setExpandedAgent(isExpanded?null:a.agent)} className="phone-more-btn">
-                                        {isExpanded ? '▲ less' : `+${a.phones.length-3} more`}
+                                        {isExpanded?'▲ less':`+${a.phones.length-3} more`}
                                       </button>
                                     )}
                                   </div>
@@ -691,7 +685,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {editingAgent && (
+      {editingAgent&&(
         <div className="edit-modal-overlay" style={{zIndex:1001}} onClick={()=>setEditingAgent(null)}>
           <div className="edit-modal" onClick={e=>e.stopPropagation()}>
             <h3 className="edit-modal-title">
