@@ -237,48 +237,33 @@ export default function Dashboard() {
 
   const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
 
-  // ── Asia agents ──
+  // ── Asia agents — solo tabla 1 ──
+  // Columnas: A=name, B=ext, C=spanish, D=english, E=total
+  // Para en cuanto encuentra "AGENT LOGGED IN" o "REMOVED"
   const asiaAgents = (() => {
-    const isAfter6pm = new Date().getHours() >= 18
     const agents = []
-    let inTable2 = false
-
     for (const row of asiaData) {
       const name = (row[0]||'').trim()
       const nameUp = name.toUpperCase()
 
-      if (nameUp.includes('REMOVED') || nameUp.includes('REMOVE')) break
-      if (nameUp.includes('AGENT LOGGED') || nameUp.includes('LOGGED IN')) {
-        inTable2 = true
-        continue
-      }
-      if (inTable2 && !isAfter6pm) continue
+      // Fin de tabla 1 — parar aquí
+      if (
+        nameUp.includes('AGENT LOGGED') ||
+        nameUp.includes('LOGGED IN') ||
+        nameUp.includes('REMOVED') ||
+        nameUp.includes('REMOVE')
+      ) break
+
+      // Saltar headers y filas sin extensión válida
+      const ext = parseInt(row[1])
+      if (isNaN(ext) || ext < 1000 || ext > 9999) continue
       if (name.length <= 1) continue
 
-      let ext, sp, en, to
+      const sp = parseInt(row[2])||0  // col C = spanish
+      const en = parseInt(row[3])||0  // col D = english
+      const to = parseInt(row[4])||0  // col E = total
 
-      if (inTable2) {
-        ext = parseInt(row[1])
-        sp  = parseInt(row[3])||0
-        en  = parseInt(row[4])||0
-        to  = parseInt(row[5])||0
-      } else {
-        ext = parseInt(row[1])
-        sp  = parseInt(row[2])||0
-        en  = parseInt(row[3])||0
-        to  = parseInt(row[4])||0
-      }
-
-      if (isNaN(ext) || ext < 1000 || ext > 9999) continue
-
-      const existing = agents.find(a => a.ext === String(ext))
-      if (existing) {
-        existing.spanish += sp
-        existing.english += en
-        existing.total   += to
-      } else {
-        agents.push({ name, ext: String(ext), spanish: sp, english: en, total: to })
-      }
+      agents.push({ name, ext: String(ext), spanish: sp, english: en, total: to })
     }
     return agents
   })()
@@ -294,7 +279,7 @@ export default function Dashboard() {
   const saveAgentEdit = () => {
     const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`) || '{}')
     overrides[editingAgent.ext] = {
-      name: editingAgent.name,
+      name:    editingAgent.name,
       spanish: parseInt(editForm.spanish)||0,
       english: parseInt(editForm.english)||0,
       total:   parseInt(editForm.total)||0,
