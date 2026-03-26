@@ -2,10 +2,11 @@ import { useEffect, useState, useRef } from 'react'
 import { APP_CONFIG } from '../config'
 import './dashboard.css'
 
-const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
+const SHEET_ID       = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
+const USERS_SHEET_ID = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 
-const csvUrl = (sheet) =>
-  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`
+const csvUrl = (sheetId, sheet) =>
+  `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`
 
 function parseCSV(text) {
   return text.trim().split('\n').map(row => {
@@ -22,11 +23,14 @@ function parseCSV(text) {
   })
 }
 
-async function fetchSheet(name) {
-  const res = await fetch(csvUrl(name))
+async function fetchSheet(sheetId, name) {
+  const res  = await fetch(csvUrl(sheetId, name))
   const text = await res.text()
   return parseCSV(text)
 }
+
+// parseInt seguro: elimina comas de miles antes de parsear
+const safeInt = (val) => parseInt((val||'').toString().replace(/,/g, '')) || 0
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 
@@ -90,6 +94,13 @@ const formatDateLabel = (dateStr) => {
   return `${d}/${m}/${y}`
 }
 
+// Cuenta phones en una celda: "tel:123/tel:456" → 2
+const countPhones = (callCell) => {
+  if (!callCell) return 0
+  const parts = callCell.split('/').filter(p => p.trim().length > 0)
+  return parts.length || 1
+}
+
 function BarChart({ agents, metric }) {
   const [tooltip, setTooltip] = useState(null)
   const buckets = RANGES.map(r => ({
@@ -147,6 +158,7 @@ export default function Dashboard() {
 
   const [liveGeneral, setLiveGeneral]     = useState([])
   const [liveAsia, setLiveAsia]           = useState([])
+  const [slacksData, setSlacksData]       = useState([])
   const [loading, setLoading]             = useState(true)
   const [lastUpdate, setLastUpdate]       = useState(null)
   const [activeTab, setActiveTab]         = useState('general')
@@ -157,6 +169,7 @@ export default function Dashboard() {
   const [editingAgent, setEditingAgent]   = useState(null)
   const [editForm, setEditForm]           = useState({})
   const [overridesTick, setOverridesTick] = useState(0)
+  const [slackFilter, setSlackFilter]     = useState('all') // 'all' | date string
 
   const isToday     = selectedDate === todayKey()
   const activeSnap  = isToday ? null : snapshots.find(s => s.date === selectedDate)
@@ -195,12 +208,19 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [general, asia] = await Promise.all([
-        fetchSheet("WELL'S REPORT"),
-        fetchSheet('AW GARRET ASIA LEXNER'),
+      const [general, asia, slacks] = await Promise.all([
+        fetchSheet(SHEET_ID, "WELL'S REPORT"),
+        fetchSheet(SHEET_ID, 'AW GARRET ASIA LEXNER'),
+        fetchSheet(USERS_SHEET_ID, 'Slacks'),
       ])
-      setLiveGeneral(general); setLiveAsia(asia); setLastUpdate(new Date())
-      saveSnapshot(general, asia); setSnapshots(loadAllSnapshots())
+      setLiveGeneral(general)
+      setLiveAsia(asia)
+      setLastUpdate(new Date())
+      saveSnapshot(general, asia)
+      setSnapshots(loadAllSnapshots())
+      // Slacks: skip header row
+      const rows = slacks.slice(1).filter(r => r[0] && r[1])
+      setSlacksData(rows)
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -222,11 +242,11 @@ export default function Dashboard() {
         if (!found.find(f => f.name.toUpperCase() === name)) {
           const rawSpanish = row[4]?.trim()
           found.push({
-            name: row[0]?.trim()||'',
-            agents: parseInt(row[2])||0,
-            english: parseInt(row[3])||0,
-            spanish: parseInt(rawSpanish)||0,
-            total: parseInt(row[5])||0,
+            name:      row[0]?.trim()||'',
+            agents:    safeInt(row[2]),
+            english:   safeInt(row[3]),
+            spanish:   safeInt(rawSpanish),
+            total:     safeInt(row[5]),
             noSpanish: rawSpanish==='-'||rawSpanish===''||!rawSpanish,
           })
         }
@@ -239,46 +259,44 @@ export default function Dashboard() {
   const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
 
   // ── Asia parser ──
-  // Columnas: A=name, B=ext, C=spanish, D=english, E=total
-  // Para en "AGENT LOGGED IN" y lee totales de esa fila
   const { asiaAgents, asiaTotals } = (() => {
     const agents = []
     let totals = { spanish: 0, english: 0, total: 0, activeAgents: 0 }
 
     for (const row of asiaData) {
-      const name = (row[0]||'').trim()
+      const name   = (row[0]||'').trim()
       const nameUp = name.toUpperCase()
 
       if (nameUp.includes('AGENT LOGGED') || nameUp.includes('LOGGED IN')) {
         const numMatch = name.match(/^(\d+)/)
         totals = {
           activeAgents: numMatch ? parseInt(numMatch[1]) : agents.length,
-          spanish:      parseInt(row[2])||0,
-          english:      parseInt(row[3])||0,
-          total:        parseInt(row[4])||0,
+          spanish:      safeInt(row[2]),
+          english:      safeInt(row[3]),
+          total:        safeInt(row[4]),
         }
         break
       }
 
       if (nameUp.includes('REMOVED') || nameUp.includes('REMOVE')) break
 
-      const ext = parseInt(row[1])
+      const ext = safeInt(row[1])
       if (isNaN(ext) || ext < 1000 || ext > 9999) continue
       if (name.length <= 1) continue
 
       agents.push({
         name,
         ext:     String(ext),
-        spanish: parseInt(row[2])||0,
-        english: parseInt(row[3])||0,
-        total:   parseInt(row[4])||0,
+        spanish: safeInt(row[2]),
+        english: safeInt(row[3]),
+        total:   safeInt(row[4]),
       })
     }
 
     return { asiaAgents: agents, asiaTotals: totals }
   })()
 
-  // ── Aplicar overrides para días pasados ──
+  // ── Overrides días pasados ──
   const asiaAgentsFinal = (() => {
     if (isToday) return asiaAgents
     void overridesTick
@@ -286,15 +304,11 @@ export default function Dashboard() {
     return asiaAgents.map(a => overrides[a.ext] ? { ...a, ...overrides[a.ext] } : a)
   })()
 
-  // ── Guardar edición manual ──
   const saveAgentEdit = () => {
     const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`) || '{}')
-    overrides[editingAgent.ext] = {
-      name:    editingAgent.name,
-      spanish: parseInt(editForm.spanish)||0,
-      english: parseInt(editForm.english)||0,
-      total:   parseInt(editForm.total)||0,
-    }
+    const en = parseInt(editForm.english)||0
+    const sp = parseInt(editForm.spanish)||0
+    overrides[editingAgent.ext] = { name: editingAgent.name, spanish: sp, english: en, total: en + sp }
     localStorage.setItem(`pulse_overrides_${selectedDate}`, JSON.stringify(overrides))
     setEditingAgent(null)
     setSnapshots(loadAllSnapshots())
@@ -303,25 +317,58 @@ export default function Dashboard() {
 
   const goal = APP_CONFIG.dailyGoal
 
-  // Totales:
-  // Today  → directo del sheet (fila AGENT LOGGED IN)
-  // Pasado → suma agentes con overrides; Total = Spanish + English (siempre correcto)
-  const totalSpanish = isToday
-    ? asiaTotals.spanish
-    : asiaAgentsFinal.reduce((s,a) => s + a.spanish, 0)
-
-  const totalEnglish = isToday
-    ? asiaTotals.english
-    : asiaAgentsFinal.reduce((s,a) => s + a.english, 0)
-
-  const totalXfers = isToday
-    ? asiaTotals.total
-    : totalSpanish + totalEnglish   // ← suma los dos ya calculados
+  const totalSpanish = isToday ? asiaTotals.spanish : asiaAgentsFinal.reduce((s,a) => s+a.spanish, 0)
+  const totalEnglish = isToday ? asiaTotals.english : asiaAgentsFinal.reduce((s,a) => s+a.english, 0)
+  const totalXfers   = isToday ? asiaTotals.total   : totalSpanish + totalEnglish
 
   const hitGoal     = asiaAgentsFinal.filter(a => a.english >= goal)
   const atZero      = asiaAgentsFinal.filter(a => a.total === 0)
   const top3English = [...asiaAgentsFinal].sort((a,b) => b.english-a.english).slice(0,3)
   const top3Spanish = [...asiaAgentsFinal].sort((a,b) => b.spanish-a.spanish).slice(0,3)
+
+  // ── Slacks Reports ──
+  // Rows: [date, agentName, idOpener, call]
+  // Agrupar por agente, contar phones (split por "/")
+  const slacksByAgent = (() => {
+    const map = {}
+    for (const row of slacksData) {
+      const date    = (row[0]||'').trim()
+      const agent   = (row[1]||'').trim()
+      const opener  = (row[2]||'').trim()
+      const call    = (row[3]||'').trim()
+      if (!agent) continue
+      const phones  = countPhones(call)
+      if (!map[agent]) map[agent] = { agent, opener, reports: 0, phones: 0, dates: [] }
+      map[agent].reports += 1
+      map[agent].phones  += phones
+      if (date && !map[agent].dates.includes(date)) map[agent].dates.push(date)
+    }
+    return Object.values(map).sort((a,b) => b.phones - a.phones)
+  })()
+
+  // Fechas únicas disponibles en slacks
+  const slackDates = [...new Set(slacksData.map(r => r[0]?.trim()).filter(Boolean))].sort((a,b) => b.localeCompare(a))
+
+  // Filas filtradas por fecha
+  const slackRowsFiltered = slackFilter === 'all'
+    ? slacksData
+    : slacksData.filter(r => r[0]?.trim() === slackFilter)
+
+  // Agrupado por agente para la vista filtrada
+  const slacksByAgentFiltered = (() => {
+    const map = {}
+    for (const row of slackRowsFiltered) {
+      const agent  = (row[1]||'').trim()
+      const opener = (row[2]||'').trim()
+      const call   = (row[3]||'').trim()
+      if (!agent) continue
+      const phones = countPhones(call)
+      if (!map[agent]) map[agent] = { agent, opener, reports: 0, phones: 0 }
+      map[agent].reports += 1
+      map[agent].phones  += phones
+    }
+    return Object.values(map).sort((a,b) => b.phones - a.phones)
+  })()
 
   const getFlag = (name) => {
     const n = name.toUpperCase()
@@ -429,18 +476,21 @@ export default function Dashboard() {
                 {isToday ? <span className="live-badge">LIVE</span> : <span className="date-badge">{formatDateLabel(selectedDate)}</span>}
               </h2>
               <div className="asia-view-tabs">
-                <button className={`view-tab ${asiaView==='stats'?'active':''}`} onClick={()=>setAsiaView('stats')}>📊 Stats</button>
-                <button className={`view-tab ${asiaView==='charts'?'active':''}`} onClick={()=>setAsiaView('charts')}>📈 Charts</button>
+                <button className={`view-tab ${asiaView==='stats'?'active':''}`}   onClick={()=>setAsiaView('stats')}>📊 Stats</button>
+                <button className={`view-tab ${asiaView==='charts'?'active':''}`}  onClick={()=>setAsiaView('charts')}>📈 Charts</button>
+                <button className={`view-tab ${asiaView==='slacks'?'active':''}`}  onClick={()=>setAsiaView('slacks')}>💬 Slacks</button>
               </div>
             </div>
 
-            <div className="summary-grid">
-              <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
-              <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length - hitGoal.length - atZero.length}</div><div className="sum-label">In Progress</div></div>
-              <div className="sum-card purple"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
-              <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
-              <div className="sum-card gold"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
-            </div>
+            {asiaView !== 'slacks' && (
+              <div className="summary-grid">
+                <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+                <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length - hitGoal.length - atZero.length}</div><div className="sum-label">In Progress</div></div>
+                <div className="sum-card purple"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
+                <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
+                <div className="sum-card gold"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
+              </div>
+            )}
 
             {asiaView==='stats' ? (
               <>
@@ -461,18 +511,12 @@ export default function Dashboard() {
                     }
                   </div>
                 </div>
-
                 <div className="agent-table-wrap">
                   <table className="agent-table">
                     <thead>
                       <tr>
-                        <th>#</th>
-                        <th>Agent</th>
-                        <th>Ext</th>
-                        <th>English</th>
-                        <th>Spanish</th>
-                        <th>Total</th>
-                        <th>Goal</th>
+                        <th>#</th><th>Agent</th><th>Ext</th>
+                        <th>English</th><th>Spanish</th><th>Total</th><th>Goal</th>
                         {!isToday && <th className="th-edit"></th>}
                       </tr>
                     </thead>
@@ -487,22 +531,10 @@ export default function Dashboard() {
                             <td className="val-english">{a.english}</td>
                             <td className="val-spanish">{a.spanish}</td>
                             <td className="val-total">{a.english + a.spanish}</td>
-                            <td>
-                              {a.english>=goal
-                                ? <span className="badge-goal">✓ Goal</span>
-                                : <span className="badge-pending">{goal-a.english} left</span>}
-                            </td>
+                            <td>{a.english>=goal ? <span className="badge-goal">✓ Goal</span> : <span className="badge-pending">{goal-a.english} left</span>}</td>
                             {!isToday && (
                               <td className="td-edit">
-                                <button
-                                  className="edit-agent-btn"
-                                  title="Edit transfers"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setEditForm({ spanish: a.spanish, english: a.english, total: a.english + a.spanish })
-                                    setEditingAgent(a)
-                                  }}
-                                >✏️</button>
+                                <button className="edit-agent-btn" title="Edit" onClick={(e)=>{e.stopPropagation(); setEditForm({spanish:a.spanish,english:a.english}); setEditingAgent(a)}}>✏️</button>
                               </td>
                             )}
                           </tr>
@@ -512,14 +544,14 @@ export default function Dashboard() {
                   </table>
                 </div>
               </>
-            ) : (
+            ) : asiaView==='charts' ? (
               <div className="charts-section">
                 <div className="chart-controls">
                   <span className="chart-label">Distribution by transfers:</span>
                   <div className="metric-tabs">
                     <button className={`metric-tab ${chartMetric==='english'?'active':''}`} onClick={()=>setChartMetric('english')}>English</button>
                     <button className={`metric-tab ${chartMetric==='spanish'?'active':''}`} onClick={()=>setChartMetric('spanish')}>Spanish</button>
-                    <button className={`metric-tab ${chartMetric==='total'?'active':''}`} onClick={()=>setChartMetric('total')}>Total</button>
+                    <button className={`metric-tab ${chartMetric==='total'?'active':''}`}   onClick={()=>setChartMetric('total')}>Total</button>
                   </div>
                 </div>
                 <BarChart agents={asiaAgentsFinal} metric={chartMetric}/>
@@ -529,30 +561,112 @@ export default function Dashboard() {
                   <div className="goal-stat red-stat"><div className="goal-stat-val">{atZero.length}</div><div className="goal-stat-label"><Img src={E.zero} size={14}/> At zero</div></div>
                 </div>
               </div>
+            ) : (
+              /* ── SLACKS REPORTS ── */
+              <div className="slacks-section">
+                {/* Summary cards */}
+                <div className="summary-grid" style={{marginBottom:'1.5rem'}}>
+                  <div className="sum-card blue"><div className="sum-val">{slacksByAgent.length}</div><div className="sum-label">Agents w/ Reports</div></div>
+                  <div className="sum-card gold"><div className="sum-val">{slacksData.length}</div><div className="sum-label">Total Reports</div></div>
+                  <div className="sum-card purple"><div className="sum-val">{slacksData.reduce((s,r)=>s+countPhones(r[3]),0)}</div><div className="sum-label">Total Phones</div></div>
+                  <div className="sum-card green"><div className="sum-val">{slackDates.length}</div><div className="sum-label">Days w/ Reports</div></div>
+                  <div className="sum-card orange"><div className="sum-val">{slacksByAgentFiltered.length}</div><div className="sum-label">Agents (filtered)</div></div>
+                </div>
+
+                {/* Date filter */}
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:'1rem',flexWrap:'wrap'}}>
+                  <span style={{fontSize:12,color:'#6b7280'}}>Filter by date:</span>
+                  <button
+                    onClick={()=>setSlackFilter('all')}
+                    className={`metric-tab ${slackFilter==='all'?'active':''}`}
+                  >All</button>
+                  {slackDates.map(d=>(
+                    <button key={d} onClick={()=>setSlackFilter(d)} className={`metric-tab ${slackFilter===d?'active':''}`}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Table */}
+                <div className="agent-table-wrap">
+                  <table className="agent-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Agent</th>
+                        <th>ID Opener</th>
+                        <th style={{textAlign:'center'}}>Reports</th>
+                        <th style={{textAlign:'center'}}>Phones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {slacksByAgentFiltered.length === 0 ? (
+                        <tr><td colSpan={5} style={{textAlign:'center',color:'#6b7280',padding:'2rem'}}>No reports for this date.</td></tr>
+                      ) : slacksByAgentFiltered.map((a,i)=>{
+                        const rs = i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
+                        return (
+                          <tr key={i}>
+                            <td style={rs}>#{i+1}</td>
+                            <td className="agent-name">{a.agent}</td>
+                            <td className="agent-ext">{a.opener}</td>
+                            <td style={{textAlign:'center',color:'#f97316',fontWeight:600}}>{a.reports}</td>
+                            <td style={{textAlign:'center',color:'#c084fc',fontWeight:700,fontSize:16}}>{a.phones}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Detail rows for filtered date */}
+                {slackFilter !== 'all' && (
+                  <div style={{marginTop:'1.5rem'}}>
+                    <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>
+                      All entries — {slackFilter}
+                    </h3>
+                    <div className="agent-table-wrap">
+                      <table className="agent-table">
+                        <thead>
+                          <tr>
+                            <th>#</th><th>Agent</th><th>ID Opener</th><th>Call(s)</th><th style={{textAlign:'center'}}>Phones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {slackRowsFiltered.map((r,i)=>(
+                            <tr key={i}>
+                              <td style={{color:'#6b7280'}}>{i+1}</td>
+                              <td className="agent-name">{r[1]}</td>
+                              <td className="agent-ext">{r[2]}</td>
+                              <td style={{fontSize:11,color:'#9ca3af',maxWidth:200,wordBreak:'break-all'}}>{r[3]}</td>
+                              <td style={{textAlign:'center',color:'#c084fc',fontWeight:700}}>{countPhones(r[3])}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
       </div>
 
-      {/* ── Modal edición — z-index 1001 sobre canvas trail (999) ── */}
+      {/* ── Modal edición ── */}
       {editingAgent && (
-        <div
-          className="edit-modal-overlay"
-          style={{ zIndex: 1001 }}
-          onClick={() => setEditingAgent(null)}
-        >
-          <div className="edit-modal" onClick={e => e.stopPropagation()}>
+        <div className="edit-modal-overlay" style={{zIndex:1001}} onClick={()=>setEditingAgent(null)}>
+          <div className="edit-modal" onClick={e=>e.stopPropagation()}>
             <h3 className="edit-modal-title">
               Edit — {editingAgent.name}
-              <span style={{ color:'#6b7280', fontSize:12, fontWeight:400 }}>#{editingAgent.ext}</span>
+              <span style={{color:'#6b7280',fontSize:12,fontWeight:400}}>#{editingAgent.ext}</span>
             </h3>
             <div className="edit-modal-fields">
-              <label>English<input type="number" value={editForm.english} onChange={e => setEditForm(f=>({...f, english: e.target.value}))}/></label>
-              <label>Spanish<input type="number" value={editForm.spanish} onChange={e => setEditForm(f=>({...f, spanish: e.target.value}))}/></label>
+              <label>English<input type="number" value={editForm.english} onChange={e=>setEditForm(f=>({...f,english:e.target.value}))}/></label>
+              <label>Spanish<input type="number" value={editForm.spanish} onChange={e=>setEditForm(f=>({...f,spanish:e.target.value}))}/></label>
             </div>
             <div className="edit-modal-actions">
-              <button className="btn-cancel" onClick={() => setEditingAgent(null)}>Cancel</button>
-              <button className="btn-save" onClick={saveAgentEdit}>Save</button>
+              <button className="btn-cancel" onClick={()=>setEditingAgent(null)}>Cancel</button>
+              <button className="btn-save"   onClick={saveAgentEdit}>Save</button>
             </div>
           </div>
         </div>
