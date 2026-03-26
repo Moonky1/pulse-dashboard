@@ -6,7 +6,6 @@ const SHEET_ID         = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const USERS_SHEET_ID   = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
 
-// Fechas históricas — isoDate se usa como selectedDate key
 const HISTORY_DATES = [
   { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026' },
   { isoDate:'2026-03-16', tab:'16032026', slackLabel:'16/03/2026' },
@@ -44,9 +43,17 @@ async function fetchSheet(sheetId, name) {
 }
 
 const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
+
+// Cuenta phones distintos en una celda — split por / o por tel:
 const countPhones = (cell) => {
   if (!cell) return 0
   return cell.split('/').filter(p => p.trim().length > 0).length || 1
+}
+
+// Extrae lista de números limpios de la celda
+const extractPhones = (cell) => {
+  if (!cell) return []
+  return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length > 0)
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
@@ -82,7 +89,7 @@ const todayKey = () => new Date().toISOString().slice(0,10)
 
 const saveSnapshot = (generalData, asiaData) => {
   const key = `pulse_snap_${todayKey()}`
-  try { localStorage.setItem(key, JSON.stringify({generalData, asiaData, savedAt: new Date().toISOString()})) } catch(e) {}
+  try { localStorage.setItem(key, JSON.stringify({generalData,asiaData,savedAt:new Date().toISOString()})) } catch(e) {}
 }
 
 const loadAllSnapshots = () => {
@@ -104,33 +111,37 @@ const formatDateLabel = (dateStr) => {
   const today = todayKey()
   const yest = new Date(); yest.setDate(yest.getDate()-1)
   const yKey = yest.toISOString().slice(0,10)
-  if (dateStr===today)  return 'Today'
-  if (dateStr===yKey)   return 'Yesterday'
+  if (dateStr===today) return 'Today'
+  if (dateStr===yKey)  return 'Yesterday'
   const [y,m,d] = dateStr.split('-')
   return `${d}/${m}/${y}`
 }
 
-// Parse agents from a history sheet rows
+// Parse history sheet — total = spanish + english siempre
 function parseHistoryAgents(rows) {
   const agents = []
-  let totals = {spanish:0, english:0, total:0, activeAgents:0}
+  let totals = {spanish:0,english:0,total:0,activeAgents:0}
   for (const row of rows) {
     const name   = (row[0]||'').trim()
     const nameUp = name.toUpperCase()
     if (nameUp.includes('AGENT') && nameUp.includes('LOGGED')) {
       const numMatch = name.match(/^(\d+)/)
+      const sp = safeInt(row[2])
+      const en = safeInt(row[3])
       totals = {
         activeAgents: numMatch ? parseInt(numMatch[1]) : agents.length,
-        spanish: safeInt(row[2]),
-        english: safeInt(row[3]),
-        total:   safeInt(row[4]),
+        spanish: sp,
+        english: en,
+        total:   sp + en,   // ← siempre spanish + english
       }
       break
     }
-    if (nameUp.includes('MANAGEMENT') || nameUp.includes('CALLS') || name.length<=1) continue
+    if (nameUp.includes('MANAGEMENT')||nameUp.includes('CALLS')||name.length<=1) continue
     const ext = safeInt(row[1])
     if (ext < 1000 || ext > 9999) continue
-    agents.push({ name, ext: String(ext), spanish: safeInt(row[2]), english: safeInt(row[3]), total: safeInt(row[4]) })
+    const sp = safeInt(row[2])
+    const en = safeInt(row[3])
+    agents.push({ name, ext: String(ext), spanish: sp, english: en, total: sp + en })
   }
   return {agents, totals}
 }
@@ -203,21 +214,18 @@ export default function Dashboard() {
   const [editingAgent, setEditingAgent]     = useState(null)
   const [editForm, setEditForm]             = useState({})
   const [overridesTick, setOverridesTick]   = useState(0)
-  // History date data cache: { [isoDate]: {agents, totals} }
   const [histCache, setHistCache]           = useState({})
   const [histLoading, setHistLoading]       = useState(false)
+  const [expandedAgent, setExpandedAgent]   = useState(null) // for phone number expansion in slacks
 
-  const isToday      = selectedDate === todayKey()
-  const isHistDate   = HISTORY_ISO_SET.has(selectedDate)
-  const histMeta     = HISTORY_DATES.find(d => d.isoDate===selectedDate)
-  const activeSnap   = (!isToday && !isHistDate) ? snapshots.find(s => s.date===selectedDate) : null
+  const isToday    = selectedDate === todayKey()
+  const isHistDate = HISTORY_ISO_SET.has(selectedDate)
+  const histMeta   = HISTORY_DATES.find(d => d.isoDate===selectedDate)
+  const activeSnap = (!isToday && !isHistDate) ? snapshots.find(s => s.date===selectedDate) : null
 
-  // asiaData source
-  const asiaDataRaw = isToday ? liveAsia : (activeSnap?.asiaData || [])
+  const asiaDataRaw    = isToday ? liveAsia    : (activeSnap?.asiaData    || [])
   const generalDataRaw = isToday ? liveGeneral : (activeSnap?.generalData || [])
-
-  // History agents come from cache
-  const histParsed = isHistDate ? (histCache[selectedDate] || {agents:[], totals:{spanish:0,english:0,total:0,activeAgents:0}}) : null
+  const histParsed     = isHistDate ? (histCache[selectedDate] || {agents:[],totals:{spanish:0,english:0,total:0,activeAgents:0}}) : null
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -269,14 +277,14 @@ export default function Dashboard() {
     return ()=>clearInterval(iv)
   },[])
 
-  // Load history sheet when a history date is selected and not cached
+  // Load history sheet when needed
   useEffect(()=>{
-    if (!isHistDate || !histMeta || histCache[selectedDate]) return
+    if (!isHistDate||!histMeta||histCache[selectedDate]) return
     setHistLoading(true)
-    fetchSheet(HISTORY_SHEET_ID, histMeta.tab)
-      .then(rows => {
-        const parsed = parseHistoryAgents(rows)
-        setHistCache(c => ({...c, [selectedDate]: parsed}))
+    fetchSheet(HISTORY_SHEET_ID,histMeta.tab)
+      .then(rows=>{
+        const parsed=parseHistoryAgents(rows)
+        setHistCache(c=>({...c,[selectedDate]:parsed}))
       })
       .catch(console.error)
       .finally(()=>setHistLoading(false))
@@ -293,7 +301,7 @@ export default function Dashboard() {
         if (!found.find(f=>f.name.toUpperCase()===name)) {
           const rawSpanish = row[4]?.trim()
           found.push({
-            name: row[0]?.trim()||'', agents:safeInt(row[2]),
+            name:row[0]?.trim()||'', agents:safeInt(row[2]),
             english:safeInt(row[3]), spanish:safeInt(rawSpanish),
             total:safeInt(row[5]), noSpanish:rawSpanish==='-'||rawSpanish===''||!rawSpanish,
           })
@@ -306,40 +314,39 @@ export default function Dashboard() {
   const teamsSorted = [...teamRows].sort((a,b)=>b.english-a.english)
 
   // ── Asia agents ──
-  // For history dates: use histParsed; for today/snapshot: parse asiaDataRaw
   const {asiaAgents, asiaTotals} = (() => {
     if (isHistDate && histParsed) {
-      return {asiaAgents: histParsed.agents, asiaTotals: histParsed.totals}
+      return {asiaAgents:histParsed.agents, asiaTotals:histParsed.totals}
     }
     const agents = []
     let totals = {spanish:0,english:0,total:0,activeAgents:0}
     for (const row of asiaDataRaw) {
-      const name   = (row[0]||'').trim()
-      const nameUp = name.toUpperCase()
+      const name=(row[0]||'').trim(), nameUp=name.toUpperCase()
       if (nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')) {
         const numMatch=name.match(/^(\d+)/)
-        totals={activeAgents:numMatch?parseInt(numMatch[1]):agents.length,spanish:safeInt(row[2]),english:safeInt(row[3]),total:safeInt(row[4])}
+        const sp=safeInt(row[2]), en=safeInt(row[3])
+        totals={activeAgents:numMatch?parseInt(numMatch[1]):agents.length,spanish:sp,english:en,total:sp+en}
         break
       }
       if (nameUp.includes('REMOVED')||nameUp.includes('REMOVE')) break
       const ext=safeInt(row[1])
       if (isNaN(ext)||ext<1000||ext>9999) continue
       if (name.length<=1) continue
-      agents.push({name,ext:String(ext),spanish:safeInt(row[2]),english:safeInt(row[3]),total:safeInt(row[4])})
+      const sp=safeInt(row[2]), en=safeInt(row[3])
+      agents.push({name,ext:String(ext),spanish:sp,english:en,total:sp+en})
     }
-    return {asiaAgents:agents, asiaTotals:totals}
+    return {asiaAgents:agents,asiaTotals:totals}
   })()
 
-  // Overrides (only for snapshot dates, not history dates which are read-only)
   const asiaAgentsFinal = (() => {
-    if (isToday || isHistDate) return asiaAgents
+    if (isToday||isHistDate) return asiaAgents
     void overridesTick
-    const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`)||'{}')
-    return asiaAgents.map(a => overrides[a.ext] ? {...a,...overrides[a.ext]} : a)
+    const overrides=JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`)||'{}')
+    return asiaAgents.map(a=>overrides[a.ext]?{...a,...overrides[a.ext]}:a)
   })()
 
   const saveAgentEdit = () => {
-    const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`)||'{}')
+    const overrides=JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`)||'{}')
     const en=parseInt(editForm.english)||0, sp=parseInt(editForm.spanish)||0
     overrides[editingAgent.ext]={name:editingAgent.name,spanish:sp,english:en,total:en+sp}
     localStorage.setItem(`pulse_overrides_${selectedDate}`,JSON.stringify(overrides))
@@ -348,42 +355,42 @@ export default function Dashboard() {
 
   const goal = APP_CONFIG.dailyGoal
 
+  // Totals — always spanish + english
   const totalSpanish = isToday ? asiaTotals.spanish : (isHistDate ? asiaTotals.spanish : asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0))
   const totalEnglish = isToday ? asiaTotals.english : (isHistDate ? asiaTotals.english : asiaAgentsFinal.reduce((s,a)=>s+a.english,0))
-  const totalXfers   = isToday ? asiaTotals.total   : (isHistDate ? asiaTotals.total   : totalSpanish+totalEnglish)
+  const totalXfers   = totalSpanish + totalEnglish   // ← siempre la suma de los dos
 
   const hitGoal     = asiaAgentsFinal.filter(a=>a.english>=goal)
   const atZero      = asiaAgentsFinal.filter(a=>a.total===0)
   const top3English = [...asiaAgentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
   const top3Spanish = [...asiaAgentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3)
 
-  // ── Slacks ──
-  // Match slacks by date: slacks sheet has "14/03/2026" format
+  // ── Slacks — ONLY for current selected date ──
   const slackLabelForDate = (iso) => {
-    const hd = HISTORY_DATES.find(d=>d.isoDate===iso)
+    const hd=HISTORY_DATES.find(d=>d.isoDate===iso)
     if (hd) return hd.slackLabel
-    const [y,m,d] = iso.split('-')
+    const [y,m,d]=iso.split('-')
     return `${d}/${m}/${y}`
   }
   const currentSlackLabel = slackLabelForDate(selectedDate)
-  // For history/snapshot dates filter slacks to that day; for Today show all of today
-  const slackRowsForDate = isToday
-    ? slacksData
-    : slacksData.filter(r => r[0]?.trim() === currentSlackLabel)
-  const slackDates = [...new Set(slacksData.map(r=>r[0]?.trim()).filter(Boolean))].sort((a,b)=>b.localeCompare(a))
+
+  // Filter strictly to current date only — no fallback to all
+  const slackRowsForDate = slacksData.filter(r => r[0]?.trim() === currentSlackLabel)
 
   const buildSlackAgents = (rows) => {
     const map = {}
     for (const row of rows) {
       const agent=(row[1]||'').trim(), opener=(row[2]||'').trim(), call=(row[3]||'').trim()
       if (!agent) continue
-      if (!map[agent]) map[agent]={agent,opener,reports:0,phones:0}
-      map[agent].reports+=1; map[agent].phones+=countPhones(call)
+      if (!map[agent]) map[agent]={agent,opener,reports:0,calls:0,phones:[]}
+      map[agent].reports+=1
+      map[agent].calls+=countPhones(call)
+      extractPhones(call).forEach(p=>{ if(!map[agent].phones.includes(p)) map[agent].phones.push(p) })
     }
-    return Object.values(map).sort((a,b)=>b.phones-a.phones)
+    return Object.values(map).sort((a,b)=>b.calls-a.calls)
   }
-  const slackAgentsForDate  = buildSlackAgents(slackRowsForDate)
-  const slackAgentsAll      = buildSlackAgents(slacksData)
+  const slackAgentsForDate = buildSlackAgents(slackRowsForDate)
+  const totalCallsForDate  = slackRowsForDate.reduce((s,r)=>s+countPhones(r[3]),0)
 
   const getFlag = (name) => {
     const n=name.toUpperCase()
@@ -399,12 +406,11 @@ export default function Dashboard() {
            (team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))
   }
 
-  // Date tabs: Today + snapshots + history dates, sorted newest first
   const dateTabs = (() => {
     const dates = new Set()
     dates.add(todayKey())
-    snapshots.forEach(s => dates.add(s.date))
-    HISTORY_DATES.forEach(d => dates.add(d.isoDate))
+    snapshots.forEach(s=>dates.add(s.date))
+    HISTORY_DATES.forEach(d=>dates.add(d.isoDate))
     return [...dates].sort((a,b)=>b.localeCompare(a))
   })()
 
@@ -442,7 +448,6 @@ export default function Dashboard() {
         <button className={`dash-tab ${activeTab==='asia'?'active':''}`}    onClick={()=>setActiveTab('asia')}>🌏 Asia</button>
       </div>
 
-      {/* Date tabs — Today + snapshots + all history dates */}
       <div className="date-tabs-bar">
         <span className="date-tabs-label">📅</span>
         <div className="date-tabs">
@@ -471,7 +476,7 @@ export default function Dashboard() {
           <div className="fade-in">
             <h2 className="section-title">
               Auto Warranty Garrett — Teams Overview
-              {isToday ? <span className="live-badge">LIVE</span> : <span className="date-badge">{formatDateLabel(selectedDate)}</span>}
+              {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}
             </h2>
             {teamsSorted.length===0 ? <p style={{color:'#6b7280'}}>No data for this date.</p> : (
               <div className="teams-grid">
@@ -496,12 +501,11 @@ export default function Dashboard() {
             )}
           </div>
         ) : (
-          /* ── ASIA TAB ── */
           <div className="fade-in">
             <div className="asia-header-row">
               <h2 className="section-title">
                 Asia — Agent Detail
-                {isToday ? <span className="live-badge">LIVE</span> : <span className="date-badge">{formatDateLabel(selectedDate)}</span>}
+                {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}
               </h2>
               <div className="asia-view-tabs">
                 <button className={`view-tab ${asiaView==='stats'?'active':''}`}  onClick={()=>setAsiaView('stats')}>📊 Stats</button>
@@ -510,21 +514,19 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Summary cards — always visible except slacks */}
+            {/* Summary cards */}
             {asiaView !== 'slacks' && (
-              <>
-                {histLoading ? (
-                  <div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading historical data...</div>
-                ) : (
-                  <div className="summary-grid">
-                    <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
-                    <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-                    <div className="sum-card purple"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
-                    <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
-                    <div className="sum-card gold"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
-                  </div>
-                )}
-              </>
+              histLoading ? (
+                <div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading historical data...</div>
+              ) : (
+                <div className="summary-grid">
+                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+                  <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
+                  <div className="sum-card teal"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
+                  <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
+                  <div className="sum-card indigo"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
+                </div>
+              )
             )}
 
             {/* ── STATS ── */}
@@ -602,78 +604,84 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── SLACKS — filtered to current date ── */}
+            {/* ── SLACKS — solo fecha seleccionada ── */}
             {asiaView==='slacks' && (
               <div className="slacks-section">
                 {/* Summary */}
                 <div className="summary-grid" style={{marginBottom:'1.5rem'}}>
-                  <div className="sum-card blue"><div className="sum-val">{slackAgentsAll.length}</div><div className="sum-label">Agents (all time)</div></div>
-                  <div className="sum-card gold"><div className="sum-val">{slacksData.length}</div><div className="sum-label">Reports (all time)</div></div>
-                  <div className="sum-card purple"><div className="sum-val">{slacksData.reduce((s,r)=>s+countPhones(r[3]),0)}</div><div className="sum-label">Phones (all time)</div></div>
-                  <div className="sum-card green"><div className="sum-val">{slackRowsForDate.length}</div><div className="sum-label">Reports {isToday?'Today':'This Day'}</div></div>
-                  <div className="sum-card orange"><div className="sum-val">{slackAgentsForDate.reduce((s,a)=>s+a.phones,0)}</div><div className="sum-label">Phones {isToday?'Today':'This Day'}</div></div>
+                  <div className="sum-card blue"><div className="sum-val">{slackAgentsForDate.length}</div><div className="sum-label">Agents</div></div>
+                  <div className="sum-card gold"><div className="sum-val">{slackRowsForDate.length}</div><div className="sum-label">Reports</div></div>
+                  <div className="sum-card teal"><div className="sum-val">{totalCallsForDate}</div><div className="sum-label">Total Calls</div></div>
+                  <div className="sum-card indigo"><div className="sum-val">{slackRowsForDate.reduce((s,r)=>s+extractPhones(r[3]).length,0)}</div><div className="sum-label">Unique Phones</div></div>
+                  <div className="sum-card orange"><div className="sum-val" style={{fontSize:14,paddingTop:8}}>{currentSlackLabel}</div><div className="sum-label">Date</div></div>
                 </div>
 
-                {/* Date filter chips */}
-                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:'1rem',flexWrap:'wrap'}}>
-                  <span style={{fontSize:12,color:'#6b7280'}}>Jump to date:</span>
-                  {slackDates.map(d=>(
-                    <button
-                      key={d}
-                      onClick={()=>{
-                        // Find matching isoDate and switch selectedDate
-                        const hd = HISTORY_DATES.find(h=>h.slackLabel===d)
-                        if (hd) setSelectedDate(hd.isoDate)
-                      }}
-                      className={`metric-tab ${currentSlackLabel===d?'active':''}`}
-                    >{d}</button>
-                  ))}
-                </div>
-
-                {/* Agents table for current date */}
-                <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>
-                  {isToday ? "Today's Slack Reports" : `Slack Reports — ${formatDateLabel(selectedDate)}`}
-                </h3>
-                <div className="agent-table-wrap" style={{marginBottom:'1.5rem'}}>
-                  <table className="agent-table">
-                    <thead>
-                      <tr><th>#</th><th>Agent</th><th>ID Opener</th><th style={{textAlign:'center'}}>Reports</th><th style={{textAlign:'center'}}>Phones</th></tr>
-                    </thead>
-                    <tbody>
-                      {slackAgentsForDate.length===0
-                        ? <tr><td colSpan={5} style={{textAlign:'center',color:'#6b7280',padding:'2rem'}}>No slack reports for this date.</td></tr>
-                        : slackAgentsForDate.map((a,i)=>{
-                          const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
-                          return (
-                            <tr key={i}>
-                              <td style={rs}>#{i+1}</td>
-                              <td className="agent-name">{a.agent}</td>
-                              <td className="agent-ext">{a.opener}</td>
-                              <td style={{textAlign:'center',color:'#f97316',fontWeight:600}}>{a.reports}</td>
-                              <td style={{textAlign:'center',color:'#c084fc',fontWeight:700,fontSize:16}}>{a.phones}</td>
-                            </tr>
-                          )
-                        })
-                      }
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Detail entries */}
-                {slackRowsForDate.length > 0 && (
+                {slackRowsForDate.length === 0 ? (
+                  <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>
+                    No slack reports for {formatDateLabel(selectedDate)}.
+                  </div>
+                ) : (
                   <>
-                    <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>All entries</h3>
+                    {/* Agents summary table */}
+                    <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>
+                      Agent Summary — {formatDateLabel(selectedDate)}
+                    </h3>
+                    <div className="agent-table-wrap" style={{marginBottom:'1.5rem'}}>
+                      <table className="agent-table">
+                        <thead>
+                          <tr>
+                            <th>#</th><th>Agent</th><th>ID Opener</th>
+                            <th style={{textAlign:'center'}}>Reports</th>
+                            <th style={{textAlign:'center'}}>Calls</th>
+                            <th>Phone Numbers</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {slackAgentsForDate.map((a,i)=>{
+                            const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
+                            const isExpanded = expandedAgent === a.agent
+                            return (
+                              <tr key={i}>
+                                <td style={rs}>#{i+1}</td>
+                                <td className="agent-name">{a.agent}</td>
+                                <td className="agent-ext">{a.opener}</td>
+                                <td style={{textAlign:'center',color:'#f97316',fontWeight:600}}>{a.reports}</td>
+                                <td style={{textAlign:'center',color:'#22d3ee',fontWeight:700,fontSize:16}}>{a.calls}</td>
+                                <td>
+                                  <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                                    {(isExpanded ? a.phones : a.phones.slice(0,2)).map((p,j)=>(
+                                      <span key={j} style={{background:'#1e2230',border:'0.5px solid #2a2d38',borderRadius:4,padding:'2px 8px',fontSize:11,color:'#94a3b8',fontFamily:'monospace'}}>{p}</span>
+                                    ))}
+                                    {a.phones.length > 2 && (
+                                      <button
+                                        onClick={()=>setExpandedAgent(isExpanded?null:a.agent)}
+                                        style={{background:'none',border:'0.5px solid #2a2d38',borderRadius:4,color:'#6b7280',fontSize:10,cursor:'pointer',padding:'2px 6px'}}
+                                      >{isExpanded ? 'less' : `+${a.phones.length-2} more`}</button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Full entry detail */}
+                    <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>All Entries</h3>
                     <div className="agent-table-wrap">
                       <table className="agent-table">
-                        <thead><tr><th>#</th><th>Agent</th><th>ID Opener</th><th>Call(s)</th><th style={{textAlign:'center'}}>Phones</th></tr></thead>
+                        <thead>
+                          <tr><th>#</th><th>Agent</th><th>ID Opener</th><th>Raw Call Data</th><th style={{textAlign:'center'}}>Calls</th></tr>
+                        </thead>
                         <tbody>
                           {slackRowsForDate.map((r,i)=>(
                             <tr key={i}>
                               <td style={{color:'#6b7280'}}>{i+1}</td>
                               <td className="agent-name">{r[1]}</td>
                               <td className="agent-ext">{r[2]}</td>
-                              <td style={{fontSize:11,color:'#9ca3af',maxWidth:200,wordBreak:'break-all'}}>{r[3]}</td>
-                              <td style={{textAlign:'center',color:'#c084fc',fontWeight:700}}>{countPhones(r[3])}</td>
+                              <td style={{fontSize:11,color:'#9ca3af',maxWidth:220,wordBreak:'break-all'}}>{r[3]}</td>
+                              <td style={{textAlign:'center',color:'#22d3ee',fontWeight:700}}>{countPhones(r[3])}</td>
                             </tr>
                           ))}
                         </tbody>
