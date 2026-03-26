@@ -25,6 +25,7 @@ export default function Admin() {
   const [loading, setLoading]   = useState(true)
   const [filter, setFilter]     = useState('all')
   const [menuOpen, setMenuOpen] = useState(null)
+  const [menuPos, setMenuPos]   = useState({ x: 0, y: 0 })
   const [editUser, setEditUser] = useState(null)
   const [editForm, setEditForm] = useState({ name:'', team:'', role:'' })
   const [saving, setSaving]     = useState(false)
@@ -69,6 +70,14 @@ export default function Admin() {
   const filtered = filter === 'all' ? users : users.filter(u => u.role?.toLowerCase().includes(filter))
   const roleCount = (role) => users.filter(u => u.role === role).length
 
+  const openMenu = (e, i) => {
+    e.stopPropagation()
+    if (menuOpen === i) { setMenuOpen(null); return }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setMenuPos({ x: rect.right, y: rect.bottom })
+    setMenuOpen(i)
+  }
+
   const openEdit = (user) => {
     setEditUser(user)
     setEditForm({ name: user.name, team: user.team, role: user.role })
@@ -97,11 +106,13 @@ export default function Admin() {
           </div>
           <div style={{ fontFamily:"'Sora',sans-serif", fontWeight:700, fontSize:18, color:'#f5f5f5', marginBottom:4 }}>Pulse Admin</div>
           <p style={{ fontSize:12, color:'#6b7280', marginBottom:24 }}>Enter your password to continue</p>
-          <input type="password" placeholder="Password" value={pw}
+          <input
+            type="password" placeholder="Password" value={pw}
             onChange={e => { setPw(e.target.value); setPwError('') }}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
             style={{ width:'100%', padding:'12px 16px', background:'#0d0f14', border:`0.5px solid ${pwError?'#f87171':'#2a2d38'}`, borderRadius:10, color:'#f5f5f5', fontSize:14, outline:'none', boxSizing:'border-box', marginBottom:8, fontFamily:"'DM Sans',sans-serif" }}
-            autoFocus />
+            autoFocus
+          />
           {pwError && <p style={{ color:'#f87171', fontSize:12, marginBottom:12 }}>{pwError}</p>}
           <button onClick={handleLogin} style={{ width:'100%', padding:12, background:'#f97316', border:'none', borderRadius:10, color:'#fff', fontSize:14, fontWeight:600, cursor:'pointer' }}>Enter →</button>
           <p style={{ marginTop:'1.5rem', fontSize:11, color:'#374151' }}>/admin — keep this URL private</p>
@@ -111,45 +122,89 @@ export default function Admin() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'#080a0f', fontFamily:"'DM Sans',sans-serif", color:'#f5f5f5' }} onClick={() => setMenuOpen(null)}>
+    <div
+      style={{ minHeight:'100vh', background:'#080a0f', fontFamily:"'DM Sans',sans-serif", color:'#f5f5f5' }}
+      onClick={() => setMenuOpen(null)}
+    >
 
-      {/* Edit Modal */}
+      {/* ── Edit Modal ── */}
       {editUser && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
-          <div style={{ background:'#181b23', border:'0.5px solid #2a2d38', borderRadius:16, padding:'2rem', width:'100%', maxWidth:380 }} onClick={e=>e.stopPropagation()}>
-            <h3 style={{ fontFamily:"'Sora',sans-serif", marginBottom:'1.5rem', fontSize:16 }}>Edit User</h3>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1001 }}>
+          <div
+            style={{ background:'#181b23', border:'0.5px solid #2a2d38', borderRadius:16, padding:'2rem', width:'100%', maxWidth:380, boxShadow:'0 24px 48px rgba(0,0,0,0.8)' }}
+            onClick={e=>e.stopPropagation()}
+          >
+            <h3 style={{ fontFamily:"'Sora',sans-serif", marginBottom:'1.5rem', fontSize:16, color:'#f5f5f5' }}>Edit User</h3>
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               <div>
                 <label style={{ fontSize:11, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em' }}>Name</label>
-                <input value={editForm.name} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))}
-                  style={{ width:'100%', marginTop:6, padding:'10px 14px', background:'#0d0f14', border:'0.5px solid #2a2d38', borderRadius:8, color:'#f5f5f5', fontSize:14, outline:'none', boxSizing:'border-box' }} />
+                <input
+                  value={editForm.name}
+                  onChange={e=>setEditForm(f=>({...f,name:e.target.value}))}
+                  style={{ width:'100%', marginTop:6, padding:'10px 14px', background:'#0d0f14', border:'0.5px solid #2a2d38', borderRadius:8, color:'#f5f5f5', fontSize:14, outline:'none', boxSizing:'border-box' }}
+                />
               </div>
               <div>
                 <label style={{ fontSize:11, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em' }}>Team</label>
-                <select value={editForm.team} onChange={e=>setEditForm(f=>({...f,team:e.target.value}))}
-                  style={{ width:'100%', marginTop:6, padding:'10px 14px', background:'#0d0f14', border:'0.5px solid #2a2d38', borderRadius:8, color:'#f5f5f5', fontSize:14, outline:'none', boxSizing:'border-box' }}>
+                <select
+                  value={editForm.team}
+                  onChange={e=>setEditForm(f=>({...f,team:e.target.value}))}
+                  style={{ width:'100%', marginTop:6, padding:'10px 14px', background:'#0d0f14', border:'0.5px solid #2a2d38', borderRadius:8, color:'#f5f5f5', fontSize:14, outline:'none', boxSizing:'border-box' }}
+                >
                   {TEAMS.map(t=><option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ fontSize:11, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em' }}>Role</label>
-                <select value={editForm.role} onChange={e=>setEditForm(f=>({...f,role:e.target.value}))}
-                  style={{ width:'100%', marginTop:6, padding:'10px 14px', background:'#0d0f14', border:'0.5px solid #2a2d38', borderRadius:8, color:'#f5f5f5', fontSize:14, outline:'none', boxSizing:'border-box' }}>
+                <select
+                  value={editForm.role}
+                  onChange={e=>setEditForm(f=>({...f,role:e.target.value}))}
+                  style={{ width:'100%', marginTop:6, padding:'10px 14px', background:'#0d0f14', border:'0.5px solid #2a2d38', borderRadius:8, color:'#f5f5f5', fontSize:14, outline:'none', boxSizing:'border-box' }}
+                >
                   {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
             </div>
             <div style={{ display:'flex', gap:10, marginTop:'1.5rem' }}>
-              <button onClick={()=>setEditUser(null)} style={{ flex:1, padding:10, background:'transparent', border:'0.5px solid #2a2d38', borderRadius:8, color:'#6b7280', fontSize:13, cursor:'pointer' }}>Cancel</button>
-              <button onClick={saveEdit} disabled={saving} style={{ flex:1, padding:10, background:'#f97316', border:'none', borderRadius:8, color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                {saving ? 'Saving...' : 'Save changes'}
-              </button>
+              <button
+                onClick={()=>setEditUser(null)}
+                style={{ flex:1, padding:10, background:'transparent', border:'0.5px solid #2a2d38', borderRadius:8, color:'#6b7280', fontSize:13, cursor:'pointer' }}
+              >Cancel</button>
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                style={{ flex:1, padding:10, background:'#f97316', border:'none', borderRadius:8, color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', opacity: saving?0.7:1 }}
+              >{saving ? 'Saving...' : 'Save changes'}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Nav */}
+      {/* ── Dropdown menu (fixed position, siempre visible) ── */}
+      {menuOpen !== null && (
+        <div
+          onClick={e=>e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top:  menuPos.y + 4,
+            left: menuPos.x - 130,
+            background: '#1e2230',
+            border: '0.5px solid #2a2d38',
+            borderRadius: 8,
+            zIndex: 500,
+            minWidth: 130,
+            overflow: 'hidden',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+          }}
+        >
+          <button
+            onClick={() => openEdit(filtered[menuOpen])}
+            style={{ width:'100%', padding:'10px 16px', background:'transparent', border:'none', color:'#f5f5f5', fontSize:13, cursor:'pointer', textAlign:'left' }}
+          >✏️ Edit</button>
+        </div>
+      )}
+
+      {/* ── Nav ── */}
       <div style={{ background:'#181b23', borderBottom:'0.5px solid #2a2d38', padding:'0 2rem', height:60, display:'flex', alignItems:'center', gap:12 }}>
         <div style={{ width:32, height:32, background:'#f97316', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center' }}>
           <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
@@ -166,7 +221,7 @@ export default function Admin() {
 
       <div style={{ maxWidth:960, margin:'0 auto', padding:'2rem' }}>
 
-        {/* Token */}
+        {/* ── Token ── */}
         <div style={{ background:'#181b23', border:'0.5px solid #2a2d38', borderRadius:16, padding:'1.5rem 2rem', marginBottom:'1.5rem', display:'flex', alignItems:'center', gap:'2rem', flexWrap:'wrap' }}>
           <div style={{ flex:1, minWidth:200 }}>
             <p style={{ fontSize:11, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:6 }}>Current Access Token</p>
@@ -176,12 +231,13 @@ export default function Admin() {
             </div>
             <p style={{ fontSize:12, color:seconds<30?'#f87171':'#6b7280', marginTop:6 }}>Changes in {seconds}s</p>
           </div>
-          <button onClick={copy} style={{ padding:'10px 24px', background:copied?'#0d2018':'transparent', border:`0.5px solid ${copied?'#1a4a2e':'#2a2d38'}`, borderRadius:10, color:copied?'#34d399':'#9ca3af', fontSize:14, cursor:'pointer', transition:'all 0.2s' }}>
-            {copied ? '✓ Copied!' : 'Copy token'}
-          </button>
+          <button
+            onClick={copy}
+            style={{ padding:'10px 24px', background:copied?'#0d2018':'transparent', border:`0.5px solid ${copied?'#1a4a2e':'#2a2d38'}`, borderRadius:10, color:copied?'#34d399':'#9ca3af', fontSize:14, cursor:'pointer', transition:'all 0.2s' }}
+          >{copied ? '✓ Copied!' : 'Copy token'}</button>
         </div>
 
-        {/* Stats */}
+        {/* ── Stats ── */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:'1.5rem' }}>
           {[
             { label:'Total',        value:users.length,            color:'#f97316', bg:'#1a1310', border:'#4a2e1a' },
@@ -196,7 +252,7 @@ export default function Admin() {
           ))}
         </div>
 
-        {/* Users table */}
+        {/* ── Users table ── */}
         <div style={{ background:'#181b23', border:'0.5px solid #2a2d38', borderRadius:12, overflow:'hidden' }}>
           <div style={{ padding:'1rem 1.5rem', borderBottom:'0.5px solid #2a2d38', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
             <span style={{ fontFamily:"'Sora',sans-serif", fontSize:14, fontWeight:600 }}>
@@ -220,8 +276,8 @@ export default function Admin() {
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
               <thead>
                 <tr style={{ background:'#0d0f14' }}>
-                  {['#','Name','Team','Role','Date',''].map(h => (
-                    <th key={h} style={{ padding:'10px 16px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'0.5px solid #2a2d38' }}>{h}</th>
+                  {['#','Name','Team','Role','Date',''].map((h,i) => (
+                    <th key={i} style={{ padding:'10px 16px', textAlign:'left', fontSize:11, fontWeight:600, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'0.5px solid #2a2d38' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -237,19 +293,11 @@ export default function Admin() {
                         <span style={{ background:rc.bg, border:`0.5px solid ${rc.border}`, color:rc.color, padding:'2px 10px', borderRadius:4, fontSize:11, fontWeight:600 }}>{u.role}</span>
                       </td>
                       <td style={{ padding:'10px 16px', color:'#6b7280', fontSize:12 }}>{u.date}</td>
-                      <td style={{ padding:'10px 16px', position:'relative' }}>
+                      <td style={{ padding:'10px 16px', textAlign:'right' }}>
                         <button
-                          onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen===i?null:i) }}
-                          style={{ background:'transparent', border:'none', color:'#6b7280', fontSize:18, cursor:'pointer', padding:'0 4px', letterSpacing:2 }}>
-                          ···
-                        </button>
-                        {menuOpen===i && (
-                          <div onClick={e=>e.stopPropagation()} style={{ position:'absolute', right:16, top:36, background:'#1e2230', border:'0.5px solid #2a2d38', borderRadius:8, zIndex:100, minWidth:100, overflow:'hidden' }}>
-                            <button onClick={()=>openEdit(u)} style={{ width:'100%', padding:'10px 16px', background:'transparent', border:'none', color:'#f5f5f5', fontSize:13, cursor:'pointer', textAlign:'left' }}>
-                              ✏️ Edit
-                            </button>
-                          </div>
-                        )}
+                          onClick={(e) => openMenu(e, i)}
+                          style={{ background:'transparent', border:'none', color:'#6b7280', fontSize:18, cursor:'pointer', padding:'0 4px', letterSpacing:2, lineHeight:1 }}
+                        >···</button>
                       </td>
                     </tr>
                   )
@@ -258,6 +306,7 @@ export default function Admin() {
             </table>
           )}
         </div>
+
         <p style={{ marginTop:'1.5rem', fontSize:11, color:'#374151', textAlign:'center' }}>/admin — keep this URL private</p>
       </div>
     </div>

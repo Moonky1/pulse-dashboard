@@ -145,20 +145,21 @@ export default function Dashboard() {
   const team = APP_CONFIG.teams.find(t => t.id === user?.team)
   const roleLabel = user?.role === 'supervisor' ? 'Supervisor' : user?.role === 'qa' ? 'QA' : user?.role === 'leader' ? 'Team Leader' : 'Member'
 
-  const [liveGeneral, setLiveGeneral] = useState([])
-  const [liveAsia, setLiveAsia]       = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [lastUpdate, setLastUpdate]   = useState(null)
-  const [activeTab, setActiveTab]     = useState('general')
-  const [asiaView, setAsiaView]       = useState('stats')
-  const [chartMetric, setChartMetric] = useState('english')
-  const [snapshots, setSnapshots]     = useState([])
+  const [liveGeneral, setLiveGeneral]   = useState([])
+  const [liveAsia, setLiveAsia]         = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [lastUpdate, setLastUpdate]     = useState(null)
+  const [activeTab, setActiveTab]       = useState('general')
+  const [asiaView, setAsiaView]         = useState('stats')
+  const [chartMetric, setChartMetric]   = useState('english')
+  const [snapshots, setSnapshots]       = useState([])
   const [selectedDate, setSelectedDate] = useState(todayKey())
   const [editingAgent, setEditingAgent] = useState(null)
   const [editForm, setEditForm]         = useState({})
+  const [overridesTick, setOverridesTick] = useState(0) // fuerza re-render al guardar edits
 
-  const isToday    = selectedDate === todayKey()
-  const activeSnap = isToday ? null : snapshots.find(s => s.date === selectedDate)
+  const isToday     = selectedDate === todayKey()
+  const activeSnap  = isToday ? null : snapshots.find(s => s.date === selectedDate)
   const generalData = isToday ? liveGeneral : (activeSnap?.generalData || [])
   const asiaData    = isToday ? liveAsia    : (activeSnap?.asiaData    || [])
 
@@ -239,7 +240,7 @@ export default function Dashboard() {
 
   // ── Asia parser ──
   // Columnas: A=name, B=ext, C=spanish, D=english, E=total
-  // Para en "AGENT LOGGED IN" y lee los totales de esa fila
+  // Para en "AGENT LOGGED IN" y lee totales de esa fila
   const { asiaAgents, asiaTotals } = (() => {
     const agents = []
     let totals = { spanish: 0, english: 0, total: 0, activeAgents: 0 }
@@ -277,9 +278,11 @@ export default function Dashboard() {
     return { asiaAgents: agents, asiaTotals: totals }
   })()
 
-  // ── Aplicar overrides manuales para días pasados ──
+  // ── Aplicar overrides para días pasados ──
+  // overridesTick incluido para forzar recompute cuando se guarda un edit
   const asiaAgentsFinal = (() => {
     if (isToday) return asiaAgents
+    void overridesTick
     const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`) || '{}')
     return asiaAgents.map(a => overrides[a.ext] ? { ...a, ...overrides[a.ext] } : a)
   })()
@@ -296,11 +299,12 @@ export default function Dashboard() {
     localStorage.setItem(`pulse_overrides_${selectedDate}`, JSON.stringify(overrides))
     setEditingAgent(null)
     setSnapshots(loadAllSnapshots())
+    setOverridesTick(t => t + 1) // fuerza re-render → totales se actualizan
   }
 
   const goal = APP_CONFIG.dailyGoal
 
-  // Totales: Today → directo del sheet; días pasados → suma con overrides
+  // Totales: Today → directo del sheet; días pasados → suma con overrides aplicados
   const totalSpanish = isToday ? asiaTotals.spanish : asiaAgentsFinal.reduce((s,a) => s+a.spanish, 0)
   const totalEnglish = isToday ? asiaTotals.english : asiaAgentsFinal.reduce((s,a) => s+a.english, 0)
   const totalXfers   = isToday ? asiaTotals.total   : asiaAgentsFinal.reduce((s,a) => s+a.total,   0)
@@ -521,7 +525,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── Modal edición — z-index 1001 para estar sobre el canvas trail (999) ── */}
+      {/* ── Modal edición — z-index 1001 sobre canvas trail (999) ── */}
       {editingAgent && (
         <div
           className="edit-modal-overlay"
@@ -531,37 +535,16 @@ export default function Dashboard() {
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
             <h3 className="edit-modal-title">
               Edit — {editingAgent.name}
-              <span style={{ color:'#6b7280', fontSize:12, fontWeight:400, marginLeft:6 }}>#{editingAgent.ext}</span>
+              <span style={{ color:'#6b7280', fontSize:12, fontWeight:400 }}>#{editingAgent.ext}</span>
             </h3>
             <div className="edit-modal-fields">
-              <label>
-                English
-                <input
-                  type="number"
-                  value={editForm.english}
-                  onChange={e => setEditForm(f => ({ ...f, english: e.target.value }))}
-                />
-              </label>
-              <label>
-                Spanish
-                <input
-                  type="number"
-                  value={editForm.spanish}
-                  onChange={e => setEditForm(f => ({ ...f, spanish: e.target.value }))}
-                />
-              </label>
-              <label>
-                Total
-                <input
-                  type="number"
-                  value={editForm.total}
-                  onChange={e => setEditForm(f => ({ ...f, total: e.target.value }))}
-                />
-              </label>
+              <label>English<input type="number" value={editForm.english} onChange={e => setEditForm(f=>({...f, english: e.target.value}))}/></label>
+              <label>Spanish<input type="number" value={editForm.spanish} onChange={e => setEditForm(f=>({...f, spanish: e.target.value}))}/></label>
+              <label>Total<input   type="number" value={editForm.total}   onChange={e => setEditForm(f=>({...f, total:   e.target.value}))}/></label>
             </div>
             <div className="edit-modal-actions">
               <button className="btn-cancel" onClick={() => setEditingAgent(null)}>Cancel</button>
-              <button className="btn-save" onClick={saveAgentEdit}>Save</button>
+              <button className="btn-save"   onClick={saveAgentEdit}>Save</button>
             </div>
           </div>
         </div>
