@@ -145,18 +145,18 @@ export default function Dashboard() {
   const team = APP_CONFIG.teams.find(t => t.id === user?.team)
   const roleLabel = user?.role === 'supervisor' ? 'Supervisor' : user?.role === 'qa' ? 'QA' : user?.role === 'leader' ? 'Team Leader' : 'Member'
 
-  const [liveGeneral, setLiveGeneral]   = useState([])
-  const [liveAsia, setLiveAsia]         = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [lastUpdate, setLastUpdate]     = useState(null)
-  const [activeTab, setActiveTab]       = useState('general')
-  const [asiaView, setAsiaView]         = useState('stats')
-  const [chartMetric, setChartMetric]   = useState('english')
-  const [snapshots, setSnapshots]       = useState([])
-  const [selectedDate, setSelectedDate] = useState(todayKey())
-  const [editingAgent, setEditingAgent] = useState(null)
-  const [editForm, setEditForm]         = useState({})
-  const [overridesTick, setOverridesTick] = useState(0) // fuerza re-render al guardar edits
+  const [liveGeneral, setLiveGeneral]     = useState([])
+  const [liveAsia, setLiveAsia]           = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [lastUpdate, setLastUpdate]       = useState(null)
+  const [activeTab, setActiveTab]         = useState('general')
+  const [asiaView, setAsiaView]           = useState('stats')
+  const [chartMetric, setChartMetric]     = useState('english')
+  const [snapshots, setSnapshots]         = useState([])
+  const [selectedDate, setSelectedDate]   = useState(todayKey())
+  const [editingAgent, setEditingAgent]   = useState(null)
+  const [editForm, setEditForm]           = useState({})
+  const [overridesTick, setOverridesTick] = useState(0)
 
   const isToday     = selectedDate === todayKey()
   const activeSnap  = isToday ? null : snapshots.find(s => s.date === selectedDate)
@@ -279,7 +279,6 @@ export default function Dashboard() {
   })()
 
   // ── Aplicar overrides para días pasados ──
-  // overridesTick incluido para forzar recompute cuando se guarda un edit
   const asiaAgentsFinal = (() => {
     if (isToday) return asiaAgents
     void overridesTick
@@ -299,15 +298,25 @@ export default function Dashboard() {
     localStorage.setItem(`pulse_overrides_${selectedDate}`, JSON.stringify(overrides))
     setEditingAgent(null)
     setSnapshots(loadAllSnapshots())
-    setOverridesTick(t => t + 1) // fuerza re-render → totales se actualizan
+    setOverridesTick(t => t + 1)
   }
 
   const goal = APP_CONFIG.dailyGoal
 
-  // Totales: Today → directo del sheet; días pasados → suma con overrides aplicados
-  const totalSpanish = isToday ? asiaTotals.spanish : asiaAgentsFinal.reduce((s,a) => s+a.spanish, 0)
-  const totalEnglish = isToday ? asiaTotals.english : asiaAgentsFinal.reduce((s,a) => s+a.english, 0)
-  const totalXfers   = isToday ? asiaTotals.total   : asiaAgentsFinal.reduce((s,a) => s+a.total,   0)
+  // Totales:
+  // Today  → directo del sheet (fila AGENT LOGGED IN)
+  // Pasado → suma agentes con overrides; Total = Spanish + English (siempre correcto)
+  const totalSpanish = isToday
+    ? asiaTotals.spanish
+    : asiaAgentsFinal.reduce((s,a) => s + a.spanish, 0)
+
+  const totalEnglish = isToday
+    ? asiaTotals.english
+    : asiaAgentsFinal.reduce((s,a) => s + a.english, 0)
+
+  const totalXfers = isToday
+    ? asiaTotals.total
+    : totalSpanish + totalEnglish   // ← suma los dos ya calculados
 
   const hitGoal     = asiaAgentsFinal.filter(a => a.english >= goal)
   const atZero      = asiaAgentsFinal.filter(a => a.total === 0)
@@ -477,7 +486,7 @@ export default function Dashboard() {
                             <td className="agent-ext">{a.ext}</td>
                             <td className="val-english">{a.english}</td>
                             <td className="val-spanish">{a.spanish}</td>
-                            <td className="val-total">{a.total}</td>
+                            <td className="val-total">{a.english + a.spanish}</td>
                             <td>
                               {a.english>=goal
                                 ? <span className="badge-goal">✓ Goal</span>
@@ -490,7 +499,7 @@ export default function Dashboard() {
                                   title="Edit transfers"
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    setEditForm({ spanish: a.spanish, english: a.english, total: a.total })
+                                    setEditForm({ spanish: a.spanish, english: a.english, total: a.english + a.spanish })
                                     setEditingAgent(a)
                                   }}
                                 >✏️</button>
@@ -540,11 +549,10 @@ export default function Dashboard() {
             <div className="edit-modal-fields">
               <label>English<input type="number" value={editForm.english} onChange={e => setEditForm(f=>({...f, english: e.target.value}))}/></label>
               <label>Spanish<input type="number" value={editForm.spanish} onChange={e => setEditForm(f=>({...f, spanish: e.target.value}))}/></label>
-              <label>Total<input   type="number" value={editForm.total}   onChange={e => setEditForm(f=>({...f, total:   e.target.value}))}/></label>
             </div>
             <div className="edit-modal-actions">
               <button className="btn-cancel" onClick={() => setEditingAgent(null)}>Cancel</button>
-              <button className="btn-save"   onClick={saveAgentEdit}>Save</button>
+              <button className="btn-save" onClick={saveAgentEdit}>Save</button>
             </div>
           </div>
         </div>
