@@ -2,21 +2,22 @@ import { useEffect, useState, useRef } from 'react'
 import { APP_CONFIG } from '../config'
 import './dashboard.css'
 
-const SHEET_ID       = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
-const USERS_SHEET_ID = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
+const SHEET_ID         = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
+const USERS_SHEET_ID   = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
 
-// Fechas históricas a leer (formato DDMMYYYY = nombre del tab)
+// Fechas históricas — isoDate se usa como selectedDate key
 const HISTORY_DATES = [
-  { tab: '14032026', label: '14/03/2026' },
-  { tab: '16032026', label: '16/03/2026' },
-  { tab: '17032026', label: '17/03/2026' },
-  { tab: '18032026', label: '18/03/2026' },
-  { tab: '19032026', label: '19/03/2026' },
-  { tab: '20032026', label: '20/03/2026' },
-  { tab: '21032026', label: '21/03/2026' },
-  { tab: '23032026', label: '23/03/2026' },
+  { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026' },
+  { isoDate:'2026-03-16', tab:'16032026', slackLabel:'16/03/2026' },
+  { isoDate:'2026-03-17', tab:'17032026', slackLabel:'17/03/2026' },
+  { isoDate:'2026-03-18', tab:'18032026', slackLabel:'18/03/2026' },
+  { isoDate:'2026-03-19', tab:'19032026', slackLabel:'19/03/2026' },
+  { isoDate:'2026-03-20', tab:'20032026', slackLabel:'20/03/2026' },
+  { isoDate:'2026-03-21', tab:'21032026', slackLabel:'21/03/2026' },
+  { isoDate:'2026-03-23', tab:'23032026', slackLabel:'23/03/2026' },
 ]
+const HISTORY_ISO_SET = new Set(HISTORY_DATES.map(d => d.isoDate))
 
 const csvUrl = (sheetId, sheet) =>
   `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`
@@ -42,13 +43,10 @@ async function fetchSheet(sheetId, name) {
   return parseCSV(text)
 }
 
-// parseInt seguro: elimina comas de miles
-const safeInt = (val) => parseInt((val||'').toString().replace(/,/g, '')) || 0
-
-// Cuenta phones en celda: "tel:123/tel:456" → 2
-const countPhones = (callCell) => {
-  if (!callCell) return 0
-  return callCell.split('/').filter(p => p.trim().length > 0).length || 1
+const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
+const countPhones = (cell) => {
+  if (!cell) return 0
+  return cell.split('/').filter(p => p.trim().length > 0).length || 1
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
@@ -68,92 +66,116 @@ const E = {
   medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp',
   medal3:'/emojis/web3.webp', zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
 }
-
-const Img = ({ src, size = 18 }) => (
-  <img src={src} width={size} height={size} style={{ display:'inline-block', verticalAlign:'middle', objectFit:'contain' }} />
+const Img = ({ src, size=18 }) => (
+  <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}} />
 )
 const MEDALS = [E.medal1, E.medal2, E.medal3]
 
 const getTeamRankBadge = (rank) => {
-  if (rank === 0) return <Img src={E.goal1} size={26} />
-  if (rank === 1) return <Img src={E.goal3} size={26} />
-  if (rank === 2) return <Img src={E.goal4} size={26} />
-  return <span style={{ color:'#6b7280', fontFamily:"'Sora',sans-serif", fontWeight:700, fontSize:14 }}>#{rank+1}</span>
+  if (rank===0) return <Img src={E.goal1} size={26}/>
+  if (rank===1) return <Img src={E.goal3} size={26}/>
+  if (rank===2) return <Img src={E.goal4} size={26}/>
+  return <span style={{color:'#6b7280',fontFamily:"'Sora',sans-serif",fontWeight:700,fontSize:14}}>#{rank+1}</span>
 }
 
-const todayKey = () => new Date().toISOString().slice(0, 10)
+const todayKey = () => new Date().toISOString().slice(0,10)
 
 const saveSnapshot = (generalData, asiaData) => {
   const key = `pulse_snap_${todayKey()}`
-  try { localStorage.setItem(key, JSON.stringify({ generalData, asiaData, savedAt: new Date().toISOString() })) } catch(e) {}
+  try { localStorage.setItem(key, JSON.stringify({generalData, asiaData, savedAt: new Date().toISOString()})) } catch(e) {}
 }
 
 const loadAllSnapshots = () => {
   const snaps = []
-  for (let i = 0; i < localStorage.length; i++) {
+  for (let i=0; i<localStorage.length; i++) {
     const k = localStorage.key(i)
     if (k?.startsWith('pulse_snap_')) {
       try {
-        const date = k.replace('pulse_snap_', '')
+        const date = k.replace('pulse_snap_','')
         const data = JSON.parse(localStorage.getItem(k))
-        snaps.push({ date, ...data })
+        snaps.push({date,...data})
       } catch(e) {}
     }
   }
-  return snaps.sort((a, b) => b.date.localeCompare(a.date))
+  return snaps.sort((a,b) => b.date.localeCompare(a.date))
 }
 
 const formatDateLabel = (dateStr) => {
   const today = todayKey()
-  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
-  const yKey = yesterday.toISOString().slice(0, 10)
-  if (dateStr === today) return 'Today'
-  if (dateStr === yKey) return 'Yesterday'
-  const [y, m, d] = dateStr.split('-')
+  const yest = new Date(); yest.setDate(yest.getDate()-1)
+  const yKey = yest.toISOString().slice(0,10)
+  if (dateStr===today)  return 'Today'
+  if (dateStr===yKey)   return 'Yesterday'
+  const [y,m,d] = dateStr.split('-')
   return `${d}/${m}/${y}`
 }
 
-function BarChart({ agents, metric }) {
+// Parse agents from a history sheet rows
+function parseHistoryAgents(rows) {
+  const agents = []
+  let totals = {spanish:0, english:0, total:0, activeAgents:0}
+  for (const row of rows) {
+    const name   = (row[0]||'').trim()
+    const nameUp = name.toUpperCase()
+    if (nameUp.includes('AGENT') && nameUp.includes('LOGGED')) {
+      const numMatch = name.match(/^(\d+)/)
+      totals = {
+        activeAgents: numMatch ? parseInt(numMatch[1]) : agents.length,
+        spanish: safeInt(row[2]),
+        english: safeInt(row[3]),
+        total:   safeInt(row[4]),
+      }
+      break
+    }
+    if (nameUp.includes('MANAGEMENT') || nameUp.includes('CALLS') || name.length<=1) continue
+    const ext = safeInt(row[1])
+    if (ext < 1000 || ext > 9999) continue
+    agents.push({ name, ext: String(ext), spanish: safeInt(row[2]), english: safeInt(row[3]), total: safeInt(row[4]) })
+  }
+  return {agents, totals}
+}
+
+function BarChart({agents, metric}) {
   const [tooltip, setTooltip] = useState(null)
   const buckets = RANGES.map(r => ({
     ...r,
-    agentsInRange: agents.filter(a => a[metric] >= r.min && a[metric] <= r.max),
-    count: agents.filter(a => a[metric] >= r.min && a[metric] <= r.max).length,
+    agentsInRange: agents.filter(a => a[metric]>=r.min && a[metric]<=r.max),
+    count: agents.filter(a => a[metric]>=r.min && a[metric]<=r.max).length,
   }))
-  const maxCount = Math.max(...buckets.map(b => b.count), 1)
+  const maxCount = Math.max(...buckets.map(b=>b.count),1)
   return (
     <div className="chart-wrap">
       <div className="chart-bars">
-        {buckets.map((b, i) => (
-          <div key={i} className={`chart-col ${b.count > 0 ? 'chart-col-hoverable' : ''}`}
-            onMouseEnter={(e) => { if (!b.count) return; const r = e.currentTarget.getBoundingClientRect(); setTooltip({ bucket:b, x:r.left+r.width/2, y:r.top }) }}
-            onMouseLeave={() => setTooltip(null)}>
+        {buckets.map((b,i)=>(
+          <div key={i} className={`chart-col ${b.count>0?'chart-col-hoverable':''}`}
+            onMouseEnter={(e)=>{if(!b.count)return; const r=e.currentTarget.getBoundingClientRect(); setTooltip({bucket:b,x:r.left+r.width/2,y:r.top})}}
+            onMouseLeave={()=>setTooltip(null)}>
             <div className="bar-count">{b.count}</div>
-            <div className="bar-outer"><div className="bar-inner" style={{ height:`${(b.count/maxCount)*100}%`, background:b.color }} /></div>
+            <div className="bar-outer"><div className="bar-inner" style={{height:`${(b.count/maxCount)*100}%`,background:b.color}}/></div>
             <div className="bar-label">{b.label}</div>
           </div>
         ))}
       </div>
       {tooltip && (
-        <div className="bar-tooltip" style={{ left:tooltip.x, top:tooltip.y }}>
-          <div className="bar-tooltip-header" style={{ color:tooltip.bucket.color }}>
+        <div className="bar-tooltip" style={{left:tooltip.x,top:tooltip.y}}>
+          <div className="bar-tooltip-header" style={{color:tooltip.bucket.color}}>
             {tooltip.bucket.label} xfers
-            <span className="bar-tooltip-count">{tooltip.bucket.count} agent{tooltip.bucket.count !== 1 ? 's' : ''}</span>
+            <span className="bar-tooltip-count">{tooltip.bucket.count} agent{tooltip.bucket.count!==1?'s':''}</span>
           </div>
           <div className="bar-tooltip-agents">
-            {tooltip.bucket.agentsInRange.sort((a,b) => b[metric]-a[metric]).map((a,i) => (
+            {tooltip.bucket.agentsInRange.sort((a,b)=>b[metric]-a[metric]).map((a,i)=>(
               <div key={i} className="bar-tooltip-agent">
                 <span className="bar-tooltip-name">{a.name}</span>
-                <span className="bar-tooltip-val" style={{ color:tooltip.bucket.color }}>{a[metric]}</span>
+                <span className="bar-tooltip-val" style={{color:tooltip.bucket.color}}>{a[metric]}</span>
               </div>
             ))}
           </div>
         </div>
       )}
       <div className="chart-legend">
-        {RANGES.map((r,i) => (
+        {RANGES.map((r,i)=>(
           <div key={i} className="legend-item">
-            <div className="legend-dot" style={{ background:r.color }} />
+            <div className="legend-dot" style={{background:r.color}}/>
             <span>{r.label} xfers</span>
           </div>
         ))}
@@ -164,33 +186,38 @@ function BarChart({ agents, metric }) {
 
 export default function Dashboard() {
   const canvasRef = useRef(null)
-  const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
-  const team = APP_CONFIG.teams.find(t => t.id === user?.team)
-  const roleLabel = user?.role === 'supervisor' ? 'Supervisor' : user?.role === 'qa' ? 'QA' : user?.role === 'leader' ? 'Team Leader' : 'Member'
+  const user = JSON.parse(localStorage.getItem('pulse_user')||'null')
+  const team = APP_CONFIG.teams.find(t => t.id===user?.team)
+  const roleLabel = user?.role==='supervisor'?'Supervisor':user?.role==='qa'?'QA':user?.role==='leader'?'Team Leader':'Member'
 
-  const [liveGeneral, setLiveGeneral]     = useState([])
-  const [liveAsia, setLiveAsia]           = useState([])
-  const [slacksData, setSlacksData]       = useState([])
-  const [historyData, setHistoryData]     = useState([]) // [{ label, agents, spanish, english, total }]
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [loading, setLoading]             = useState(true)
-  const [lastUpdate, setLastUpdate]       = useState(null)
-  const [activeTab, setActiveTab]         = useState('general')
-  const [asiaView, setAsiaView]           = useState('stats')
-  const [chartMetric, setChartMetric]     = useState('english')
-  const [snapshots, setSnapshots]         = useState([])
-  const [selectedDate, setSelectedDate]   = useState(todayKey())
-  const [editingAgent, setEditingAgent]   = useState(null)
-  const [editForm, setEditForm]           = useState({})
-  const [overridesTick, setOverridesTick] = useState(0)
-  const [slackFilter, setSlackFilter]     = useState('all')
-  const [historySelected, setHistorySelected] = useState(null) // tab name selected for drill-down
-  const [historyDetail, setHistoryDetail] = useState([]) // agent rows for selected date
+  const [liveGeneral, setLiveGeneral]       = useState([])
+  const [liveAsia, setLiveAsia]             = useState([])
+  const [slacksData, setSlacksData]         = useState([])
+  const [loading, setLoading]               = useState(true)
+  const [lastUpdate, setLastUpdate]         = useState(null)
+  const [activeTab, setActiveTab]           = useState('general')
+  const [asiaView, setAsiaView]             = useState('stats')
+  const [chartMetric, setChartMetric]       = useState('english')
+  const [snapshots, setSnapshots]           = useState([])
+  const [selectedDate, setSelectedDate]     = useState(todayKey())
+  const [editingAgent, setEditingAgent]     = useState(null)
+  const [editForm, setEditForm]             = useState({})
+  const [overridesTick, setOverridesTick]   = useState(0)
+  // History date data cache: { [isoDate]: {agents, totals} }
+  const [histCache, setHistCache]           = useState({})
+  const [histLoading, setHistLoading]       = useState(false)
 
-  const isToday     = selectedDate === todayKey()
-  const activeSnap  = isToday ? null : snapshots.find(s => s.date === selectedDate)
-  const generalData = isToday ? liveGeneral : (activeSnap?.generalData || [])
-  const asiaData    = isToday ? liveAsia    : (activeSnap?.asiaData    || [])
+  const isToday      = selectedDate === todayKey()
+  const isHistDate   = HISTORY_ISO_SET.has(selectedDate)
+  const histMeta     = HISTORY_DATES.find(d => d.isoDate===selectedDate)
+  const activeSnap   = (!isToday && !isHistDate) ? snapshots.find(s => s.date===selectedDate) : null
+
+  // asiaData source
+  const asiaDataRaw = isToday ? liveAsia : (activeSnap?.asiaData || [])
+  const generalDataRaw = isToday ? liveGeneral : (activeSnap?.generalData || [])
+
+  // History agents come from cache
+  const histParsed = isHistDate ? (histCache[selectedDate] || {agents:[], totals:{spanish:0,english:0,total:0,activeAgents:0}}) : null
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -199,260 +226,199 @@ export default function Dashboard() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight
     const particles = []
     const onMove = (e) => {
-      for (let i = 0; i < 3; i++) particles.push({
-        x: e.clientX+(Math.random()-.5)*20, y: e.clientY+(Math.random()-.5)*20,
-        size: Math.random()*3+1, life:1, vx:(Math.random()-.5)*1.5, vy:(Math.random()-.5)*1.5-.5,
+      for (let i=0;i<3;i++) particles.push({
+        x:e.clientX+(Math.random()-.5)*20, y:e.clientY+(Math.random()-.5)*20,
+        size:Math.random()*3+1, life:1, vx:(Math.random()-.5)*1.5, vy:(Math.random()-.5)*1.5-.5,
       })
     }
-    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mousemove',onMove)
     let raf
     const draw = () => {
       ctx.clearRect(0,0,canvas.width,canvas.height)
-      for (let i = particles.length-1; i>=0; i--) {
-        const p = particles[i]; p.life-=.03; p.x+=p.vx; p.y+=p.vy
-        if (p.life<=0) { particles.splice(i,1); continue }
+      for (let i=particles.length-1;i>=0;i--) {
+        const p=particles[i]; p.life-=.03; p.x+=p.vx; p.y+=p.vy
+        if(p.life<=0){particles.splice(i,1);continue}
         ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2)
         ctx.fillStyle=`rgba(249,115,22,${p.life*.5})`; ctx.fill()
       }
-      raf = requestAnimationFrame(draw)
+      raf=requestAnimationFrame(draw)
     }
     draw()
-    const onResize = () => { canvas.width=window.innerWidth; canvas.height=window.innerHeight }
-    window.addEventListener('resize', onResize)
-    return () => { window.removeEventListener('mousemove',onMove); window.removeEventListener('resize',onResize); cancelAnimationFrame(raf) }
-  }, [])
+    const onResize=()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+    window.addEventListener('resize',onResize)
+    return ()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('resize',onResize);cancelAnimationFrame(raf)}
+  },[])
 
   const loadData = async () => {
     try {
       const [general, asia, slacks] = await Promise.all([
-        fetchSheet(SHEET_ID, "WELL'S REPORT"),
-        fetchSheet(SHEET_ID, 'AW GARRET ASIA LEXNER'),
-        fetchSheet(USERS_SHEET_ID, 'Slacks'),
+        fetchSheet(SHEET_ID,"WELL'S REPORT"),
+        fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),
+        fetchSheet(USERS_SHEET_ID,'Slacks'),
       ])
-      setLiveGeneral(general)
-      setLiveAsia(asia)
-      setLastUpdate(new Date())
-      saveSnapshot(general, asia)
-      setSnapshots(loadAllSnapshots())
-      setSlacksData(slacks.slice(1).filter(r => r[0] && r[1]))
-    } catch(e) { console.error(e) }
-    finally { setLoading(false) }
+      setLiveGeneral(general); setLiveAsia(asia); setLastUpdate(new Date())
+      saveSnapshot(general,asia); setSnapshots(loadAllSnapshots())
+      setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]))
+    } catch(e){console.error(e)}
+    finally{setLoading(false)}
   }
 
-  // Cargar historial cuando se entra al tab history
-  const loadHistory = async () => {
-    setHistoryLoading(true)
-    try {
-      const results = await Promise.all(
-        HISTORY_DATES.map(async ({ tab, label }) => {
-          try {
-            const rows = await fetchSheet(HISTORY_SHEET_ID, tab)
-            // Buscar fila "XX Agents logged in"
-            for (const row of rows) {
-              const cell = (row[0]||'').trim().toUpperCase()
-              if (cell.includes('AGENT') && cell.includes('LOGGED')) {
-                const numMatch = (row[0]||'').match(/^(\d+)/)
-                return {
-                  tab, label,
-                  agents:  numMatch ? parseInt(numMatch[1]) : 0,
-                  spanish: safeInt(row[2]),
-                  english: safeInt(row[3]),
-                  total:   safeInt(row[4]),
-                }
-              }
-            }
-            return { tab, label, agents:0, spanish:0, english:0, total:0 }
-          } catch(e) {
-            return { tab, label, agents:0, spanish:0, english:0, total:0 }
-          }
-        })
-      )
-      setHistoryData(results)
-    } catch(e) { console.error(e) }
-    finally { setHistoryLoading(false) }
-  }
-
-  // Cargar detalle de agentes para un día específico
-  const loadHistoryDetail = async (tab) => {
-    setHistorySelected(tab)
-    setHistoryDetail([])
-    try {
-      const rows = await fetchSheet(HISTORY_SHEET_ID, tab)
-      const agents = []
-      for (const row of rows) {
-        const name   = (row[0]||'').trim()
-        const nameUp = name.toUpperCase()
-        if (nameUp.includes('AGENT') && nameUp.includes('LOGGED')) break
-        if (nameUp.includes('MANAGEMENT') || nameUp.includes('CALLS') || name.length <= 1) continue
-        const ext = safeInt(row[1])
-        if (ext < 1000 || ext > 9999) continue
-        agents.push({
-          name,
-          ext:     String(ext),
-          spanish: safeInt(row[2]),
-          english: safeInt(row[3]),
-          total:   safeInt(row[4]),
-        })
-      }
-      setHistoryDetail(agents.sort((a,b) => b.english - a.english))
-    } catch(e) { console.error(e) }
-  }
-
-  useEffect(() => {
+  useEffect(()=>{
     setSnapshots(loadAllSnapshots()); loadData()
-    const interval = setInterval(loadData, 60000)
-    return () => clearInterval(interval)
-  }, [])
+    const iv=setInterval(loadData,60000)
+    return ()=>clearInterval(iv)
+  },[])
 
-  useEffect(() => {
-    if (asiaView === 'history' && historyData.length === 0) loadHistory()
-  }, [asiaView])
+  // Load history sheet when a history date is selected and not cached
+  useEffect(()=>{
+    if (!isHistDate || !histMeta || histCache[selectedDate]) return
+    setHistLoading(true)
+    fetchSheet(HISTORY_SHEET_ID, histMeta.tab)
+      .then(rows => {
+        const parsed = parseHistoryAgents(rows)
+        setHistCache(c => ({...c, [selectedDate]: parsed}))
+      })
+      .catch(console.error)
+      .finally(()=>setHistLoading(false))
+  },[selectedDate])
 
-  const logout = () => { localStorage.removeItem('pulse_user'); window.location.href = '/' }
+  const logout = () => { localStorage.removeItem('pulse_user'); window.location.href='/' }
 
   // ── Well's Report ──
   const teamRows = (() => {
     const found = []
-    for (const row of generalData) {
+    for (const row of generalDataRaw) {
       const name = row[0]?.toUpperCase().trim()
-      if (TEAMS_ORDER.some(t => name === t)) {
-        if (!found.find(f => f.name.toUpperCase() === name)) {
+      if (TEAMS_ORDER.some(t=>name===t)) {
+        if (!found.find(f=>f.name.toUpperCase()===name)) {
           const rawSpanish = row[4]?.trim()
           found.push({
-            name:      row[0]?.trim()||'',
-            agents:    safeInt(row[2]),
-            english:   safeInt(row[3]),
-            spanish:   safeInt(rawSpanish),
-            total:     safeInt(row[5]),
-            noSpanish: rawSpanish==='-'||rawSpanish===''||!rawSpanish,
+            name: row[0]?.trim()||'', agents:safeInt(row[2]),
+            english:safeInt(row[3]), spanish:safeInt(rawSpanish),
+            total:safeInt(row[5]), noSpanish:rawSpanish==='-'||rawSpanish===''||!rawSpanish,
           })
         }
       }
-      if (found.length === 6) break
+      if (found.length===6) break
     }
     return found
   })()
+  const teamsSorted = [...teamRows].sort((a,b)=>b.english-a.english)
 
-  const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
-
-  // ── Asia parser ──
-  const { asiaAgents, asiaTotals } = (() => {
+  // ── Asia agents ──
+  // For history dates: use histParsed; for today/snapshot: parse asiaDataRaw
+  const {asiaAgents, asiaTotals} = (() => {
+    if (isHistDate && histParsed) {
+      return {asiaAgents: histParsed.agents, asiaTotals: histParsed.totals}
+    }
     const agents = []
-    let totals = { spanish: 0, english: 0, total: 0, activeAgents: 0 }
-    for (const row of asiaData) {
+    let totals = {spanish:0,english:0,total:0,activeAgents:0}
+    for (const row of asiaDataRaw) {
       const name   = (row[0]||'').trim()
       const nameUp = name.toUpperCase()
-      if (nameUp.includes('AGENT LOGGED') || nameUp.includes('LOGGED IN')) {
-        const numMatch = name.match(/^(\d+)/)
-        totals = {
-          activeAgents: numMatch ? parseInt(numMatch[1]) : agents.length,
-          spanish:      safeInt(row[2]),
-          english:      safeInt(row[3]),
-          total:        safeInt(row[4]),
-        }
+      if (nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')) {
+        const numMatch=name.match(/^(\d+)/)
+        totals={activeAgents:numMatch?parseInt(numMatch[1]):agents.length,spanish:safeInt(row[2]),english:safeInt(row[3]),total:safeInt(row[4])}
         break
       }
-      if (nameUp.includes('REMOVED') || nameUp.includes('REMOVE')) break
-      const ext = safeInt(row[1])
-      if (isNaN(ext) || ext < 1000 || ext > 9999) continue
-      if (name.length <= 1) continue
-      agents.push({ name, ext: String(ext), spanish: safeInt(row[2]), english: safeInt(row[3]), total: safeInt(row[4]) })
+      if (nameUp.includes('REMOVED')||nameUp.includes('REMOVE')) break
+      const ext=safeInt(row[1])
+      if (isNaN(ext)||ext<1000||ext>9999) continue
+      if (name.length<=1) continue
+      agents.push({name,ext:String(ext),spanish:safeInt(row[2]),english:safeInt(row[3]),total:safeInt(row[4])})
     }
-    return { asiaAgents: agents, asiaTotals: totals }
+    return {asiaAgents:agents, asiaTotals:totals}
   })()
 
+  // Overrides (only for snapshot dates, not history dates which are read-only)
   const asiaAgentsFinal = (() => {
-    if (isToday) return asiaAgents
+    if (isToday || isHistDate) return asiaAgents
     void overridesTick
-    const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`) || '{}')
-    return asiaAgents.map(a => overrides[a.ext] ? { ...a, ...overrides[a.ext] } : a)
+    const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`)||'{}')
+    return asiaAgents.map(a => overrides[a.ext] ? {...a,...overrides[a.ext]} : a)
   })()
 
   const saveAgentEdit = () => {
-    const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`) || '{}')
-    const en = parseInt(editForm.english)||0
-    const sp = parseInt(editForm.spanish)||0
-    overrides[editingAgent.ext] = { name: editingAgent.name, spanish: sp, english: en, total: en + sp }
-    localStorage.setItem(`pulse_overrides_${selectedDate}`, JSON.stringify(overrides))
-    setEditingAgent(null)
-    setSnapshots(loadAllSnapshots())
-    setOverridesTick(t => t + 1)
+    const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`)||'{}')
+    const en=parseInt(editForm.english)||0, sp=parseInt(editForm.spanish)||0
+    overrides[editingAgent.ext]={name:editingAgent.name,spanish:sp,english:en,total:en+sp}
+    localStorage.setItem(`pulse_overrides_${selectedDate}`,JSON.stringify(overrides))
+    setEditingAgent(null); setSnapshots(loadAllSnapshots()); setOverridesTick(t=>t+1)
   }
 
-  const goal         = APP_CONFIG.dailyGoal
-  const totalSpanish = isToday ? asiaTotals.spanish : asiaAgentsFinal.reduce((s,a) => s+a.spanish, 0)
-  const totalEnglish = isToday ? asiaTotals.english : asiaAgentsFinal.reduce((s,a) => s+a.english, 0)
-  const totalXfers   = isToday ? asiaTotals.total   : totalSpanish + totalEnglish
-  const hitGoal      = asiaAgentsFinal.filter(a => a.english >= goal)
-  const atZero       = asiaAgentsFinal.filter(a => a.total === 0)
-  const top3English  = [...asiaAgentsFinal].sort((a,b) => b.english-a.english).slice(0,3)
-  const top3Spanish  = [...asiaAgentsFinal].sort((a,b) => b.spanish-a.spanish).slice(0,3)
+  const goal = APP_CONFIG.dailyGoal
+
+  const totalSpanish = isToday ? asiaTotals.spanish : (isHistDate ? asiaTotals.spanish : asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0))
+  const totalEnglish = isToday ? asiaTotals.english : (isHistDate ? asiaTotals.english : asiaAgentsFinal.reduce((s,a)=>s+a.english,0))
+  const totalXfers   = isToday ? asiaTotals.total   : (isHistDate ? asiaTotals.total   : totalSpanish+totalEnglish)
+
+  const hitGoal     = asiaAgentsFinal.filter(a=>a.english>=goal)
+  const atZero      = asiaAgentsFinal.filter(a=>a.total===0)
+  const top3English = [...asiaAgentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
+  const top3Spanish = [...asiaAgentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3)
 
   // ── Slacks ──
-  const slackDates = [...new Set(slacksData.map(r => r[0]?.trim()).filter(Boolean))].sort((a,b) => b.localeCompare(a))
-  const slackRowsFiltered = slackFilter === 'all' ? slacksData : slacksData.filter(r => r[0]?.trim() === slackFilter)
-  const slacksByAgentFiltered = (() => {
+  // Match slacks by date: slacks sheet has "14/03/2026" format
+  const slackLabelForDate = (iso) => {
+    const hd = HISTORY_DATES.find(d=>d.isoDate===iso)
+    if (hd) return hd.slackLabel
+    const [y,m,d] = iso.split('-')
+    return `${d}/${m}/${y}`
+  }
+  const currentSlackLabel = slackLabelForDate(selectedDate)
+  // For history/snapshot dates filter slacks to that day; for Today show all of today
+  const slackRowsForDate = isToday
+    ? slacksData
+    : slacksData.filter(r => r[0]?.trim() === currentSlackLabel)
+  const slackDates = [...new Set(slacksData.map(r=>r[0]?.trim()).filter(Boolean))].sort((a,b)=>b.localeCompare(a))
+
+  const buildSlackAgents = (rows) => {
     const map = {}
-    for (const row of slackRowsFiltered) {
-      const agent  = (row[1]||'').trim()
-      const opener = (row[2]||'').trim()
-      const call   = (row[3]||'').trim()
+    for (const row of rows) {
+      const agent=(row[1]||'').trim(), opener=(row[2]||'').trim(), call=(row[3]||'').trim()
       if (!agent) continue
-      if (!map[agent]) map[agent] = { agent, opener, reports: 0, phones: 0 }
-      map[agent].reports += 1
-      map[agent].phones  += countPhones(call)
+      if (!map[agent]) map[agent]={agent,opener,reports:0,phones:0}
+      map[agent].reports+=1; map[agent].phones+=countPhones(call)
     }
-    return Object.values(map).sort((a,b) => b.phones - a.phones)
-  })()
-  const slacksByAgent = (() => {
-    const map = {}
-    for (const row of slacksData) {
-      const agent  = (row[1]||'').trim()
-      const opener = (row[2]||'').trim()
-      const call   = (row[3]||'').trim()
-      if (!agent) continue
-      if (!map[agent]) map[agent] = { agent, opener, reports: 0, phones: 0 }
-      map[agent].reports += 1
-      map[agent].phones  += countPhones(call)
-    }
-    return Object.values(map).sort((a,b) => b.phones - a.phones)
-  })()
+    return Object.values(map).sort((a,b)=>b.phones-a.phones)
+  }
+  const slackAgentsForDate  = buildSlackAgents(slackRowsForDate)
+  const slackAgentsAll      = buildSlackAgents(slacksData)
 
   const getFlag = (name) => {
-    const n = name.toUpperCase()
-    if (n.includes('PHIL')) return 'ph'; if (n.includes('VENE')) return 've'
-    if (n.includes('COLOM')) return 'co'; if (n.includes('MEXICO')) return 'mx'
-    if (n.includes('CENTRAL')) return 'hn'; if (n.includes('ASIA')) return 'cn'
-    return 'un'
+    const n=name.toUpperCase()
+    if(n.includes('PHIL'))return'ph'; if(n.includes('VENE'))return've'
+    if(n.includes('COLOM'))return'co'; if(n.includes('MEXICO'))return'mx'
+    if(n.includes('CENTRAL'))return'hn'; if(n.includes('ASIA'))return'cn'
+    return'un'
   }
   const isMyTeam = (name) => {
-    const n = name.toUpperCase()
+    const n=name.toUpperCase()
     return (team?.id==='asia'&&n.includes('ASIA'))||(team?.id==='philippines'&&n.includes('PHIL'))||
            (team?.id==='venezuela'&&n.includes('VENE'))||(team?.id==='colombia'&&n.includes('COLOM'))||
            (team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))
   }
 
+  // Date tabs: Today + snapshots + history dates, sorted newest first
   const dateTabs = (() => {
-    const dates = new Set(snapshots.map(s => s.date)); dates.add(todayKey())
-    return [...dates].sort((a,b) => b.localeCompare(a))
+    const dates = new Set()
+    dates.add(todayKey())
+    snapshots.forEach(s => dates.add(s.date))
+    HISTORY_DATES.forEach(d => dates.add(d.isoDate))
+    return [...dates].sort((a,b)=>b.localeCompare(a))
   })()
 
-  // History summary totals
-  const histTotalAgents  = historyData.reduce((s,d) => s + d.agents,  0)
-  const histTotalSpanish = historyData.reduce((s,d) => s + d.spanish, 0)
-  const histTotalEnglish = historyData.reduce((s,d) => s + d.english, 0)
-  const histTotalXfers   = historyData.reduce((s,d) => s + d.total,   0)
-  const histBestDay      = historyData.length ? historyData.reduce((best,d) => d.english > best.english ? d : best, historyData[0]) : null
+  const showEditBtn = !isToday && !isHistDate
 
   return (
     <div className="dash-root">
-      <canvas ref={canvasRef} className="dash-trail-canvas" />
+      <canvas ref={canvasRef} className="dash-trail-canvas"/>
 
       <nav className="dash-nav">
         <div className="dash-nav-left">
           <div className="nav-logo-wrap">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="9" fill="#f97316" />
+              <rect width="32" height="32" rx="9" fill="#f97316"/>
               <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
@@ -476,19 +442,26 @@ export default function Dashboard() {
         <button className={`dash-tab ${activeTab==='asia'?'active':''}`}    onClick={()=>setActiveTab('asia')}>🌏 Asia</button>
       </div>
 
+      {/* Date tabs — Today + snapshots + all history dates */}
       <div className="date-tabs-bar">
         <span className="date-tabs-label">📅</span>
         <div className="date-tabs">
-          {dateTabs.map(date => (
-            <button key={date} className={`date-tab ${selectedDate===date?'active':''} ${date===todayKey()?'today':''}`} onClick={()=>setSelectedDate(date)}>
+          {dateTabs.map(date=>(
+            <button
+              key={date}
+              className={`date-tab ${selectedDate===date?'active':''} ${date===todayKey()?'today':''} ${HISTORY_ISO_SET.has(date)?'history-tab':''}`}
+              onClick={()=>setSelectedDate(date)}
+            >
               {formatDateLabel(date)}
               {date===todayKey() && <span className="date-tab-live">LIVE</span>}
+              {HISTORY_ISO_SET.has(date) && <span className="date-tab-hist">H</span>}
             </button>
           ))}
         </div>
-        {!isToday && activeSnap?.savedAt && (
+        {!isToday && !isHistDate && activeSnap?.savedAt && (
           <span className="date-snap-info">Snapshot at {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
         )}
+        {isHistDate && <span className="date-snap-info">Historical record</span>}
       </div>
 
       <div className="dash-content">
@@ -502,7 +475,7 @@ export default function Dashboard() {
             </h2>
             {teamsSorted.length===0 ? <p style={{color:'#6b7280'}}>No data for this date.</p> : (
               <div className="teams-grid">
-                {teamsSorted.map((row, rank) => (
+                {teamsSorted.map((row,rank)=>(
                   <div key={rank} className={`team-card-dash ${isMyTeam(row.name)?'highlight':''}`}>
                     <div className="tc-header">
                       <div className="tc-rank-badge">{getTeamRankBadge(rank)}</div>
@@ -523,6 +496,7 @@ export default function Dashboard() {
             )}
           </div>
         ) : (
+          /* ── ASIA TAB ── */
           <div className="fade-in">
             <div className="asia-header-row">
               <h2 className="section-title">
@@ -530,25 +504,31 @@ export default function Dashboard() {
                 {isToday ? <span className="live-badge">LIVE</span> : <span className="date-badge">{formatDateLabel(selectedDate)}</span>}
               </h2>
               <div className="asia-view-tabs">
-                <button className={`view-tab ${asiaView==='stats'?'active':''}`}   onClick={()=>setAsiaView('stats')}>📊 Stats</button>
-                <button className={`view-tab ${asiaView==='charts'?'active':''}`}  onClick={()=>setAsiaView('charts')}>📈 Charts</button>
-                <button className={`view-tab ${asiaView==='slacks'?'active':''}`}  onClick={()=>setAsiaView('slacks')}>💬 Slacks</button>
-                <button className={`view-tab ${asiaView==='history'?'active':''}`} onClick={()=>setAsiaView('history')}>📋 History</button>
+                <button className={`view-tab ${asiaView==='stats'?'active':''}`}  onClick={()=>setAsiaView('stats')}>📊 Stats</button>
+                <button className={`view-tab ${asiaView==='charts'?'active':''}`} onClick={()=>setAsiaView('charts')}>📈 Charts</button>
+                <button className={`view-tab ${asiaView==='slacks'?'active':''}`} onClick={()=>setAsiaView('slacks')}>💬 Slacks</button>
               </div>
             </div>
 
-            {asiaView !== 'slacks' && asiaView !== 'history' && (
-              <div className="summary-grid">
-                <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
-                <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length - hitGoal.length - atZero.length}</div><div className="sum-label">In Progress</div></div>
-                <div className="sum-card purple"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
-                <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
-                <div className="sum-card gold"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
-              </div>
+            {/* Summary cards — always visible except slacks */}
+            {asiaView !== 'slacks' && (
+              <>
+                {histLoading ? (
+                  <div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading historical data...</div>
+                ) : (
+                  <div className="summary-grid">
+                    <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+                    <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
+                    <div className="sum-card purple"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
+                    <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
+                    <div className="sum-card gold"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* ── STATS ── */}
-            {asiaView==='stats' && (
+            {asiaView==='stats' && !histLoading && (
               <>
                 <div className="tops-row">
                   <div className="top-block">
@@ -573,12 +553,12 @@ export default function Dashboard() {
                       <tr>
                         <th>#</th><th>Agent</th><th>Ext</th>
                         <th>English</th><th>Spanish</th><th>Total</th><th>Goal</th>
-                        {!isToday && <th className="th-edit"></th>}
+                        {showEditBtn && <th className="th-edit"></th>}
                       </tr>
                     </thead>
                     <tbody>
                       {[...asiaAgentsFinal].sort((a,b)=>b.english-a.english).map((a,i)=>{
-                        const rs = i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
+                        const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
                         return (
                           <tr key={i} className={a.total===0?'row-zero':a.english>=goal?'row-goal':''}>
                             <td style={rs}>#{i+1}</td>
@@ -586,11 +566,11 @@ export default function Dashboard() {
                             <td className="agent-ext">{a.ext}</td>
                             <td className="val-english">{a.english}</td>
                             <td className="val-spanish">{a.spanish}</td>
-                            <td className="val-total">{a.english + a.spanish}</td>
-                            <td>{a.english>=goal ? <span className="badge-goal">✓ Goal</span> : <span className="badge-pending">{goal-a.english} left</span>}</td>
-                            {!isToday && (
+                            <td className="val-total">{a.english+a.spanish}</td>
+                            <td>{a.english>=goal?<span className="badge-goal">✓ Goal</span>:<span className="badge-pending">{goal-a.english} left</span>}</td>
+                            {showEditBtn && (
                               <td className="td-edit">
-                                <button className="edit-agent-btn" title="Edit" onClick={(e)=>{e.stopPropagation(); setEditForm({spanish:a.spanish,english:a.english}); setEditingAgent(a)}}>✏️</button>
+                                <button className="edit-agent-btn" title="Edit" onClick={e=>{e.stopPropagation();setEditForm({spanish:a.spanish,english:a.english});setEditingAgent(a)}}>✏️</button>
                               </td>
                             )}
                           </tr>
@@ -603,7 +583,7 @@ export default function Dashboard() {
             )}
 
             {/* ── CHARTS ── */}
-            {asiaView==='charts' && (
+            {asiaView==='charts' && !histLoading && (
               <div className="charts-section">
                 <div className="chart-controls">
                   <span className="chart-label">Distribution by transfers:</span>
@@ -622,31 +602,48 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── SLACKS ── */}
+            {/* ── SLACKS — filtered to current date ── */}
             {asiaView==='slacks' && (
               <div className="slacks-section">
+                {/* Summary */}
                 <div className="summary-grid" style={{marginBottom:'1.5rem'}}>
-                  <div className="sum-card blue"><div className="sum-val">{slacksByAgent.length}</div><div className="sum-label">Agents w/ Reports</div></div>
-                  <div className="sum-card gold"><div className="sum-val">{slacksData.length}</div><div className="sum-label">Total Reports</div></div>
-                  <div className="sum-card purple"><div className="sum-val">{slacksData.reduce((s,r)=>s+countPhones(r[3]),0)}</div><div className="sum-label">Total Phones</div></div>
-                  <div className="sum-card green"><div className="sum-val">{slackDates.length}</div><div className="sum-label">Days w/ Reports</div></div>
-                  <div className="sum-card orange"><div className="sum-val">{slacksByAgentFiltered.length}</div><div className="sum-label">Agents (filtered)</div></div>
+                  <div className="sum-card blue"><div className="sum-val">{slackAgentsAll.length}</div><div className="sum-label">Agents (all time)</div></div>
+                  <div className="sum-card gold"><div className="sum-val">{slacksData.length}</div><div className="sum-label">Reports (all time)</div></div>
+                  <div className="sum-card purple"><div className="sum-val">{slacksData.reduce((s,r)=>s+countPhones(r[3]),0)}</div><div className="sum-label">Phones (all time)</div></div>
+                  <div className="sum-card green"><div className="sum-val">{slackRowsForDate.length}</div><div className="sum-label">Reports {isToday?'Today':'This Day'}</div></div>
+                  <div className="sum-card orange"><div className="sum-val">{slackAgentsForDate.reduce((s,a)=>s+a.phones,0)}</div><div className="sum-label">Phones {isToday?'Today':'This Day'}</div></div>
                 </div>
+
+                {/* Date filter chips */}
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:'1rem',flexWrap:'wrap'}}>
-                  <span style={{fontSize:12,color:'#6b7280'}}>Filter by date:</span>
-                  <button onClick={()=>setSlackFilter('all')} className={`metric-tab ${slackFilter==='all'?'active':''}`}>All</button>
+                  <span style={{fontSize:12,color:'#6b7280'}}>Jump to date:</span>
                   {slackDates.map(d=>(
-                    <button key={d} onClick={()=>setSlackFilter(d)} className={`metric-tab ${slackFilter===d?'active':''}`}>{d}</button>
+                    <button
+                      key={d}
+                      onClick={()=>{
+                        // Find matching isoDate and switch selectedDate
+                        const hd = HISTORY_DATES.find(h=>h.slackLabel===d)
+                        if (hd) setSelectedDate(hd.isoDate)
+                      }}
+                      className={`metric-tab ${currentSlackLabel===d?'active':''}`}
+                    >{d}</button>
                   ))}
                 </div>
-                <div className="agent-table-wrap">
+
+                {/* Agents table for current date */}
+                <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>
+                  {isToday ? "Today's Slack Reports" : `Slack Reports — ${formatDateLabel(selectedDate)}`}
+                </h3>
+                <div className="agent-table-wrap" style={{marginBottom:'1.5rem'}}>
                   <table className="agent-table">
-                    <thead><tr><th>#</th><th>Agent</th><th>ID Opener</th><th style={{textAlign:'center'}}>Reports</th><th style={{textAlign:'center'}}>Phones</th></tr></thead>
+                    <thead>
+                      <tr><th>#</th><th>Agent</th><th>ID Opener</th><th style={{textAlign:'center'}}>Reports</th><th style={{textAlign:'center'}}>Phones</th></tr>
+                    </thead>
                     <tbody>
-                      {slacksByAgentFiltered.length === 0
-                        ? <tr><td colSpan={5} style={{textAlign:'center',color:'#6b7280',padding:'2rem'}}>No reports for this date.</td></tr>
-                        : slacksByAgentFiltered.map((a,i)=>{
-                          const rs = i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
+                      {slackAgentsForDate.length===0
+                        ? <tr><td colSpan={5} style={{textAlign:'center',color:'#6b7280',padding:'2rem'}}>No slack reports for this date.</td></tr>
+                        : slackAgentsForDate.map((a,i)=>{
+                          const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
                           return (
                             <tr key={i}>
                               <td style={rs}>#{i+1}</td>
@@ -661,14 +658,16 @@ export default function Dashboard() {
                     </tbody>
                   </table>
                 </div>
-                {slackFilter !== 'all' && (
-                  <div style={{marginTop:'1.5rem'}}>
-                    <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>All entries — {slackFilter}</h3>
+
+                {/* Detail entries */}
+                {slackRowsForDate.length > 0 && (
+                  <>
+                    <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>All entries</h3>
                     <div className="agent-table-wrap">
                       <table className="agent-table">
                         <thead><tr><th>#</th><th>Agent</th><th>ID Opener</th><th>Call(s)</th><th style={{textAlign:'center'}}>Phones</th></tr></thead>
                         <tbody>
-                          {slackRowsFiltered.map((r,i)=>(
+                          {slackRowsForDate.map((r,i)=>(
                             <tr key={i}>
                               <td style={{color:'#6b7280'}}>{i+1}</td>
                               <td className="agent-name">{r[1]}</td>
@@ -680,121 +679,6 @@ export default function Dashboard() {
                         </tbody>
                       </table>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── HISTORY ── */}
-            {asiaView==='history' && (
-              <div className="fade-in">
-                {/* Summary totals */}
-                <div className="summary-grid" style={{marginBottom:'1.5rem'}}>
-                  <div className="sum-card blue"><div className="sum-val">{HISTORY_DATES.length}</div><div className="sum-label">Days Tracked</div></div>
-                  <div className="sum-card purple"><div className="sum-val">{histTotalSpanish.toLocaleString()}</div><div className="sum-label">Total Spanish</div></div>
-                  <div className="sum-card green"><div className="sum-val">{histTotalEnglish.toLocaleString()}</div><div className="sum-label">Total English</div></div>
-                  <div className="sum-card gold"><div className="sum-val">{histTotalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
-                  <div className="sum-card orange">
-                    <div className="sum-val" style={{fontSize:14,paddingTop:4}}>{histBestDay?.label || '—'}</div>
-                    <div className="sum-label">Best Day ({histBestDay?.english.toLocaleString()} EN)</div>
-                  </div>
-                </div>
-
-                {historyLoading ? (
-                  <div className="dash-loading"><div className="dash-spinner"/><p>Loading history...</p></div>
-                ) : (
-                  <>
-                    {/* Main history table */}
-                    <div className="agent-table-wrap" style={{marginBottom:'1.5rem'}}>
-                      <table className="agent-table">
-                        <thead>
-                          <tr>
-                            <th>#</th>
-                            <th>Date</th>
-                            <th style={{textAlign:'center'}}>Agents</th>
-                            <th style={{textAlign:'center'}}>Spanish</th>
-                            <th style={{textAlign:'center'}}>English</th>
-                            <th style={{textAlign:'center'}}>Total</th>
-                            <th style={{textAlign:'center'}}>Avg EN/Agent</th>
-                            <th style={{textAlign:'center'}}>Detail</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {historyData.map((d, i) => {
-                            const avg = d.agents > 0 ? (d.english / d.agents).toFixed(1) : '—'
-                            const isSelected = historySelected === d.tab
-                            const isBest = histBestDay?.tab === d.tab
-                            return (
-                              <tr key={i} style={isBest ? {background:'rgba(249,115,22,0.06)'} : {}}>
-                                <td style={{color:'#6b7280'}}>{i+1}</td>
-                                <td style={{fontWeight:600,color: isBest ? '#f97316' : '#f5f5f5'}}>
-                                  {d.label}
-                                  {isBest && <span style={{marginLeft:6,fontSize:10,background:'#f97316',color:'#fff',padding:'1px 6px',borderRadius:3}}>BEST</span>}
-                                </td>
-                                <td style={{textAlign:'center',color:'#9ca3af'}}>{d.agents}</td>
-                                <td style={{textAlign:'center',color:'#34d399',fontWeight:600}}>{d.spanish.toLocaleString()}</td>
-                                <td style={{textAlign:'center',color:'#60a5fa',fontWeight:700}}>{d.english.toLocaleString()}</td>
-                                <td style={{textAlign:'center',color:'#fcd34d',fontWeight:700}}>{d.total.toLocaleString()}</td>
-                                <td style={{textAlign:'center',color:'#9ca3af'}}>{avg}</td>
-                                <td style={{textAlign:'center'}}>
-                                  <button
-                                    onClick={() => isSelected ? setHistorySelected(null) : loadHistoryDetail(d.tab)}
-                                    style={{
-                                      padding:'3px 10px', fontSize:11, cursor:'pointer',
-                                      background: isSelected ? '#1a1310' : 'transparent',
-                                      border:`0.5px solid ${isSelected ? '#f97316' : '#2a2d38'}`,
-                                      color: isSelected ? '#f97316' : '#6b7280',
-                                      borderRadius:6
-                                    }}
-                                  >{isSelected ? 'Hide' : 'View'}</button>
-                                </td>
-                              </tr>
-                            )
-                          })}
-                          {/* Totals row */}
-                          <tr style={{background:'#0d0f14',borderTop:'1px solid #2a2d38'}}>
-                            <td colSpan={2} style={{fontFamily:"'Sora',sans-serif",fontWeight:700,color:'#f5f5f5',padding:'12px 16px'}}>TOTAL</td>
-                            <td style={{textAlign:'center',color:'#9ca3af',fontWeight:600}}>{Math.round(histTotalAgents / (historyData.length||1))}<span style={{fontSize:10,color:'#6b7280'}}> avg</span></td>
-                            <td style={{textAlign:'center',color:'#34d399',fontWeight:800,fontFamily:"'Sora',sans-serif"}}>{histTotalSpanish.toLocaleString()}</td>
-                            <td style={{textAlign:'center',color:'#60a5fa',fontWeight:800,fontFamily:"'Sora',sans-serif"}}>{histTotalEnglish.toLocaleString()}</td>
-                            <td style={{textAlign:'center',color:'#fcd34d',fontWeight:800,fontFamily:"'Sora',sans-serif"}}>{histTotalXfers.toLocaleString()}</td>
-                            <td colSpan={2}></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Drill-down detail */}
-                    {historySelected && historyDetail.length > 0 && (
-                      <div>
-                        <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:14,color:'#9ca3af',marginBottom:12}}>
-                          Agent detail — {HISTORY_DATES.find(d=>d.tab===historySelected)?.label}
-                        </h3>
-                        <div className="agent-table-wrap">
-                          <table className="agent-table">
-                            <thead>
-                              <tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th><th>Spanish</th><th>Total</th><th>Goal</th></tr>
-                            </thead>
-                            <tbody>
-                              {historyDetail.map((a,i) => {
-                                const rs = i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
-                                return (
-                                  <tr key={i} className={a.english>=goal?'row-goal':a.total===0?'row-zero':''}>
-                                    <td style={rs}>#{i+1}</td>
-                                    <td className="agent-name">{a.name}</td>
-                                    <td className="agent-ext">{a.ext}</td>
-                                    <td className="val-english">{a.english}</td>
-                                    <td className="val-spanish">{a.spanish}</td>
-                                    <td className="val-total">{a.total}</td>
-                                    <td>{a.english>=goal ? <span className="badge-goal">✓ Goal</span> : <span className="badge-pending">{goal-a.english} left</span>}</td>
-                                  </tr>
-                                )
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
@@ -803,7 +687,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── Modal edición ── */}
+      {/* ── Edit modal ── */}
       {editingAgent && (
         <div className="edit-modal-overlay" style={{zIndex:1001}} onClick={()=>setEditingAgent(null)}>
           <div className="edit-modal" onClick={e=>e.stopPropagation()}>
