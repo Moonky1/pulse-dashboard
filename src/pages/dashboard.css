@@ -254,8 +254,9 @@
 .bar-tooltip-name   { font-size: 11px; color: #e5e7eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .bar-tooltip-val    { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 700; flex-shrink: 0; }
 
+/* ── Canvas trail ── */
 .dash-trail-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
-/* ── Edit agent button ── */
+
 /* ── Edit col ── */
 .th-edit { width: 40px; }
 .td-edit { text-align: center; width: 40px; }
@@ -264,3 +265,52 @@
   font-size: 14px; opacity: 0.3; transition: opacity .2s; padding: 2px;
 }
 .edit-agent-btn:hover { opacity: 1; }
+
+/* ── Edit modal — z-index 1001 para estar SOBRE el canvas trail (999) ── */
+.edit-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1001;
+}
+.edit-modal {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 14px;
+  padding: 24px;
+  min-width: 300px;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.8);
+}
+.edit-modal-title {
+  color: #f9fafb; font-size: 15px; font-weight: 700;
+  margin-bottom: 18px; display: flex; align-items: center; gap: 6px;
+}
+.edit-modal-fields {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.edit-modal-fields label {
+  color: #9ca3af; font-size: 13px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.edit-modal-fields input {
+  background: #111827; border: 1px solid #374151;
+  border-radius: 8px; color: #f9fafb;
+  padding: 8px 12px; font-size: 15px; outline: none;
+  transition: border-color 0.15s;
+}
+.edit-modal-fields input:focus { border-color: #f97316; }
+.edit-modal-actions {
+  display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px;
+}
+.btn-cancel {
+  background: #374151; color: #9ca3af; border: none;
+  border-radius: 8px; padding: 8px 16px; cursor: pointer;
+  font-size: 13px; transition: background 0.15s;
+}
+.btn-cancel:hover { background: #4b5563; }
+.btn-save {
+  background: #f97316; color: white; border: none;
+  border-radius: 8px; padding: 8px 16px; cursor: pointer;
+  font-size: 13px; font-weight: 700; transition: background 0.15s;
+}
+.btn-save:hover { background: #ea6c0a; }

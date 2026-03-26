@@ -237,35 +237,44 @@ export default function Dashboard() {
 
   const teamsSorted = [...teamRows].sort((a, b) => b.english - a.english)
 
-  // ── Asia agents — solo tabla 1 ──
+  // ── Asia parser ──
   // Columnas: A=name, B=ext, C=spanish, D=english, E=total
-  // Para en cuanto encuentra "AGENT LOGGED IN" o "REMOVED"
-  const asiaAgents = (() => {
+  // Para en "AGENT LOGGED IN" y lee los totales de esa fila
+  const { asiaAgents, asiaTotals } = (() => {
     const agents = []
+    let totals = { spanish: 0, english: 0, total: 0, activeAgents: 0 }
+
     for (const row of asiaData) {
       const name = (row[0]||'').trim()
       const nameUp = name.toUpperCase()
 
-      // Fin de tabla 1 — parar aquí
-      if (
-        nameUp.includes('AGENT LOGGED') ||
-        nameUp.includes('LOGGED IN') ||
-        nameUp.includes('REMOVED') ||
-        nameUp.includes('REMOVE')
-      ) break
+      if (nameUp.includes('AGENT LOGGED') || nameUp.includes('LOGGED IN')) {
+        const numMatch = name.match(/^(\d+)/)
+        totals = {
+          activeAgents: numMatch ? parseInt(numMatch[1]) : agents.length,
+          spanish:      parseInt(row[2])||0,
+          english:      parseInt(row[3])||0,
+          total:        parseInt(row[4])||0,
+        }
+        break
+      }
 
-      // Saltar headers y filas sin extensión válida
+      if (nameUp.includes('REMOVED') || nameUp.includes('REMOVE')) break
+
       const ext = parseInt(row[1])
       if (isNaN(ext) || ext < 1000 || ext > 9999) continue
       if (name.length <= 1) continue
 
-      const sp = parseInt(row[2])||0  // col C = spanish
-      const en = parseInt(row[3])||0  // col D = english
-      const to = parseInt(row[4])||0  // col E = total
-
-      agents.push({ name, ext: String(ext), spanish: sp, english: en, total: to })
+      agents.push({
+        name,
+        ext:     String(ext),
+        spanish: parseInt(row[2])||0,
+        english: parseInt(row[3])||0,
+        total:   parseInt(row[4])||0,
+      })
     }
-    return agents
+
+    return { asiaAgents: agents, asiaTotals: totals }
   })()
 
   // ── Aplicar overrides manuales para días pasados ──
@@ -289,14 +298,17 @@ export default function Dashboard() {
     setSnapshots(loadAllSnapshots())
   }
 
-  const goal         = APP_CONFIG.dailyGoal
-  const hitGoal      = asiaAgentsFinal.filter(a => a.english >= goal)
-  const atZero       = asiaAgentsFinal.filter(a => a.total === 0)
-  const top3English  = [...asiaAgentsFinal].sort((a,b) => b.english-a.english).slice(0,3)
-  const top3Spanish  = [...asiaAgentsFinal].sort((a,b) => b.spanish-a.spanish).slice(0,3)
-  const totalEnglish = asiaAgentsFinal.reduce((s,a) => s+a.english, 0)
-  const totalSpanish = asiaAgentsFinal.reduce((s,a) => s+a.spanish, 0)
-  const totalXfers   = asiaAgentsFinal.reduce((s,a) => s+a.total,   0)
+  const goal = APP_CONFIG.dailyGoal
+
+  // Totales: Today → directo del sheet; días pasados → suma con overrides
+  const totalSpanish = isToday ? asiaTotals.spanish : asiaAgentsFinal.reduce((s,a) => s+a.spanish, 0)
+  const totalEnglish = isToday ? asiaTotals.english : asiaAgentsFinal.reduce((s,a) => s+a.english, 0)
+  const totalXfers   = isToday ? asiaTotals.total   : asiaAgentsFinal.reduce((s,a) => s+a.total,   0)
+
+  const hitGoal     = asiaAgentsFinal.filter(a => a.english >= goal)
+  const atZero      = asiaAgentsFinal.filter(a => a.total === 0)
+  const top3English = [...asiaAgentsFinal].sort((a,b) => b.english-a.english).slice(0,3)
+  const top3Spanish = [...asiaAgentsFinal].sort((a,b) => b.spanish-a.spanish).slice(0,3)
 
   const getFlag = (name) => {
     const n = name.toUpperCase()
@@ -321,6 +333,7 @@ export default function Dashboard() {
   return (
     <div className="dash-root">
       <canvas ref={canvasRef} className="dash-trail-canvas" />
+
       <nav className="dash-nav">
         <div className="dash-nav-left">
           <div className="nav-logo-wrap">
@@ -359,7 +372,9 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-        {!isToday && activeSnap?.savedAt && <span className="date-snap-info">Snapshot at {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
+        {!isToday && activeSnap?.savedAt && (
+          <span className="date-snap-info">Snapshot at {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+        )}
       </div>
 
       <div className="dash-content">
@@ -408,7 +423,7 @@ export default function Dashboard() {
 
             <div className="summary-grid">
               <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
-              <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
+              <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length - hitGoal.length - atZero.length}</div><div className="sum-label">In Progress</div></div>
               <div className="sum-card purple"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
               <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
               <div className="sum-card gold"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
@@ -433,6 +448,7 @@ export default function Dashboard() {
                     }
                   </div>
                 </div>
+
                 <div className="agent-table-wrap">
                   <table className="agent-table">
                     <thead>
@@ -468,7 +484,11 @@ export default function Dashboard() {
                                 <button
                                   className="edit-agent-btn"
                                   title="Edit transfers"
-                                  onClick={() => { setEditingAgent(a); setEditForm({ spanish: a.spanish, english: a.english, total: a.total }) }}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditForm({ spanish: a.spanish, english: a.english, total: a.total })
+                                    setEditingAgent(a)
+                                  }}
                                 >✏️</button>
                               </td>
                             )}
@@ -501,22 +521,47 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── Modal edición agente (solo días pasados) ── */}
+      {/* ── Modal edición — z-index 1001 para estar sobre el canvas trail (999) ── */}
       {editingAgent && (
-        <div className="edit-modal-overlay" onClick={() => setEditingAgent(null)}>
+        <div
+          className="edit-modal-overlay"
+          style={{ zIndex: 1001 }}
+          onClick={() => setEditingAgent(null)}
+        >
           <div className="edit-modal" onClick={e => e.stopPropagation()}>
             <h3 className="edit-modal-title">
               Edit — {editingAgent.name}
               <span style={{ color:'#6b7280', fontSize:12, fontWeight:400, marginLeft:6 }}>#{editingAgent.ext}</span>
             </h3>
             <div className="edit-modal-fields">
-              <label>English<input type="number" value={editForm.english} onChange={e => setEditForm(f=>({...f, english: e.target.value}))}/></label>
-              <label>Spanish<input type="number" value={editForm.spanish} onChange={e => setEditForm(f=>({...f, spanish: e.target.value}))}/></label>
-              <label>Total<input type="number"   value={editForm.total}   onChange={e => setEditForm(f=>({...f, total:   e.target.value}))}/></label>
+              <label>
+                English
+                <input
+                  type="number"
+                  value={editForm.english}
+                  onChange={e => setEditForm(f => ({ ...f, english: e.target.value }))}
+                />
+              </label>
+              <label>
+                Spanish
+                <input
+                  type="number"
+                  value={editForm.spanish}
+                  onChange={e => setEditForm(f => ({ ...f, spanish: e.target.value }))}
+                />
+              </label>
+              <label>
+                Total
+                <input
+                  type="number"
+                  value={editForm.total}
+                  onChange={e => setEditForm(f => ({ ...f, total: e.target.value }))}
+                />
+              </label>
             </div>
             <div className="edit-modal-actions">
               <button className="btn-cancel" onClick={() => setEditingAgent(null)}>Cancel</button>
-              <button className="btn-save"   onClick={saveAgentEdit}>Save</button>
+              <button className="btn-save" onClick={saveAgentEdit}>Save</button>
             </div>
           </div>
         </div>
