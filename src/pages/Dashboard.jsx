@@ -6,15 +6,17 @@ const SHEET_ID         = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const USERS_SHEET_ID   = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
 
+// totalRowIdx = 0-based row index in CSV where "XX AGENT LOGGED IN" is
+// Row 65 in Google Sheets = index 64 in 0-based CSV
 const HISTORY_DATES = [
-  { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026' },
-  { isoDate:'2026-03-16', tab:'16032026', slackLabel:'16/03/2026' },
-  { isoDate:'2026-03-17', tab:'17032026', slackLabel:'17/03/2026' },
-  { isoDate:'2026-03-18', tab:'18032026', slackLabel:'18/03/2026' },
-  { isoDate:'2026-03-19', tab:'19032026', slackLabel:'19/03/2026' },
-  { isoDate:'2026-03-20', tab:'20032026', slackLabel:'20/03/2026' },
-  { isoDate:'2026-03-21', tab:'21032026', slackLabel:'21/03/2026' },
-  { isoDate:'2026-03-23', tab:'23032026', slackLabel:'23/03/2026' },
+  { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026' },              // auto-detect
+  { isoDate:'2026-03-16', tab:'16032026', slackLabel:'16/03/2026', totalRowIdx:72 }, // row 73
+  { isoDate:'2026-03-17', tab:'17032026', slackLabel:'17/03/2026', totalRowIdx:66 }, // row 67
+  { isoDate:'2026-03-18', tab:'18032026', slackLabel:'18/03/2026', totalRowIdx:64 }, // row 65
+  { isoDate:'2026-03-19', tab:'19032026', slackLabel:'19/03/2026', totalRowIdx:66 }, // row 67
+  { isoDate:'2026-03-20', tab:'20032026', slackLabel:'20/03/2026', totalRowIdx:63 }, // row 64
+  { isoDate:'2026-03-21', tab:'21032026', slackLabel:'21/03/2026' },              // auto-detect
+  { isoDate:'2026-03-23', tab:'23032026', slackLabel:'23/03/2026', totalRowIdx:64 }, // row 65
 ]
 const HISTORY_ISO_SET = new Set(HISTORY_DATES.map(d => d.isoDate))
 
@@ -44,13 +46,11 @@ async function fetchSheet(sheetId, name) {
 
 const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
 
-// Cuenta phones distintos en una celda — split por / o por tel:
 const countPhones = (cell) => {
   if (!cell) return 0
   return cell.split('/').filter(p => p.trim().length > 0).length || 1
 }
 
-// Extrae lista de números limpios de la celda
 const extractPhones = (cell) => {
   if (!cell) return []
   return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length > 0)
@@ -117,31 +117,46 @@ const formatDateLabel = (dateStr) => {
   return `${d}/${m}/${y}`
 }
 
-// Parse history sheet — total = spanish + english siempre
-function parseHistoryAgents(rows) {
+// Parse history sheet using specific row index OR auto-detect
+function parseHistoryAgents(rows, totalRowIdx) {
   const agents = []
   let totals = {spanish:0,english:0,total:0,activeAgents:0}
-  for (const row of rows) {
-    const name   = (row[0]||'').trim()
-    const nameUp = name.toUpperCase()
-    if (nameUp.includes('AGENT') && nameUp.includes('LOGGED')) {
-      const numMatch = name.match(/^(\d+)/)
-      const sp = safeInt(row[2])
-      const en = safeInt(row[3])
-      totals = {
-        activeAgents: numMatch ? parseInt(numMatch[1]) : agents.length,
-        spanish: sp,
-        english: en,
-        total:   sp + en,   // ← siempre spanish + english
-      }
-      break
+
+  if (totalRowIdx !== undefined && rows[totalRowIdx]) {
+    // Direct row access — exact row given by user
+    const tRow = rows[totalRowIdx]
+    const sp = safeInt(tRow[2])
+    const en = safeInt(tRow[3])
+    totals = { spanish: sp, english: en, total: sp+en, activeAgents: 0 }
+    // Parse agents up to that row
+    for (let i = 0; i < totalRowIdx; i++) {
+      const row = rows[i]
+      const name = (row[0]||'').trim()
+      const nameUp = name.toUpperCase()
+      if (nameUp.includes('MANAGEMENT')||nameUp.includes('CALLS')||nameUp.includes('TRANSFERS')||name.length<=1) continue
+      const ext = safeInt(row[1])
+      if (ext < 1000 || ext > 9999) continue
+      const sp2 = safeInt(row[2]), en2 = safeInt(row[3])
+      agents.push({name, ext:String(ext), spanish:sp2, english:en2, total:sp2+en2})
     }
-    if (nameUp.includes('MANAGEMENT')||nameUp.includes('CALLS')||name.length<=1) continue
-    const ext = safeInt(row[1])
-    if (ext < 1000 || ext > 9999) continue
-    const sp = safeInt(row[2])
-    const en = safeInt(row[3])
-    agents.push({ name, ext: String(ext), spanish: sp, english: en, total: sp + en })
+    totals.activeAgents = agents.length
+  } else {
+    // Auto-detect: search for "AGENT LOGGED"
+    for (const row of rows) {
+      const name = (row[0]||'').trim()
+      const nameUp = name.toUpperCase()
+      if (nameUp.includes('AGENT') && nameUp.includes('LOGGED')) {
+        const numMatch = name.match(/^(\d+)/)
+        const sp = safeInt(row[2]), en = safeInt(row[3])
+        totals = {activeAgents:numMatch?parseInt(numMatch[1]):agents.length, spanish:sp, english:en, total:sp+en}
+        break
+      }
+      if (nameUp.includes('MANAGEMENT')||nameUp.includes('CALLS')||nameUp.includes('TRANSFERS')||name.length<=1) continue
+      const ext = safeInt(row[1])
+      if (ext < 1000 || ext > 9999) continue
+      const sp = safeInt(row[2]), en = safeInt(row[3])
+      agents.push({name, ext:String(ext), spanish:sp, english:en, total:sp+en})
+    }
   }
   return {agents, totals}
 }
@@ -159,7 +174,11 @@ function BarChart({agents, metric}) {
       <div className="chart-bars">
         {buckets.map((b,i)=>(
           <div key={i} className={`chart-col ${b.count>0?'chart-col-hoverable':''}`}
-            onMouseEnter={(e)=>{if(!b.count)return; const r=e.currentTarget.getBoundingClientRect(); setTooltip({bucket:b,x:r.left+r.width/2,y:r.top})}}
+            onMouseEnter={(e)=>{
+              if(!b.count)return
+              const r=e.currentTarget.getBoundingClientRect()
+              setTooltip({bucket:b,x:r.left+r.width/2,y:r.top,side:r.left>window.innerWidth/2?'left':'right'})
+            }}
             onMouseLeave={()=>setTooltip(null)}>
             <div className="bar-count">{b.count}</div>
             <div className="bar-outer"><div className="bar-inner" style={{height:`${(b.count/maxCount)*100}%`,background:b.color}}/></div>
@@ -167,15 +186,23 @@ function BarChart({agents, metric}) {
           </div>
         ))}
       </div>
+
+      {/* Tooltip — horizontal list, smart positioning */}
       {tooltip && (
-        <div className="bar-tooltip" style={{left:tooltip.x,top:tooltip.y}}>
+        <div className="bar-tooltip" style={{
+          left: tooltip.side==='left' ? tooltip.x - 20 : tooltip.x + 20,
+          top: tooltip.y,
+          transform: tooltip.side==='left'
+            ? 'translate(-100%, calc(-100% - 12px))'
+            : 'translate(0%, calc(-100% - 12px))',
+        }}>
           <div className="bar-tooltip-header" style={{color:tooltip.bucket.color}}>
-            {tooltip.bucket.label} xfers
+            <span>{tooltip.bucket.label} xfers</span>
             <span className="bar-tooltip-count">{tooltip.bucket.count} agent{tooltip.bucket.count!==1?'s':''}</span>
           </div>
-          <div className="bar-tooltip-agents">
+          <div className="bar-tooltip-agents-list">
             {tooltip.bucket.agentsInRange.sort((a,b)=>b[metric]-a[metric]).map((a,i)=>(
-              <div key={i} className="bar-tooltip-agent">
+              <div key={i} className="bar-tooltip-agent-row">
                 <span className="bar-tooltip-name">{a.name}</span>
                 <span className="bar-tooltip-val" style={{color:tooltip.bucket.color}}>{a[metric]}</span>
               </div>
@@ -183,6 +210,7 @@ function BarChart({agents, metric}) {
           </div>
         </div>
       )}
+
       <div className="chart-legend">
         {RANGES.map((r,i)=>(
           <div key={i} className="legend-item">
@@ -216,7 +244,7 @@ export default function Dashboard() {
   const [overridesTick, setOverridesTick]   = useState(0)
   const [histCache, setHistCache]           = useState({})
   const [histLoading, setHistLoading]       = useState(false)
-  const [expandedAgent, setExpandedAgent]   = useState(null) // for phone number expansion in slacks
+  const [expandedAgent, setExpandedAgent]   = useState(null)
 
   const isToday    = selectedDate === todayKey()
   const isHistDate = HISTORY_ISO_SET.has(selectedDate)
@@ -225,7 +253,7 @@ export default function Dashboard() {
 
   const asiaDataRaw    = isToday ? liveAsia    : (activeSnap?.asiaData    || [])
   const generalDataRaw = isToday ? liveGeneral : (activeSnap?.generalData || [])
-  const histParsed     = isHistDate ? (histCache[selectedDate] || {agents:[],totals:{spanish:0,english:0,total:0,activeAgents:0}}) : null
+  const histParsed     = isHistDate ? (histCache[selectedDate] || null) : null
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -277,13 +305,12 @@ export default function Dashboard() {
     return ()=>clearInterval(iv)
   },[])
 
-  // Load history sheet when needed
   useEffect(()=>{
     if (!isHistDate||!histMeta||histCache[selectedDate]) return
     setHistLoading(true)
     fetchSheet(HISTORY_SHEET_ID,histMeta.tab)
       .then(rows=>{
-        const parsed=parseHistoryAgents(rows)
+        const parsed=parseHistoryAgents(rows, histMeta.totalRowIdx)
         setHistCache(c=>({...c,[selectedDate]:parsed}))
       })
       .catch(console.error)
@@ -355,17 +382,16 @@ export default function Dashboard() {
 
   const goal = APP_CONFIG.dailyGoal
 
-  // Totals — always spanish + english
   const totalSpanish = isToday ? asiaTotals.spanish : (isHistDate ? asiaTotals.spanish : asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0))
   const totalEnglish = isToday ? asiaTotals.english : (isHistDate ? asiaTotals.english : asiaAgentsFinal.reduce((s,a)=>s+a.english,0))
-  const totalXfers   = totalSpanish + totalEnglish   // ← siempre la suma de los dos
+  const totalXfers   = totalSpanish + totalEnglish
 
   const hitGoal     = asiaAgentsFinal.filter(a=>a.english>=goal)
   const atZero      = asiaAgentsFinal.filter(a=>a.total===0)
   const top3English = [...asiaAgentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
   const top3Spanish = [...asiaAgentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3)
 
-  // ── Slacks — ONLY for current selected date ──
+  // ── Slacks — strictly current date only ──
   const slackLabelForDate = (iso) => {
     const hd=HISTORY_DATES.find(d=>d.isoDate===iso)
     if (hd) return hd.slackLabel
@@ -373,24 +399,22 @@ export default function Dashboard() {
     return `${d}/${m}/${y}`
   }
   const currentSlackLabel = slackLabelForDate(selectedDate)
-
-  // Filter strictly to current date only — no fallback to all
-  const slackRowsForDate = slacksData.filter(r => r[0]?.trim() === currentSlackLabel)
+  const slackRowsForDate  = slacksData.filter(r => r[0]?.trim() === currentSlackLabel)
 
   const buildSlackAgents = (rows) => {
     const map = {}
     for (const row of rows) {
       const agent=(row[1]||'').trim(), opener=(row[2]||'').trim(), call=(row[3]||'').trim()
       if (!agent) continue
-      if (!map[agent]) map[agent]={agent,opener,reports:0,calls:0,phones:[]}
+      if (!map[agent]) map[agent]={agent,opener,reports:0,phones:[]}
       map[agent].reports+=1
-      map[agent].calls+=countPhones(call)
-      extractPhones(call).forEach(p=>{ if(!map[agent].phones.includes(p)) map[agent].phones.push(p) })
+      extractPhones(call).forEach(p=>{ if(p && !map[agent].phones.includes(p)) map[agent].phones.push(p) })
     }
-    return Object.values(map).sort((a,b)=>b.calls-a.calls)
+    return Object.values(map).sort((a,b)=>b.reports-a.reports)
   }
   const slackAgentsForDate = buildSlackAgents(slackRowsForDate)
-  const totalCallsForDate  = slackRowsForDate.reduce((s,r)=>s+countPhones(r[3]),0)
+  const topAgent           = slackAgentsForDate[0] || null
+  const totalReportsForDate = slackRowsForDate.length
 
   const getFlag = (name) => {
     const n=name.toUpperCase()
@@ -514,19 +538,19 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Summary cards */}
+            {/* Summary cards — stats/charts only */}
             {asiaView !== 'slacks' && (
-              histLoading ? (
-                <div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading historical data...</div>
-              ) : (
-                <div className="summary-grid">
-                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
-                  <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-                  <div className="sum-card teal"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
-                  <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
-                  <div className="sum-card indigo"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
-                </div>
-              )
+              histLoading
+                ? <div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading historical data...</div>
+                : (
+                  <div className="summary-grid">
+                    <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+                    <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
+                    <div className="sum-card teal"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
+                    <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
+                    <div className="sum-card indigo"><div className="sum-val">{totalXfers.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
+                  </div>
+                )
             )}
 
             {/* ── STATS ── */}
@@ -604,16 +628,33 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── SLACKS — solo fecha seleccionada ── */}
+            {/* ── SLACKS ── */}
             {asiaView==='slacks' && (
               <div className="slacks-section">
-                {/* Summary */}
-                <div className="summary-grid" style={{marginBottom:'1.5rem'}}>
-                  <div className="sum-card blue"><div className="sum-val">{slackAgentsForDate.length}</div><div className="sum-label">Agents</div></div>
-                  <div className="sum-card gold"><div className="sum-val">{slackRowsForDate.length}</div><div className="sum-label">Reports</div></div>
-                  <div className="sum-card teal"><div className="sum-val">{totalCallsForDate}</div><div className="sum-label">Total Calls</div></div>
-                  <div className="sum-card indigo"><div className="sum-val">{slackRowsForDate.reduce((s,r)=>s+extractPhones(r[3]).length,0)}</div><div className="sum-label">Unique Phones</div></div>
-                  <div className="sum-card orange"><div className="sum-val" style={{fontSize:14,paddingTop:8}}>{currentSlackLabel}</div><div className="sum-label">Date</div></div>
+
+                {/* 3 summary cards: Agents, Total Reports, Top Agent */}
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:'1.5rem'}}>
+                  <div className="sum-card blue">
+                    <div className="sum-val">{slackAgentsForDate.length}</div>
+                    <div className="sum-label">Agents</div>
+                  </div>
+                  <div className="sum-card gold">
+                    <div className="sum-val">{totalReportsForDate}</div>
+                    <div className="sum-label">Total Reports</div>
+                  </div>
+                  <div className="sum-card green">
+                    {topAgent ? (
+                      <>
+                        <div className="sum-val" style={{fontSize:16,paddingTop:6,lineHeight:1.3}}>{topAgent.agent}</div>
+                        <div className="sum-label">Top Agent ({topAgent.reports} reports)</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="sum-val">—</div>
+                        <div className="sum-label">Top Agent</div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {slackRowsForDate.length === 0 ? (
@@ -622,68 +663,46 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <>
-                    {/* Agents summary table */}
                     <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>
                       Agent Summary — {formatDateLabel(selectedDate)}
                     </h3>
-                    <div className="agent-table-wrap" style={{marginBottom:'1.5rem'}}>
+                    <div className="agent-table-wrap">
                       <table className="agent-table">
                         <thead>
                           <tr>
-                            <th>#</th><th>Agent</th><th>ID Opener</th>
+                            <th>#</th>
+                            <th>Agent</th>
+                            <th>ID Opener</th>
                             <th style={{textAlign:'center'}}>Reports</th>
-                            <th style={{textAlign:'center'}}>Calls</th>
-                            <th>Phone Numbers</th>
+                            <th>Calls</th>
                           </tr>
                         </thead>
                         <tbody>
                           {slackAgentsForDate.map((a,i)=>{
                             const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
-                            const isExpanded = expandedAgent === a.agent
+                            const isExpanded = expandedAgent===a.agent
                             return (
                               <tr key={i}>
                                 <td style={rs}>#{i+1}</td>
                                 <td className="agent-name">{a.agent}</td>
                                 <td className="agent-ext">{a.opener}</td>
-                                <td style={{textAlign:'center',color:'#f97316',fontWeight:600}}>{a.reports}</td>
-                                <td style={{textAlign:'center',color:'#22d3ee',fontWeight:700,fontSize:16}}>{a.calls}</td>
+                                <td style={{textAlign:'center',color:'#f97316',fontWeight:700,fontSize:15}}>{a.reports}</td>
                                 <td>
-                                  <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                                    {(isExpanded ? a.phones : a.phones.slice(0,2)).map((p,j)=>(
-                                      <span key={j} style={{background:'#1e2230',border:'0.5px solid #2a2d38',borderRadius:4,padding:'2px 8px',fontSize:11,color:'#94a3b8',fontFamily:'monospace'}}>{p}</span>
+                                  <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                                    {(isExpanded ? a.phones : a.phones.slice(0,3)).map((p,j)=>(
+                                      <span key={j} className="phone-chip">{p}</span>
                                     ))}
-                                    {a.phones.length > 2 && (
+                                    {a.phones.length > 3 && (
                                       <button
                                         onClick={()=>setExpandedAgent(isExpanded?null:a.agent)}
-                                        style={{background:'none',border:'0.5px solid #2a2d38',borderRadius:4,color:'#6b7280',fontSize:10,cursor:'pointer',padding:'2px 6px'}}
-                                      >{isExpanded ? 'less' : `+${a.phones.length-2} more`}</button>
+                                        className="phone-more-btn"
+                                      >{isExpanded ? '▲ less' : `+${a.phones.length-3} more`}</button>
                                     )}
                                   </div>
                                 </td>
                               </tr>
                             )
                           })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Full entry detail */}
-                    <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>All Entries</h3>
-                    <div className="agent-table-wrap">
-                      <table className="agent-table">
-                        <thead>
-                          <tr><th>#</th><th>Agent</th><th>ID Opener</th><th>Raw Call Data</th><th style={{textAlign:'center'}}>Calls</th></tr>
-                        </thead>
-                        <tbody>
-                          {slackRowsForDate.map((r,i)=>(
-                            <tr key={i}>
-                              <td style={{color:'#6b7280'}}>{i+1}</td>
-                              <td className="agent-name">{r[1]}</td>
-                              <td className="agent-ext">{r[2]}</td>
-                              <td style={{fontSize:11,color:'#9ca3af',maxWidth:220,wordBreak:'break-all'}}>{r[3]}</td>
-                              <td style={{textAlign:'center',color:'#22d3ee',fontWeight:700}}>{countPhones(r[3])}</td>
-                            </tr>
-                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -716,4 +735,4 @@ export default function Dashboard() {
       )}
     </div>
   )
-}  
+}
