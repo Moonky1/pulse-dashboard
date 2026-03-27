@@ -5,6 +5,7 @@ import './dashboard.css'
 const SHEET_ID         = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const USERS_SHEET_ID   = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
+const SCRIPT_URL       = 'https://script.google.com/macros/s/AKfycbwmiLdRPyx6IU65p8nW7A3lEncOBr74XIsP-9nsRkxZe2-GF6sqZgvfeS82EK_cTnve/exec'
 
 const HISTORY_DATES = [
   { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026' },
@@ -47,6 +48,37 @@ const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
 const extractPhones = (cell) => {
   if (!cell) return []
   return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length >= 7)
+}
+
+// ── Persist overrides to Sheets + localStorage ──
+const OVERRIDE_KEY_AGENTS = (date) => `pulse_overrides_${date}`
+const OVERRIDE_KEY_TOTALS = (date) => `pulse_totals_override_${date}`
+
+async function persistOverride(date, key, value) {
+  // Always save to localStorage first (instant)
+  localStorage.setItem(key, JSON.stringify(value))
+  // Then async save to Sheets (durable)
+  try {
+    const url = `${SCRIPT_URL}?action=saveOverride&date=${encodeURIComponent(date)}&key=${encodeURIComponent(key)}&value=${encodeURIComponent(JSON.stringify(value))}`
+    await fetch(url, { mode:'no-cors' })
+  } catch(e) { console.warn('Sheets save failed, localStorage only:', e) }
+}
+
+async function loadRemoteOverrides() {
+  try {
+    const url = `${SCRIPT_URL}?action=getOverrides`
+    const res  = await fetch(url)
+    const data = await res.json()
+    // data = [[date, key, value, savedAt], ...]
+    data.forEach(([date, key, value]) => {
+      try {
+        // Only update localStorage if remote is newer or local doesn't exist
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, value)
+        }
+      } catch(e) {}
+    })
+  } catch(e) { console.warn('Could not load remote overrides:', e) }
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
@@ -112,30 +144,28 @@ const formatDateLabel = (dateStr) => {
 
 function parseHistorySheet(rows) {
   const agents = []
-  let totals = {spanish:0, english:0, total:0, activeAgents:0}
+  let totals = {spanish:0,english:0,total:0,activeAgents:0}
   let foundTotal = false
-  for (let i = 0; i < rows.length; i++) {
+  for (let i=0; i<rows.length; i++) {
     const row    = rows[i]
     const cell0  = (row[0]||'').trim()
     const cell0U = cell0.toUpperCase()
     if (cell0U.includes('AGENT') && cell0U.includes('LOGGED')) {
-      const sp = safeInt(row[2]), en = safeInt(row[3])
-      totals = { spanish: sp, english: en, total: sp+en, activeAgents: agents.length }
-      foundTotal = true
-      break
+      const sp=safeInt(row[2]), en=safeInt(row[3])
+      totals={spanish:sp,english:en,total:sp+en,activeAgents:agents.length}
+      foundTotal=true; break
     }
     if (cell0U.includes('MANAGEMENT')||cell0U.includes('CALL')||cell0U.includes('TRANSFER')||cell0U.includes('LEXNER')||cell0U.includes('GENERAL')||cell0.length<=1) continue
-    const ext = safeInt(row[1])
-    if (ext < 1000 || ext > 9999) continue
-    const sp = safeInt(row[2]), en = safeInt(row[3])
-    agents.push({ name: cell0, ext: String(ext), spanish: sp, english: en, total: sp+en })
+    const ext=safeInt(row[1])
+    if (ext<1000||ext>9999) continue
+    const sp=safeInt(row[2]), en=safeInt(row[3])
+    agents.push({name:cell0,ext:String(ext),spanish:sp,english:en,total:sp+en})
   }
   if (!foundTotal) {
-    const sp = agents.reduce((s,a)=>s+a.spanish,0)
-    const en = agents.reduce((s,a)=>s+a.english,0)
-    totals = { spanish: sp, english: en, total: sp+en, activeAgents: agents.length }
+    const sp=agents.reduce((s,a)=>s+a.spanish,0), en=agents.reduce((s,a)=>s+a.english,0)
+    totals={spanish:sp,english:en,total:sp+en,activeAgents:agents.length}
   }
-  return { agents, totals }
+  return {agents,totals}
 }
 
 function BarChart({agents, metric}) {
@@ -154,7 +184,7 @@ function BarChart({agents, metric}) {
             onMouseEnter={(e)=>{
               if(!b.count)return
               const r=e.currentTarget.getBoundingClientRect()
-              setTooltip({bucket:b, rect:r})
+              setTooltip({bucket:b,rect:r})
             }}
             onMouseLeave={()=>setTooltip(null)}>
             <div className="bar-count">{b.count}</div>
@@ -163,14 +193,8 @@ function BarChart({agents, metric}) {
           </div>
         ))}
       </div>
-
-      {/* Horizontal tooltip — wide grid */}
       {tooltip && (
-        <div className="bar-tooltip-h" style={{
-          top: tooltip.rect.top - 12,
-          left: '50%',
-          transform: 'translate(-50%, -100%)',
-        }}>
+        <div className="bar-tooltip-h" style={{top:tooltip.rect.top-12,left:'50%',transform:'translate(-50%,calc(-100% - 12px))'}}>
           <div className="bar-tooltip-h-header" style={{color:tooltip.bucket.color}}>
             <span>{tooltip.bucket.label} xfers</span>
             <span className="bar-tooltip-count">{tooltip.bucket.count} agent{tooltip.bucket.count!==1?'s':''}</span>
@@ -185,14 +209,8 @@ function BarChart({agents, metric}) {
           </div>
         </div>
       )}
-
       <div className="chart-legend">
-        {RANGES.map((r,i)=>(
-          <div key={i} className="legend-item">
-            <div className="legend-dot" style={{background:r.color}}/>
-            <span>{r.label} xfers</span>
-          </div>
-        ))}
+        {RANGES.map((r,i)=>(<div key={i} className="legend-item"><div className="legend-dot" style={{background:r.color}}/><span>{r.label} xfers</span></div>))}
       </div>
     </div>
   )
@@ -216,16 +234,15 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate]   = useState(todayKey())
   const [editingAgent, setEditingAgent]   = useState(null)
   const [editForm, setEditForm]           = useState({})
-  const [overridesTick, setOverridesTick] = useState(0)
+  const [overridesTick, setOverridesTick] = useState(0) // force re-render
   const [histCache, setHistCache]         = useState({})
   const [histLoading, setHistLoading]     = useState(false)
   const [expandedAgent, setExpandedAgent] = useState(null)
-
-  // ── Bulk edit mode ──
   const [editMenuOpen, setEditMenuOpen]   = useState(false)
   const [bulkEditMode, setBulkEditMode]   = useState(false)
-  const [bulkEdits, setBulkEdits]         = useState({}) // { ext: {spanish, english} }
-  const [bulkTotalsEdit, setBulkTotalsEdit] = useState(null) // {spanish, english} override for summary cards
+  const [bulkEdits, setBulkEdits]         = useState({})
+  const [bulkTotalsEdit, setBulkTotalsEdit] = useState(null)
+  const [savingOverride, setSavingOverride] = useState(false)
 
   const isToday    = selectedDate === todayKey()
   const isHistDate = HISTORY_ISO_SET.has(selectedDate)
@@ -281,6 +298,8 @@ export default function Dashboard() {
   }
 
   useEffect(()=>{
+    // Load remote overrides on start so edits persist across devices
+    loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1))
     setSnapshots(loadAllSnapshots()); loadData()
     const iv=setInterval(loadData,60000)
     return ()=>clearInterval(iv)
@@ -289,14 +308,13 @@ export default function Dashboard() {
   useEffect(()=>{
     if (!isHistDate||!histMeta||histCache[selectedDate]) return
     setHistLoading(true)
-    fetchSheet(HISTORY_SHEET_ID, histMeta.tab)
-      .then(rows => setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)})))
+    fetchSheet(HISTORY_SHEET_ID,histMeta.tab)
+      .then(rows=>setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)})))
       .catch(console.error)
       .finally(()=>setHistLoading(false))
   },[selectedDate])
 
-  // Reset bulk edit when date changes
-  useEffect(()=>{ setBulkEditMode(false); setBulkEdits({}); setBulkTotalsEdit(null); setEditMenuOpen(false) },[selectedDate])
+  useEffect(()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)},[selectedDate])
 
   const logout = () => { localStorage.removeItem('pulse_user'); window.location.href='/' }
 
@@ -343,17 +361,21 @@ export default function Dashboard() {
     return {asiaAgents:agents,asiaTotals:totals}
   })()
 
-  // Overrides from localStorage (individual agent edits)
+  // ── Apply overrides — works for ALL dates ──
+  // overridesTick ensures re-render after save
   const asiaAgentsFinal = (() => {
-    const overrides = JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`)||'{}')
+    void overridesTick // ← triggers recompute on every save
+    const overrides = JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate))||'{}')
     let agents = asiaAgents.map(a => overrides[a.ext] ? {...a,...overrides[a.ext]} : a)
-    // Apply bulk edits on top (in-progress edits)
-    if (bulkEditMode && Object.keys(bulkEdits).length > 0) {
+    // Apply in-progress bulk edits on top
+    if (bulkEditMode && Object.keys(bulkEdits).length>0) {
       agents = agents.map(a => {
         if (bulkEdits[a.ext]) {
-          const en = parseInt(bulkEdits[a.ext].english)||a.english
-          const sp = parseInt(bulkEdits[a.ext].spanish)||a.spanish
-          return {...a, english:en, spanish:sp, total:en+sp}
+          const en = parseInt(bulkEdits[a.ext].english)
+          const sp = parseInt(bulkEdits[a.ext].spanish)
+          const newEn = isNaN(en) ? a.english : en
+          const newSp = isNaN(sp) ? a.spanish : sp
+          return {...a, english:newEn, spanish:newSp, total:newEn+newSp}
         }
         return a
       })
@@ -361,43 +383,55 @@ export default function Dashboard() {
     return agents
   })()
 
-  // Save individual agent edit (pencil button)
-  const saveAgentEdit = () => {
-    const overrides=JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`)||'{}')
+  // Save individual agent edit
+  const saveAgentEdit = async () => {
+    setSavingOverride(true)
+    const overrides = JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate))||'{}')
     const en=parseInt(editForm.english)||0, sp=parseInt(editForm.spanish)||0
     overrides[editingAgent.ext]={name:editingAgent.name,spanish:sp,english:en,total:en+sp}
-    localStorage.setItem(`pulse_overrides_${selectedDate}`,JSON.stringify(overrides))
+    await persistOverride(selectedDate, OVERRIDE_KEY_AGENTS(selectedDate), overrides)
     setEditingAgent(null); setSnapshots(loadAllSnapshots()); setOverridesTick(t=>t+1)
+    setSavingOverride(false)
   }
 
-  // Save all bulk edits at once
-  const saveBulkEdits = () => {
-    const overrides=JSON.parse(localStorage.getItem(`pulse_overrides_${selectedDate}`)||'{}')
-    Object.entries(bulkEdits).forEach(([ext, vals]) => {
+  // Save bulk edits
+  const saveBulkEdits = async () => {
+    setSavingOverride(true)
+    const overrides = JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate))||'{}')
+    Object.entries(bulkEdits).forEach(([ext,vals]) => {
       const agent = asiaAgents.find(a=>a.ext===ext)
       if (!agent) return
-      const en = parseInt(vals.english)||agent.english
-      const sp = parseInt(vals.spanish)||agent.spanish
-      overrides[ext]={name:agent.name, spanish:sp, english:en, total:en+sp}
+      const en = parseInt(vals.english); const sp = parseInt(vals.spanish)
+      const newEn = isNaN(en)?agent.english:en; const newSp = isNaN(sp)?agent.spanish:sp
+      overrides[ext]={name:agent.name,spanish:newSp,english:newEn,total:newEn+newSp}
     })
-    // Save bulk totals override if set
+    await persistOverride(selectedDate, OVERRIDE_KEY_AGENTS(selectedDate), overrides)
     if (bulkTotalsEdit) {
-      localStorage.setItem(`pulse_totals_override_${selectedDate}`, JSON.stringify({
+      const totalsVal = {
         spanish: parseInt(bulkTotalsEdit.spanish)||0,
         english: parseInt(bulkTotalsEdit.english)||0,
-      }))
+      }
+      await persistOverride(selectedDate, OVERRIDE_KEY_TOTALS(selectedDate), totalsVal)
     }
-    localStorage.setItem(`pulse_overrides_${selectedDate}`,JSON.stringify(overrides))
     setBulkEditMode(false); setBulkEdits({}); setBulkTotalsEdit(null)
     setSnapshots(loadAllSnapshots()); setOverridesTick(t=>t+1)
+    setSavingOverride(false)
+  }
+
+  const resetOverrides = async () => {
+    localStorage.removeItem(OVERRIDE_KEY_AGENTS(selectedDate))
+    localStorage.removeItem(OVERRIDE_KEY_TOTALS(selectedDate))
+    setBulkEdits({}); setBulkTotalsEdit(null); setBulkEditMode(false)
+    setOverridesTick(t=>t+1); setEditMenuOpen(false)
   }
 
   const goal = APP_CONFIG.dailyGoal
 
-  // Totals — check totals override first
   const totalsOverride = (() => {
-    try { return JSON.parse(localStorage.getItem(`pulse_totals_override_${selectedDate}`)||'null') } catch(e) { return null }
+    void overridesTick
+    try { return JSON.parse(localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate))||'null') } catch(e) { return null }
   })()
+
   const totalSpanish = totalsOverride?.spanish ?? (isToday ? asiaTotals.spanish : (isHistDate ? asiaTotals.spanish : asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0)))
   const totalEnglish = totalsOverride?.english ?? (isToday ? asiaTotals.english : (isHistDate ? asiaTotals.english : asiaAgentsFinal.reduce((s,a)=>s+a.english,0)))
   const totalXfers   = totalSpanish + totalEnglish
@@ -407,6 +441,10 @@ export default function Dashboard() {
   const top3English = [...asiaAgentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
   const top3Spanish = [...asiaAgentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3)
 
+  // Check if this date has overrides
+  void overridesTick
+  const hasOverrides = !!(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate)) || localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate)))
+
   // ── Slacks ──
   const slackLabelForDate = (iso) => {
     const hd=HISTORY_DATES.find(d=>d.isoDate===iso)
@@ -415,7 +453,7 @@ export default function Dashboard() {
     return `${d}/${m}/${y}`
   }
   const currentSlackLabel = slackLabelForDate(selectedDate)
-  const slackRowsForDate  = slacksData.filter(r => r[0]?.trim() === currentSlackLabel)
+  const slackRowsForDate  = slacksData.filter(r => r[0]?.trim()===currentSlackLabel)
 
   const buildSlackAgents = (rows) => {
     const map = {}
@@ -423,20 +461,19 @@ export default function Dashboard() {
       const agent=(row[1]||'').trim(), opener=(row[2]||'').trim(), call=(row[3]||'').trim()
       if (!agent) continue
       if (!map[agent]) map[agent]={agent,opener,reports:0,phones:[]}
-      const phones = extractPhones(call)
-      if (phones.length > 0) {
-        map[agent].reports += phones.length
-        phones.forEach(p=>{ if(!map[agent].phones.includes(p)) map[agent].phones.push(p) })
+      const phones=extractPhones(call)
+      if (phones.length>0) {
+        map[agent].reports+=phones.length
+        phones.forEach(p=>{if(!map[agent].phones.includes(p))map[agent].phones.push(p)})
       } else if (call.trim()) {
-        map[agent].reports += 1
-        const raw = call.trim()
-        if (!map[agent].phones.includes(raw)) map[agent].phones.push(raw)
+        map[agent].reports+=1
+        if(!map[agent].phones.includes(call.trim()))map[agent].phones.push(call.trim())
       }
     }
     return Object.values(map).sort((a,b)=>b.reports-a.reports)
   }
   const slackAgentsForDate  = buildSlackAgents(slackRowsForDate)
-  const topAgent            = slackAgentsForDate[0] || null
+  const topAgent            = slackAgentsForDate[0]||null
   const totalReportsForDate = slackAgentsForDate.reduce((s,a)=>s+a.reports,0)
 
   const getFlag = (name) => {
@@ -466,6 +503,7 @@ export default function Dashboard() {
   return (
     <div className="dash-root" onClick={()=>setEditMenuOpen(false)}>
       <canvas ref={canvasRef} className="dash-trail-canvas"/>
+
       <nav className="dash-nav">
         <div className="dash-nav-left">
           <div className="nav-logo-wrap">
@@ -512,7 +550,8 @@ export default function Dashboard() {
         {!isToday && !isHistDate && activeSnap?.savedAt && (
           <span className="date-snap-info">Snapshot at {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
         )}
-        {isHistDate && <span className="date-snap-info">Historical record</span>}
+        {isHistDate && <span className="date-snap-info">Historical record{hasOverrides?' · ✏️ edited':''}</span>}
+        {!isToday && !isHistDate && hasOverrides && <span className="date-snap-info">✏️ edited</span>}
       </div>
 
       <div className="dash-content">
@@ -548,49 +587,43 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="fade-in">
-            {/* ── Asia header with ··· menu ── */}
+            {/* Asia header with ··· menu */}
             <div className="asia-header-row">
-              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:0}}>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
                 <h2 className="section-title" style={{marginBottom:0}}>
                   Asia — Agent Detail
                   {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}
-                  {bulkEditMode && <span style={{fontSize:11,background:'#f97316',color:'#fff',padding:'2px 8px',borderRadius:4,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>EDIT MODE</span>}
+                  {bulkEditMode && <span style={{fontSize:11,background:'#f97316',color:'#fff',padding:'2px 8px',borderRadius:4,fontWeight:600}}>EDIT MODE</span>}
+                  {hasOverrides && !bulkEditMode && <span style={{fontSize:11,background:'#1e2230',color:'#9ca3af',padding:'2px 8px',borderRadius:4,border:'0.5px solid #2a2d38'}}>✏️ edited</span>}
                 </h2>
-                {/* ··· menu button — always visible in Asia tab */}
-                <div style={{position:'relative'}} onClick={e=>e.stopPropagation()}>
-                  <button
-                    className="asia-menu-btn"
-                    onClick={()=>setEditMenuOpen(o=>!o)}
-                    title="Options"
-                  >···</button>
-                  {editMenuOpen && (
-                    <div className="asia-menu-dropdown">
-                      {!bulkEditMode ? (
-                        <button className="asia-menu-item" onClick={()=>{setBulkEditMode(true);setEditMenuOpen(false);setAsiaView('stats')}}>
-                          ✏️ Edit this day's data
-                        </button>
-                      ) : (
-                        <>
-                          <button className="asia-menu-item green-item" onClick={()=>{saveBulkEdits();setEditMenuOpen(false)}}>
-                            ✅ Save all changes
+                {!isToday && (
+                  <div style={{position:'relative'}} onClick={e=>e.stopPropagation()}>
+                    <button className="asia-menu-btn" onClick={()=>setEditMenuOpen(o=>!o)} title="Options">···</button>
+                    {editMenuOpen && (
+                      <div className="asia-menu-dropdown">
+                        {!bulkEditMode ? (
+                          <button className="asia-menu-item" onClick={()=>{setBulkEditMode(true);setEditMenuOpen(false);setAsiaView('stats')}}>
+                            ✏️ Edit this day's data
                           </button>
-                          <button className="asia-menu-item red-item" onClick={()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)}}>
-                            ✖ Cancel edit
+                        ) : (
+                          <>
+                            <button className="asia-menu-item green-item" onClick={()=>{saveBulkEdits();setEditMenuOpen(false)}}>
+                              {savingOverride ? '⏳ Saving...' : '✅ Save all changes'}
+                            </button>
+                            <button className="asia-menu-item red-item" onClick={()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)}}>
+                              ✖ Cancel edit
+                            </button>
+                          </>
+                        )}
+                        {hasOverrides && (
+                          <button className="asia-menu-item" style={{borderTop:'0.5px solid #2a2d38',marginTop:4,paddingTop:10,color:'#f87171'}} onClick={resetOverrides}>
+                            🗑 Reset to original data
                           </button>
-                        </>
-                      )}
-                      {/* Clear overrides */}
-                      <button className="asia-menu-item" style={{borderTop:'0.5px solid #2a2d38',marginTop:4,paddingTop:10}} onClick={()=>{
-                        localStorage.removeItem(`pulse_overrides_${selectedDate}`)
-                        localStorage.removeItem(`pulse_totals_override_${selectedDate}`)
-                        setBulkEdits({}); setBulkTotalsEdit(null); setBulkEditMode(false)
-                        setOverridesTick(t=>t+1); setEditMenuOpen(false)
-                      }}>
-                        🗑 Reset to original
-                      </button>
-                    </div>
-                  )}
-                </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="asia-view-tabs">
                 <button className={`view-tab ${asiaView==='stats'?'active':''}`}  onClick={()=>setAsiaView('stats')}>📊 Stats</button>
@@ -602,37 +635,25 @@ export default function Dashboard() {
             {/* Summary cards */}
             {asiaView!=='slacks' && (
               histLoading
-                ? <div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading historical data...</div>
+                ? <div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading...</div>
                 : bulkEditMode ? (
-                  /* Editable summary cards */
                   <div className="summary-grid" style={{marginBottom:'1.5rem'}}>
                     <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
                     <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-                    {/* Editable Spanish */}
-                    <div className="sum-card teal" style={{position:'relative'}}>
-                      <input
-                        type="number"
-                        className="sum-edit-input"
+                    <div className="sum-card teal">
+                      <input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}}
                         value={bulkTotalsEdit?.spanish ?? totalSpanish}
-                        onChange={e=>setBulkTotalsEdit(t=>({spanish:e.target.value,english:t?.english??totalEnglish}))}
-                      />
+                        onChange={e=>setBulkTotalsEdit(t=>({spanish:e.target.value,english:t?.english??totalEnglish}))}/>
                       <div className="sum-label">Spanish Xfers ✏️</div>
                     </div>
-                    {/* Editable English */}
-                    <div className="sum-card blue" style={{position:'relative'}}>
-                      <input
-                        type="number"
-                        className="sum-edit-input"
+                    <div className="sum-card blue">
+                      <input type="number" className="sum-edit-input" style={{color:'#60a5fa'}}
                         value={bulkTotalsEdit?.english ?? totalEnglish}
-                        onChange={e=>setBulkTotalsEdit(t=>({english:e.target.value,spanish:t?.spanish??totalSpanish}))}
-                      />
+                        onChange={e=>setBulkTotalsEdit(t=>({english:e.target.value,spanish:t?.spanish??totalSpanish}))}/>
                       <div className="sum-label">English Xfers ✏️</div>
                     </div>
-                    {/* Total auto-calculated */}
                     <div className="sum-card indigo">
-                      <div className="sum-val">
-                        {((parseInt(bulkTotalsEdit?.spanish)||totalSpanish)+(parseInt(bulkTotalsEdit?.english)||totalEnglish)).toLocaleString()}
-                      </div>
+                      <div className="sum-val">{((parseInt(bulkTotalsEdit?.spanish)||totalSpanish)+(parseInt(bulkTotalsEdit?.english)||totalEnglish)).toLocaleString()}</div>
                       <div className="sum-label">Total Xfers (auto)</div>
                     </div>
                   </div>
@@ -647,7 +668,7 @@ export default function Dashboard() {
                 )
             )}
 
-            {/* ── STATS ── */}
+            {/* STATS */}
             {asiaView==='stats' && !histLoading && (
               <>
                 {!bulkEditMode && (
@@ -669,14 +690,12 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
-
                 {bulkEditMode && (
                   <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}>
-                    <span style={{fontSize:13,color:'#f97316',fontWeight:600}}>✏️ Edit mode</span>
-                    <span style={{fontSize:12,color:'#9ca3af'}}>— modify each agent's English and Spanish, then click Save all changes in the ··· menu</span>
+                    <span style={{fontSize:13,color:'#f97316',fontWeight:600}}>✏️ Edit mode activo</span>
+                    <span style={{fontSize:12,color:'#9ca3af'}}>— modifica los valores y usa "Save all changes" en el menú ···</span>
                   </div>
                 )}
-
                 <div className="agent-table-wrap">
                   <table className="agent-table">
                     <thead>
@@ -689,10 +708,9 @@ export default function Dashboard() {
                     <tbody>
                       {[...asiaAgentsFinal].sort((a,b)=>b.english-a.english).map((a,i)=>{
                         const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
-                        const beEn = bulkEdits[a.ext]?.english ?? ''
-                        const beSp = bulkEdits[a.ext]?.spanish ?? ''
-                        const dispEn = bulkEditMode && beEn!=='' ? parseInt(beEn)||0 : a.english
-                        const dispSp = bulkEditMode && beSp!=='' ? parseInt(beSp)||0 : a.spanish
+                        const beEn=bulkEdits[a.ext]?.english??'', beSp=bulkEdits[a.ext]?.spanish??''
+                        const dispEn=bulkEditMode&&beEn!==''?parseInt(beEn)||0:a.english
+                        const dispSp=bulkEditMode&&beSp!==''?parseInt(beSp)||0:a.spanish
                         return(
                           <tr key={i} className={a.total===0?'row-zero':a.english>=goal?'row-goal':''}>
                             <td style={rs}>#{i+1}</td>
@@ -700,21 +718,19 @@ export default function Dashboard() {
                             <td className="agent-ext">{a.ext}</td>
                             <td className="val-english">
                               {bulkEditMode
-                                ? <input type="number" className="bulk-edit-input" value={beEn!==''?beEn:a.english} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],english:e.target.value}}))}/>
-                                : a.english}
+                                ?<input type="number" className="bulk-edit-input" value={beEn!==''?beEn:a.english} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],english:e.target.value}}))}/>
+                                :a.english}
                             </td>
                             <td className="val-spanish">
                               {bulkEditMode
-                                ? <input type="number" className="bulk-edit-input" onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],spanish:e.target.value}}))} value={beSp!==''?beSp:a.spanish}/>
-                                : a.spanish}
+                                ?<input type="number" className="bulk-edit-input" value={beSp!==''?beSp:a.spanish} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],spanish:e.target.value}}))}/>
+                                :a.spanish}
                             </td>
                             <td className="val-total">{dispEn+dispSp}</td>
                             <td>{dispEn>=goal?<span className="badge-goal">✓ Goal</span>:<span className="badge-pending">{goal-dispEn} left</span>}</td>
                             {showEditBtn&&(
                               <td className="td-edit">
-                                {!bulkEditMode && (
-                                  <button className="edit-agent-btn" title="Quick edit" onClick={e=>{e.stopPropagation();setEditForm({spanish:a.spanish,english:a.english});setEditingAgent(a)}}>✏️</button>
-                                )}
+                                {!bulkEditMode&&<button className="edit-agent-btn" title="Quick edit" onClick={e=>{e.stopPropagation();setEditForm({spanish:a.spanish,english:a.english});setEditingAgent(a)}}>✏️</button>}
                               </td>
                             )}
                           </tr>
@@ -723,16 +739,16 @@ export default function Dashboard() {
                     </tbody>
                   </table>
                 </div>
-                {bulkEditMode && (
+                {bulkEditMode&&(
                   <div style={{display:'flex',gap:10,marginTop:12,justifyContent:'flex-end'}}>
                     <button className="btn-cancel" onClick={()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null)}}>Cancel</button>
-                    <button className="btn-save" onClick={saveBulkEdits}>✅ Save all changes</button>
+                    <button className="btn-save" onClick={saveBulkEdits}>{savingOverride?'⏳ Saving...':'✅ Save all changes'}</button>
                   </div>
                 )}
               </>
             )}
 
-            {/* ── CHARTS ── */}
+            {/* CHARTS */}
             {asiaView==='charts' && !histLoading && (
               <div className="charts-section">
                 <div className="chart-controls">
@@ -752,61 +768,48 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ── SLACKS ── */}
+            {/* SLACKS */}
             {asiaView==='slacks' && (
               <div className="slacks-section">
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:'1.5rem'}}>
                   <div className="sum-card blue"><div className="sum-val">{slackAgentsForDate.length}</div><div className="sum-label">Agents</div></div>
                   <div className="sum-card gold"><div className="sum-val">{totalReportsForDate}</div><div className="sum-label">Total Reports</div></div>
                   <div className="sum-card green">
-                    {topAgent
-                      ?<><div className="sum-val" style={{fontSize:15,paddingTop:6,lineHeight:1.3}}>{topAgent.agent}</div><div className="sum-label">Top Agent ({topAgent.reports} reports)</div></>
-                      :<><div className="sum-val">—</div><div className="sum-label">Top Agent</div></>
-                    }
+                    {topAgent?<><div className="sum-val" style={{fontSize:15,paddingTop:6,lineHeight:1.3}}>{topAgent.agent}</div><div className="sum-label">Top Agent ({topAgent.reports} reports)</div></>
+                    :<><div className="sum-val">—</div><div className="sum-label">Top Agent</div></>}
                   </div>
                 </div>
-                {slackRowsForDate.length===0?(
-                  <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>
-                    No slack reports for {formatDateLabel(selectedDate)}.
-                  </div>
-                ):(
-                  <>
-                    <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>
-                      Agent Summary — {formatDateLabel(selectedDate)}
-                    </h3>
-                    <div className="agent-table-wrap">
-                      <table className="agent-table">
-                        <thead><tr><th>#</th><th>Agent</th><th>ID Opener</th><th style={{textAlign:'center'}}>Reports</th><th>Calls</th></tr></thead>
-                        <tbody>
-                          {slackAgentsForDate.map((a,i)=>{
-                            const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
-                            const isExp=expandedAgent===a.agent
-                            return(
-                              <tr key={i}>
+                {slackRowsForDate.length===0
+                  ?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No slack reports for {formatDateLabel(selectedDate)}.</div>
+                  :(
+                    <>
+                      <h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>Agent Summary — {formatDateLabel(selectedDate)}</h3>
+                      <div className="agent-table-wrap">
+                        <table className="agent-table">
+                          <thead><tr><th>#</th><th>Agent</th><th>ID Opener</th><th style={{textAlign:'center'}}>Reports</th><th>Calls</th></tr></thead>
+                          <tbody>
+                            {slackAgentsForDate.map((a,i)=>{
+                              const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
+                              const isExp=expandedAgent===a.agent
+                              return(<tr key={i}>
                                 <td style={rs}>#{i+1}</td>
                                 <td className="agent-name">{a.agent}</td>
                                 <td className="agent-ext">{a.opener}</td>
                                 <td style={{textAlign:'center',color:'#f97316',fontWeight:700,fontSize:15}}>{a.reports}</td>
                                 <td>
                                   <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                                    {(isExp?a.phones:a.phones.slice(0,3)).map((p,j)=>(
-                                      <span key={j} className="phone-chip">{p}</span>
-                                    ))}
-                                    {a.phones.length>3&&(
-                                      <button onClick={()=>setExpandedAgent(isExp?null:a.agent)} className="phone-more-btn">
-                                        {isExp?'▲ less':`+${a.phones.length-3} more`}
-                                      </button>
-                                    )}
+                                    {(isExp?a.phones:a.phones.slice(0,3)).map((p,j)=>(<span key={j} className="phone-chip">{p}</span>))}
+                                    {a.phones.length>3&&<button onClick={()=>setExpandedAgent(isExp?null:a.agent)} className="phone-more-btn">{isExp?'▲ less':`+${a.phones.length-3} more`}</button>}
                                   </div>
                                 </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
+                              </tr>)
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )
+                }
               </div>
             )}
           </div>
@@ -817,17 +820,14 @@ export default function Dashboard() {
       {editingAgent&&(
         <div className="edit-modal-overlay" style={{zIndex:1001}} onClick={()=>setEditingAgent(null)}>
           <div className="edit-modal" onClick={e=>e.stopPropagation()}>
-            <h3 className="edit-modal-title">
-              Edit — {editingAgent.name}
-              <span style={{color:'#6b7280',fontSize:12,fontWeight:400}}>#{editingAgent.ext}</span>
-            </h3>
+            <h3 className="edit-modal-title">Edit — {editingAgent.name} <span style={{color:'#6b7280',fontSize:12,fontWeight:400}}>#{editingAgent.ext}</span></h3>
             <div className="edit-modal-fields">
               <label>English<input type="number" value={editForm.english} onChange={e=>setEditForm(f=>({...f,english:e.target.value}))}/></label>
               <label>Spanish<input type="number" value={editForm.spanish} onChange={e=>setEditForm(f=>({...f,spanish:e.target.value}))}/></label>
             </div>
             <div className="edit-modal-actions">
               <button className="btn-cancel" onClick={()=>setEditingAgent(null)}>Cancel</button>
-              <button className="btn-save"   onClick={saveAgentEdit}>Save</button>
+              <button className="btn-save" onClick={saveAgentEdit}>{savingOverride?'⏳ Saving...':'Save'}</button>
             </div>
           </div>
         </div>
