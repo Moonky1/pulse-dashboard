@@ -341,19 +341,22 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [general, asia, slacks, philippines] = await Promise.all([
+      const [general, asia, slacks] = await Promise.all([
         fetchSheet(SHEET_ID,"WELL'S REPORT"),
         fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),
         fetchSheet(USERS_SHEET_ID,'Slacks'),
-        fetchSheet(SHEET_ID, PHIL_SHEET_NAME),
       ])
       setLiveGeneral(general)
       setLiveAsia(asia)
-      setLivePhilippines(philippines)
       setLastUpdate(new Date())
+      setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]))
+      let philippines = []
+      try {
+        philippines = await fetchSheet(SHEET_ID, PHIL_SHEET_NAME)
+        setLivePhilippines(philippines)
+      } catch(e) { console.warn('Philippines sheet failed:', e) }
       saveSnapshot(general, asia, philippines)
       setSnapshots(loadAllSnapshots())
-      setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]))
     } catch(e){console.error(e)}
     finally{setLoading(false)}
   }
