@@ -70,6 +70,7 @@ async function loadRemoteOverrides() {
     const url = `${SCRIPT_URL}?action=getOverrides`
     const res  = await fetch(url)
     const data = await res.json()
+    if (!Array.isArray(data)) return
     data.forEach(([date, key, value]) => {
       try { if (!localStorage.getItem(key)) localStorage.setItem(key, value) } catch(e) {}
     })
