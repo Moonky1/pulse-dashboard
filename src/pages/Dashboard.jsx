@@ -172,6 +172,7 @@ function parseHistorySheet(rows) {
 
 // ── Philippines parser — Col A=name, B=ext, C=english only ──
 function parsePhilSheet(rows) {
+  if (!rows || !Array.isArray(rows)) return { agents: [], totals: { english: 0, total: 0, activeAgents: 0 } }
   const agents = []
   let totals = { english: 0, total: 0, activeAgents: 0 }
   let foundTotal = false
@@ -304,7 +305,7 @@ export default function Dashboard() {
 
   const asiaDataRaw        = isToday ? liveAsia        : (activeSnap?.asiaData        || [])
   const generalDataRaw     = isToday ? liveGeneral     : (activeSnap?.generalData     || [])
-  const philippinesDataRaw = isToday ? livePhilippines : (activeSnap?.philippinesData || [])
+  const philippinesDataRaw = isToday ? livePhilippines : (activeSnap?.philippinesData ?? [])
   const histParsed         = isHistDate ? (histCache[selectedDate] || null) : null
 
   // ── Canvas trail ──
