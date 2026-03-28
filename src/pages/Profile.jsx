@@ -156,7 +156,7 @@ async function loadAgentData(ext) {
   return records.filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i).sort((a,b)=>a.date.localeCompare(b.date))
 }
 
-const formatDate=(d)=>{const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(d).getDay()]} ${dd}/${m}`}
+const formatDate=(d)=>{const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(`${d}T12:00:00`).getDay()]} ${dd}/${m}`}
 
 export default function Profile() {
   const { ext }   = useParams()
