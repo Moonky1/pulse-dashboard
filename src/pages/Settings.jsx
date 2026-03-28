@@ -5,7 +5,7 @@ import './settings.css'
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmiLdRPyx6IU65p8nW7A3lEncOBr74XIsP-9nsRkxZe2-GF6sqZgvfeS82EK_cTnve/exec'
 
 // Compress image to max 200px and ~80% quality before storing
-function compressImage(file, maxPx = 200, quality = 0.8) {
+function compressImage(file, maxPx = 80, quality = 0.75) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -29,8 +29,11 @@ function compressImage(file, maxPx = 200, quality = 0.8) {
 
 async function savePhotoToSheets(userName, photoB64) {
   try {
-    const url = `${SCRIPT_URL}?action=saveUserPhoto&userName=${encodeURIComponent(userName)}&photo=${encodeURIComponent(photoB64)}`
-    await fetch(url, { mode: 'no-cors' })
+    const params = new URLSearchParams()
+    params.append('action', 'saveUserPhoto')
+    params.append('userName', userName)
+    params.append('photo', photoB64)
+    await fetch(SCRIPT_URL, { method:'POST', body: params, mode:'no-cors' })
   } catch(e) { console.warn('savePhotoToSheets failed:', e) }
 }
 
@@ -74,7 +77,7 @@ export default function Settings() {
     setUploadingPhoto(true)
     setSaveMsg('⏳ Uploading photo...')
     try {
-      const compressed = await compressImage(file, 200, 0.82)
+      const compressed = await compressImage(file, 80, 0.75)
       setPhoto(compressed)
       localStorage.setItem('pulse_user_photo', compressed)
       await savePhotoToSheets(user.name, compressed)
