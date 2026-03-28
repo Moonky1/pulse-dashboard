@@ -4,23 +4,26 @@ import './settings.css'
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmiLdRPyx6IU65p8nW7A3lEncOBr74XIsP-9nsRkxZe2-GF6sqZgvfeS82EK_cTnve/exec'
 
-// Compress image to max 200px and ~80% quality before storing
-function compressImage(file, maxPx = 80, quality = 0.75) {
+// Compress to 40px JPEG — small enough to fit in a GET URL (~1-2KB base64)
+function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = (ev) => {
       const img = new Image()
       img.onload = () => {
+        const SIZE = 40
         const canvas = document.createElement('canvas')
-        const scale  = Math.min(maxPx / img.width, maxPx / img.height, 1)
-        canvas.width  = Math.round(img.width  * scale)
-        canvas.height = Math.round(img.height * scale)
+        canvas.width = SIZE; canvas.height = SIZE
         const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        resolve(canvas.toDataURL('image/jpeg', quality))
+        // Crop to square from center
+        const min = Math.min(img.width, img.height)
+        const sx  = (img.width  - min) / 2
+        const sy  = (img.height - min) / 2
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, SIZE, SIZE)
+        resolve(canvas.toDataURL('image/jpeg', 0.8))
       }
       img.onerror = reject
-      img.src = e.target.result
+      img.src = ev.target.result
     }
     reader.onerror = reject
     reader.readAsDataURL(file)
@@ -29,11 +32,9 @@ function compressImage(file, maxPx = 80, quality = 0.75) {
 
 async function savePhotoToSheets(userName, photoB64) {
   try {
-    const params = new URLSearchParams()
-    params.append('action', 'saveUserPhoto')
-    params.append('userName', userName)
-    params.append('photo', photoB64)
-    await fetch(SCRIPT_URL, { method:'POST', body: params, mode:'no-cors' })
+    const url = `${SCRIPT_URL}?action=saveUserPhoto&userName=${encodeURIComponent(userName)}&photo=${encodeURIComponent(photoB64)}`
+    await fetch(url, { mode: 'no-cors' })
+    console.log('Photo saved to Sheets')
   } catch(e) { console.warn('savePhotoToSheets failed:', e) }
 }
 
@@ -42,8 +43,12 @@ async function loadPhotoFromSheets(userName) {
     const url  = `${SCRIPT_URL}?action=getUserPhoto&userName=${encodeURIComponent(userName)}`
     const res  = await fetch(url)
     const data = await res.json()
-    return data.photo || null
-  } catch(e) { return null }
+    if (data.photo && data.photo.length > 10) {
+      localStorage.setItem('pulse_user_photo', data.photo)
+      return data.photo
+    }
+  } catch(e) { console.warn('loadPhotoFromSheets failed:', e) }
+  return null
 }
 
 export default function Settings() {
@@ -51,42 +56,42 @@ export default function Settings() {
   const user     = JSON.parse(localStorage.getItem('pulse_user')||'null')
   const fileRef  = useRef(null)
 
-  const [photo, setPhoto]         = useState(localStorage.getItem('pulse_user_photo')||'')
-  const [agentExt, setAgentExt]   = useState(user?.agentExt||'')
-  const [extInput, setExtInput]   = useState(user?.agentExt||'')
-  const [extSaved, setExtSaved]   = useState(!!user?.agentExt)
-  const [saveMsg, setSaveMsg]     = useState('')
-  const [confirmReg, setConfirmReg] = useState(false)
+  const [photo, setPhoto]               = useState(localStorage.getItem('pulse_user_photo')||'')
+  const [agentExt, setAgentExt]         = useState(user?.agentExt||'')
+  const [extInput, setExtInput]         = useState(user?.agentExt||'')
+  const [extSaved, setExtSaved]         = useState(!!user?.agentExt)
+  const [saveMsg, setSaveMsg]           = useState('')
+  const [confirmReg, setConfirmReg]     = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
     if (!user) { navigate('/signin'); return }
-    // Load photo from Sheets on mount (sync across devices)
+    // Load photo from Sheets — may be newer than localStorage
     loadPhotoFromSheets(user.name).then(p => {
-      if (p && p !== localStorage.getItem('pulse_user_photo')) {
-        setPhoto(p)
-        localStorage.setItem('pulse_user_photo', p)
-      }
+      if (p) setPhoto(p)
     })
   }, [])
 
   const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) { alert('Photo too large. Max 5MB.'); return }
+    if (file.size > 10 * 1024 * 1024) { alert('Photo too large. Max 10MB.'); return }
     setUploadingPhoto(true)
-    setSaveMsg('⏳ Uploading photo...')
+    setSaveMsg('⏳ Processing photo...')
     try {
-      const compressed = await compressImage(file, 80, 0.75)
+      const compressed = await compressImage(file)
+      console.log('Compressed size:', compressed.length, 'chars')
       setPhoto(compressed)
       localStorage.setItem('pulse_user_photo', compressed)
+      setSaveMsg('⏳ Saving to cloud...')
       await savePhotoToSheets(user.name, compressed)
-      setSaveMsg('✅ Photo updated on all your devices!')
+      setSaveMsg('✅ Photo synced to all devices!')
     } catch(err) {
-      setSaveMsg('❌ Upload failed. Try a smaller image.')
+      console.error('Photo upload error:', err)
+      setSaveMsg('❌ Error. Try again.')
     }
     setUploadingPhoto(false)
-    setTimeout(() => setSaveMsg(''), 3500)
+    setTimeout(() => setSaveMsg(''), 4000)
   }
 
   const removePhoto = async () => {
@@ -102,17 +107,14 @@ export default function Settings() {
     if (!val || isNaN(parseInt(val))) { alert('Enter a valid extension number.'); return }
     const updated = { ...user, agentExt: val }
     localStorage.setItem('pulse_user', JSON.stringify(updated))
-    setAgentExt(val)
-    setExtSaved(true)
-    setConfirmReg(false)
+    setAgentExt(val); setExtSaved(true); setConfirmReg(false)
     setSaveMsg(`✅ Agent ID #${val} registered!`)
     setTimeout(() => setSaveMsg(''), 3000)
   }
 
   const unregisterExt = () => {
     if (!confirm('Remove your agent ID?')) return
-    const updated = { ...user }
-    delete updated.agentExt
+    const updated = { ...user }; delete updated.agentExt
     localStorage.setItem('pulse_user', JSON.stringify(updated))
     setAgentExt(''); setExtInput(''); setExtSaved(false)
     setSaveMsg('Agent ID removed.')
@@ -146,7 +148,7 @@ export default function Settings() {
             <div className="settings-card-icon">🖼️</div>
             <div>
               <div className="settings-card-title">Profile Photo</div>
-              <div className="settings-card-sub">Syncs across all devices. Compressed automatically.</div>
+              <div className="settings-card-sub">Auto-compressed and synced to all your devices.</div>
             </div>
           </div>
           <div className="settings-photo-row">
@@ -157,12 +159,13 @@ export default function Settings() {
             </div>
             <div className="settings-photo-actions">
               <button className="settings-btn primary" onClick={() => fileRef.current?.click()} disabled={uploadingPhoto}>
-                {uploadingPhoto ? '⏳ Uploading...' : photo ? '🔄 Change Photo' : '📷 Upload Photo'}
+                {uploadingPhoto ? '⏳ Processing...' : photo ? '🔄 Change Photo' : '📷 Upload Photo'}
               </button>
-              {photo && !uploadingPhoto && <button className="settings-btn danger" onClick={removePhoto}>Remove</button>}
+              {photo && !uploadingPhoto && (
+                <button className="settings-btn danger" onClick={removePhoto}>Remove</button>
+              )}
               <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handlePhotoChange}/>
             </div>
-            <div style={{fontSize:11,color:'#4b5563',marginTop:4}}>Max 5MB · Auto-compressed to 200px</div>
           </div>
         </div>
 
@@ -175,13 +178,12 @@ export default function Settings() {
               <div className="settings-card-sub">Link your extension to see your personal stats and share your profile.</div>
             </div>
           </div>
-
           {extSaved ? (
             <div className="settings-ext-registered">
               <div className="settings-ext-badge">#{agentExt}</div>
               <div style={{flex:1}}>
                 <div style={{fontSize:14,color:'#e5e7eb',fontWeight:600}}>Registered as Agent #{agentExt}</div>
-                <div style={{fontSize:12,color:'#6b7280',marginTop:2}}>Your profile is available at pulse-kk.com/profile/{agentExt}</div>
+                <div style={{fontSize:12,color:'#6b7280',marginTop:2}}>pulse-kk.com/profile/{agentExt}</div>
               </div>
               <div style={{display:'flex',gap:8}}>
                 <button className="settings-btn primary" onClick={() => navigate(`/profile/${agentExt}`)}>👤 View Profile</button>
@@ -192,7 +194,7 @@ export default function Settings() {
             <div className="settings-ext-form">
               <div className="settings-ext-info">
                 <span style={{fontSize:20}}>💡</span>
-                <p>Enter your 4-digit extension (e.g. <strong>1005</strong> or <strong>3024</strong>) to link your account to your performance data.</p>
+                <p>Enter your 4-digit extension (e.g. <strong>1005</strong> or <strong>3024</strong>).</p>
               </div>
               <div className="settings-ext-input-row">
                 <span className="settings-ext-hash">#</span>
@@ -227,7 +229,7 @@ export default function Settings() {
           <div className="settings-confirm-modal" onClick={e => e.stopPropagation()}>
             <div style={{fontSize:40,marginBottom:12}}>🎯</div>
             <h3>Register as Agent #{extInput}?</h3>
-            <p>This links your account to extension <strong>#{extInput}</strong>. You can change this anytime.</p>
+            <p>Links your account to extension <strong>#{extInput}</strong>. You can change this anytime.</p>
             <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:20}}>
               <button className="settings-btn ghost" onClick={() => setConfirmReg(false)}>Cancel</button>
               <button className="settings-btn primary" onClick={registerExt}>Yes, register me</button>
