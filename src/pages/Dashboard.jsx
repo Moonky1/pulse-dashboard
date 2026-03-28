@@ -126,6 +126,17 @@ async function loadRemoteOverrides() {
   } catch(e) {}
 }
 
+async function loadUserPhotoFromSheets(userName) {
+  try {
+    const url  = `${SCRIPT_URL}?action=getUserPhoto&userName=${encodeURIComponent(userName)}`
+    const res  = await fetch(url)
+    const data = await res.json()
+    if (data.photo) {
+      localStorage.setItem('pulse_user_photo', data.photo)
+    }
+  } catch(e) {}
+}
+
 async function saveAgentSnapshotsToSheets(date, allAgents) {
   const flag = `pulse_snap_sheets_${date}`
   if (sessionStorage.getItem(flag)) return
@@ -612,6 +623,8 @@ export default function Dashboard() {
 
   useEffect(()=>{
     loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1))
+    // Sync profile photo from Sheets on every load
+    if (user?.name) loadUserPhotoFromSheets(user.name)
     setSnapshots(loadAllSnapshots());loadData()
     const iv=setInterval(loadData,60000);return()=>clearInterval(iv)
   },[])
