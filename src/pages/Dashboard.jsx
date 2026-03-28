@@ -153,7 +153,16 @@ const E = {
 const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
 const MEDALS = [E.medal1, E.medal2, E.medal3]
 
+
 const todayKey = () => new Date().toISOString().slice(0,10)
+
+// Saturday goal is 10, all other days use base goal
+const getGoalForDate = (dateStr, baseGoal) => {
+  try {
+    const day = new Date(dateStr + 'T12:00:00').getDay() // 0=Sun, 6=Sat
+    return day === 6 ? 10 : baseGoal
+  } catch(e) { return baseGoal }
+}
 
 const saveSnapshot = (generalData, asiaData, teamsData={}) => {
   const key = `pulse_snap_${todayKey()}`
@@ -344,7 +353,7 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
   const totalEn=totOvr?.english??agentsFinal.reduce((s,a)=>s+a.english,0)
   const totalSp=totOvr?.spanish??agentsFinal.reduce((s,a)=>s+a.spanish,0)
   const totalXf=totalEn+totalSp
-  const goal=config.goal
+  const goal=getGoalForDate(selectedDate, config.goal)
   const hitGoal=agentsFinal.filter(a=>a.english>=goal)
   const atZero=agentsFinal.filter(a=>a.total===0)
   const top3En=[...agentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
@@ -653,7 +662,7 @@ export default function Dashboard() {
   const totalSpanish=asiaOvrTotals?.spanish??(isToday?asiaTotals.spanish:(isHistDate?asiaTotals.spanish:asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0)))
   const totalEnglish=asiaOvrTotals?.english??(isToday?asiaTotals.english:(isHistDate?asiaTotals.english:asiaAgentsFinal.reduce((s,a)=>s+a.english,0)))
   const totalXfers=totalSpanish+totalEnglish
-  const goal=APP_CONFIG.dailyGoal
+  const goal=getGoalForDate(selectedDate, APP_CONFIG.dailyGoal)
   const hitGoal=asiaAgentsFinal.filter(a=>a.english>=goal)
   const atZero=asiaAgentsFinal.filter(a=>a.total===0)
   const top3English=[...asiaAgentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
