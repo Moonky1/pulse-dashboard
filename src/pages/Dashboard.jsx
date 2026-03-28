@@ -133,8 +133,10 @@ async function loadUserPhotoFromSheets(userName) {
     const data = await res.json()
     if (data.photo) {
       localStorage.setItem('pulse_user_photo', data.photo)
+      return data.photo
     }
   } catch(e) {}
+  return null
 }
 
 async function saveAgentSnapshotsToSheets(date, allAgents) {
@@ -525,7 +527,7 @@ export default function Dashboard() {
   const canvasRef = useRef(null)
   const navigate  = useNavigate()
   const user      = JSON.parse(localStorage.getItem('pulse_user')||'null')
-  const userPhoto = localStorage.getItem('pulse_user_photo')
+  const [userPhoto, setUserPhoto] = useState(localStorage.getItem('pulse_user_photo')||'')
   const team      = APP_CONFIG.teams.find(t => t.id===user?.team)
   const roleLabel = user?.role==='supervisor'?'Supervisor':user?.role==='qa'?'QA':user?.role==='leader'?'Team Leader':'Member'
   const canEdit   = ['supervisor','qa','leader'].includes(user?.role)
@@ -624,7 +626,10 @@ export default function Dashboard() {
   useEffect(()=>{
     loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1))
     // Sync profile photo from Sheets on every load
-    if (user?.name) loadUserPhotoFromSheets(user.name)
+    if (user?.name) loadUserPhotoFromSheets(user.name).then(() => {
+      const p = localStorage.getItem('pulse_user_photo')
+      if (p) setUserPhoto(p)
+    })
     setSnapshots(loadAllSnapshots());loadData()
     const iv=setInterval(loadData,60000);return()=>clearInterval(iv)
   },[])
