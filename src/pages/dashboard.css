@@ -476,3 +476,11 @@
   transition:all .15s; white-space:nowrap;
 }
 .nav-profile-btn:hover { border-color:#f97316; color:#f97316; }
+
+
+/* ── Scrollable tabs ── */
+.dash-tabs-scroll {
+  display: flex; gap: 2px; overflow-x: auto;
+  scrollbar-width: none;
+}
+.dash-tabs-scroll::-webkit-scrollbar { display: none; }
