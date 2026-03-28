@@ -26,11 +26,11 @@ const HISTORY_ISO_SET = new Set(HISTORY_DATES.map(d => d.isoDate))
 // Colombia/Central/Venezuela: has openers → A=name, B=ext, C=openers, D=english, E=spanish
 // Mexico: has openers, no spanish → A=name, B=ext, C=openers, D=english
 const TEAM_SHEETS = [
-  { id:'philippines', label:'🇵🇭 Philippines', sheetName:'AW GARRET PHILIPPINES',               extStart:'1', hasSp:false, goal:10, flag:'ph', colEn:2, colSp:null },
-  { id:'colombia',    label:'🇨🇴 Colombia',    sheetName:'AW GARRET COLOMBIA JUAN GARCIA',       extStart:'2', hasSp:true,  goal:10, flag:'co', colEn:3, colSp:4   },
-  { id:'central',     label:'🌎 Central',      sheetName:'AW GARRET CENTRAL AMERICA - CAROLINA', extStart:'4', hasSp:true,  goal:10, flag:'hn', colEn:3, colSp:4   },
-  { id:'mexico',      label:'🇲🇽 Mexico',      sheetName:'AW GARRET BAJA MX KEVIN',              extStart:'5', hasSp:false, goal:10, flag:'mx', colEn:3, colSp:null },
-  { id:'venezuela',   label:'🇻🇪 Venezuela',   sheetName:'AW GARRET VENEZUELA PATRICIA',         extStart:'6', hasSp:true,  goal:10, flag:'ve', colEn:3, colSp:4   },
+  { id:'philippines', label:'🇵🇭 Philippines', sheetName:'AW GARRET PHILIPPINES',               extStart:'1', hasSp:false, goal:10, flag:'ph', colEn:2, colSp:null, protected:false },
+  { id:'colombia',    label:'🇨🇴 Colombia',    sheetName:'AW GARRET COLOMBIA JUAN GARCIA',       extStart:'2', hasSp:true,  goal:10, flag:'co', colEn:3, colSp:4,    protected:false },
+  { id:'central',     label:'🌎 Central',      sheetName:'AW GARRET CENTRAL AMERICA - CAROLINA', extStart:'4', hasSp:true,  goal:10, flag:'hn', colEn:3, colSp:4,    protected:false },
+  { id:'mexico',      label:'🇲🇽 Mexico',      sheetName:'AW GARRET BAJA MX KEVIN',              extStart:'5', hasSp:false, goal:10, flag:'mx', colEn:3, colSp:null, protected:false },
+  { id:'venezuela',   label:'🇻🇪 Venezuela',   sheetName:'AW GARRET VENEZUELA PATRICIA',         extStart:'6', hasSp:true,  goal:10, flag:'ve', colEn:3, colSp:4,    protected:true  },
 ]
 
 const csvUrl = (sheetId, sheet) =>
@@ -51,6 +51,15 @@ async function fetchSheet(sheetId, name) {
     throw new Error(`Sheet "${name}" returned no valid CSV data`)
   }
   return parseCSV(text)
+}
+
+async function fetchSheetViaScript(sheetId, sheetName) {
+  const url  = `${SCRIPT_URL}?action=getSheet&sheetId=${encodeURIComponent(sheetId)}&sheetName=${encodeURIComponent(sheetName)}`
+  const res  = await fetch(url)
+  const data = await res.json()
+  if (!Array.isArray(data)) throw new Error(`getSheet error: ${JSON.stringify(data)}`)
+  // Convert array-of-arrays to array-of-string-arrays (same format as parseCSV)
+  return data.map(row => row.map(cell => String(cell===null||cell===undefined?'':cell)))
 }
 
 const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
@@ -599,7 +608,12 @@ export default function Dashboard() {
       setLiveGeneral(general);setLiveAsia(asia);setLastUpdate(new Date())
       setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]))
 
-      const results = await Promise.allSettled(TEAM_SHEETS.map(t => fetchSheet(SHEET_ID, t.sheetName)))
+      const results = await Promise.allSettled(
+        TEAM_SHEETS.map(t => t.protected
+          ? fetchSheetViaScript(SHEET_ID, t.sheetName)
+          : fetchSheet(SHEET_ID, t.sheetName)
+        )
+      )
       const newTeams = {}
       const allAgents = []
       TEAM_SHEETS.forEach((t,i)=>{
