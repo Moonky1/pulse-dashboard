@@ -29,6 +29,19 @@ function parseCSV(text) {
 async function fetchSheet(sheetId,name){const res=await fetch(csvUrl(sheetId,name));const text=await res.text();return parseCSV(text)}
 const safeInt=(val)=>parseInt((val||'').toString().replace(/,/g,''))||0
 
+async function loadUserPhotoFromSheets(userName) {
+  try {
+    const url  = `${SCRIPT_URL}?action=getUserPhoto&userName=${encodeURIComponent(userName)}`
+    const res  = await fetch(url)
+    const data = await res.json()
+    if (data.photo) {
+      localStorage.setItem('pulse_user_photo', data.photo)
+      return data.photo
+    }
+  } catch(e) {}
+  return localStorage.getItem('pulse_user_photo') || null
+}
+
 const E = {
   medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp', medal3:'/emojis/web3.webp',
   goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp', zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
@@ -175,6 +188,8 @@ export default function Profile() {
 
   useEffect(()=>{
     if(!user){return} // will show login screen
+    // Sync photo from Sheets
+    loadUserPhotoFromSheets(user.name).then(p => { if(p) setUserPhoto(p) })
     setLoading(true)
     loadAgentData(ext).then(recs=>{
       setRecords(recs)
@@ -245,18 +260,20 @@ export default function Profile() {
       ):(
         <div className="profile-body">
           <div className="profile-hero">
-            <div className="profile-avatar-ring">
-              {isOwnProfile&&userPhoto?<img src={userPhoto} alt="" className="profile-avatar-photo"/>:<div className="profile-avatar-letter">{agentName?.[0]?.toUpperCase()}</div>}
-            </div>
-            <div className="profile-hero-info">
-              <h1 className="profile-hero-name">{agentName}</h1>
-              <div className="profile-hero-meta">
-                <img src={`https://flagcdn.com/w20/${teamInfo.flag}.png`} alt="" style={{borderRadius:2}}/>
-                <span>{teamInfo.name}</span>
-                <span className="profile-ext-tag">#{ext}</span>
-                {isOwnProfile&&<span className="profile-own-tag">✓ Your profile</span>}
+            <div className="profile-hero-inner">
+              <div className="profile-avatar-ring">
+                {isOwnProfile&&userPhoto?<img src={userPhoto} alt="" className="profile-avatar-photo"/>:<div className="profile-avatar-letter">{agentName?.[0]?.toUpperCase()}</div>}
               </div>
-              {records.length===0&&<p style={{color:'#6b7280',marginTop:8,fontSize:13}}>No historical data found yet. Data appears as days are recorded.</p>}
+              <div className="profile-hero-info">
+                <h1 className="profile-hero-name">{agentName}</h1>
+                <div className="profile-hero-meta">
+                  <img src={`https://flagcdn.com/w20/${teamInfo.flag}.png`} alt="" style={{borderRadius:2}}/>
+                  <span style={{fontSize:13,color:'#9ca3af'}}>{teamInfo.name}</span>
+                  <span className="profile-ext-tag">#{ext}</span>
+                  {isOwnProfile&&<span className="profile-own-tag">✓ You</span>}
+                </div>
+                {records.length===0&&<p style={{color:'#6b7280',marginTop:8,fontSize:12}}>No data yet. Appears as days are recorded.</p>}
+              </div>
             </div>
             <div className="profile-share">
               <div className="profile-share-url">pulse-kk.com/profile/{ext}</div>
