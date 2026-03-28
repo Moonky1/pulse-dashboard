@@ -193,7 +193,7 @@ const SAT_GOALS = {
   central:     5,
   venezuela:   5,
   philippines: 10,
-  mexico:      10,
+  mexico:      5,
   asia:        10,
 }
 const getGoalForDate = (dateStr, baseGoal, teamId='asia') => {
