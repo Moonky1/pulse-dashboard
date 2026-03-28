@@ -20,17 +20,17 @@ const HISTORY_DATES = [
 ]
 const HISTORY_ISO_SET = new Set(HISTORY_DATES.map(d => d.isoDate))
 
-// ── Team config ──
-// extStart: first digit of extension
-// hasSp: has spanish column
-// colEn/colSp: column index (0-based) for english/spanish
-// Some sheets have openers in col C (col index 2), shifting english to col D (3)
+// ── Team config — explicit column indices ──
+// colEn/colSp are 0-based index in the CSV row
+// Philippines: no openers → A=name, B=ext, C=english
+// Colombia/Central/Venezuela: has openers → A=name, B=ext, C=openers, D=english, E=spanish
+// Mexico: has openers, no spanish → A=name, B=ext, C=openers, D=english
 const TEAM_SHEETS = [
-  { id:'philippines', label:'🇵🇭 Philippines', sheetName:'AW GARRET PHILIPPINES',                  extStart:'1', hasSp:false, goal:10, flag:'ph' },
-  { id:'colombia',    label:'🇨🇴 Colombia',    sheetName:'AW GARRET COLOMBIA JUAN GARCIA',          extStart:'2', hasSp:true,  goal:10, flag:'co' },
-  { id:'central',     label:'🌎 Central',      sheetName:'AW GARRET CENTRAL AMERICA - CAROLINA',    extStart:'4', hasSp:true,  goal:10, flag:'hn' },
-  { id:'mexico',      label:'🇲🇽 Mexico',      sheetName:'AW GARRET BAJA MX KEVIN',                 extStart:'5', hasSp:false, goal:10, flag:'mx' },
-  { id:'venezuela',   label:'🇻🇪 Venezuela',   sheetName:'AW GARRET VENEZUELA PATRICIA',            extStart:'6', hasSp:true,  goal:10, flag:'ve' },
+  { id:'philippines', label:'🇵🇭 Philippines', sheetName:'AW GARRET PHILIPPINES',               extStart:'1', hasSp:false, goal:10, flag:'ph', colEn:2, colSp:null },
+  { id:'colombia',    label:'🇨🇴 Colombia',    sheetName:'AW GARRET COLOMBIA JUAN GARCIA',       extStart:'2', hasSp:true,  goal:10, flag:'co', colEn:3, colSp:4   },
+  { id:'central',     label:'🌎 Central',      sheetName:'AW GARRET CENTRAL AMERICA - CAROLINA', extStart:'4', hasSp:true,  goal:10, flag:'hn', colEn:3, colSp:4   },
+  { id:'mexico',      label:'🇲🇽 Mexico',      sheetName:'AW GARRET BAJA MX KEVIN',              extStart:'5', hasSp:false, goal:10, flag:'mx', colEn:3, colSp:null },
+  { id:'venezuela',   label:'🇻🇪 Venezuela',   sheetName:'AW GARRET VENEZUELA PATRICIA',         extStart:'6', hasSp:true,  goal:10, flag:'ve', colEn:3, colSp:4   },
 ]
 
 const csvUrl = (sheetId, sheet) =>
@@ -38,12 +38,8 @@ const csvUrl = (sheetId, sheet) =>
 
 function parseCSV(text) {
   return text.trim().split('\n').map(row => {
-    const result = []; let current = ''; let inQuotes = false
-    for (let i = 0; i < row.length; i++) {
-      if (row[i]==='"'){inQuotes=!inQuotes;continue}
-      if (row[i]===','&&!inQuotes){result.push(current.trim());current='';continue}
-      current+=row[i]
-    }
+    const result=[]; let current=''; let inQuotes=false
+    for(let i=0;i<row.length;i++){if(row[i]==='"'){inQuotes=!inQuotes;continue}if(row[i]===','&&!inQuotes){result.push(current.trim());current='';continue}current+=row[i]}
     result.push(current.trim()); return result
   })
 }
@@ -51,7 +47,9 @@ function parseCSV(text) {
 async function fetchSheet(sheetId, name) {
   const res  = await fetch(csvUrl(sheetId, name))
   const text = await res.text()
-  if (text.trim().startsWith('<!')) throw new Error('Got HTML instead of CSV — sheet may be protected')
+  if (!text || text.trim().startsWith('<!') || text.trim().length < 10) {
+    throw new Error(`Sheet "${name}" returned no valid CSV data`)
+  }
   return parseCSV(text)
 }
 
@@ -61,110 +59,80 @@ const extractPhones = (cell) => {
   return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length >= 7)
 }
 
-// ── Generic team sheet parser ──
-// Detects column layout automatically:
-//   If col C (row[2]) looks like a number → english is at col C (no openers)
-//   If col C looks like text (openers) → english is at col D (row[3])
-function parseTeamSheet(rows, extStart, hasSp) {
+// ── Generic team sheet parser — uses explicit colEn/colSp ──
+function parseTeamSheet(rows, config) {
+  const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
-    return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 } }
+    return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
 
   const agents = []
-  let totals = { english: 0, spanish: 0, total: 0, activeAgents: 0 }
-  let colEn = null // detect on first valid row
-  let colSp = null
+  let totals = { english:0, spanish:0, total:0, activeAgents:0 }
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]
+    const row    = rows[i]
     if (!Array.isArray(row)) continue
-    const cell0  = (row[0] || '').trim()
+    const cell0  = (row[0]||'').trim()
     const cell0U = cell0.toUpperCase()
 
-    // Stop at "XX AGENTS LOGGED" row — use it for totals
-    if (cell0U.includes('AGENT') && cell0U.includes('LOGGED')) {
-      if (colEn !== null) {
-        const en = safeInt(row[colEn])
-        const sp = (hasSp && colSp !== null) ? safeInt(row[colSp]) : 0
-        totals = { english: en, spanish: sp, total: en + sp, activeAgents: agents.length }
-      }
+    // Stop at agents-logged row (handles: "74 AGENTS LOGGED", "83 Agents Logged in", "AGENTS LOG IN")
+    const isLoggedRow = (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN')))
+    if (isLoggedRow) {
+      const en = safeInt(row[colEn])
+      const sp = (hasSp && colSp!=null) ? safeInt(row[colSp]) : 0
+      totals = { english:en, spanish:sp, total:en+sp, activeAgents:agents.length }
       break
     }
 
-    const extRaw = (row[1] || '').toString().replace(/,/g,'').trim()
-    const extNum = safeInt(extRaw)
-
-    // Valid agent: 4-digit ext starting with extStart
+    const extNum = safeInt((row[1]||'').toString().replace(/,/g,'').trim())
     if (extNum < 1000 || extNum > 9999) continue
-    if (!extRaw.startsWith(extStart)) continue
+    if (!String(extNum).startsWith(extStart)) continue
     if (cell0.length <= 1) continue
-
-    // Auto-detect columns from the first valid agent row
-    if (colEn === null) {
-      const col2raw = (row[2] || '').toString().trim()
-      const col2num = safeInt(col2raw)
-      // If col2 is a number and >= 0, it's probably english (no openers column)
-      // If col2 is text or looks like openers text, shift right
-      const col2isNumber = col2num >= 0 && /^\d+$/.test(col2raw)
-      if (col2isNumber) {
-        colEn = 2
-        colSp = hasSp ? 3 : null
-      } else {
-        // Has openers column
-        colEn = 3
-        colSp = hasSp ? 4 : null
-      }
-    }
+    // Skip header-like rows
+    if (cell0U.includes('USER') || cell0U.includes('SUPERVISOR') || cell0U.includes('MANAGER') || cell0U.includes('ARWIN')) continue
 
     const en = safeInt(row[colEn])
-    const sp = (hasSp && colSp !== null) ? safeInt(row[colSp]) : 0
-    agents.push({ name: cell0, ext: String(extNum), english: en, spanish: sp, total: en + sp })
+    const sp = (hasSp && colSp!=null) ? safeInt(row[colSp]) : 0
+    agents.push({ name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp })
   }
 
   if (agents.length > 0 && totals.activeAgents === 0) {
-    const en = agents.reduce((s,a) => s + a.english, 0)
-    const sp = agents.reduce((s,a) => s + a.spanish, 0)
-    totals = { english: en, spanish: sp, total: en + sp, activeAgents: agents.length }
+    const en = agents.reduce((s,a)=>s+a.english,0)
+    const sp = agents.reduce((s,a)=>s+a.spanish,0)
+    totals = { english:en, spanish:sp, total:en+sp, activeAgents:agents.length }
   }
-
   return { agents, totals }
 }
 
 // ── Override keys ──
-const OVERRIDE_KEY_AGENTS = (date, teamId='asia') => `pulse_overrides_${teamId}_${date}`
-const OVERRIDE_KEY_TOTALS = (date, teamId='asia') => `pulse_totals_override_${teamId}_${date}`
-// Keep backward compat for Asia
-const ASIA_OVERRIDE_AGENTS = (date) => `pulse_overrides_${date}`
-const ASIA_OVERRIDE_TOTALS = (date) => `pulse_totals_override_${date}`
+const OVERRIDE_KEY_AGENTS = (date, teamId='asia') => teamId==='asia' ? `pulse_overrides_${date}` : `pulse_overrides_${teamId}_${date}`
+const OVERRIDE_KEY_TOTALS = (date, teamId='asia') => teamId==='asia' ? `pulse_totals_override_${date}` : `pulse_totals_override_${teamId}_${date}`
 
 async function persistOverride(date, key, value) {
   localStorage.setItem(key, JSON.stringify(value))
   try {
     const url = `${SCRIPT_URL}?action=saveOverride&date=${encodeURIComponent(date)}&key=${encodeURIComponent(key)}&value=${encodeURIComponent(JSON.stringify(value))}`
     await fetch(url, { mode:'no-cors' })
-  } catch(e) { console.warn('Sheets save failed:', e) }
+  } catch(e) {}
 }
 
 async function loadRemoteOverrides() {
   try {
-    const url = `${SCRIPT_URL}?action=getOverrides`
-    const res  = await fetch(url)
+    const res  = await fetch(`${SCRIPT_URL}?action=getOverrides`)
     const data = await res.json()
     if (!Array.isArray(data)) return
     data.forEach(([date, key, value]) => {
-      try { if (!localStorage.getItem(key)) localStorage.setItem(key, value) } catch(e) {}
+      try { if (!localStorage.getItem(key)) localStorage.setItem(key, value) } catch(e) {} 
     })
-  } catch(e) { console.warn('Could not load remote overrides:', e) }
+  } catch(e) {}
 }
 
-// ── Save agent snapshots to Sheets (once per session per date) ──
 async function saveAgentSnapshotsToSheets(date, allAgents) {
   const flag = `pulse_snap_sheets_${date}`
-  if (sessionStorage.getItem(flag)) return // already saved this session
+  if (sessionStorage.getItem(flag)) return
   sessionStorage.setItem(flag, '1')
   try {
-    const url = `${SCRIPT_URL}?action=saveAgentSnapshots&date=${encodeURIComponent(date)}&snapshots=${encodeURIComponent(JSON.stringify(allAgents))}`
-    await fetch(url, { mode:'no-cors' })
-  } catch(e) { console.warn('Agent snapshots save failed:', e) }
+    await fetch(`${SCRIPT_URL}?action=saveAgentSnapshots&date=${encodeURIComponent(date)}&snapshots=${encodeURIComponent(JSON.stringify(allAgents))}`, { mode:'no-cors' })
+  } catch(e) {}
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
@@ -178,28 +146,18 @@ const RANGES = [
 ]
 
 const E = {
-  goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp',
-  goal3:'/emojis/goal3.webp', goal4:'/emojis/goal4.webp',
-  medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp',
-  medal3:'/emojis/web3.webp', zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
+  goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp', goal3:'/emojis/goal3.webp', goal4:'/emojis/goal4.webp',
+  medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp', medal3:'/emojis/web3.webp',
+  zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
 }
-const Img = ({ src, size=18 }) => (
-  <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}} />
-)
+const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
 const MEDALS = [E.medal1, E.medal2, E.medal3]
 
 const todayKey = () => new Date().toISOString().slice(0,10)
 
 const saveSnapshot = (generalData, asiaData, teamsData={}) => {
   const key = `pulse_snap_${todayKey()}`
-  try {
-    localStorage.setItem(key, JSON.stringify({
-      generalData: generalData || [],
-      asiaData: asiaData || [],
-      teams: teamsData,
-      savedAt: new Date().toISOString()
-    }))
-  } catch(e) {}
+  try { localStorage.setItem(key, JSON.stringify({ generalData:generalData||[], asiaData:asiaData||[], teams:teamsData, savedAt:new Date().toISOString() })) } catch(e) {}
 }
 
 const loadAllSnapshots = () => {
@@ -214,10 +172,7 @@ const loadAllSnapshots = () => {
           date,
           generalData:     Array.isArray(data.generalData)     ? data.generalData     : [],
           asiaData:        Array.isArray(data.asiaData)        ? data.asiaData        : [],
-          // Support both old format (philippinesData) and new format (teams)
-          teams: data.teams || {
-            philippines: Array.isArray(data.philippinesData) ? data.philippinesData : [],
-          },
+          teams: data.teams || { philippines: Array.isArray(data.philippinesData) ? data.philippinesData : [] },
           savedAt: data.savedAt,
         })
       } catch(e) {}
@@ -227,55 +182,35 @@ const loadAllSnapshots = () => {
 }
 
 const formatDateLabel = (dateStr) => {
-  const today = todayKey()
-  const yest = new Date(); yest.setDate(yest.getDate()-1)
-  const yKey = yest.toISOString().slice(0,10)
+  const today=todayKey(), yest=new Date(); yest.setDate(yest.getDate()-1); const yKey=yest.toISOString().slice(0,10)
   if (dateStr===today) return 'Today'
   if (dateStr===yKey)  return 'Yesterday'
-  const [y,m,d] = dateStr.split('-')
-  return `${d}/${m}/${y}`
+  const [y,m,d] = dateStr.split('-'); return `${d}/${m}/${y}`
 }
 
 function parseHistorySheet(rows) {
-  const agents = []
-  let totals = {spanish:0,english:0,total:0,activeAgents:0}
-  let foundTotal = false
-  for (let i=0; i<rows.length; i++) {
-    const row    = rows[i]
-    const cell0  = (row[0]||'').trim()
-    const cell0U = cell0.toUpperCase()
-    if (cell0U.includes('AGENT') && cell0U.includes('LOGGED')) {
-      const sp=safeInt(row[2]), en=safeInt(row[3])
-      totals={spanish:sp,english:en,total:sp+en,activeAgents:agents.length}
-      foundTotal=true; break
-    }
-    if (cell0U.includes('MANAGEMENT')||cell0U.includes('CALL')||cell0U.includes('TRANSFER')||cell0U.includes('LEXNER')||cell0U.includes('GENERAL')||cell0.length<=1) continue
-    const ext=safeInt(row[1])
-    if (ext<1000||ext>9999) continue
-    const sp=safeInt(row[2]), en=safeInt(row[3])
-    agents.push({name:cell0,ext:String(ext),spanish:sp,english:en,total:sp+en})
+  const agents=[]; let totals={spanish:0,english:0,total:0,activeAgents:0}; let foundTotal=false
+  for(let i=0;i<rows.length;i++){
+    const row=rows[i], cell0=(row[0]||'').trim(), cell0U=cell0.toUpperCase()
+    if(cell0U.includes('AGENT')&&cell0U.includes('LOGGED')){const sp=safeInt(row[2]),en=safeInt(row[3]);totals={spanish:sp,english:en,total:sp+en,activeAgents:agents.length};foundTotal=true;break}
+    if(cell0U.includes('MANAGEMENT')||cell0U.includes('CALL')||cell0U.includes('TRANSFER')||cell0U.includes('LEXNER')||cell0U.includes('GENERAL')||cell0.length<=1)continue
+    const ext=safeInt(row[1]); if(ext<1000||ext>9999)continue
+    const sp=safeInt(row[2]),en=safeInt(row[3]); agents.push({name:cell0,ext:String(ext),spanish:sp,english:en,total:sp+en})
   }
-  if (!foundTotal) {
-    const sp=agents.reduce((s,a)=>s+a.spanish,0), en=agents.reduce((s,a)=>s+a.english,0)
-    totals={spanish:sp,english:en,total:sp+en,activeAgents:agents.length}
-  }
+  if(!foundTotal){const sp=agents.reduce((s,a)=>s+a.spanish,0),en=agents.reduce((s,a)=>s+a.english,0);totals={spanish:sp,english:en,total:sp+en,activeAgents:agents.length}}
   return {agents,totals}
 }
 
-function BarChart({agents, metric}) {
-  const [tooltip, setTooltip] = useState(null)
-  const buckets = RANGES.map(r => ({
-    ...r,
-    agentsInRange: agents.filter(a => a[metric]>=r.min && a[metric]<=r.max),
-    count: agents.filter(a => a[metric]>=r.min && a[metric]<=r.max).length,
-  }))
-  const maxCount = Math.max(...buckets.map(b=>b.count),1)
-  return (
+function BarChart({agents,metric}) {
+  const [tooltip,setTooltip]=useState(null)
+  const buckets=RANGES.map(r=>({...r,agentsInRange:agents.filter(a=>a[metric]>=r.min&&a[metric]<=r.max),count:agents.filter(a=>a[metric]>=r.min&&a[metric]<=r.max).length}))
+  const maxCount=Math.max(...buckets.map(b=>b.count),1)
+  return(
     <div className="chart-wrap">
       <div className="chart-bars">
         {buckets.map((b,i)=>(
           <div key={i} className={`chart-col ${b.count>0?'chart-col-hoverable':''}`}
-            onMouseEnter={(e)=>{ if(!b.count)return; const r=e.currentTarget.getBoundingClientRect(); setTooltip({bucket:b,rect:r}) }}
+            onMouseEnter={(e)=>{if(!b.count)return;const r=e.currentTarget.getBoundingClientRect();setTooltip({bucket:b,rect:r})}}
             onMouseLeave={()=>setTooltip(null)}>
             <div className="bar-count">{b.count}</div>
             <div className="bar-outer"><div className="bar-inner" style={{height:`${(b.count/maxCount)*100}%`,background:b.color}}/></div>
@@ -283,7 +218,7 @@ function BarChart({agents, metric}) {
           </div>
         ))}
       </div>
-      {tooltip && (
+      {tooltip&&(
         <div className="bar-tooltip-h" style={{top:tooltip.rect.top-12,left:'50%',transform:'translate(-50%,calc(-100% - 12px))'}}>
           <div className="bar-tooltip-h-header" style={{color:tooltip.bucket.color}}>
             <span>{tooltip.bucket.label} xfers</span>
@@ -306,69 +241,36 @@ function BarChart({agents, metric}) {
   )
 }
 
-// ── Date Picker ──
-function DatePicker({ dateTabs, selectedDate, onSelect }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-  const today = todayKey()
-  const yest = new Date(); yest.setDate(yest.getDate()-1)
-  const yKey = yest.toISOString().slice(0,10)
-
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const groups = {}
-  dateTabs.forEach(date => {
-    const [y, m] = date.split('-')
-    const mk = `${y}-${m}`
-    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-    const label = `${monthNames[parseInt(m)-1]} ${y}`
-    if (!groups[mk]) groups[mk] = { label, dates: [] }
-    groups[mk].dates.push(date)
-  })
-
-  const formatFull = (d) => {
-    if (d===today) return 'Today — LIVE'
-    if (d===yKey)  return 'Yesterday'
-    const [y,m,dd]=d.split('-')
-    const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-    return `${days[new Date(d).getDay()]} ${dd}/${m}/${y}`
-  }
-
-  return (
+function DatePicker({dateTabs,selectedDate,onSelect}) {
+  const [open,setOpen]=useState(false); const ref=useRef(null)
+  const today=todayKey(); const yest=new Date(); yest.setDate(yest.getDate()-1); const yKey=yest.toISOString().slice(0,10)
+  useEffect(()=>{const h=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false)};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h)},[])
+  const groups={}
+  dateTabs.forEach(date=>{const[y,m]=date.split('-');const mk=`${y}-${m}`;const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const label=`${mn[parseInt(m)-1]} ${y}`;if(!groups[mk])groups[mk]={label,dates:[]};groups[mk].dates.push(date)})
+  const formatFull=(d)=>{if(d===today)return'Today — LIVE';if(d===yKey)return'Yesterday';const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(d).getDay()]} ${dd}/${m}/${y}`}
+  return(
     <div className="datepicker-wrap" ref={ref}>
-      <button className="datepicker-btn" onClick={() => setOpen(o => !o)}>
-        <span className="datepicker-icon">📅</span>
-        <span className="datepicker-label">
-          {selectedDate===today ? <><span className="dp-live-dot"/>Today — LIVE</> : formatFull(selectedDate)}
-        </span>
-        {HISTORY_ISO_SET.has(selectedDate) && <span className="dp-hist-badge">H</span>}
+      <button className="datepicker-btn" onClick={()=>setOpen(o=>!o)}>
+        <span>📅</span>
+        <span className="datepicker-label">{selectedDate===today?<><span className="dp-live-dot"/>Today — LIVE</>:formatFull(selectedDate)}</span>
+        {HISTORY_ISO_SET.has(selectedDate)&&<span className="dp-hist-badge">H</span>}
         <span className="datepicker-arrow">{open?'▲':'▼'}</span>
       </button>
-      {open && (
-        <div className="datepicker-dropdown" onClick={e => e.stopPropagation()}>
-          {Object.entries(groups).map(([mk, group]) => (
+      {open&&(
+        <div className="datepicker-dropdown" onClick={e=>e.stopPropagation()}>
+          {Object.entries(groups).map(([mk,group])=>(
             <div key={mk} className="dp-group">
               <div className="dp-group-label">{group.label}</div>
               <div className="dp-group-dates">
-                {group.dates.map(date => {
-                  const isT=date===today, isY=date===yKey, isH=HISTORY_ISO_SET.has(date), isSel=date===selectedDate
-                  const [y,m,d]=date.split('-')
-                  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-                  const dn=days[new Date(date).getDay()]
-                  return (
-                    <button key={date}
-                      className={`dp-date-btn ${isSel?'dp-selected':''} ${isT?'dp-today':''} ${isH?'dp-hist':''}`}
-                      onClick={() => { onSelect(date); setOpen(false) }}>
-                      <span className="dp-dayname">{isT?'Today':isY?'Yest.':dn}</span>
-                      <span className="dp-daynum">{d}/{m}</span>
-                      {isT && <span className="dp-live-pill">LIVE</span>}
-                      {isH && !isT && <span className="dp-h-pill">H</span>}
-                    </button>
-                  )
+                {group.dates.map(date=>{
+                  const isT=date===today,isY=date===yKey,isH=HISTORY_ISO_SET.has(date),isSel=date===selectedDate
+                  const[y,m,d]=date.split('-'); const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; const dn=days[new Date(date).getDay()]
+                  return(<button key={date} className={`dp-date-btn ${isSel?'dp-selected':''} ${isT?'dp-today':''} ${isH?'dp-hist':''}`} onClick={()=>{onSelect(date);setOpen(false)}}>
+                    <span className="dp-dayname">{isT?'Today':isY?'Yest.':dn}</span>
+                    <span className="dp-daynum">{d}/{m}</span>
+                    {isT&&<span className="dp-live-pill">LIVE</span>}
+                    {isH&&!isT&&<span className="dp-h-pill">H</span>}
+                  </button>)
                 })}
               </div>
             </div>
@@ -379,42 +281,26 @@ function DatePicker({ dateTabs, selectedDate, onSelect }) {
   )
 }
 
-// ── Team Overview card ──
-const getFlag = (name) => {
-  const n=name.toUpperCase()
-  if(n.includes('PHIL'))return'ph'; if(n.includes('VENE'))return've'
-  if(n.includes('COLOM'))return'co'; if(n.includes('MEXICO'))return'mx'
-  if(n.includes('CENTRAL'))return'hn'; if(n.includes('ASIA'))return'cn'
-  return'un'
-}
-const TEAM_ACCENT = {
-  PHILIPPINES:'#3b82f6', VENEZUELA:'#ef4444', COLOMBIA:'#f59e0b',
-  'MEXICO BAJA':'#10b981', 'CENTRAL AMERICA':'#8b5cf6', ASIA:'#f97316',
-}
-const rankEmojis = [E.goal1, E.goal3, E.goal4]
+const getFlag=(name)=>{const n=name.toUpperCase();if(n.includes('PHIL'))return'ph';if(n.includes('VENE'))return've';if(n.includes('COLOM'))return'co';if(n.includes('MEXICO'))return'mx';if(n.includes('CENTRAL'))return'hn';if(n.includes('ASIA'))return'cn';return'un'}
+const TEAM_ACCENT={PHILIPPINES:'#3b82f6',VENEZUELA:'#ef4444',COLOMBIA:'#f59e0b','MEXICO BAJA':'#10b981','CENTRAL AMERICA':'#8b5cf6',ASIA:'#f97316'}
 
-function TeamCard({ row, rank, isMyTeam, isFirst }) {
-  const [hovered, setHovered] = useState(false)
-  const accent = TEAM_ACCENT[row.name.toUpperCase()] || '#f97316'
-  return (
+function TeamCard({row,rank,isMyTeam,isFirst}) {
+  const [hovered,setHovered]=useState(false)
+  const accent=TEAM_ACCENT[row.name.toUpperCase()]||'#f97316'
+  const rankEmojis=[E.goal1,E.goal3,E.goal4]
+  return(
     <div className={`vteam-card ${isFirst?'vteam-first':''} ${isMyTeam?'vteam-mine':''} ${hovered?'vteam-hovered':''}`}
-      style={{'--accent':accent}}
-      onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
+      style={{'--accent':accent}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
       <div className="vteam-glow" style={{background:`radial-gradient(ellipse at 50% 0%, ${accent}40 0%, transparent 70%)`}}/>
       <div className="vteam-top">
-        <div className="vteam-rank">
-          {rank<3 ? <Img src={rankEmojis[rank]} size={28}/> : <span className="vteam-rank-num">#{rank+1}</span>}
-        </div>
+        <div className="vteam-rank">{rank<3?<Img src={rankEmojis[rank]} size={28}/>:<span className="vteam-rank-num">#{rank+1}</span>}</div>
         <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="vteam-flag"/>
-        <div className="vteam-name-wrap">
-          <div className="vteam-name">{row.name}</div>
-          <div className="vteam-agents">{row.agents} agents</div>
-        </div>
+        <div className="vteam-name-wrap"><div className="vteam-name">{row.name}</div><div className="vteam-agents">{row.agents} agents</div></div>
       </div>
       <div className="vteam-divider" style={{background:`linear-gradient(90deg,transparent,${accent}80,transparent)`}}/>
       <div className="vteam-stats">
         <div className="vteam-stat"><span className="vteam-val" style={{color:'#60a5fa'}}>{row.english.toLocaleString()}</span><span className="vteam-lbl">English</span></div>
-        {!row.noSpanish && <div className="vteam-stat"><span className="vteam-val" style={{color:'#34d399'}}>{row.spanish.toLocaleString()}</span><span className="vteam-lbl">Spanish</span></div>}
+        {!row.noSpanish&&<div className="vteam-stat"><span className="vteam-val" style={{color:'#34d399'}}>{row.spanish.toLocaleString()}</span><span className="vteam-lbl">Spanish</span></div>}
         <div className="vteam-stat"><span className="vteam-val" style={{color:accent}}>{row.total.toLocaleString()}</span><span className="vteam-lbl">Total</span></div>
       </div>
       <div className="vteam-bar" style={{background:`linear-gradient(90deg,transparent,${accent},transparent)`,opacity:hovered||isFirst?1:0}}/>
@@ -422,84 +308,79 @@ function TeamCard({ row, rank, isMyTeam, isFirst }) {
   )
 }
 
-// ── Generic Team Detail Section ──
-function TeamDetail({ config, agents, totals, dateLabel, isToday, canEdit, selectedDate, onOverrideTick }) {
-  const [view, setView]             = useState('stats')
-  const [menuOpen, setMenuOpen]     = useState(false)
-  const [bulkMode, setBulkMode]     = useState(false)
-  const [bulkEdits, setBulkEdits]   = useState({})
-  const [bulkTotals, setBulkTotals] = useState(null)
-  const [editAgent, setEditAgent]   = useState(null)
-  const [editForm, setEditForm]     = useState({})
-  const [saving, setSaving]         = useState(false)
-  const [overrideTick, setOverrideTick] = useState(0)
+// ── Generic Team Detail ──
+function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOverrideTick,navigate}) {
+  const [view,setView]=useState('stats')
+  const [menuOpen,setMenuOpen]=useState(false)
+  const [bulkMode,setBulkMode]=useState(false)
+  const [bulkEdits,setBulkEdits]=useState({})
+  const [bulkTotals,setBulkTotals]=useState(null)
+  const [editAgent,setEditAgent]=useState(null)
+  const [editForm,setEditForm]=useState({})
+  const [saving,setSaving]=useState(false)
+  const [tick,setTick]=useState(0)
 
-  const OA = (d) => OVERRIDE_KEY_AGENTS(d, config.id)
-  const OT = (d) => OVERRIDE_KEY_TOTALS(d, config.id)
+  const OA=(d)=>OVERRIDE_KEY_AGENTS(d,config.id)
+  const OT=(d)=>OVERRIDE_KEY_TOTALS(d,config.id)
 
-  useEffect(() => { setBulkMode(false); setBulkEdits({}); setBulkTotals(null); setMenuOpen(false) }, [selectedDate])
-
-  const hasOverrides = !!(localStorage.getItem(OA(selectedDate)) || localStorage.getItem(OT(selectedDate)))
+  useEffect(()=>{setBulkMode(false);setBulkEdits({});setBulkTotals(null);setMenuOpen(false)},[selectedDate])
+  const hasOvr = !!(localStorage.getItem(OA(selectedDate))||localStorage.getItem(OT(selectedDate)))
 
   const agentsFinal = (() => {
-    void overrideTick
-    const ovr = JSON.parse(localStorage.getItem(OA(selectedDate))||'{}')
-    let ags = agents.map(a => ovr[a.ext] ? {...a,...ovr[a.ext]} : a)
-    if (bulkMode && Object.keys(bulkEdits).length > 0) {
-      ags = ags.map(a => {
-        if (!bulkEdits[a.ext]) return a
-        const en=parseInt(bulkEdits[a.ext].english), sp=parseInt(bulkEdits[a.ext].spanish||'0')
-        return {...a, english:isNaN(en)?a.english:en, spanish:isNaN(sp)?a.spanish:sp, total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}
+    void tick
+    const ovr=JSON.parse(localStorage.getItem(OA(selectedDate))||'{}')
+    let ags=agents.map(a=>ovr[a.ext]?{...a,...ovr[a.ext]}:a)
+    if(bulkMode&&Object.keys(bulkEdits).length>0){
+      ags=ags.map(a=>{
+        if(!bulkEdits[a.ext])return a
+        const en=parseInt(bulkEdits[a.ext].english),sp=parseInt(bulkEdits[a.ext].spanish||'0')
+        return{...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}
       })
     }
     return ags
   })()
 
-  const totOvr = (() => {
-    void overrideTick
-    try { return JSON.parse(localStorage.getItem(OT(selectedDate))||'null') } catch(e) { return null }
-  })()
+  const totOvr=(()=>{void tick;try{return JSON.parse(localStorage.getItem(OT(selectedDate))||'null')}catch(e){return null}})()
+  const totalEn=totOvr?.english??agentsFinal.reduce((s,a)=>s+a.english,0)
+  const totalSp=totOvr?.spanish??agentsFinal.reduce((s,a)=>s+a.spanish,0)
+  const totalXf=totalEn+totalSp
+  const goal=config.goal
+  const hitGoal=agentsFinal.filter(a=>a.english>=goal)
+  const atZero=agentsFinal.filter(a=>a.total===0)
+  const top3En=[...agentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
+  const top3Sp=config.hasSp?[...agentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3):[]
 
-  const totalEn = totOvr?.english ?? (agentsFinal.reduce((s,a)=>s+a.english,0))
-  const totalSp = totOvr?.spanish ?? (agentsFinal.reduce((s,a)=>s+a.spanish,0))
-  const totalXf = totalEn + totalSp
-  const goal    = config.goal
-
-  const hitGoal = agentsFinal.filter(a=>a.english>=goal)
-  const atZero  = agentsFinal.filter(a=>a.total===0)
-  const top3En  = [...agentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
-  const top3Sp  = config.hasSp ? [...agentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3) : []
-
-  const saveBulk = async () => {
+  const saveBulk=async()=>{
     setSaving(true)
-    const ovr = JSON.parse(localStorage.getItem(OA(selectedDate))||'{}')
-    Object.entries(bulkEdits).forEach(([ext,vals]) => {
-      const ag=agents.find(a=>a.ext===ext); if (!ag) return
-      const en=parseInt(vals.english), sp=parseInt(vals.spanish||'0')
+    const ovr=JSON.parse(localStorage.getItem(OA(selectedDate))||'{}')
+    Object.entries(bulkEdits).forEach(([ext,vals])=>{
+      const ag=agents.find(a=>a.ext===ext);if(!ag)return
+      const en=parseInt(vals.english),sp=parseInt(vals.spanish||'0')
       ovr[ext]={name:ag.name,english:isNaN(en)?ag.english:en,spanish:isNaN(sp)?ag.spanish:sp,total:(isNaN(en)?ag.english:en)+(isNaN(sp)?ag.spanish:sp)}
     })
-    await persistOverride(selectedDate, OA(selectedDate), ovr)
-    if (bulkTotals) await persistOverride(selectedDate, OT(selectedDate), {english:parseInt(bulkTotals.english)||0, spanish:parseInt(bulkTotals.spanish||0)||0})
-    setBulkMode(false); setBulkEdits({}); setBulkTotals(null); setOverrideTick(t=>t+1); onOverrideTick?.(); setSaving(false)
+    await persistOverride(selectedDate,OA(selectedDate),ovr)
+    if(bulkTotals)await persistOverride(selectedDate,OT(selectedDate),{english:parseInt(bulkTotals.english)||0,spanish:parseInt(bulkTotals.spanish||0)||0})
+    setBulkMode(false);setBulkEdits({});setBulkTotals(null);setTick(t=>t+1);onOverrideTick?.();setSaving(false)
   }
 
-  const saveQuick = async () => {
+  const saveQuick=async()=>{
     setSaving(true)
-    const ovr = JSON.parse(localStorage.getItem(OA(selectedDate))||'{}')
-    const en=parseInt(editForm.english)||0, sp=parseInt(editForm.spanish||'0')||0
+    const ovr=JSON.parse(localStorage.getItem(OA(selectedDate))||'{}')
+    const en=parseInt(editForm.english)||0,sp=parseInt(editForm.spanish||'0')||0
     ovr[editAgent.ext]={name:editAgent.name,english:en,spanish:sp,total:en+sp}
-    await persistOverride(selectedDate, OA(selectedDate), ovr)
-    setEditAgent(null); setOverrideTick(t=>t+1); onOverrideTick?.(); setSaving(false)
+    await persistOverride(selectedDate,OA(selectedDate),ovr)
+    setEditAgent(null);setTick(t=>t+1);onOverrideTick?.();setSaving(false)
   }
 
-  const resetOvr = async () => {
-    localStorage.removeItem(OA(selectedDate)); localStorage.removeItem(OT(selectedDate))
-    setBulkEdits({}); setBulkTotals(null); setBulkMode(false); setOverrideTick(t=>t+1); onOverrideTick?.(); setMenuOpen(false)
+  const resetOvr=async()=>{
+    localStorage.removeItem(OA(selectedDate));localStorage.removeItem(OT(selectedDate))
+    setBulkEdits({});setBulkTotals(null);setBulkMode(false);setTick(t=>t+1);onOverrideTick?.();setMenuOpen(false)
   }
 
-  const showEditBtn = !isToday && canEdit
+  const showEditBtn=!isToday&&canEdit
+  const colCount=config.hasSp?7:6
 
-  return (
+  return(
     <div className="fade-in" onClick={()=>setMenuOpen(false)}>
       <div className="asia-header-row">
         <div style={{display:'flex',alignItems:'center',gap:12}}>
@@ -507,19 +388,19 @@ function TeamDetail({ config, agents, totals, dateLabel, isToday, canEdit, selec
             <img src={`https://flagcdn.com/w20/${config.flag}.png`} alt="" style={{borderRadius:2,verticalAlign:'middle',marginRight:6}}/>
             {config.label.replace(/^[^\s]+ /,'')} — Agent Detail
             {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{dateLabel}</span>}
-            {bulkMode && <span style={{fontSize:11,background:'#f97316',color:'#fff',padding:'2px 8px',borderRadius:4,fontWeight:600}}>EDIT MODE</span>}
-            {hasOverrides && !bulkMode && <span style={{fontSize:11,background:'#1e2230',color:'#9ca3af',padding:'2px 8px',borderRadius:4,border:'0.5px solid #2a2d38'}}>✏️ edited</span>}
+            {bulkMode&&<span style={{fontSize:11,background:'#f97316',color:'#fff',padding:'2px 8px',borderRadius:4,fontWeight:600}}>EDIT MODE</span>}
+            {hasOvr&&!bulkMode&&<span style={{fontSize:11,background:'#1e2230',color:'#9ca3af',padding:'2px 8px',borderRadius:4,border:'0.5px solid #2a2d38'}}>✏️ edited</span>}
           </h2>
-          {!isToday && canEdit && (
+          {!isToday&&canEdit&&(
             <div style={{position:'relative'}} onClick={e=>e.stopPropagation()}>
               <button className="asia-menu-btn" onClick={()=>setMenuOpen(o=>!o)}>···</button>
-              {menuOpen && (
+              {menuOpen&&(
                 <div className="asia-menu-dropdown">
                   {!bulkMode
-                    ? <button className="asia-menu-item" onClick={()=>{setBulkMode(true);setMenuOpen(false);setView('stats')}}>✏️ Edit this day's data</button>
-                    : <><button className="asia-menu-item green-item" onClick={()=>{saveBulk();setMenuOpen(false)}}>{saving?'⏳ Saving...':'✅ Save all changes'}</button>
+                    ?<button className="asia-menu-item" onClick={()=>{setBulkMode(true);setMenuOpen(false);setView('stats')}}>✏️ Edit this day's data</button>
+                    :<><button className="asia-menu-item green-item" onClick={()=>{saveBulk();setMenuOpen(false)}}>{saving?'⏳ Saving...':'✅ Save all changes'}</button>
                        <button className="asia-menu-item red-item" onClick={()=>{setBulkMode(false);setBulkEdits({});setBulkTotals(null);setMenuOpen(false)}}>✖ Cancel edit</button></>}
-                  {hasOverrides && <button className="asia-menu-item" style={{borderTop:'0.5px solid #2a2d38',marginTop:4,paddingTop:10,color:'#f87171'}} onClick={resetOvr}>🗑 Reset to original data</button>}
+                  {hasOvr&&<button className="asia-menu-item" style={{borderTop:'0.5px solid #2a2d38',marginTop:4,paddingTop:10,color:'#f87171'}} onClick={resetOvr}>🗑 Reset to original data</button>}
                 </div>
               )}
             </div>
@@ -531,58 +412,50 @@ function TeamDetail({ config, agents, totals, dateLabel, isToday, canEdit, selec
         </div>
       </div>
 
-      {/* Summary cards */}
-      {bulkMode ? (
+      {/* Summary */}
+      {bulkMode?(
         <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`,marginBottom:'1.5rem'}}>
           <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
           <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-          {config.hasSp && <div className="sum-card teal">
-            <input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotals?.spanish??totalSp} onChange={e=>setBulkTotals(t=>({spanish:e.target.value,english:t?.english??totalEn}))}/>
-            <div className="sum-label">Spanish Xfers ✏️</div>
-          </div>}
-          <div className="sum-card blue">
-            <input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotals?.english??totalEn} onChange={e=>setBulkTotals(t=>({english:e.target.value,spanish:t?.spanish??totalSp}))}/>
-            <div className="sum-label">English Xfers ✏️</div>
-          </div>
+          {config.hasSp&&<div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotals?.spanish??totalSp} onChange={e=>setBulkTotals(t=>({spanish:e.target.value,english:t?.english??totalEn}))}/><div className="sum-label">Spanish Xfers ✏️</div></div>}
+          <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotals?.english??totalEn} onChange={e=>setBulkTotals(t=>({english:e.target.value,spanish:t?.spanish??totalSp}))}/><div className="sum-label">English Xfers ✏️</div></div>
           <div className="sum-card indigo"><div className="sum-val">{((parseInt(bulkTotals?.spanish)||totalSp)+(parseInt(bulkTotals?.english)||totalEn)).toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
         </div>
-      ) : (
+      ):(
         <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`}}>
           <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
           <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-          {config.hasSp && <div className="sum-card teal"><div className="sum-val">{totalSp.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>}
+          {config.hasSp&&<div className="sum-card teal"><div className="sum-val">{totalSp.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>}
           <div className="sum-card blue"><div className="sum-val">{totalEn.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
           <div className="sum-card indigo"><div className="sum-val">{totalXf.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
         </div>
       )}
 
-      {agentsFinal.length===0 && (
-        <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280',marginTop:'0.5rem'}}>
-          No data available for this date.
-        </div>
-      )}
+      {agentsFinal.length===0&&<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280',marginTop:'0.5rem'}}>No data available for this date.</div>}
 
-      {view==='stats' && agentsFinal.length>0 && (
+      {view==='stats'&&agentsFinal.length>0&&(
         <>
-          {!bulkMode && (
+          {!bulkMode&&(
             <div className="tops-row" style={{gridTemplateColumns:config.hasSp?'1fr 1fr 1fr':'1fr 1fr'}}>
-              <div className="top-block"><h3 className="top-title"><Img src={E.goal} size={16}/> Top English</h3>{top3En.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score english">{a.english}</span></div>))}</div>
-              {config.hasSp && <div className="top-block"><h3 className="top-title"><Img src={E.goal} size={16}/> Top Spanish</h3>{top3Sp.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score spanish">{a.spanish}</span></div>))}</div>}
-              <div className="top-block red-block"><h3 className="top-title"><Img src={E.zero} size={16}/> At Zero</h3>{atZero.length===0?<p className="top-empty"><Img src={E.firework} size={16}/> Everyone has transfers!</p>:atZero.slice(0,3).map((a,i)=>(<div key={i} className="top-item"><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score red">0</span></div>))}</div>
+              <div className="top-block"><h3 className="top-title"><Img src={E.goal} size={16}/> Top English</h3>{top3En.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score english">{a.english}</span></div>))}</div>
+              {config.hasSp&&<div className="top-block"><h3 className="top-title"><Img src={E.goal} size={16}/> Top Spanish</h3>{top3Sp.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score spanish">{a.spanish}</span></div>))}</div>}
+              <div className="top-block red-block"><h3 className="top-title"><Img src={E.zero} size={16}/> At Zero</h3>{atZero.length===0?<p className="top-empty"><Img src={E.firework} size={16}/> Everyone has transfers!</p>:atZero.slice(0,3).map((a,i)=>(<div key={i} className="top-item"><span className="top-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score red">0</span></div>))}</div>
             </div>
           )}
-          {bulkMode && <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>✏️ Edit mode activo</span><span style={{fontSize:12,color:'#9ca3af'}}>— modifica los valores y usa "Save all changes" en el menú ···</span></div>}
+          {bulkMode&&<div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>✏️ Edit mode activo</span><span style={{fontSize:12,color:'#9ca3af'}}>— modifica y usa "Save all changes" en ···</span></div>}
           <div className="agent-table-wrap">
             <table className="agent-table">
               <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th>{config.hasSp&&<th>Spanish</th>}<th>Total</th><th>Goal</th>{showEditBtn&&<th className="th-edit"></th>}</tr></thead>
               <tbody>
                 {[...agentsFinal].sort((a,b)=>b.english-a.english).map((a,i)=>{
                   const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
-                  const beEn=bulkEdits[a.ext]?.english??'', beSp=bulkEdits[a.ext]?.spanish??''
+                  const beEn=bulkEdits[a.ext]?.english??'',beSp=bulkEdits[a.ext]?.spanish??''
                   const dEn=bulkMode&&beEn!==''?parseInt(beEn)||0:a.english
                   const dSp=bulkMode&&beSp!==''?parseInt(beSp)||0:a.spanish
                   return(<tr key={i} className={a.total===0?'row-zero':a.english>=goal?'row-goal':''}>
-                    <td style={rs}>#{i+1}</td><td className="agent-name">{a.name}</td><td className="agent-ext">{a.ext}</td>
+                    <td style={rs}>#{i+1}</td>
+                    <td className="agent-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</td>
+                    <td className="agent-ext">{a.ext}</td>
                     <td className="val-english">{bulkMode?<input type="number" className="bulk-edit-input" value={beEn!==''?beEn:a.english} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],english:e.target.value}}))}/>:a.english}</td>
                     {config.hasSp&&<td className="val-spanish">{bulkMode?<input type="number" className="bulk-edit-input" value={beSp!==''?beSp:a.spanish} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],spanish:e.target.value}}))}/>:a.spanish}</td>}
                     <td className="val-total">{config.hasSp?dEn+dSp:dEn}</td>
@@ -597,16 +470,8 @@ function TeamDetail({ config, agents, totals, dateLabel, isToday, canEdit, selec
         </>
       )}
 
-      {view==='charts' && agentsFinal.length>0 && (
+      {view==='charts'&&agentsFinal.length>0&&(
         <div className="charts-section">
-          {config.hasSp && (
-            <div className="chart-controls">
-              <span className="chart-label">Metric:</span>
-              <div className="metric-tabs">
-                <button className="metric-tab active">English</button>
-              </div>
-            </div>
-          )}
           <BarChart agents={agentsFinal} metric="english"/>
           <div className="chart-goal-row">
             <div className="goal-stat green-stat"><div className="goal-stat-val">{hitGoal.length}</div><div className="goal-stat-label"><Img src={E.goal} size={14}/> Reached goal ({goal}+ EN)</div></div>
@@ -616,14 +481,13 @@ function TeamDetail({ config, agents, totals, dateLabel, isToday, canEdit, selec
         </div>
       )}
 
-      {/* Quick edit modal */}
       {editAgent&&(
         <div className="edit-modal-overlay" onClick={()=>setEditAgent(null)}>
           <div className="edit-modal" onClick={e=>e.stopPropagation()}>
             <h3 className="edit-modal-title">Edit — {editAgent.name} <span style={{color:'#6b7280',fontSize:12}}>#{editAgent.ext}</span></h3>
             <div className="edit-modal-fields">
               <label>English<input type="number" value={editForm.english} onChange={e=>setEditForm(f=>({...f,english:e.target.value}))}/></label>
-              {config.hasSp && <label>Spanish<input type="number" value={editForm.spanish} onChange={e=>setEditForm(f=>({...f,spanish:e.target.value}))}/></label>}
+              {config.hasSp&&<label>Spanish<input type="number" value={editForm.spanish} onChange={e=>setEditForm(f=>({...f,spanish:e.target.value}))}/></label>}
             </div>
             <div className="edit-modal-actions">
               <button className="btn-cancel" onClick={()=>setEditAgent(null)}>Cancel</button>
@@ -646,61 +510,50 @@ export default function Dashboard() {
   const roleLabel = user?.role==='supervisor'?'Supervisor':user?.role==='qa'?'QA':user?.role==='leader'?'Team Leader':'Member'
   const canEdit   = ['supervisor','qa','leader'].includes(user?.role)
 
-  const [liveGeneral, setLiveGeneral] = useState([])
-  const [liveAsia, setLiveAsia]       = useState([])
-  const [liveTeams, setLiveTeams]     = useState({}) // { teamId: rows[] }
-  const [slacksData, setSlacksData]   = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [lastUpdate, setLastUpdate]   = useState(null)
+  const [liveGeneral,setLiveGeneral] = useState([])
+  const [liveAsia,setLiveAsia]       = useState([])
+  const [liveTeams,setLiveTeams]     = useState({})
+  const [slacksData,setSlacksData]   = useState([])
+  const [loading,setLoading]         = useState(true)
+  const [lastUpdate,setLastUpdate]   = useState(null)
 
-  const [activeTab, setActiveTab]     = useState('general')
-  const [asiaView, setAsiaView]       = useState('stats')
-  const [chartMetric, setChartMetric] = useState('english')
-  const [snapshots, setSnapshots]     = useState([])
-  const [selectedDate, setSelectedDate] = useState(todayKey())
-  const [overridesTick, setOverridesTick] = useState(0)
-  const [savingOverride, setSavingOverride] = useState(false)
+  const [activeTab,setActiveTab]     = useState('general')
+  const [asiaView,setAsiaView]       = useState('stats')
+  const [chartMetric,setChartMetric] = useState('english')
+  const [snapshots,setSnapshots]     = useState([])
+  const [selectedDate,setSelectedDate] = useState(todayKey())
+  const [overridesTick,setOverridesTick] = useState(0)
+  const [savingOverride,setSavingOverride] = useState(false)
 
-  // Asia edit state
-  const [editingAgent, setEditingAgent]     = useState(null)
-  const [editForm, setEditForm]             = useState({})
-  const [editMenuOpen, setEditMenuOpen]     = useState(false)
-  const [bulkEditMode, setBulkEditMode]     = useState(false)
-  const [bulkEdits, setBulkEdits]           = useState({})
-  const [bulkTotalsEdit, setBulkTotalsEdit] = useState(null)
-
-  const [histCache, setHistCache]     = useState({})
-  const [histLoading, setHistLoading] = useState(false)
-  const [expandedAgent, setExpandedAgent] = useState(null)
+  const [editingAgent,setEditingAgent]     = useState(null)
+  const [editForm,setEditForm]             = useState({})
+  const [editMenuOpen,setEditMenuOpen]     = useState(false)
+  const [bulkEditMode,setBulkEditMode]     = useState(false)
+  const [bulkEdits,setBulkEdits]           = useState({})
+  const [bulkTotalsEdit,setBulkTotalsEdit] = useState(null)
+  const [histCache,setHistCache]           = useState({})
+  const [histLoading,setHistLoading]       = useState(false)
+  const [expandedAgent,setExpandedAgent]   = useState(null)
 
   const isToday    = selectedDate === todayKey()
   const isHistDate = HISTORY_ISO_SET.has(selectedDate)
   const histMeta   = HISTORY_DATES.find(d => d.isoDate===selectedDate)
-  const activeSnap = (!isToday && !isHistDate) ? snapshots.find(s => s.date===selectedDate) : null
-
+  const activeSnap = (!isToday&&!isHistDate) ? snapshots.find(s=>s.date===selectedDate) : null
   const asiaDataRaw    = isToday ? liveAsia    : (activeSnap?.asiaData    || [])
   const generalDataRaw = isToday ? liveGeneral : (activeSnap?.generalData || [])
-  const histParsed     = isHistDate ? (histCache[selectedDate] || null) : null
+  const histParsed     = isHistDate ? (histCache[selectedDate]||null) : null
 
-  const getTeamData = (teamId) => {
-    if (isToday) return liveTeams[teamId] || []
-    return activeSnap?.teams?.[teamId] || []
-  }
+  const getTeamData = (teamId) => isToday ? (liveTeams[teamId]||[]) : (activeSnap?.teams?.[teamId]||[])
 
-  // Canvas particles
-  useEffect(() => {
-    const canvas = canvasRef.current; if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight
-    const particles = []
-    const onMove = (e) => { for(let i=0;i<3;i++) particles.push({x:e.clientX+(Math.random()-.5)*20,y:e.clientY+(Math.random()-.5)*20,size:Math.random()*3+1,life:1,vx:(Math.random()-.5)*1.5,vy:(Math.random()-.5)*1.5-.5}) }
+  // Canvas
+  useEffect(()=>{
+    const canvas=canvasRef.current;if(!canvas)return
+    const ctx=canvas.getContext('2d');canvas.width=window.innerWidth;canvas.height=window.innerHeight
+    const particles=[]
+    const onMove=(e)=>{for(let i=0;i<3;i++)particles.push({x:e.clientX+(Math.random()-.5)*20,y:e.clientY+(Math.random()-.5)*20,size:Math.random()*3+1,life:1,vx:(Math.random()-.5)*1.5,vy:(Math.random()-.5)*1.5-.5})}
     window.addEventListener('mousemove',onMove)
     let raf
-    const draw = () => {
-      ctx.clearRect(0,0,canvas.width,canvas.height)
-      for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=.03;p.x+=p.vx;p.y+=p.vy;if(p.life<=0){particles.splice(i,1);continue}ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fillStyle=`rgba(249,115,22,${p.life*.5})`;ctx.fill()}
-      raf=requestAnimationFrame(draw)
-    }
+    const draw=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=.03;p.x+=p.vx;p.y+=p.vy;if(p.life<=0){particles.splice(i,1);continue}ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fillStyle=`rgba(249,115,22,${p.life*.5})`;ctx.fill()};raf=requestAnimationFrame(draw)}
     draw()
     const onResize=()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight}
     window.addEventListener('resize',onResize)
@@ -709,198 +562,138 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [general, asia, slacks] = await Promise.all([
+      const [general,asia,slacks] = await Promise.all([
         fetchSheet(SHEET_ID,"WELL'S REPORT"),
         fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),
         fetchSheet(USERS_SHEET_ID,'Slacks'),
       ])
-      setLiveGeneral(general); setLiveAsia(asia); setLastUpdate(new Date())
+      setLiveGeneral(general);setLiveAsia(asia);setLastUpdate(new Date())
       setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]))
 
-      // Fetch all team sheets in parallel
-      const results = await Promise.allSettled(
-        TEAM_SHEETS.map(t => fetchSheet(SHEET_ID, t.sheetName))
-      )
+      const results = await Promise.allSettled(TEAM_SHEETS.map(t => fetchSheet(SHEET_ID, t.sheetName)))
       const newTeams = {}
-      const allAgentsForSnap = []
-      TEAM_SHEETS.forEach((t, i) => {
-        if (results[i].status === 'fulfilled') {
-          newTeams[t.id] = results[i].value
-          // Collect agents for AGENT_SNAPSHOTS
-          const { agents } = parseTeamSheet(results[i].value, t.extStart, t.hasSp)
-          agents.forEach(a => allAgentsForSnap.push({ ext:a.ext, name:a.name, english:a.english, spanish:a.spanish||0, total:a.total, team:t.id }))
+      const allAgents = []
+      TEAM_SHEETS.forEach((t,i)=>{
+        if(results[i].status==='fulfilled'){
+          newTeams[t.id]=results[i].value
+          const {agents}=parseTeamSheet(results[i].value, t)
+          agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}))
+          console.log(`✓ ${t.label}: ${agents.length} agents`)
         } else {
-          console.warn(`${t.label} sheet failed:`, results[i].reason)
+          console.warn(`✗ ${t.label} failed:`, results[i].reason?.message)
         }
       })
       setLiveTeams(newTeams)
 
-      // Also add Asia agents
-      const asiaAgentsRaw = []
-      for (const row of asia) {
-        const name=(row[0]||'').trim(), nameUp=name.toUpperCase()
-        if (nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')) break
-        if (nameUp.includes('REMOVED')) break
-        const ext=safeInt(row[1]); if(isNaN(ext)||ext<1000||ext>9999||name.length<=1) continue
-        asiaAgentsRaw.push({ ext:String(ext), name, english:safeInt(row[3]), spanish:safeInt(row[2]), total:safeInt(row[2])+safeInt(row[3]), team:'asia' })
+      // Asia agents for snapshots
+      for(const row of asia){
+        const name=(row[0]||'').trim(),nameUp=name.toUpperCase()
+        if(nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN'))break
+        if(nameUp.includes('REMOVED'))break
+        const ext=safeInt(row[1]);if(isNaN(ext)||ext<1000||ext>9999||name.length<=1)continue
+        allAgents.push({ext:String(ext),name,english:safeInt(row[3]),spanish:safeInt(row[2]),total:safeInt(row[2])+safeInt(row[3]),team:'asia'})
       }
-      allAgentsForSnap.push(...asiaAgentsRaw)
 
-      saveSnapshot(general, asia, newTeams)
+      saveSnapshot(general,asia,newTeams)
       setSnapshots(loadAllSnapshots())
-
-      // Save to Sheets once per session
-      saveAgentSnapshotsToSheets(todayKey(), allAgentsForSnap)
-    } catch(e){console.error(e)}
+      saveAgentSnapshotsToSheets(todayKey(),allAgents)
+    } catch(e){console.error('loadData error:',e)}
     finally{setLoading(false)}
   }
 
   useEffect(()=>{
     loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1))
-    setSnapshots(loadAllSnapshots()); loadData()
-    const iv=setInterval(loadData,60000)
-    return ()=>clearInterval(iv)
+    setSnapshots(loadAllSnapshots());loadData()
+    const iv=setInterval(loadData,60000);return()=>clearInterval(iv)
   },[])
 
   useEffect(()=>{
-    if(!isHistDate||!histMeta||histCache[selectedDate]) return
+    if(!isHistDate||!histMeta||histCache[selectedDate])return
     setHistLoading(true)
-    fetchSheet(HISTORY_SHEET_ID,histMeta.tab)
-      .then(rows=>setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)})))
-      .catch(console.error).finally(()=>setHistLoading(false))
+    fetchSheet(HISTORY_SHEET_ID,histMeta.tab).then(rows=>setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)}))).catch(console.error).finally(()=>setHistLoading(false))
   },[selectedDate])
 
-  useEffect(()=>{ setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false) },[selectedDate])
+  useEffect(()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)},[selectedDate])
 
-  const logout = () => { localStorage.removeItem('pulse_user'); window.location.href='/' }
+  const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
 
-  // Well's Report
-  const teamRows = (() => {
-    const found = []
-    for (const row of generalDataRaw) {
-      const name = row[0]?.toUpperCase().trim()
-      if (TEAMS_ORDER.some(t=>name===t)) {
-        if (!found.find(f=>f.name.toUpperCase()===name)) {
-          const rawSpanish = row[4]?.trim()
-          found.push({ name:row[0]?.trim()||'', agents:safeInt(row[2]), english:safeInt(row[3]), spanish:safeInt(rawSpanish), total:safeInt(row[5]), noSpanish:rawSpanish==='-'||rawSpanish===''||!rawSpanish })
-        }
-      }
-      if (found.length===6) break
+  const teamRows=(()=>{
+    const found=[]
+    for(const row of generalDataRaw){
+      const name=row[0]?.toUpperCase().trim()
+      if(TEAMS_ORDER.some(t=>name===t)){if(!found.find(f=>f.name.toUpperCase()===name)){const rawSpanish=row[4]?.trim();found.push({name:row[0]?.trim()||'',agents:safeInt(row[2]),english:safeInt(row[3]),spanish:safeInt(rawSpanish),total:safeInt(row[5]),noSpanish:rawSpanish==='-'||rawSpanish===''||!rawSpanish})}}
+      if(found.length===6)break
     }
     return found
   })()
-  const teamsSorted = [...teamRows].sort((a,b)=>b.english-a.english)
+  const teamsSorted=[...teamRows].sort((a,b)=>b.english-a.english)
 
-  // Asia
-  const {asiaAgents, asiaTotals} = (() => {
-    if (isHistDate && histParsed) return {asiaAgents:histParsed.agents, asiaTotals:histParsed.totals}
-    const agents=[]; let totals={spanish:0,english:0,total:0,activeAgents:0}
-    for (const row of asiaDataRaw) {
-      const name=(row[0]||'').trim(), nameUp=name.toUpperCase()
-      if (nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')){const sp=safeInt(row[2]),en=safeInt(row[3]);totals={activeAgents:agents.length,spanish:sp,english:en,total:sp+en};break}
-      if (nameUp.includes('REMOVED')) break
-      const ext=safeInt(row[1]); if(isNaN(ext)||ext<1000||ext>9999||name.length<=1) continue
+  const {asiaAgents,asiaTotals}=(()=>{
+    if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals}
+    const agents=[];let totals={spanish:0,english:0,total:0,activeAgents:0}
+    for(const row of asiaDataRaw){
+      const name=(row[0]||'').trim(),nameUp=name.toUpperCase()
+      if(nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')){const sp=safeInt(row[2]),en=safeInt(row[3]);totals={activeAgents:agents.length,spanish:sp,english:en,total:sp+en};break}
+      if(nameUp.includes('REMOVED'))break
+      const ext=safeInt(row[1]);if(isNaN(ext)||ext<1000||ext>9999||name.length<=1)continue
       agents.push({name,ext:String(ext),spanish:safeInt(row[2]),english:safeInt(row[3]),total:safeInt(row[2])+safeInt(row[3])})
     }
-    return {asiaAgents:agents,asiaTotals:totals}
+    return{asiaAgents:agents,asiaTotals:totals}
   })()
 
-  const asiaAgentsFinal = (() => {
+  const asiaAgentsFinal=(()=>{
     void overridesTick
-    const ovr = JSON.parse(localStorage.getItem(ASIA_OVERRIDE_AGENTS(selectedDate))||'{}')
-    let agents = asiaAgents.map(a => ovr[a.ext] ? {...a,...ovr[a.ext]} : a)
-    if (bulkEditMode && Object.keys(bulkEdits).length>0) {
-      agents = agents.map(a => {
-        if(!bulkEdits[a.ext]) return a
-        const en=parseInt(bulkEdits[a.ext].english), sp=parseInt(bulkEdits[a.ext].spanish)
-        return {...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}
-      })
-    }
+    const ovr=JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'))||'{}')
+    let agents=asiaAgents.map(a=>ovr[a.ext]?{...a,...ovr[a.ext]}:a)
+    if(bulkEditMode&&Object.keys(bulkEdits).length>0){agents=agents.map(a=>{if(!bulkEdits[a.ext])return a;const en=parseInt(bulkEdits[a.ext].english),sp=parseInt(bulkEdits[a.ext].spanish);return{...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}})}
     return agents
   })()
 
-  const asiaOvrTotals = (() => { void overridesTick; try{return JSON.parse(localStorage.getItem(ASIA_OVERRIDE_TOTALS(selectedDate))||'null')}catch(e){return null} })()
-  const totalSpanish  = asiaOvrTotals?.spanish ?? (isToday?asiaTotals.spanish:(isHistDate?asiaTotals.spanish:asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0)))
-  const totalEnglish  = asiaOvrTotals?.english ?? (isToday?asiaTotals.english:(isHistDate?asiaTotals.english:asiaAgentsFinal.reduce((s,a)=>s+a.english,0)))
-  const totalXfers    = totalSpanish + totalEnglish
-  const goal          = APP_CONFIG.dailyGoal
-  const hitGoal       = asiaAgentsFinal.filter(a=>a.english>=goal)
-  const atZero        = asiaAgentsFinal.filter(a=>a.total===0)
-  const top3English   = [...asiaAgentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
-  const top3Spanish   = [...asiaAgentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3)
+  const asiaOvrTotals=(()=>{void overridesTick;try{return JSON.parse(localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate,'asia'))||'null')}catch(e){return null}})()
+  const totalSpanish=asiaOvrTotals?.spanish??(isToday?asiaTotals.spanish:(isHistDate?asiaTotals.spanish:asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0)))
+  const totalEnglish=asiaOvrTotals?.english??(isToday?asiaTotals.english:(isHistDate?asiaTotals.english:asiaAgentsFinal.reduce((s,a)=>s+a.english,0)))
+  const totalXfers=totalSpanish+totalEnglish
+  const goal=APP_CONFIG.dailyGoal
+  const hitGoal=asiaAgentsFinal.filter(a=>a.english>=goal)
+  const atZero=asiaAgentsFinal.filter(a=>a.total===0)
+  const top3English=[...asiaAgentsFinal].sort((a,b)=>b.english-a.english).slice(0,3)
+  const top3Spanish=[...asiaAgentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3)
   void overridesTick
-  const hasAsiaOverrides = !!(localStorage.getItem(ASIA_OVERRIDE_AGENTS(selectedDate))||localStorage.getItem(ASIA_OVERRIDE_TOTALS(selectedDate)))
+  const hasAsiaOverrides=!!(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'))||localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate,'asia')))
 
-  // Asia save
-  const saveAsiaAgentEdit = async () => {
-    setSavingOverride(true)
-    const ovr=JSON.parse(localStorage.getItem(ASIA_OVERRIDE_AGENTS(selectedDate))||'{}')
-    const en=parseInt(editForm.english)||0, sp=parseInt(editForm.spanish)||0
-    ovr[editingAgent.ext]={name:editingAgent.name,spanish:sp,english:en,total:en+sp}
-    await persistOverride(selectedDate,ASIA_OVERRIDE_AGENTS(selectedDate),ovr)
-    setEditingAgent(null); setOverridesTick(t=>t+1); setSavingOverride(false)
-  }
-  const saveAsiaBulk = async () => {
-    setSavingOverride(true)
-    const ovr=JSON.parse(localStorage.getItem(ASIA_OVERRIDE_AGENTS(selectedDate))||'{}')
-    Object.entries(bulkEdits).forEach(([ext,vals])=>{const ag=asiaAgents.find(a=>a.ext===ext);if(!ag)return;const en=parseInt(vals.english),sp=parseInt(vals.spanish);ovr[ext]={name:ag.name,spanish:isNaN(sp)?ag.spanish:sp,english:isNaN(en)?ag.english:en,total:(isNaN(en)?ag.english:en)+(isNaN(sp)?ag.spanish:sp)}})
-    await persistOverride(selectedDate,ASIA_OVERRIDE_AGENTS(selectedDate),ovr)
-    if(bulkTotalsEdit) await persistOverride(selectedDate,ASIA_OVERRIDE_TOTALS(selectedDate),{spanish:parseInt(bulkTotalsEdit.spanish)||0,english:parseInt(bulkTotalsEdit.english)||0})
-    setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setOverridesTick(t=>t+1);setSavingOverride(false)
-  }
-  const resetAsiaOverrides = async () => {
-    localStorage.removeItem(ASIA_OVERRIDE_AGENTS(selectedDate));localStorage.removeItem(ASIA_OVERRIDE_TOTALS(selectedDate))
-    setBulkEdits({});setBulkTotalsEdit(null);setBulkEditMode(false);setOverridesTick(t=>t+1);setEditMenuOpen(false)
-  }
+  const saveAsiaAgentEdit=async()=>{setSavingOverride(true);const ovr=JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'))||'{}');const en=parseInt(editForm.english)||0,sp=parseInt(editForm.spanish)||0;ovr[editingAgent.ext]={name:editingAgent.name,spanish:sp,english:en,total:en+sp};await persistOverride(selectedDate,OVERRIDE_KEY_AGENTS(selectedDate,'asia'),ovr);setEditingAgent(null);setOverridesTick(t=>t+1);setSavingOverride(false)}
+  const saveAsiaBulk=async()=>{setSavingOverride(true);const ovr=JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'))||'{}');Object.entries(bulkEdits).forEach(([ext,vals])=>{const ag=asiaAgents.find(a=>a.ext===ext);if(!ag)return;const en=parseInt(vals.english),sp=parseInt(vals.spanish);ovr[ext]={name:ag.name,spanish:isNaN(sp)?ag.spanish:sp,english:isNaN(en)?ag.english:en,total:(isNaN(en)?ag.english:en)+(isNaN(sp)?ag.spanish:sp)}});await persistOverride(selectedDate,OVERRIDE_KEY_AGENTS(selectedDate,'asia'),ovr);if(bulkTotalsEdit)await persistOverride(selectedDate,OVERRIDE_KEY_TOTALS(selectedDate,'asia'),{spanish:parseInt(bulkTotalsEdit.spanish)||0,english:parseInt(bulkTotalsEdit.english)||0});setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setOverridesTick(t=>t+1);setSavingOverride(false)}
+  const resetAsiaOverrides=async()=>{localStorage.removeItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'));localStorage.removeItem(OVERRIDE_KEY_TOTALS(selectedDate,'asia'));setBulkEdits({});setBulkTotalsEdit(null);setBulkEditMode(false);setOverridesTick(t=>t+1);setEditMenuOpen(false)}
 
-  // Slacks
-  const slackLabelForDate = (iso) => { const hd=HISTORY_DATES.find(d=>d.isoDate===iso);if(hd)return hd.slackLabel;const[y,m,d]=iso.split('-');return`${d}/${m}/${y}` }
-  const slackRowsForDate  = slacksData.filter(r=>r[0]?.trim()===slackLabelForDate(selectedDate))
-  const buildSlackAgents  = (rows) => {
-    const map={}
-    for(const row of rows){const agent=(row[1]||'').trim(),opener=(row[2]||'').trim(),call=(row[3]||'').trim();if(!agent)continue;if(!map[agent])map[agent]={agent,opener,reports:0,phones:[]};const phones=extractPhones(call);if(phones.length>0){map[agent].reports+=phones.length;phones.forEach(p=>{if(!map[agent].phones.includes(p))map[agent].phones.push(p)})}else if(call.trim()){map[agent].reports+=1;if(!map[agent].phones.includes(call.trim()))map[agent].phones.push(call.trim())}}
-    return Object.values(map).sort((a,b)=>b.reports-a.reports)
-  }
-  const slackAgentsForDate  = buildSlackAgents(slackRowsForDate)
-  const topAgent            = slackAgentsForDate[0]||null
-  const totalReportsForDate = slackAgentsForDate.reduce((s,a)=>s+a.reports,0)
+  const slackLabelForDate=(iso)=>{const hd=HISTORY_DATES.find(d=>d.isoDate===iso);if(hd)return hd.slackLabel;const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`}
+  const slackRowsForDate=slacksData.filter(r=>r[0]?.trim()===slackLabelForDate(selectedDate))
+  const buildSlackAgents=(rows)=>{const map={};for(const row of rows){const agent=(row[1]||'').trim(),opener=(row[2]||'').trim(),call=(row[3]||'').trim();if(!agent)continue;if(!map[agent])map[agent]={agent,opener,reports:0,phones:[]};const phones=extractPhones(call);if(phones.length>0){map[agent].reports+=phones.length;phones.forEach(p=>{if(!map[agent].phones.includes(p))map[agent].phones.push(p)})}else if(call.trim()){map[agent].reports+=1;if(!map[agent].phones.includes(call.trim()))map[agent].phones.push(call.trim())}};return Object.values(map).sort((a,b)=>b.reports-a.reports)}
+  const slackAgentsForDate=buildSlackAgents(slackRowsForDate)
+  const topAgent=slackAgentsForDate[0]||null
+  const totalReportsForDate=slackAgentsForDate.reduce((s,a)=>s+a.reports,0)
 
-  const isMyTeam = (name) => {
-    const n=name.toUpperCase()
-    return (team?.id==='asia'&&n.includes('ASIA'))||(team?.id==='philippines'&&n.includes('PHIL'))||(team?.id==='venezuela'&&n.includes('VENE'))||(team?.id==='colombia'&&n.includes('COLOM'))||(team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))
-  }
+  const isMyTeam=(name)=>{const n=name.toUpperCase();return(team?.id==='asia'&&n.includes('ASIA'))||(team?.id==='philippines'&&n.includes('PHIL'))||(team?.id==='venezuela'&&n.includes('VENE'))||(team?.id==='colombia'&&n.includes('COLOM'))||(team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))}
 
-  const dateTabs = (() => {
-    const dates=new Set();dates.add(todayKey());snapshots.forEach(s=>dates.add(s.date));HISTORY_DATES.forEach(d=>dates.add(d.isoDate))
-    return [...dates].sort((a,b)=>b.localeCompare(a))
-  })()
+  const dateTabs=(()=>{const dates=new Set();dates.add(todayKey());snapshots.forEach(s=>dates.add(s.date));HISTORY_DATES.forEach(d=>dates.add(d.isoDate));return[...dates].sort((a,b)=>b.localeCompare(a))})()
+  const showAsiaEditBtn=!isToday&&canEdit
+  const currentTeamConfig=TEAM_SHEETS.find(t=>t.id===activeTab)
 
-  const showAsiaEditBtn = !isToday && canEdit
-  const currentTeamConfig = TEAM_SHEETS.find(t=>t.id===activeTab)
-
-  return (
+  return(
     <div className="dash-root" onClick={()=>setEditMenuOpen(false)}>
       <canvas ref={canvasRef} className="dash-trail-canvas"/>
 
       <nav className="dash-nav">
         <div className="dash-nav-left">
-          <div className="nav-logo-wrap">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#f97316"/><polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </div>
+          <div className="nav-logo-wrap"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#f97316"/><polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
           <span className="nav-appname">Pulse</span>
         </div>
         <div className="dash-nav-right">
           <div className="nav-user" style={{cursor:'pointer'}} onClick={()=>navigate('/settings')}>
-            <div className="nav-avatar">
-              {userPhoto ? <img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/> : user?.name?.[0]?.toUpperCase()}
-            </div>
-            <div className="nav-info">
-              <span className="nav-name">{user?.name}</span>
-              <span className="nav-role">{team?.name} · {roleLabel}</span>
-            </div>
+            <div className="nav-avatar">{userPhoto?<img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>:user?.name?.[0]?.toUpperCase()}</div>
+            <div className="nav-info"><span className="nav-name">{user?.name}</span><span className="nav-role">{team?.name} · {roleLabel}</span></div>
           </div>
-          {user?.agentExt && <button className="nav-profile-btn" onClick={()=>navigate(`/profile/${user.agentExt}`)}>👤 #{user.agentExt}</button>}
-          {lastUpdate && <span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
+          {user?.agentExt&&<button className="nav-profile-btn" onClick={()=>navigate(`/profile/${user.agentExt}`)}>👤 #{user.agentExt}</button>}
+          {lastUpdate&&<span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
           <button className="nav-logout" onClick={logout}>Log out</button>
         </div>
       </nav>
@@ -909,35 +702,33 @@ export default function Dashboard() {
         <div className="dash-tabs-scroll">
           <button className={`dash-tab ${activeTab==='general'?'active':''}`}  onClick={()=>setActiveTab('general')}>All Teams</button>
           <button className={`dash-tab ${activeTab==='asia'?'active':''}`}      onClick={()=>setActiveTab('asia')}>🌏 Asia</button>
-          {TEAM_SHEETS.map(t=>(
-            <button key={t.id} className={`dash-tab ${activeTab===t.id?'active':''}`} onClick={()=>setActiveTab(t.id)}>{t.label}</button>
-          ))}
+          {TEAM_SHEETS.map(t=><button key={t.id} className={`dash-tab ${activeTab===t.id?'active':''}`} onClick={()=>setActiveTab(t.id)}>{t.label}</button>)}
         </div>
         <div className="dash-topbar-right">
-          {!isToday && activeSnap?.savedAt && <span className="date-snap-info">Snapshot {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
-          {isHistDate && <span className="date-snap-info">Historical</span>}
+          {!isToday&&activeSnap?.savedAt&&<span className="date-snap-info">Snapshot {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
+          {isHistDate&&<span className="date-snap-info">Historical</span>}
           <DatePicker dateTabs={dateTabs} selectedDate={selectedDate} onSelect={setSelectedDate}/>
         </div>
       </div>
 
       <div className="dash-content">
-        {loading ? (
+        {loading?(
           <div className="dash-loading"><div className="dash-spinner"/><p>Loading live data...</p></div>
 
-        ) : activeTab==='general' ? (
+        ):activeTab==='general'?(
           <div className="fade-in">
             <div className="vteams-header">
               <h2 className="section-title" style={{marginBottom:0}}>Auto Warranty Garrett {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}</h2>
               <span className="vteams-sub">{teamsSorted.length} teams · ranked by English xfers</span>
             </div>
-            {teamsSorted.length===0 ? <p style={{color:'#6b7280'}}>No data.</p> : (
+            {teamsSorted.length===0?<p style={{color:'#6b7280'}}>No data.</p>:(
               <div className="vteams-grid">
                 {teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0}/>)}
               </div>
             )}
           </div>
 
-        ) : activeTab==='asia' ? (
+        ):activeTab==='asia'?(
           <div className="fade-in">
             <div className="asia-header-row">
               <div style={{display:'flex',alignItems:'center',gap:12}}>
@@ -947,7 +738,7 @@ export default function Dashboard() {
                   {bulkEditMode&&<span style={{fontSize:11,background:'#f97316',color:'#fff',padding:'2px 8px',borderRadius:4,fontWeight:600}}>EDIT MODE</span>}
                   {hasAsiaOverrides&&!bulkEditMode&&<span style={{fontSize:11,background:'#1e2230',color:'#9ca3af',padding:'2px 8px',borderRadius:4,border:'0.5px solid #2a2d38'}}>✏️ edited</span>}
                 </h2>
-                {!isToday && canEdit && (
+                {!isToday&&canEdit&&(
                   <div style={{position:'relative'}} onClick={e=>e.stopPropagation()}>
                     <button className="asia-menu-btn" onClick={()=>setEditMenuOpen(o=>!o)}>···</button>
                     {editMenuOpen&&(
@@ -993,12 +784,12 @@ export default function Dashboard() {
               <>
                 {!bulkEditMode&&(
                   <div className="tops-row">
-                    <div className="top-block"><h3 className="top-title"><Img src={E.goal} size={16}/> Top English</h3>{top3English.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score english">{a.english}</span></div>))}</div>
-                    <div className="top-block"><h3 className="top-title"><Img src={E.goal} size={16}/> Top Spanish</h3>{top3Spanish.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score spanish">{a.spanish}</span></div>))}</div>
-                    <div className="top-block red-block"><h3 className="top-title"><Img src={E.zero} size={16}/> At Zero</h3>{atZero.length===0?<p className="top-empty"><Img src={E.firework} size={16}/> Everyone has transfers!</p>:atZero.slice(0,3).map((a,i)=>(<div key={i} className="top-item"><span className="top-name">{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score red">0</span></div>))}</div>
+                    <div className="top-block"><h3 className="top-title"><Img src={E.goal} size={16}/> Top English</h3>{top3English.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score english">{a.english}</span></div>))}</div>
+                    <div className="top-block"><h3 className="top-title"><Img src={E.goal} size={16}/> Top Spanish</h3>{top3Spanish.map((a,i)=>(<div key={i} className="top-item"><span className="top-medal"><Img src={MEDALS[i]} size={18}/></span><span className="top-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score spanish">{a.spanish}</span></div>))}</div>
+                    <div className="top-block red-block"><h3 className="top-title"><Img src={E.zero} size={16}/> At Zero</h3>{atZero.length===0?<p className="top-empty"><Img src={E.firework} size={16}/> Everyone has transfers!</p>:atZero.slice(0,3).map((a,i)=>(<div key={i} className="top-item"><span className="top-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score red">0</span></div>))}</div>
                   </div>
                 )}
-                {bulkEditMode&&<div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>✏️ Edit mode activo</span><span style={{fontSize:12,color:'#9ca3af'}}>— modifica los valores y usa "Save all changes" en el menú ···</span></div>}
+                {bulkEditMode&&<div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>✏️ Edit mode activo</span><span style={{fontSize:12,color:'#9ca3af'}}>— modifica y usa "Save all changes" en ···</span></div>}
                 <div className="agent-table-wrap">
                   <table className="agent-table">
                     <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th><th>Spanish</th><th>Total</th><th>Goal</th>{showAsiaEditBtn&&<th className="th-edit"></th>}</tr></thead>
@@ -1009,7 +800,9 @@ export default function Dashboard() {
                         const dEn=bulkEditMode&&beEn!==''?parseInt(beEn)||0:a.english
                         const dSp=bulkEditMode&&beSp!==''?parseInt(beSp)||0:a.spanish
                         return(<tr key={i} className={a.total===0?'row-zero':a.english>=goal?'row-goal':''}>
-                          <td style={rs}>#{i+1}</td><td className="agent-name">{a.name}</td><td className="agent-ext">{a.ext}</td>
+                          <td style={rs}>#{i+1}</td>
+                          <td className="agent-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</td>
+                          <td className="agent-ext">{a.ext}</td>
                           <td className="val-english">{bulkEditMode?<input type="number" className="bulk-edit-input" value={beEn!==''?beEn:a.english} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],english:e.target.value}}))}/>:a.english}</td>
                           <td className="val-spanish">{bulkEditMode?<input type="number" className="bulk-edit-input" value={beSp!==''?beSp:a.spanish} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],spanish:e.target.value}}))}/>:a.spanish}</td>
                           <td className="val-total">{dEn+dSp}</td>
@@ -1054,17 +847,7 @@ export default function Dashboard() {
                   :<><h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>Agent Summary — {formatDateLabel(selectedDate)}</h3>
                     <div className="agent-table-wrap"><table className="agent-table">
                       <thead><tr><th>#</th><th>Agent</th><th>ID Opener</th><th style={{textAlign:'center'}}>Reports</th><th>Calls</th></tr></thead>
-                      <tbody>{slackAgentsForDate.map((a,i)=>{
-                        const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
-                        const isExp=expandedAgent===a.agent
-                        return(<tr key={i}><td style={rs}>#{i+1}</td><td className="agent-name">{a.agent}</td><td className="agent-ext">{a.opener}</td>
-                          <td style={{textAlign:'center',color:'#f97316',fontWeight:700,fontSize:15}}>{a.reports}</td>
-                          <td><div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                            {(isExp?a.phones:a.phones.slice(0,3)).map((p,j)=>(<span key={j} className="phone-chip">{p}</span>))}
-                            {a.phones.length>3&&<button onClick={()=>setExpandedAgent(isExp?null:a.agent)} className="phone-more-btn">{isExp?'▲ less':`+${a.phones.length-3} more`}</button>}
-                          </div></td>
-                        </tr>)
-                      })}</tbody>
+                      <tbody>{slackAgentsForDate.map((a,i)=>{const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'};const isExp=expandedAgent===a.agent;return(<tr key={i}><td style={rs}>#{i+1}</td><td className="agent-name">{a.agent}</td><td className="agent-ext">{a.opener}</td><td style={{textAlign:'center',color:'#f97316',fontWeight:700,fontSize:15}}>{a.reports}</td><td><div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>{(isExp?a.phones:a.phones.slice(0,3)).map((p,j)=>(<span key={j} className="phone-chip">{p}</span>))}{a.phones.length>3&&<button onClick={()=>setExpandedAgent(isExp?null:a.agent)} className="phone-more-btn">{isExp?'▲ less':`+${a.phones.length-3} more`}</button>}</div></td></tr>)})}</tbody>
                     </table></div></>
                 }
               </div>
@@ -1087,21 +870,19 @@ export default function Dashboard() {
             )}
           </div>
 
-        ) : currentTeamConfig ? (
-          // ── Generic team tab ──
+        ):currentTeamConfig?(
           <TeamDetail
             key={activeTab}
             config={currentTeamConfig}
-            agents={parseTeamSheet(getTeamData(activeTab), currentTeamConfig.extStart, currentTeamConfig.hasSp).agents}
-            totals={parseTeamSheet(getTeamData(activeTab), currentTeamConfig.extStart, currentTeamConfig.hasSp).totals}
+            agents={parseTeamSheet(getTeamData(activeTab), currentTeamConfig).agents}
             dateLabel={formatDateLabel(selectedDate)}
             isToday={isToday}
             canEdit={canEdit}
             selectedDate={selectedDate}
             onOverrideTick={()=>setOverridesTick(t=>t+1)}
+            navigate={navigate}
           />
-
-        ) : null}
+        ):null}
       </div>
     </div>
   )

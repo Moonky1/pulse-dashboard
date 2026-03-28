@@ -484,3 +484,72 @@
   scrollbar-width: none;
 }
 .dash-tabs-scroll::-webkit-scrollbar { display: none; }
+
+/* ── Clickable agent names ── */
+.agent-link {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.agent-link:hover { color: #f97316 !important; text-decoration: underline; }
+
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  .dash-nav { padding: 0 1rem; height: 52px; }
+  .nav-update { display: none; }
+  .nav-name { font-size: 12px; }
+  .nav-role { font-size: 10px; }
+  .nav-profile-btn { display: none; }
+
+  .dash-topbar { padding: 0 0.5rem; flex-wrap: wrap; gap: 6px; }
+  .dash-tabs-scroll { gap: 0; }
+  .dash-tab { padding: 10px 12px; font-size: 12px; }
+
+  .dash-content { padding: 1rem; }
+
+  .section-title { font-size: 16px; }
+
+  /* Teams grid — 1 col on mobile */
+  .vteams-grid { grid-template-columns: 1fr; gap: 10px; }
+  .vteam-val { font-size: 18px; }
+
+  /* Summary grid — 2 cols on mobile */
+  .summary-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+  .sum-val { font-size: 24px; }
+  .sum-label { font-size: 10px; }
+
+  /* Tops row — 1 col on mobile */
+  .tops-row { grid-template-columns: 1fr !important; gap: 10px; }
+
+  /* Agent table — horizontal scroll */
+  .agent-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .agent-table { min-width: 480px; font-size: 12px; }
+  .agent-table th, .agent-table td { padding: 8px 10px; }
+  .agent-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Asia header */
+  .asia-header-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .asia-view-tabs { width: 100%; justify-content: flex-start; }
+
+  /* DatePicker dropdown */
+  .datepicker-dropdown { right: -20px; min-width: 280px; }
+  .dp-group-dates { grid-template-columns: repeat(3, 1fr); }
+
+  /* Charts */
+  .chart-goal-row { grid-template-columns: 1fr; gap: 8px; }
+  .bar-tooltip-h { min-width: 280px; left: 10px !important; transform: translateY(calc(-100% - 12px)) !important; }
+  .bar-tooltip-h-grid { grid-template-columns: repeat(2,1fr); }
+
+  /* Profile stats */
+  .vteams-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
+
+@media (max-width: 480px) {
+  .dash-tab { padding: 8px 8px; font-size: 11px; }
+  .summary-grid { grid-template-columns: repeat(2,1fr) !important; }
+  .sum-val { font-size: 20px; }
+  .agent-table { min-width: 380px; }
+  .nav-avatar { width: 28px; height: 28px; font-size: 12px; }
+}
