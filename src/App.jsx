@@ -1,24 +1,29 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Landing   from './pages/Landing'
-import Register  from './pages/Register'
+import Landing  from './pages/Landing'
+import Register from './pages/Register'
+import SignIn   from './pages/SignIn'
 import Dashboard from './pages/Dashboard'
-import Admin     from './pages/Admin'
-import SignIn from './pages/SignIn'
+import Admin    from './pages/Admin'
+import Profile  from './pages/Profile'
+import Settings from './pages/Settings'
 
-function App() {
-  const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
+const PrivateRoute = ({ children }) => {
+  const user = localStorage.getItem('pulse_user')
+  return user ? children : <Navigate to="/signin" replace/>
+}
 
+export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"          element={user ? <Navigate to="/dashboard" /> : <Landing />} />
-        <Route path="/register"  element={user ? <Navigate to="/dashboard" /> : <Register />} />
-        <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
-        <Route path="/admin"     element={<Admin />} />
-        <Route path="/signin" element={user ? <Navigate to="/dashboard" /> : <SignIn />} />  
+        <Route path="/"          element={<Landing />} />
+        <Route path="/register"  element={<Register />} />
+        <Route path="/signin"    element={<SignIn />} />
+        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/admin"     element={<PrivateRoute><Admin /></PrivateRoute>} />
+        <Route path="/settings"  element={<PrivateRoute><Settings /></PrivateRoute>} />
+        <Route path="/profile/:ext" element={<Profile />} />
       </Routes>
     </BrowserRouter>
   )
 }
-
-export default App

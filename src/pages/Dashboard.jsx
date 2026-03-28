@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { APP_CONFIG } from '../config'
 import './dashboard.css'
 
@@ -146,7 +147,7 @@ const formatDateFull = (dateStr) => {
   const today = todayKey()
   const yest = new Date(); yest.setDate(yest.getDate()-1)
   const yKey = yest.toISOString().slice(0,10)
-  if (dateStr===today) return '🟢 Today — LIVE'
+  if (dateStr===today) return 'Today — LIVE'
   if (dateStr===yKey)  return 'Yesterday'
   const [y,m,d] = dateStr.split('-')
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
@@ -193,8 +194,7 @@ function parsePhilSheet(rows) {
     if (cell0U.includes('AGENT') && cell0U.includes('LOGGED')) {
       const en = safeInt(row[2])
       totals = { english: en, total: en, activeAgents: agents.length }
-      foundTotal = true
-      break
+      foundTotal = true; break
     }
     const ext = safeInt(row[1])
     if (ext < 1000 || ext > 1999) continue
@@ -253,7 +253,7 @@ function BarChart({agents, metric}) {
   )
 }
 
-// ── Date Picker Component ──
+// ── Date Picker ──
 function DatePicker({ dateTabs, selectedDate, onSelect }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -267,7 +267,6 @@ function DatePicker({ dateTabs, selectedDate, onSelect }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // Group dates
   const groups = {}
   dateTabs.forEach(date => {
     const [y, m] = date.split('-')
@@ -278,20 +277,18 @@ function DatePicker({ dateTabs, selectedDate, onSelect }) {
     groups[monthKey].dates.push(date)
   })
 
-  const isHist = HISTORY_ISO_SET.has(selectedDate)
-  const isToday = selectedDate === today
-
   return (
     <div className="datepicker-wrap" ref={ref}>
       <button className="datepicker-btn" onClick={() => setOpen(o => !o)}>
         <span className="datepicker-icon">📅</span>
         <span className="datepicker-label">
-          {isToday ? <><span className="dp-live-dot"/>Today — LIVE</> : formatDateFull(selectedDate)}
+          {selectedDate === today
+            ? <><span className="dp-live-dot"/>Today — LIVE</>
+            : formatDateFull(selectedDate)}
         </span>
-        {isHist && <span className="dp-hist-badge">H</span>}
+        {HISTORY_ISO_SET.has(selectedDate) && <span className="dp-hist-badge">H</span>}
         <span className="datepicker-arrow">{open ? '▲' : '▼'}</span>
       </button>
-
       {open && (
         <div className="datepicker-dropdown" onClick={e => e.stopPropagation()}>
           {Object.entries(groups).map(([mk, group]) => (
@@ -307,11 +304,9 @@ function DatePicker({ dateTabs, selectedDate, onSelect }) {
                   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
                   const dayName = days[new Date(date).getDay()]
                   return (
-                    <button
-                      key={date}
+                    <button key={date}
                       className={`dp-date-btn ${isSel?'dp-selected':''} ${isT?'dp-today':''} ${isH?'dp-hist':''}`}
-                      onClick={() => { onSelect(date); setOpen(false) }}
-                    >
+                      onClick={() => { onSelect(date); setOpen(false) }}>
                       <span className="dp-dayname">{isT ? 'Today' : isY ? 'Yest.' : dayName}</span>
                       <span className="dp-daynum">{d}/{m}</span>
                       {isT && <span className="dp-live-pill">LIVE</span>}
@@ -338,19 +333,15 @@ const getFlag = (name) => {
 }
 
 const TEAM_ACCENT = {
-  PHILIPPINES: '#3b82f6',
-  VENEZUELA:   '#ef4444',
-  COLOMBIA:    '#f59e0b',
-  'MEXICO BAJA':'#10b981',
-  'CENTRAL AMERICA':'#8b5cf6',
-  ASIA:        '#f97316',
+  PHILIPPINES: '#3b82f6', VENEZUELA: '#ef4444', COLOMBIA: '#f59e0b',
+  'MEXICO BAJA':'#10b981', 'CENTRAL AMERICA':'#8b5cf6', ASIA:'#f97316',
 }
 
-// ── Visual Team Card ──
+// ── Visual Team Card — WITH IMAGE EMOJIS ──
 function TeamCard({ row, rank, isMyTeam, isFirst }) {
   const [hovered, setHovered] = useState(false)
   const accent = TEAM_ACCENT[row.name.toUpperCase()] || '#f97316'
-  const rankLabels = ['👑','🥈','🥉']
+  const rankEmojis = [E.goal1, E.goal3, E.goal4]
 
   return (
     <div
@@ -359,13 +350,11 @@ function TeamCard({ row, rank, isMyTeam, isFirst }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Glow layer */}
       <div className="vteam-glow" style={{ background: `radial-gradient(ellipse at 50% 0%, ${accent}40 0%, transparent 70%)` }}/>
-
-      {/* Top row */}
       <div className="vteam-top">
         <div className="vteam-rank">
-          {rank < 3 ? <span className="vteam-rank-emoji">{rankLabels[rank]}</span>
+          {rank < 3
+            ? <Img src={rankEmojis[rank]} size={28}/>
             : <span className="vteam-rank-num">#{rank+1}</span>}
         </div>
         <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="vteam-flag"/>
@@ -374,11 +363,7 @@ function TeamCard({ row, rank, isMyTeam, isFirst }) {
           <div className="vteam-agents">{row.agents} agents</div>
         </div>
       </div>
-
-      {/* Divider */}
       <div className="vteam-divider" style={{ background: `linear-gradient(90deg, transparent, ${accent}80, transparent)` }}/>
-
-      {/* Stats */}
       <div className="vteam-stats">
         <div className="vteam-stat">
           <span className="vteam-val" style={{color:'#60a5fa'}}>{row.english.toLocaleString()}</span>
@@ -395,8 +380,6 @@ function TeamCard({ row, rank, isMyTeam, isFirst }) {
           <span className="vteam-lbl">Total</span>
         </div>
       </div>
-
-      {/* Bottom accent bar */}
       <div className="vteam-bar" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)`, opacity: hovered || isFirst ? 1 : 0 }}/>
     </div>
   )
@@ -404,8 +387,10 @@ function TeamCard({ row, rank, isMyTeam, isFirst }) {
 
 export default function Dashboard() {
   const canvasRef = useRef(null)
-  const user = JSON.parse(localStorage.getItem('pulse_user')||'null')
-  const team = APP_CONFIG.teams.find(t => t.id===user?.team)
+  const navigate  = useNavigate()
+  const user      = JSON.parse(localStorage.getItem('pulse_user')||'null')
+  const userPhoto = localStorage.getItem('pulse_user_photo')
+  const team      = APP_CONFIG.teams.find(t => t.id===user?.team)
   const roleLabel = user?.role==='supervisor'?'Supervisor':user?.role==='qa'?'QA':user?.role==='leader'?'Team Leader':'Member'
 
   const [liveGeneral, setLiveGeneral]         = useState([])
@@ -555,8 +540,7 @@ export default function Dashboard() {
       const name=(row[0]||'').trim(), nameUp=name.toUpperCase()
       if (nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')) {
         const sp=safeInt(row[2]), en=safeInt(row[3])
-        totals={activeAgents:agents.length,spanish:sp,english:en,total:sp+en}
-        break
+        totals={activeAgents:agents.length,spanish:sp,english:en,total:sp+en}; break
       }
       if (nameUp.includes('REMOVED')||nameUp.includes('REMOVE')) break
       const ext=safeInt(row[1])
@@ -734,19 +718,27 @@ export default function Dashboard() {
           <span className="nav-appname">Pulse</span>
         </div>
         <div className="dash-nav-right">
-          <div className="nav-user">
-            <div className="nav-avatar">{user?.name?.[0]?.toUpperCase()}</div>
+          <div className="nav-user" style={{cursor:'pointer'}} onClick={()=>navigate('/settings')} title="Settings & Profile">
+            <div className="nav-avatar">
+              {userPhoto
+                ? <img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>
+                : user?.name?.[0]?.toUpperCase()}
+            </div>
             <div className="nav-info">
               <span className="nav-name">{user?.name}</span>
               <span className="nav-role">{team?.name} · {roleLabel}</span>
             </div>
           </div>
+          {user?.agentExt && (
+            <button className="nav-profile-btn" onClick={()=>navigate(`/profile/${user.agentExt}`)} title="My profile">
+              👤 #{user.agentExt}
+            </button>
+          )}
           {lastUpdate && <span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
           <button className="nav-logout" onClick={logout}>Log out</button>
         </div>
       </nav>
 
-      {/* Tabs + DatePicker row */}
       <div className="dash-topbar">
         <div className="dash-tabs">
           <button className={`dash-tab ${activeTab==='general'?'active':''}`}    onClick={()=>setActiveTab('general')}>All Teams</button>
@@ -754,9 +746,7 @@ export default function Dashboard() {
           <button className={`dash-tab ${activeTab==='philippines'?'active':''}`} onClick={()=>setActiveTab('philippines')}>🇵🇭 Philippines</button>
         </div>
         <div className="dash-topbar-right">
-          {!isToday && activeSnap?.savedAt && (
-            <span className="date-snap-info">Snapshot {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
-          )}
+          {!isToday && activeSnap?.savedAt && <span className="date-snap-info">Snapshot {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
           {isHistDate && <span className="date-snap-info">Historical{hasOverrides?' · ✏️':''}</span>}
           {!isToday && !isHistDate && hasOverrides && <span className="date-snap-info">✏️ edited</span>}
           <DatePicker dateTabs={dateTabs} selectedDate={selectedDate} onSelect={setSelectedDate}/>
@@ -1033,7 +1023,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-
       {philEditingAgent&&(
         <div className="edit-modal-overlay" onClick={()=>setPhilEditingAgent(null)}>
           <div className="edit-modal" onClick={e=>e.stopPropagation()}>

@@ -1,0 +1,350 @@
+import { useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import './profile.css'
+
+const SHEET_ID         = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
+const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
+
+const HISTORY_DATES = [
+  { isoDate:'2026-03-14', tab:'14032026' },
+  { isoDate:'2026-03-16', tab:'16032026' },
+  { isoDate:'2026-03-17', tab:'17032026' },
+  { isoDate:'2026-03-18', tab:'18032026' },
+  { isoDate:'2026-03-19', tab:'19032026' },
+  { isoDate:'2026-03-20', tab:'20032026' },
+  { isoDate:'2026-03-21', tab:'21032026' },
+  { isoDate:'2026-03-23', tab:'23032026' },
+]
+
+const csvUrl = (sheetId, sheet) =>
+  `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`
+
+function parseCSV(text) {
+  return text.trim().split('\n').map(row => {
+    const result = []; let current = ''; let inQuotes = false
+    for (let i = 0; i < row.length; i++) {
+      if (row[i]==='"'){inQuotes=!inQuotes;continue}
+      if (row[i]===','&&!inQuotes){result.push(current.trim());current='';continue}
+      current+=row[i]
+    }
+    result.push(current.trim()); return result
+  })
+}
+
+async function fetchSheet(sheetId, name) {
+  const res = await fetch(csvUrl(sheetId, name))
+  const text = await res.text()
+  return parseCSV(text)
+}
+
+const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
+
+function findAgentInRows(rows, ext, isPhil = false) {
+  for (const row of rows) {
+    const cellExt = safeInt(row[1])
+    if (String(cellExt) !== String(ext)) continue
+    const name = (row[0]||'').trim()
+    if (name.length <= 1) continue
+    const nameUp = name.toUpperCase()
+    if (nameUp.includes('AGENT')&&nameUp.includes('LOGGED')) continue
+    if (nameUp.includes('THIS HOUR')||nameUp.includes('SUPERVISOR')||nameUp.includes('USERS')) continue
+    if (isPhil) {
+      const en = safeInt(row[2])
+      return { name, ext: String(ext), english: en, spanish: 0, total: en }
+    } else {
+      const sp = safeInt(row[2]), en = safeInt(row[3])
+      return { name, ext: String(ext), english: en, spanish: sp, total: sp + en }
+    }
+  }
+  return null
+}
+
+// Rank agent on a date by comparing all agents
+function getRankOnDate(allRows, ext, isPhil) {
+  const agents = []
+  for (const row of allRows) {
+    const cellExt = safeInt(row[1])
+    if (cellExt < 1000 || cellExt > 9999) continue
+    const name = (row[0]||'').trim()
+    if (name.length <= 1) continue
+    const nameUp = name.toUpperCase()
+    if (nameUp.includes('AGENT')&&nameUp.includes('LOGGED')) break
+    if (nameUp.includes('THIS HOUR')||nameUp.includes('SUPERVISOR')||nameUp.includes('USERS')) continue
+    const en = isPhil ? safeInt(row[2]) : safeInt(row[3])
+    agents.push({ ext: String(cellExt), english: en })
+  }
+  agents.sort((a,b)=>b.english-a.english)
+  const idx = agents.findIndex(a=>a.ext===String(ext))
+  return idx >= 0 ? idx + 1 : null
+}
+
+async function loadAgentHistory(ext) {
+  const records = []
+  const isPhil = parseInt(ext) >= 1000 && parseInt(ext) <= 1999
+
+  // 1. From localStorage snapshots
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (!k?.startsWith('pulse_snap_')) continue
+    try {
+      const date = k.replace('pulse_snap_', '')
+      const data = JSON.parse(localStorage.getItem(k))
+      const sourceData = isPhil
+        ? (Array.isArray(data.philippinesData) ? data.philippinesData : [])
+        : (Array.isArray(data.asiaData) ? data.asiaData : [])
+      const agent = findAgentInRows(sourceData, ext, isPhil)
+      if (agent) {
+        const rank = getRankOnDate(sourceData, ext, isPhil)
+        records.push({ date, ...agent, rank, source: 'snapshot' })
+      }
+    } catch(e) {}
+  }
+
+  // 2. From history sheets (Asia only — Philippines has no history sheet)
+  if (!isPhil) {
+    for (const hd of HISTORY_DATES) {
+      if (records.find(r => r.date === hd.isoDate)) continue
+      try {
+        const rows = await fetchSheet(HISTORY_SHEET_ID, hd.tab)
+        const agent = findAgentInRows(rows, ext, false)
+        if (agent) {
+          const rank = getRankOnDate(rows, ext, false)
+          records.push({ date: hd.isoDate, ...agent, rank, source: 'history' })
+        }
+      } catch(e) {}
+    }
+  }
+
+  return records.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+const formatDate = (dateStr) => {
+  const [y,m,d] = dateStr.split('-')
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+  return `${days[new Date(dateStr).getDay()]} ${d}/${m}`
+}
+
+const MedalIcon = ({ rank }) => {
+  if (rank === 1) return <span style={{fontSize:18}}>🥇</span>
+  if (rank === 2) return <span style={{fontSize:18}}>🥈</span>
+  if (rank === 3) return <span style={{fontSize:18}}>🥉</span>
+  return <span style={{color:'#6b7280',fontSize:13}}>#{rank}</span>
+}
+
+export default function Profile() {
+  const { ext } = useParams()
+  const navigate = useNavigate()
+  const user     = JSON.parse(localStorage.getItem('pulse_user')||'null')
+  const userPhoto = localStorage.getItem('pulse_user_photo')
+  const isOwnProfile = String(user?.agentExt) === String(ext)
+
+  const [records, setRecords]     = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [agentName, setAgentName] = useState(`Agent #${ext}`)
+
+  useEffect(() => {
+    setLoading(true)
+    loadAgentHistory(ext).then(recs => {
+      setRecords(recs)
+      if (recs.length > 0) {
+        const named = recs.filter(r=>r.name&&r.name.length>1)
+        if (named.length > 0) setAgentName(named[named.length-1].name)
+      }
+      setLoading(false)
+    })
+  }, [ext])
+
+  const isPhil = parseInt(ext) >= 1000 && parseInt(ext) <= 1999
+  const teamName = isPhil ? 'Philippines' : 'Asia'
+  const teamFlag = isPhil ? 'ph' : 'cn'
+
+  const stats = (() => {
+    if (records.length === 0) return null
+    const withData = records.filter(r => r.total > 0)
+    if (withData.length === 0) return null
+    const totalEn  = records.reduce((s,r)=>s+r.english,0)
+    const totalSp  = records.reduce((s,r)=>s+r.spanish,0)
+    const avgEn    = Math.round(totalEn / records.length)
+    const bestDay  = [...withData].sort((a,b)=>b.english-a.english)[0]
+    const worstDay = [...withData].sort((a,b)=>a.english-b.english)[0]
+    const top3Days = records.filter(r=>r.rank&&r.rank<=3)
+    const top1Days = records.filter(r=>r.rank===1)
+    return { totalEn, totalSp, avgEn, bestDay, worstDay, activeDays:withData.length, zeroDays:records.length-withData.length, daysTracked:records.length, top3Days:top3Days.length, top1Days:top1Days.length }
+  })()
+
+  const maxEnglish = Math.max(...records.map(r=>r.english), 1)
+
+  return (
+    <div className="profile-root">
+      <nav className="profile-nav">
+        <div className="profile-nav-brand" onClick={()=>navigate('/dashboard')} style={{cursor:'pointer'}}>
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="9" fill="#f97316"/>
+            <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span>Pulse</span>
+        </div>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          {user && <button className="profile-nav-btn" onClick={()=>navigate('/dashboard')}>← Dashboard</button>}
+          {isOwnProfile && <button className="profile-nav-btn accent" onClick={()=>navigate('/settings')}>✏️ Edit Profile</button>}
+        </div>
+      </nav>
+
+      {loading ? (
+        <div className="profile-loading">
+          <div className="profile-spinner"/>
+          <p>Loading agent history...</p>
+        </div>
+      ) : (
+        <div className="profile-body">
+
+          {/* Header */}
+          <div className="profile-hero">
+            <div className="profile-avatar-ring">
+              {isOwnProfile && userPhoto
+                ? <img src={userPhoto} alt="" className="profile-avatar-photo"/>
+                : <div className="profile-avatar-letter">{agentName?.[0]?.toUpperCase()}</div>}
+            </div>
+            <div className="profile-hero-info">
+              <h1 className="profile-hero-name">{agentName}</h1>
+              <div className="profile-hero-meta">
+                <img src={`https://flagcdn.com/w20/${teamFlag}.png`} alt="" style={{borderRadius:2}}/>
+                <span>{teamName}</span>
+                <span className="profile-ext-tag">#{ext}</span>
+                {isOwnProfile && <span className="profile-own-tag">✓ Your profile</span>}
+              </div>
+              {records.length === 0 && <p style={{color:'#6b7280',marginTop:8,fontSize:13}}>No historical data found yet. Data appears as days are recorded.</p>}
+            </div>
+            <div className="profile-share">
+              <div className="profile-share-url">pulse-kk.com/profile/{ext}</div>
+              <button className="profile-share-btn" onClick={()=>{navigator.clipboard.writeText(`https://pulse-kk.com/profile/${ext}`);alert('Link copied!')}}>Copy Link</button>
+            </div>
+          </div>
+
+          {stats && (
+            <>
+              {/* Summary cards */}
+              <div className="profile-stats-row">
+                <div className="pstat blue">
+                  <div className="pstat-val">{stats.totalEn.toLocaleString()}</div>
+                  <div className="pstat-lbl">Total English Xfers</div>
+                </div>
+                {stats.totalSp > 0 && (
+                  <div className="pstat green">
+                    <div className="pstat-val">{stats.totalSp.toLocaleString()}</div>
+                    <div className="pstat-lbl">Total Spanish Xfers</div>
+                  </div>
+                )}
+                <div className="pstat orange">
+                  <div className="pstat-val">{stats.avgEn}</div>
+                  <div className="pstat-lbl">Avg English / Day</div>
+                </div>
+                <div className="pstat purple">
+                  <div className="pstat-val">{stats.activeDays}</div>
+                  <div className="pstat-lbl">Active Days</div>
+                </div>
+                <div className="pstat gold">
+                  <div className="pstat-val">{stats.top3Days}</div>
+                  <div className="pstat-lbl">Top 3 Appearances</div>
+                </div>
+                <div className="pstat teal">
+                  <div className="pstat-val">{stats.top1Days}</div>
+                  <div className="pstat-lbl">🥇 #1 Days</div>
+                </div>
+              </div>
+
+              {/* Highlights */}
+              <div className="profile-highlights">
+                <div className="phighlight">
+                  <div className="phighlight-left">
+                    <div className="phighlight-icon">🏆</div>
+                    <div>
+                      <div className="phighlight-title">Best Day</div>
+                      <div className="phighlight-date">{formatDate(stats.bestDay.date)}</div>
+                    </div>
+                  </div>
+                  <div className="phighlight-val" style={{color:'#34d399'}}>{stats.bestDay.english} EN</div>
+                </div>
+                <div className="phighlight">
+                  <div className="phighlight-left">
+                    <div className="phighlight-icon">📉</div>
+                    <div>
+                      <div className="phighlight-title">Lowest Active Day</div>
+                      <div className="phighlight-date">{formatDate(stats.worstDay.date)}</div>
+                    </div>
+                  </div>
+                  <div className="phighlight-val" style={{color:'#f87171'}}>{stats.worstDay.english} EN</div>
+                </div>
+                <div className="phighlight">
+                  <div className="phighlight-left">
+                    <div className="phighlight-icon">📅</div>
+                    <div>
+                      <div className="phighlight-title">Days Tracked</div>
+                      <div className="phighlight-date">{stats.zeroDays} zero days</div>
+                    </div>
+                  </div>
+                  <div className="phighlight-val" style={{color:'#60a5fa'}}>{stats.daysTracked}</div>
+                </div>
+              </div>
+
+              {/* Timeline chart */}
+              <div className="profile-section">
+                <h2 className="profile-section-title">📈 Performance Timeline</h2>
+                <div className="profile-chart">
+                  {records.map((r,i) => (
+                    <div key={i} className="ptl-col" title={`${formatDate(r.date)}: ${r.english} EN${r.rank?` · Rank #${r.rank}`:''}`}>
+                      <div className="ptl-bar-outer">
+                        <div className="ptl-bar" style={{
+                          height: `${(r.english / maxEnglish) * 100}%`,
+                          background: r.rank===1 ? '#fbbf24' : r.rank===2 ? '#9ca3af' : r.rank===3 ? '#cd7f32' : r.english >= (isPhil?10:20) ? '#34d399' : r.english > 0 ? '#60a5fa' : '#2a2d38'
+                        }}/>
+                      </div>
+                      <div className="ptl-rank">{r.rank && r.rank <= 3 ? <MedalIcon rank={r.rank}/> : null}</div>
+                      <div className="ptl-val" style={{color: r.english===stats.bestDay.english?'#34d399':r.english===0?'#4b5563':'#9ca3af'}}>{r.english > 0 ? r.english : '—'}</div>
+                      <div className="ptl-date">{formatDate(r.date)}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="ptl-legend">
+                  <span><span style={{color:'#fbbf24'}}>■</span> #1 day</span>
+                  <span><span style={{color:'#34d399'}}>■</span> Hit goal</span>
+                  <span><span style={{color:'#60a5fa'}}>■</span> Active</span>
+                  <span><span style={{color:'#2a2d38'}}>■</span> Zero</span>
+                </div>
+              </div>
+
+              {/* Day-by-day table */}
+              <div className="profile-section">
+                <h2 className="profile-section-title">📋 Daily Records</h2>
+                <div className="profile-table-wrap">
+                  <table className="profile-table">
+                    <thead><tr><th>Date</th><th>English</th>{!isPhil&&<th>Spanish</th>}<th>Total</th><th>Rank</th></tr></thead>
+                    <tbody>
+                      {[...records].reverse().map((r,i)=>(
+                        <tr key={i} className={r.rank===1?'ptr-gold':r.rank===2?'ptr-silver':r.rank===3?'ptr-bronze':r.total===0?'ptr-zero':''}>
+                          <td style={{color:'#9ca3af'}}>{formatDate(r.date)}</td>
+                          <td style={{color:'#60a5fa',fontWeight:600}}>{r.english}</td>
+                          {!isPhil&&<td style={{color:'#34d399',fontWeight:600}}>{r.spanish}</td>}
+                          <td style={{color:'#f97316',fontWeight:600}}>{r.total}</td>
+                          <td>{r.rank ? <MedalIcon rank={r.rank}/> : <span style={{color:'#4b5563'}}>—</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {records.length === 0 && (
+            <div className="profile-empty">
+              <div style={{fontSize:56,marginBottom:16}}>🔍</div>
+              <p style={{fontSize:18,fontWeight:700,color:'#e5e7eb'}}>No data found for #{ext}</p>
+              <p style={{color:'#6b7280',fontSize:13,marginTop:8}}>Data will appear as snapshots are recorded daily.</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

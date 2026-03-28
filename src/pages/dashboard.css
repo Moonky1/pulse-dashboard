@@ -469,3 +469,10 @@
 .btn-cancel:hover { background: #4b5563; }
 .btn-save { background: #f97316; color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: 700; }
 .btn-save:hover { background: #ea6c0a; }
+
+.nav-profile-btn {
+  padding:5px 12px; background:#1e2230; border:0.5px solid #2a2d38;
+  border-radius:8px; color:#9ca3af; font-size:12px; cursor:pointer;
+  transition:all .15s; white-space:nowrap;
+}
+.nav-profile-btn:hover { border-color:#f97316; color:#f97316; }
