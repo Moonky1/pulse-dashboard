@@ -161,3 +161,7 @@
 
 /* Empty state */
 .profile-empty { text-align:center; padding:4rem 2rem; color:#6b7280; }
+
+.profile-trail-canvas {
+  position: fixed; inset: 0; pointer-events: none; z-index: 999;
+}

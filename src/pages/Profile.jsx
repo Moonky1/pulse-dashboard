@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import './profile.css'
 
@@ -39,7 +39,28 @@ async function fetchSheet(sheetId, name) {
 
 const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
 
-function findAgentInRows(rows, ext, isPhil = false) {
+// Emoji images
+const E = {
+  medal1:'/emojis/medal1.webp',
+  medal2:'/emojis/medal2.webp',
+  medal3:'/emojis/web3.webp',
+  goal:  '/emojis/goal.webp',
+  zero:  '/emojis/zero.webp',
+  firework:'/emojis/firework.webp',
+  goal1: '/emojis/goal1.webp',
+}
+const Img = ({ src, size=20 }) => (
+  <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
+)
+
+const MedalImg = ({ rank }) => {
+  if (rank===1) return <Img src={E.medal1} size={22}/>
+  if (rank===2) return <Img src={E.medal2} size={22}/>
+  if (rank===3) return <Img src={E.medal3} size={22}/>
+  return <span style={{color:'#6b7280',fontSize:13}}>#{rank}</span>
+}
+
+function findAgentInRows(rows, ext, isPhil=false) {
   for (const row of rows) {
     const cellExt = safeInt(row[1])
     if (String(cellExt) !== String(ext)) continue
@@ -53,13 +74,12 @@ function findAgentInRows(rows, ext, isPhil = false) {
       return { name, ext: String(ext), english: en, spanish: 0, total: en }
     } else {
       const sp = safeInt(row[2]), en = safeInt(row[3])
-      return { name, ext: String(ext), english: en, spanish: sp, total: sp + en }
+      return { name, ext: String(ext), english: en, spanish: sp, total: sp+en }
     }
   }
   return null
 }
 
-// Rank agent on a date by comparing all agents
 function getRankOnDate(allRows, ext, isPhil) {
   const agents = []
   for (const row of allRows) {
@@ -75,19 +95,18 @@ function getRankOnDate(allRows, ext, isPhil) {
   }
   agents.sort((a,b)=>b.english-a.english)
   const idx = agents.findIndex(a=>a.ext===String(ext))
-  return idx >= 0 ? idx + 1 : null
+  return idx >= 0 ? idx+1 : null
 }
 
 async function loadAgentHistory(ext) {
   const records = []
   const isPhil = parseInt(ext) >= 1000 && parseInt(ext) <= 1999
 
-  // 1. From localStorage snapshots
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i)
     if (!k?.startsWith('pulse_snap_')) continue
     try {
-      const date = k.replace('pulse_snap_', '')
+      const date = k.replace('pulse_snap_','')
       const data = JSON.parse(localStorage.getItem(k))
       const sourceData = isPhil
         ? (Array.isArray(data.philippinesData) ? data.philippinesData : [])
@@ -95,12 +114,11 @@ async function loadAgentHistory(ext) {
       const agent = findAgentInRows(sourceData, ext, isPhil)
       if (agent) {
         const rank = getRankOnDate(sourceData, ext, isPhil)
-        records.push({ date, ...agent, rank, source: 'snapshot' })
+        records.push({ date, ...agent, rank, source:'snapshot' })
       }
     } catch(e) {}
   }
 
-  // 2. From history sheets (Asia only — Philippines has no history sheet)
   if (!isPhil) {
     for (const hd of HISTORY_DATES) {
       if (records.find(r => r.date === hd.isoDate)) continue
@@ -109,13 +127,13 @@ async function loadAgentHistory(ext) {
         const agent = findAgentInRows(rows, ext, false)
         if (agent) {
           const rank = getRankOnDate(rows, ext, false)
-          records.push({ date: hd.isoDate, ...agent, rank, source: 'history' })
+          records.push({ date: hd.isoDate, ...agent, rank, source:'history' })
         }
       } catch(e) {}
     }
   }
 
-  return records.sort((a, b) => a.date.localeCompare(b.date))
+  return records.sort((a,b) => a.date.localeCompare(b.date))
 }
 
 const formatDate = (dateStr) => {
@@ -124,23 +142,48 @@ const formatDate = (dateStr) => {
   return `${days[new Date(dateStr).getDay()]} ${d}/${m}`
 }
 
-const MedalIcon = ({ rank }) => {
-  if (rank === 1) return <span style={{fontSize:18}}>🥇</span>
-  if (rank === 2) return <span style={{fontSize:18}}>🥈</span>
-  if (rank === 3) return <span style={{fontSize:18}}>🥉</span>
-  return <span style={{color:'#6b7280',fontSize:13}}>#{rank}</span>
-}
-
 export default function Profile() {
-  const { ext } = useParams()
-  const navigate = useNavigate()
-  const user     = JSON.parse(localStorage.getItem('pulse_user')||'null')
-  const userPhoto = localStorage.getItem('pulse_user_photo')
+  const { ext }    = useParams()
+  const navigate   = useNavigate()
+  const canvasRef  = useRef(null)
+  const user       = JSON.parse(localStorage.getItem('pulse_user')||'null')
+  const userPhoto  = localStorage.getItem('pulse_user_photo')
   const isOwnProfile = String(user?.agentExt) === String(ext)
 
   const [records, setRecords]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [agentName, setAgentName] = useState(`Agent #${ext}`)
+
+  // Particles
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight
+    const particles = []
+    const onMove = (e) => {
+      for (let i=0;i<3;i++) particles.push({
+        x:e.clientX+(Math.random()-.5)*20, y:e.clientY+(Math.random()-.5)*20,
+        size:Math.random()*3+1, life:1, vx:(Math.random()-.5)*1.5, vy:(Math.random()-.5)*1.5-.5,
+      })
+    }
+    window.addEventListener('mousemove',onMove)
+    let raf
+    const draw = () => {
+      ctx.clearRect(0,0,canvas.width,canvas.height)
+      for (let i=particles.length-1;i>=0;i--) {
+        const p=particles[i]; p.life-=.03; p.x+=p.vx; p.y+=p.vy
+        if(p.life<=0){particles.splice(i,1);continue}
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2)
+        ctx.fillStyle=`rgba(249,115,22,${p.life*.5})`; ctx.fill()
+      }
+      raf=requestAnimationFrame(draw)
+    }
+    draw()
+    const onResize=()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+    window.addEventListener('resize',onResize)
+    return ()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('resize',onResize);cancelAnimationFrame(raf)}
+  },[])
 
   useEffect(() => {
     setLoading(true)
@@ -173,9 +216,12 @@ export default function Profile() {
   })()
 
   const maxEnglish = Math.max(...records.map(r=>r.english), 1)
+  const goalLine   = isPhil ? 10 : 20
 
   return (
     <div className="profile-root">
+      <canvas ref={canvasRef} className="profile-trail-canvas"/>
+
       <nav className="profile-nav">
         <div className="profile-nav-brand" onClick={()=>navigate('/dashboard')} style={{cursor:'pointer'}}>
           <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
@@ -198,7 +244,7 @@ export default function Profile() {
       ) : (
         <div className="profile-body">
 
-          {/* Header */}
+          {/* Hero */}
           <div className="profile-hero">
             <div className="profile-avatar-ring">
               {isOwnProfile && userPhoto
@@ -213,7 +259,7 @@ export default function Profile() {
                 <span className="profile-ext-tag">#{ext}</span>
                 {isOwnProfile && <span className="profile-own-tag">✓ Your profile</span>}
               </div>
-              {records.length === 0 && <p style={{color:'#6b7280',marginTop:8,fontSize:13}}>No historical data found yet. Data appears as days are recorded.</p>}
+              {records.length === 0 && <p style={{color:'#6b7280',marginTop:8,fontSize:13}}>No historical data found yet.</p>}
             </div>
             <div className="profile-share">
               <div className="profile-share-url">pulse-kk.com/profile/{ext}</div>
@@ -244,12 +290,16 @@ export default function Profile() {
                   <div className="pstat-lbl">Active Days</div>
                 </div>
                 <div className="pstat gold">
-                  <div className="pstat-val">{stats.top3Days}</div>
+                  <div className="pstat-val" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                    <Img src={E.goal1} size={28}/>{stats.top3Days}
+                  </div>
                   <div className="pstat-lbl">Top 3 Appearances</div>
                 </div>
                 <div className="pstat teal">
-                  <div className="pstat-val">{stats.top1Days}</div>
-                  <div className="pstat-lbl">🥇 #1 Days</div>
+                  <div className="pstat-val" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                    <Img src={E.medal1} size={26}/>{stats.top1Days}
+                  </div>
+                  <div className="pstat-lbl">#1 Days</div>
                 </div>
               </div>
 
@@ -257,7 +307,7 @@ export default function Profile() {
               <div className="profile-highlights">
                 <div className="phighlight">
                   <div className="phighlight-left">
-                    <div className="phighlight-icon">🏆</div>
+                    <Img src={E.goal} size={28}/>
                     <div>
                       <div className="phighlight-title">Best Day</div>
                       <div className="phighlight-date">{formatDate(stats.bestDay.date)}</div>
@@ -267,7 +317,7 @@ export default function Profile() {
                 </div>
                 <div className="phighlight">
                   <div className="phighlight-left">
-                    <div className="phighlight-icon">📉</div>
+                    <Img src={E.zero} size={28}/>
                     <div>
                       <div className="phighlight-title">Lowest Active Day</div>
                       <div className="phighlight-date">{formatDate(stats.worstDay.date)}</div>
@@ -277,7 +327,7 @@ export default function Profile() {
                 </div>
                 <div className="phighlight">
                   <div className="phighlight-left">
-                    <div className="phighlight-icon">📅</div>
+                    <span style={{fontSize:26}}>📅</span>
                     <div>
                       <div className="phighlight-title">Days Tracked</div>
                       <div className="phighlight-date">{stats.zeroDays} zero days</div>
@@ -287,7 +337,7 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Timeline chart */}
+              {/* Timeline */}
               <div className="profile-section">
                 <h2 className="profile-section-title">📈 Performance Timeline</h2>
                 <div className="profile-chart">
@@ -295,25 +345,27 @@ export default function Profile() {
                     <div key={i} className="ptl-col" title={`${formatDate(r.date)}: ${r.english} EN${r.rank?` · Rank #${r.rank}`:''}`}>
                       <div className="ptl-bar-outer">
                         <div className="ptl-bar" style={{
-                          height: `${(r.english / maxEnglish) * 100}%`,
-                          background: r.rank===1 ? '#fbbf24' : r.rank===2 ? '#9ca3af' : r.rank===3 ? '#cd7f32' : r.english >= (isPhil?10:20) ? '#34d399' : r.english > 0 ? '#60a5fa' : '#2a2d38'
+                          height:`${(r.english/maxEnglish)*100}%`,
+                          background: r.rank===1 ? '#fbbf24' : r.rank===2 ? '#9ca3af' : r.rank===3 ? '#cd7f32' : r.english>=goalLine ? '#34d399' : r.english>0 ? '#60a5fa' : '#2a2d38'
                         }}/>
                       </div>
-                      <div className="ptl-rank">{r.rank && r.rank <= 3 ? <MedalIcon rank={r.rank}/> : null}</div>
-                      <div className="ptl-val" style={{color: r.english===stats.bestDay.english?'#34d399':r.english===0?'#4b5563':'#9ca3af'}}>{r.english > 0 ? r.english : '—'}</div>
+                      <div className="ptl-rank">
+                        {r.rank && r.rank<=3 ? <MedalImg rank={r.rank}/> : null}
+                      </div>
+                      <div className="ptl-val" style={{color:r.english===stats.bestDay.english?'#34d399':r.english===0?'#4b5563':'#9ca3af'}}>{r.english>0?r.english:'—'}</div>
                       <div className="ptl-date">{formatDate(r.date)}</div>
                     </div>
                   ))}
                 </div>
                 <div className="ptl-legend">
-                  <span><span style={{color:'#fbbf24'}}>■</span> #1 day</span>
+                  <span><Img src={E.medal1} size={14}/> #1 day</span>
                   <span><span style={{color:'#34d399'}}>■</span> Hit goal</span>
                   <span><span style={{color:'#60a5fa'}}>■</span> Active</span>
-                  <span><span style={{color:'#2a2d38'}}>■</span> Zero</span>
+                  <span><span style={{color:'#2a2d38',border:'1px solid #3a3d48',display:'inline-block',width:10,height:10}}/> Zero</span>
                 </div>
               </div>
 
-              {/* Day-by-day table */}
+              {/* Daily table */}
               <div className="profile-section">
                 <h2 className="profile-section-title">📋 Daily Records</h2>
                 <div className="profile-table-wrap">
@@ -326,7 +378,7 @@ export default function Profile() {
                           <td style={{color:'#60a5fa',fontWeight:600}}>{r.english}</td>
                           {!isPhil&&<td style={{color:'#34d399',fontWeight:600}}>{r.spanish}</td>}
                           <td style={{color:'#f97316',fontWeight:600}}>{r.total}</td>
-                          <td>{r.rank ? <MedalIcon rank={r.rank}/> : <span style={{color:'#4b5563'}}>—</span>}</td>
+                          <td>{r.rank ? <MedalImg rank={r.rank}/> : <span style={{color:'#4b5563'}}>—</span>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -336,10 +388,10 @@ export default function Profile() {
             </>
           )}
 
-          {records.length === 0 && (
+          {records.length===0 && (
             <div className="profile-empty">
-              <div style={{fontSize:56,marginBottom:16}}>🔍</div>
-              <p style={{fontSize:18,fontWeight:700,color:'#e5e7eb'}}>No data found for #{ext}</p>
+              <Img src={E.zero} size={56}/>
+              <p style={{fontSize:18,fontWeight:700,color:'#e5e7eb',marginTop:16}}>No data found for #{ext}</p>
               <p style={{color:'#6b7280',fontSize:13,marginTop:8}}>Data will appear as snapshots are recorded daily.</p>
             </div>
           )}

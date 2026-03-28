@@ -701,7 +701,8 @@ export default function Dashboard() {
     return [...dates].sort((a,b)=>b.localeCompare(a))
   })()
 
-  const showEditBtn = !isToday
+  const canEdit = ['supervisor','qa','leader'].includes(user?.role)
+  const showEditBtn = !isToday && canEdit && canEdit
 
   return (
     <div className="dash-root" onClick={()=>{setEditMenuOpen(false);setPhilEditMenuOpen(false)}}>
@@ -785,7 +786,7 @@ export default function Dashboard() {
                   {bulkEditMode && <span style={{fontSize:11,background:'#f97316',color:'#fff',padding:'2px 8px',borderRadius:4,fontWeight:600}}>EDIT MODE</span>}
                   {hasOverrides && !bulkEditMode && <span style={{fontSize:11,background:'#1e2230',color:'#9ca3af',padding:'2px 8px',borderRadius:4,border:'0.5px solid #2a2d38'}}>✏️ edited</span>}
                 </h2>
-                {!isToday && (
+                {!isToday && canEdit && (
                   <div style={{position:'relative'}} onClick={e=>e.stopPropagation()}>
                     <button className="asia-menu-btn" onClick={()=>setEditMenuOpen(o=>!o)}>···</button>
                     {editMenuOpen && (
@@ -921,7 +922,7 @@ export default function Dashboard() {
                   {philBulkEditMode && <span style={{fontSize:11,background:'#f97316',color:'#fff',padding:'2px 8px',borderRadius:4,fontWeight:600}}>EDIT MODE</span>}
                   {philHasOverrides && !philBulkEditMode && <span style={{fontSize:11,background:'#1e2230',color:'#9ca3af',padding:'2px 8px',borderRadius:4,border:'0.5px solid #2a2d38'}}>✏️ edited</span>}
                 </h2>
-                {!isToday && (
+                {!isToday && canEdit && (
                   <div style={{position:'relative'}} onClick={e=>e.stopPropagation()}>
                     <button className="asia-menu-btn" onClick={()=>setPhilEditMenuOpen(o=>!o)}>···</button>
                     {philEditMenuOpen && (
