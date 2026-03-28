@@ -59,7 +59,7 @@ const extractPhones = (cell) => {
   return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length >= 7)
 }
 
-// ── Generic team sheet parser — uses explicit colEn/colSp ──
+// ── Generic team sheet parser — bullet-proof version ──
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
@@ -67,39 +67,57 @@ function parseTeamSheet(rows, config) {
 
   const agents = []
   let totals = { english:0, spanish:0, total:0, activeAgents:0 }
+  let foundTotal = false
 
   for (let i = 0; i < rows.length; i++) {
-    const row    = rows[i]
+    const row   = rows[i]
     if (!Array.isArray(row)) continue
-    const cell0  = (row[0]||'').trim()
+    const cell0 = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase()
 
-    // Stop at agents-logged row (handles: "74 AGENTS LOGGED", "83 Agents Logged in", "AGENTS LOG IN")
-    const isLoggedRow = (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN')))
-    if (isLoggedRow) {
+    // Detect totals row — "34 AGENTS LOGGED", "83 Agents Logged in", "AGENTS LOG IN", "TOTAL TRANSFERS"
+    if (
+      (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN'))) ||
+      (cell0U.includes('TOTAL') && cell0U.includes('TRANSFER'))
+    ) {
+      // Use colEn/colSp from config for totals row
       const en = safeInt(row[colEn])
-      const sp = (hasSp && colSp!=null) ? safeInt(row[colSp]) : 0
+      const sp = (hasSp && colSp != null) ? safeInt(row[colSp]) : 0
       totals = { english:en, spanish:sp, total:en+sp, activeAgents:agents.length }
+      foundTotal = true
       break
     }
 
-    const extNum = safeInt((row[1]||'').toString().replace(/,/g,'').trim())
-    if (extNum < 1000 || extNum > 9999) continue
-    if (!String(extNum).startsWith(extStart)) continue
+    // Skip known header/meta rows
     if (cell0.length <= 1) continue
-    // Skip header-like rows
-    if (cell0U.includes('USER') || cell0U.includes('SUPERVISOR') || cell0U.includes('MANAGER') || cell0U.includes('ARWIN')) continue
+    if (cell0U === 'USERS' || cell0U === 'AGENT NAME' || cell0U === 'COUNTRIES:') continue
+    if (cell0U.includes('SUPERVISOR') || cell0U.includes('MANAGER') || cell0U === 'ARWIN') continue
+    if (cell0U.includes('EXTENSION') || cell0U.includes('TRANSFER') || cell0U.includes('CAMPAIGN')) continue
+    if (cell0U.includes('PER AGENT') || cell0U.includes('HOURLY') || cell0U.includes('HOUR GOAL')) continue
+    if (cell0U.includes('BREAK') || cell0U.includes('PACIFIC') || cell0U.includes('DAILY')) continue
+    if (cell0U.includes('PHILIPPINES') || cell0U.includes('COLOMBIA') || cell0U.includes('VENEZUELA')) continue
+    if (cell0U.includes('CENTRAL') || cell0U.includes('MEXICO') || cell0U.includes('THIS HOUR')) continue
 
+    // Look for extension: must be in col 1 (B) — 4-digit starting with extStart
+    const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
+    const extNum = parseInt(rawExt)
+    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
+    if (!rawExt.startsWith(extStart)) continue
+
+    // Valid agent row — use explicit column config
     const en = safeInt(row[colEn])
-    const sp = (hasSp && colSp!=null) ? safeInt(row[colSp]) : 0
+    const sp = (hasSp && colSp != null) ? safeInt(row[colSp]) : 0
     agents.push({ name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp })
   }
 
-  if (agents.length > 0 && totals.activeAgents === 0) {
+  // If no totals row found, sum from agents
+  if (!foundTotal && agents.length > 0) {
     const en = agents.reduce((s,a)=>s+a.english,0)
     const sp = agents.reduce((s,a)=>s+a.spanish,0)
     totals = { english:en, spanish:sp, total:en+sp, activeAgents:agents.length }
   }
+
+  console.log(`${config.label}: ${agents.length} agents, ${totals.english} EN`)
   return { agents, totals }
 }
 
@@ -598,6 +616,10 @@ export default function Dashboard() {
       TEAM_SHEETS.forEach((t,i)=>{
         if(results[i].status==='fulfilled'){
           newTeams[t.id]=results[i].value
+          // Debug: log first 6 rows of Philippines
+          if(t.id==='philippines'){
+            console.log('PH raw rows 0-6:', results[i].value.slice(0,6).map(r=>JSON.stringify(r)).join('\n'))
+          }
           const {agents}=parseTeamSheet(results[i].value, t)
           agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}))
           console.log(`✓ ${t.label}: ${agents.length} agents`)
