@@ -59,7 +59,7 @@ const extractPhones = (cell) => {
   return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length >= 7)
 }
 
-// ── Generic team sheet parser — bullet-proof version ──
+// ── Generic team sheet parser — minimal filtering ──
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
@@ -70,17 +70,17 @@ function parseTeamSheet(rows, config) {
   let foundTotal = false
 
   for (let i = 0; i < rows.length; i++) {
-    const row   = rows[i]
+    const row    = rows[i]
     if (!Array.isArray(row)) continue
-    const cell0 = (row[0]||'').toString().trim()
+
+    const cell0  = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase()
 
-    // Detect totals row — "34 AGENTS LOGGED", "83 Agents Logged in", "AGENTS LOG IN", "TOTAL TRANSFERS"
+    // Totals row
     if (
       (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN'))) ||
       (cell0U.includes('TOTAL') && cell0U.includes('TRANSFER'))
     ) {
-      // Use colEn/colSp from config for totals row
       const en = safeInt(row[colEn])
       const sp = (hasSp && colSp != null) ? safeInt(row[colSp]) : 0
       totals = { english:en, spanish:sp, total:en+sp, activeAgents:agents.length }
@@ -88,29 +88,18 @@ function parseTeamSheet(rows, config) {
       break
     }
 
-    // Skip known header/meta rows
-    if (cell0.length <= 1) continue
-    if (cell0U === 'USERS' || cell0U === 'AGENT NAME' || cell0U === 'COUNTRIES:') continue
-    if (cell0U.includes('SUPERVISOR') || cell0U.includes('MANAGER') || cell0U === 'ARWIN') continue
-    if (cell0U.includes('EXTENSION') || cell0U.includes('TRANSFER') || cell0U.includes('CAMPAIGN')) continue
-    if (cell0U.includes('PER AGENT') || cell0U.includes('HOURLY') || cell0U.includes('HOUR GOAL')) continue
-    if (cell0U.includes('BREAK') || cell0U.includes('PACIFIC') || cell0U.includes('DAILY')) continue
-    if (cell0U.includes('PHILIPPINES') || cell0U.includes('COLOMBIA') || cell0U.includes('VENEZUELA')) continue
-    if (cell0U.includes('CENTRAL') || cell0U.includes('MEXICO') || cell0U.includes('THIS HOUR')) continue
-
-    // Look for extension: must be in col 1 (B) — 4-digit starting with extStart
+    // The ONLY thing we check: col B must be a 4-digit ext starting with extStart
     const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (!rawExt.startsWith(extStart)) continue
+    if (cell0.length < 2) continue
 
-    // Valid agent row — use explicit column config
     const en = safeInt(row[colEn])
     const sp = (hasSp && colSp != null) ? safeInt(row[colSp]) : 0
     agents.push({ name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp })
   }
 
-  // If no totals row found, sum from agents
   if (!foundTotal && agents.length > 0) {
     const en = agents.reduce((s,a)=>s+a.english,0)
     const sp = agents.reduce((s,a)=>s+a.spanish,0)
