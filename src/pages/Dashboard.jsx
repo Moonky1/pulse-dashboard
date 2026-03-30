@@ -266,7 +266,7 @@ const SAT_GOALS = {
 }
 const getGoalForDate = (dateStr, baseGoal, teamId='asia') => {
   try {
-    const day = new Date(dateStr + 'T12:00:00').getDay() // 0=Sun, 6=Sat
+    const day = new Date(dateStr + 'T12:00:00').getDay()
     if (day !== 6) return baseGoal
     return SAT_GOALS[teamId] ?? 10
   } catch(e) { return baseGoal }
@@ -364,7 +364,7 @@ function DatePicker({dateTabs,selectedDate,onSelect}) {
   useEffect(()=>{const h=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false)};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h)},[])
   const groups={}
   dateTabs.forEach(date=>{const[y,m]=date.split('-');const mk=`${y}-${m}`;const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const label=`${mn[parseInt(m)-1]} ${y}`;if(!groups[mk])groups[mk]={label,dates:[]};groups[mk].dates.push(date)})
-  const formatFull=(d)=>{if(d===today)return'Today — LIVE';if(d===yKey)return'Yesterday';const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(d).getDay()]} ${dd}/${m}/${y}`}
+  const formatFull=(d)=>{if(d===today)return'Today — LIVE';if(d===yKey)return'Yesterday';const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(d+'T12:00:00').getDay()]} ${dd}/${m}/${y}`}
   return(
     <div className="datepicker-wrap" ref={ref}>
       <button className="datepicker-btn" onClick={()=>setOpen(o=>!o)}>
@@ -381,7 +381,7 @@ function DatePicker({dateTabs,selectedDate,onSelect}) {
               <div className="dp-group-dates">
                 {group.dates.map(date=>{
                   const isT=date===today,isY=date===yKey,isH=HISTORY_ISO_SET.has(date),isSel=date===selectedDate
-                  const[y,m,d]=date.split('-'); const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; const dn=days[new Date(date).getDay()]
+                  const[y,m,d]=date.split('-'); const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; const dn=days[new Date(date+'T12:00:00').getDay()]
                   return(<button key={date} className={`dp-date-btn ${isSel?'dp-selected':''} ${isT?'dp-today':''} ${isH?'dp-hist':''}`} onClick={()=>{onSelect(date);setOpen(false)}}>
                     <span className="dp-dayname">{isT?'Today':isY?'Yest.':dn}</span>
                     <span className="dp-daynum">{d}/{m}</span>
