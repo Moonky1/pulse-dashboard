@@ -26,7 +26,7 @@ const HISTORY_ISO_SET = new Set(HISTORY_DATES.map(d => d.isoDate))
 // Colombia/Central/Venezuela: has openers → A=name, B=ext, C=openers, D=english, E=spanish
 // Mexico: has openers, no spanish → A=name, B=ext, C=openers, D=english
 const TEAM_SHEETS = [
-  { id:'philippines', label:'🇵🇭 Philippines', sheetName:'AW GARRET PHILIPPINES',               extStart:'1', hasSp:false, goal:10, flag:'ph', colEn:2, colSp:null, protected:false },
+  { id:'philippines', label:'🇵🇭 Philippines', sheetName:'AW GARRET PHILIPPINES',               extStart:'1', hasSp:false, goal:10, flag:'ph', colEn:2, colSp:null, protected:true  },
   { id:'colombia',    label:'🇨🇴 Colombia',    sheetName:'AW GARRET COLOMBIA JUAN GARCIA',       extStart:'2', hasSp:true,  goal:10, flag:'co', colEn:3, colSp:4,    protected:false },
   { id:'central',     label:'🌎 Central',      sheetName:'AW GARRET CENTRAL AMERICA - CAROLINA', extStart:'4', hasSp:true,  goal:10, flag:'hn', colEn:3, colSp:4,    protected:false },
   { id:'mexico',      label:'🇲🇽 Mexico',      sheetName:'AW GARRET BAJA MX KEVIN',              extStart:'5', hasSp:false, goal:10, flag:'mx', colEn:3, colSp:null, protected:false },
@@ -74,13 +74,14 @@ function parseTeamSheet(rows, config) {
   if (!rows || !Array.isArray(rows) || rows.length === 0)
     return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
 
-  const agentMap = {} // keyed by ext — merges main + OT
+  const agentMap = {}
   let mainTotals = null
   let otTotals   = null
   let inOT       = false
-  let otColEn    = -1
-  let otColSp    = -1
-  let otColExt   = 1
+  // OT columns — default to same as main until headers say otherwise
+  let otColEn  = colEn
+  let otColSp  = colSp != null ? colSp : -1
+  let otHeaderFound = false
 
   for (let i = 0; i < rows.length; i++) {
     const row    = rows[i]
@@ -88,34 +89,36 @@ function parseTeamSheet(rows, config) {
     const cell0  = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase()
 
-    // ── Detect OT section start ──
-    // Matches: "MEXICO OT", "COLOMBIA OT", "CENTRAL OT", "ASIA OT", "OT AW GARRET..."
+    // ── Detect OT section header ──
     if (!inOT && (
-      (cell0U.includes(' OT') && cell0U.length < 30) ||
+      (cell0U.includes(' OT') && cell0U.length < 40) ||
       (cell0U.startsWith('OT ') && cell0U.length < 40)
     )) {
       inOT = true
-      // Reset column detection for OT
-      otColEn = -1; otColSp = -1; otColExt = 1
+      otColEn = colEn   // reset to config defaults
+      otColSp = colSp != null ? colSp : -1
+      otHeaderFound = false
       continue
     }
 
-    // ── OT section header row — detect columns ──
-    if (inOT && otColEn < 0) {
+    // ── Try to detect OT column headers (first few rows after OT start) ──
+    if (inOT && !otHeaderFound) {
       const headers = row.map(c => (c||'').toString().toUpperCase())
-      // Find english/total column
-      const enIdx  = headers.findIndex(h => h.includes('ENGLISH') || h.includes('TOTAL XFER') || h === 'TOTAL')
-      const spIdx  = headers.findIndex(h => h.includes('SPANISH'))
-      const extIdx = headers.findIndex(h => h.includes('USER') || h.includes('EXTENSION') || h.includes('EXT'))
-      if (enIdx >= 0) {
-        otColEn  = enIdx
-        otColSp  = spIdx >= 0 ? spIdx : -1
-        otColExt = extIdx >= 0 ? extIdx : 1
+      const enIdx = headers.findIndex(h =>
+        h.includes('ENGLISH') || h === 'TRANSFER' || h.includes('TOTAL XFER') || h === 'TOTAL'
+      )
+      const spIdx = headers.findIndex(h => h.includes('SPANISH'))
+      if (enIdx >= 0 && enIdx !== 1) { // col 1 is usually ext, so skip
+        otColEn = enIdx
+        otColSp = spIdx >= 0 ? spIdx : -1
+        otHeaderFound = true
       }
-      continue
+      // If row has no ext-like value in col 1, it's a header — skip
+      const extCheck = parseInt((row[1]||'').toString().replace(/,/g,'').trim())
+      if (isNaN(extCheck) || extCheck < 1000 || extCheck > 9999) continue
     }
 
-    // ── Totals/logged row ──
+    // ── Totals / logged row ──
     const isLoggedRow =
       (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN'))) ||
       (cell0U.includes('TOTAL') && cell0U.includes('TRANSFER'))
@@ -123,36 +126,30 @@ function parseTeamSheet(rows, config) {
     if (isLoggedRow) {
       if (!inOT) {
         const en = safeInt(row[colEn])
-        const sp = (hasSp && colSp != null) ? safeInt(row[colSp]) : 0
-        mainTotals = { english:en, spanish:sp, total:en+sp }
+        const sp = colSp != null ? safeInt(row[colSp]) : 0
+        mainTotals = { english:en, spanish:sp }
       } else {
-        const ec = otColEn >= 0 ? otColEn : colEn
-        const sc = (hasSp && otColSp >= 0) ? otColSp : (hasSp && colSp != null ? colSp : -1)
-        const en = safeInt(row[ec])
-        const sp = sc >= 0 ? safeInt(row[sc]) : 0
-        otTotals = { english:en, spanish:sp, total:en+sp }
+        const en = safeInt(row[otColEn])
+        const sp = otColSp >= 0 ? safeInt(row[otColSp]) : 0
+        otTotals = { english:en, spanish:sp }
       }
-      if (inOT) continue // don't break — may be more OT sections
-      else continue
+      continue
     }
 
     if (cell0.length < 2) continue
 
-    // ── Parse agent row ──
-    const ecol   = inOT && otColEn >= 0  ? otColEn  : colEn
-    const scol   = inOT && otColSp >= 0  ? otColSp  : (colSp != null ? colSp : -1)
-    const extcol = inOT ? otColExt : 1
-
-    const rawExt = (row[extcol]||'').toString().replace(/,/g,'').trim()
+    // ── Agent row — ext must be in col B (index 1) ──
+    const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (!rawExt.startsWith(extStart)) continue
 
-    const en = safeInt(row[ecol])
-    const sp = scol >= 0 ? safeInt(row[scol]) : 0
+    const ec = inOT ? otColEn : colEn
+    const sc = inOT ? otColSp : (colSp != null ? colSp : -1)
+    const en = safeInt(row[ec])
+    const sp = sc >= 0 ? safeInt(row[sc]) : 0
 
     if (agentMap[extNum]) {
-      // Merge: add OT numbers to existing agent
       agentMap[extNum].english += en
       agentMap[extNum].spanish += sp
       agentMap[extNum].total    = agentMap[extNum].english + agentMap[extNum].spanish
@@ -162,28 +159,11 @@ function parseTeamSheet(rows, config) {
   }
 
   const agents = Object.values(agentMap)
+  const en = agents.reduce((s,a)=>s+a.english,0)
+  const sp = agents.reduce((s,a)=>s+a.spanish,0)
+  const totals = { english:en, spanish:sp, total:en+sp, activeAgents:agents.length }
 
-  // Build totals: prefer sheet total row, fallback to sum
-  const mainEn = mainTotals?.english ?? agents.reduce((s,a)=>s+a.english,0)
-  const mainSp = mainTotals?.spanish ?? agents.reduce((s,a)=>s+a.spanish,0)
-  const otEn   = otTotals?.english   ?? 0
-  const otSp   = otTotals?.spanish   ?? 0
-
-  const totals = {
-    english:      mainEn + (otTotals ? otEn : 0),
-    spanish:      mainSp + (otTotals ? otSp : 0),
-    total:        mainEn + mainSp + (otTotals ? otEn + otSp : 0),
-    activeAgents: agents.length
-  }
-
-  // If we have merged OT into agents already, just sum from agents
-  if (otTotals) {
-    const en = agents.reduce((s,a)=>s+a.english,0)
-    const sp = agents.reduce((s,a)=>s+a.spanish,0)
-    totals.english = en; totals.spanish = sp; totals.total = en+sp
-  }
-
-  console.log(`${config.label}: ${agents.length} agents, ${totals.english} EN${otTotals?` (includes OT)`:''}`)
+  console.log(`${config.label}: ${agents.length} agents, ${totals.english} EN${otTotals?' (OT included)':''}`)
   return { agents, totals }
 }
 
