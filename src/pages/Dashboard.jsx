@@ -6,7 +6,7 @@ import './dashboard.css'
 const SHEET_ID         = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const USERS_SHEET_ID   = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
-const SCRIPT_URL       = 'https://script.google.com/macros/s/AKfycbwmiLdRPyx6IU65p8nW7A3lEncOBr74XIsP-9nsRkxZe2-GF6sqZgvfeS82EK_cTnve/exec'
+const SCRIPT_URL       = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 
 const HISTORY_DATES = [
   { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026' },
@@ -26,11 +26,11 @@ const HISTORY_ISO_SET = new Set(HISTORY_DATES.map(d => d.isoDate))
 // Colombia/Central/Venezuela: has openers → A=name, B=ext, C=openers, D=english, E=spanish
 // Mexico: has openers, no spanish → A=name, B=ext, C=openers, D=english
 const TEAM_SHEETS = [
-  { id:'philippines', label:'🇵🇭 Philippines', sheetName:'AW GARRET PHILIPPINES',               extStart:'1', hasSp:false, goal:10, flag:'ph', colEn:2, colSp:null, protected:true  },
+  { id:'philippines', label:'🇵🇭 Philippines', sheetName:'AW GARRET PHILIPPINES ',               extStart:'1', hasSp:false, goal:10, flag:'ph', colEn:2, colSp:null, protected:true  },
   { id:'colombia',    label:'🇨🇴 Colombia',    sheetName:'AW GARRET COLOMBIA JUAN GARCIA',       extStart:'2', hasSp:true,  goal:10, flag:'co', colEn:3, colSp:4,    protected:false },
   { id:'central',     label:'🌎 Central',      sheetName:'AW GARRET CENTRAL AMERICA - CAROLINA', extStart:'4', hasSp:true,  goal:10, flag:'hn', colEn:3, colSp:4,    protected:false },
   { id:'mexico',      label:'🇲🇽 Mexico',      sheetName:'AW GARRET BAJA MX KEVIN',              extStart:'5', hasSp:false, goal:10, flag:'mx', colEn:3, colSp:null, protected:false },
-  { id:'venezuela',   label:'🇻🇪 Venezuela',   sheetName:'AW GARRET VENEZUELA PATRICIA',         extStart:'6', hasSp:true,  goal:10, flag:'ve', colEn:3, colSp:4,    protected:true  },
+  { id:'venezuela',   label:'🇻🇪 Venezuela',   sheetName:'AW GARRET VENEZUELA PATRICIA ',         extStart:'6', hasSp:true,  goal:10, flag:'ve', colEn:3, colSp:4,    protected:true  },
 ]
 
 const csvUrl = (sheetId, sheet) =>
@@ -104,16 +104,15 @@ function parseTeamSheet(rows, config) {
     // ── Try to detect OT column headers (first few rows after OT start) ──
     if (inOT && !otHeaderFound) {
       const headers = row.map(c => (c||'').toString().toUpperCase())
-      const enIdx = headers.findIndex(h =>
-        h.includes('ENGLISH') || h === 'TRANSFER' || h.includes('TOTAL XFER') || h === 'TOTAL'
-      )
+      const enIdx = headers.findIndex(h => h.includes('ENGLISH'))
       const spIdx = headers.findIndex(h => h.includes('SPANISH'))
-      if (enIdx >= 0 && enIdx !== 1) { // col 1 is usually ext, so skip
+      if (enIdx >= 0) {
         otColEn = enIdx
         otColSp = spIdx >= 0 ? spIdx : -1
         otHeaderFound = true
+        continue // this was a header row, skip to next
       }
-      // If row has no ext-like value in col 1, it's a header — skip
+      // Not a header row — skip if no valid ext in col 1
       const extCheck = parseInt((row[1]||'').toString().replace(/,/g,'').trim())
       if (isNaN(extCheck) || extCheck < 1000 || extCheck > 9999) continue
     }
@@ -742,20 +741,25 @@ export default function Dashboard() {
   const {asiaAgents,asiaTotals}=(()=>{
     if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals}
     const agentMap={}; let mainTotals=null; let otTotals=null; let inOT=false
-    let otColEn=3, otColSp=2
+    let otColEn=3, otColSp=2, otHeaderFound=false
     for(const row of asiaDataRaw){
       const name=(row[0]||'').trim(), nameUp=name.toUpperCase()
-      // Detect OT section
-      if(!inOT && ((nameUp.includes(' OT') && name.length < 30)||(nameUp.startsWith('OT ') && name.length < 40))){
-        inOT=true; continue
+      // Detect OT section — "OT TAKERS", "ASIA OT", "OT AW GARRET..."
+      if(!inOT && (nameUp.startsWith('OT ') || nameUp.endsWith(' OT') || nameUp.includes(' OT '))){
+        inOT=true; otHeaderFound=false; otColEn=3; otColSp=2; continue
       }
-      // Detect OT header row
-      if(inOT && otColEn===3){
+      // Detect OT header row — look for ENGLISH/SPANISH keywords, don't require valid ext
+      if(inOT && !otHeaderFound){
         const headers=row.map(c=>(c||'').toString().toUpperCase())
-        const enIdx=headers.findIndex(h=>h.includes('ENGLISH')||h.includes('TOTAL XFER'))
+        const enIdx=headers.findIndex(h=>h.includes('ENGLISH'))
         const spIdx=headers.findIndex(h=>h.includes('SPANISH'))
-        if(enIdx>=0){otColEn=enIdx; otColSp=spIdx>=0?spIdx:-1}
-        continue
+        if(enIdx>=0){
+          otColEn=enIdx; otColSp=spIdx>=0?spIdx:-1; otHeaderFound=true
+          continue
+        }
+        // If no keywords found, skip non-agent rows
+        const extCheck=safeInt((row[1]||'').toString().replace(/,/g,'').trim())
+        if(extCheck<1000||extCheck>9999) continue
       }
       // Totals row
       if(nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')||nameUp.includes('AGENT LOG IN')||(nameUp.includes('TOTAL')&&nameUp.includes('TRANSFER'))){
@@ -764,9 +768,9 @@ export default function Dashboard() {
         else otTotals={spanish:sp,english:en,total:sp+en}
         continue
       }
-      if(nameUp.includes('REMOVED'))continue
+      if(nameUp.includes('REMOVED')||nameUp.includes('MANAGEMENT')||nameUp.includes('LEXNER'))continue
       if(name.length<=1)continue
-      const ecol=inOT?otColEn:3, scol=inOT?otColSp:2
+      const ecol=inOT?otColEn:3, scol=inOT?(otColSp>=0?otColSp:-1):2
       const ext=safeInt(row[1]); if(isNaN(ext)||ext<1000||ext>9999)continue
       const en=safeInt(row[ecol]), sp=scol>=0?safeInt(row[scol]):0
       if(agentMap[ext]){agentMap[ext].english+=en;agentMap[ext].spanish+=sp;agentMap[ext].total=agentMap[ext].english+agentMap[ext].spanish}
