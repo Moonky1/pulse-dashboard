@@ -68,54 +68,122 @@ const extractPhones = (cell) => {
   return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length >= 7)
 }
 
-// ── Generic team sheet parser — minimal filtering ──
+// ── Generic team sheet parser — reads main + OT sections ──
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
     return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
 
-  const agents = []
-  let totals = { english:0, spanish:0, total:0, activeAgents:0 }
-  let foundTotal = false
+  const agentMap = {} // keyed by ext — merges main + OT
+  let mainTotals = null
+  let otTotals   = null
+  let inOT       = false
+  let otColEn    = -1
+  let otColSp    = -1
+  let otColExt   = 1
 
   for (let i = 0; i < rows.length; i++) {
     const row    = rows[i]
     if (!Array.isArray(row)) continue
-
     const cell0  = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase()
 
-    // Totals row
-    if (
-      (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN'))) ||
-      (cell0U.includes('TOTAL') && cell0U.includes('TRANSFER'))
-    ) {
-      const en = safeInt(row[colEn])
-      const sp = (hasSp && colSp != null) ? safeInt(row[colSp]) : 0
-      totals = { english:en, spanish:sp, total:en+sp, activeAgents:agents.length }
-      foundTotal = true
-      break
+    // ── Detect OT section start ──
+    // Matches: "MEXICO OT", "COLOMBIA OT", "CENTRAL OT", "ASIA OT", "OT AW GARRET..."
+    if (!inOT && (
+      (cell0U.includes(' OT') && cell0U.length < 30) ||
+      (cell0U.startsWith('OT ') && cell0U.length < 40)
+    )) {
+      inOT = true
+      // Reset column detection for OT
+      otColEn = -1; otColSp = -1; otColExt = 1
+      continue
     }
 
-    // The ONLY thing we check: col B must be a 4-digit ext starting with extStart
-    const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
+    // ── OT section header row — detect columns ──
+    if (inOT && otColEn < 0) {
+      const headers = row.map(c => (c||'').toString().toUpperCase())
+      // Find english/total column
+      const enIdx  = headers.findIndex(h => h.includes('ENGLISH') || h.includes('TOTAL XFER') || h === 'TOTAL')
+      const spIdx  = headers.findIndex(h => h.includes('SPANISH'))
+      const extIdx = headers.findIndex(h => h.includes('USER') || h.includes('EXTENSION') || h.includes('EXT'))
+      if (enIdx >= 0) {
+        otColEn  = enIdx
+        otColSp  = spIdx >= 0 ? spIdx : -1
+        otColExt = extIdx >= 0 ? extIdx : 1
+      }
+      continue
+    }
+
+    // ── Totals/logged row ──
+    const isLoggedRow =
+      (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN'))) ||
+      (cell0U.includes('TOTAL') && cell0U.includes('TRANSFER'))
+
+    if (isLoggedRow) {
+      if (!inOT) {
+        const en = safeInt(row[colEn])
+        const sp = (hasSp && colSp != null) ? safeInt(row[colSp]) : 0
+        mainTotals = { english:en, spanish:sp, total:en+sp }
+      } else {
+        const ec = otColEn >= 0 ? otColEn : colEn
+        const sc = (hasSp && otColSp >= 0) ? otColSp : (hasSp && colSp != null ? colSp : -1)
+        const en = safeInt(row[ec])
+        const sp = sc >= 0 ? safeInt(row[sc]) : 0
+        otTotals = { english:en, spanish:sp, total:en+sp }
+      }
+      if (inOT) continue // don't break — may be more OT sections
+      else continue
+    }
+
+    if (cell0.length < 2) continue
+
+    // ── Parse agent row ──
+    const ecol   = inOT && otColEn >= 0  ? otColEn  : colEn
+    const scol   = inOT && otColSp >= 0  ? otColSp  : (colSp != null ? colSp : -1)
+    const extcol = inOT ? otColExt : 1
+
+    const rawExt = (row[extcol]||'').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (!rawExt.startsWith(extStart)) continue
-    if (cell0.length < 2) continue
 
-    const en = safeInt(row[colEn])
-    const sp = (hasSp && colSp != null) ? safeInt(row[colSp]) : 0
-    agents.push({ name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp })
+    const en = safeInt(row[ecol])
+    const sp = scol >= 0 ? safeInt(row[scol]) : 0
+
+    if (agentMap[extNum]) {
+      // Merge: add OT numbers to existing agent
+      agentMap[extNum].english += en
+      agentMap[extNum].spanish += sp
+      agentMap[extNum].total    = agentMap[extNum].english + agentMap[extNum].spanish
+    } else {
+      agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
+    }
   }
 
-  if (!foundTotal && agents.length > 0) {
+  const agents = Object.values(agentMap)
+
+  // Build totals: prefer sheet total row, fallback to sum
+  const mainEn = mainTotals?.english ?? agents.reduce((s,a)=>s+a.english,0)
+  const mainSp = mainTotals?.spanish ?? agents.reduce((s,a)=>s+a.spanish,0)
+  const otEn   = otTotals?.english   ?? 0
+  const otSp   = otTotals?.spanish   ?? 0
+
+  const totals = {
+    english:      mainEn + (otTotals ? otEn : 0),
+    spanish:      mainSp + (otTotals ? otSp : 0),
+    total:        mainEn + mainSp + (otTotals ? otEn + otSp : 0),
+    activeAgents: agents.length
+  }
+
+  // If we have merged OT into agents already, just sum from agents
+  if (otTotals) {
     const en = agents.reduce((s,a)=>s+a.english,0)
     const sp = agents.reduce((s,a)=>s+a.spanish,0)
-    totals = { english:en, spanish:sp, total:en+sp, activeAgents:agents.length }
+    totals.english = en; totals.spanish = sp; totals.total = en+sp
   }
 
-  console.log(`${config.label}: ${agents.length} agents, ${totals.english} EN`)
+  console.log(`${config.label}: ${agents.length} agents, ${totals.english} EN${otTotals?` (includes OT)`:''}`)
   return { agents, totals }
 }
 
@@ -693,14 +761,40 @@ export default function Dashboard() {
 
   const {asiaAgents,asiaTotals}=(()=>{
     if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals}
-    const agents=[];let totals={spanish:0,english:0,total:0,activeAgents:0}
+    const agentMap={}; let mainTotals=null; let otTotals=null; let inOT=false
+    let otColEn=3, otColSp=2
     for(const row of asiaDataRaw){
-      const name=(row[0]||'').trim(),nameUp=name.toUpperCase()
-      if(nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')){const sp=safeInt(row[2]),en=safeInt(row[3]);totals={activeAgents:agents.length,spanish:sp,english:en,total:sp+en};break}
-      if(nameUp.includes('REMOVED'))break
-      const ext=safeInt(row[1]);if(isNaN(ext)||ext<1000||ext>9999||name.length<=1)continue
-      agents.push({name,ext:String(ext),spanish:safeInt(row[2]),english:safeInt(row[3]),total:safeInt(row[2])+safeInt(row[3])})
+      const name=(row[0]||'').trim(), nameUp=name.toUpperCase()
+      // Detect OT section
+      if(!inOT && ((nameUp.includes(' OT') && name.length < 30)||(nameUp.startsWith('OT ') && name.length < 40))){
+        inOT=true; continue
+      }
+      // Detect OT header row
+      if(inOT && otColEn===3){
+        const headers=row.map(c=>(c||'').toString().toUpperCase())
+        const enIdx=headers.findIndex(h=>h.includes('ENGLISH')||h.includes('TOTAL XFER'))
+        const spIdx=headers.findIndex(h=>h.includes('SPANISH'))
+        if(enIdx>=0){otColEn=enIdx; otColSp=spIdx>=0?spIdx:-1}
+        continue
+      }
+      // Totals row
+      if(nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')||nameUp.includes('AGENT LOG IN')||(nameUp.includes('TOTAL')&&nameUp.includes('TRANSFER'))){
+        const sp=safeInt(row[inOT?otColSp:2]),en=safeInt(row[inOT?otColEn:3])
+        if(!inOT)mainTotals={spanish:sp,english:en,total:sp+en}
+        else otTotals={spanish:sp,english:en,total:sp+en}
+        continue
+      }
+      if(nameUp.includes('REMOVED'))continue
+      if(name.length<=1)continue
+      const ecol=inOT?otColEn:3, scol=inOT?otColSp:2
+      const ext=safeInt(row[1]); if(isNaN(ext)||ext<1000||ext>9999)continue
+      const en=safeInt(row[ecol]), sp=scol>=0?safeInt(row[scol]):0
+      if(agentMap[ext]){agentMap[ext].english+=en;agentMap[ext].spanish+=sp;agentMap[ext].total=agentMap[ext].english+agentMap[ext].spanish}
+      else agentMap[ext]={name,ext:String(ext),spanish:sp,english:en,total:sp+en}
     }
+    const agents=Object.values(agentMap)
+    const en=agents.reduce((s,a)=>s+a.english,0), sp=agents.reduce((s,a)=>s+a.spanish,0)
+    const totals={spanish:sp,english:en,total:en+sp,activeAgents:agents.length}
     return{asiaAgents:agents,asiaTotals:totals}
   })()
 
