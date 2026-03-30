@@ -74,14 +74,11 @@ function parseTeamSheet(rows, config) {
   if (!rows || !Array.isArray(rows) || rows.length === 0)
     return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
 
-  const agentMap = {}
-  let mainTotals = null
-  let otTotals   = null
-  let inOT       = false
-  // OT columns — default to same as main until headers say otherwise
-  let otColEn  = colEn
-  let otColSp  = colSp != null ? colSp : -1
-  let otHeaderFound = false
+  const agentMap   = {}
+  let inOT         = false
+  let otHeaderDone = false
+  let otColEn      = colEn
+  let otColSp      = colSp != null ? colSp : -1
 
   for (let i = 0; i < rows.length; i++) {
     const row    = rows[i]
@@ -89,55 +86,53 @@ function parseTeamSheet(rows, config) {
     const cell0  = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase()
 
-    // ── Detect OT section header ──
-    if (!inOT && (
-      (cell0U.includes(' OT') && cell0U.length < 40) ||
-      (cell0U.startsWith('OT ') && cell0U.length < 40)
-    )) {
+    // ── Detect OT section ──
+    // Matches: "PHILIPPINES OT", "OT AW GARRET VENEZUELA", "MEXICO OT", etc.
+    if (
+      !inOT && cell0.length > 0 &&
+      (cell0U.startsWith('OT ') || cell0U.endsWith(' OT') || cell0U.includes(' OT '))
+    ) {
       inOT = true
-      otColEn = colEn   // reset to config defaults
+      otHeaderDone = false
+      otColEn = colEn      // reset to defaults
       otColSp = colSp != null ? colSp : -1
-      otHeaderFound = false
       continue
     }
 
-    // ── Try to detect OT column headers (first few rows after OT start) ──
-    if (inOT && !otHeaderFound) {
-      const headers = row.map(c => (c||'').toString().toUpperCase())
-      const enIdx = headers.findIndex(h => h.includes('ENGLISH'))
-      const spIdx = headers.findIndex(h => h.includes('SPANISH'))
-      if (enIdx >= 0) {
-        otColEn = enIdx
-        otColSp = spIdx >= 0 ? spIdx : -1
-        otHeaderFound = true
-        continue // this was a header row, skip to next
+    // ── OT header row detection ──
+    if (inOT && !otHeaderDone) {
+      const headers = row.map(c => (c||'').toString().toUpperCase().trim())
+      const enIdx   = headers.findIndex(h => h === 'ENGLISH' || h === 'TRANSFER')
+      const spIdx   = headers.findIndex(h => h === 'SPANISH')
+      if (enIdx > 1) {
+        // Found explicit headers — use them
+        otColEn      = enIdx
+        otColSp      = spIdx > 0 ? spIdx : -1
+        otHeaderDone = true
+        continue
       }
-      // Not a header row — skip if no valid ext in col 1
-      const extCheck = parseInt((row[1]||'').toString().replace(/,/g,'').trim())
-      if (isNaN(extCheck) || extCheck < 1000 || extCheck > 9999) continue
+      // No explicit headers — skip non-agent rows
+      const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
+      const extChk = parseInt(rawExt)
+      if (isNaN(extChk) || extChk < 1000 || extChk > 9999) continue
+      otHeaderDone = true // treat as already in agent rows
     }
 
-    // ── Totals / logged row ──
-    const isLoggedRow =
+    // ── Totals row — don't break, just skip (may have OT after) ──
+    const isTotal =
       (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN'))) ||
-      (cell0U.includes('TOTAL') && cell0U.includes('TRANSFER'))
+      (cell0U.includes('TOTAL') && cell0U.includes('TRANSFER')) ||
+      cell0U.includes('THIS HOUR') || cell0U.includes('THIS OUR') || cell0U.includes('HOURLY GOAL')
+    if (isTotal) continue
 
-    if (isLoggedRow) {
-      if (!inOT) {
-        const en = safeInt(row[colEn])
-        const sp = colSp != null ? safeInt(row[colSp]) : 0
-        mainTotals = { english:en, spanish:sp }
-      } else {
-        const en = safeInt(row[otColEn])
-        const sp = otColSp >= 0 ? safeInt(row[otColSp]) : 0
-        otTotals = { english:en, spanish:sp }
-      }
-      continue
-    }
-
+    // ── Skip header/meta rows ──
     if (cell0.length < 2) continue
+    if (cell0U === 'USERS' || cell0U === 'USER' || cell0U === 'AGENT NAME') continue
+    if (cell0U.includes('SUPERVISOR') || cell0U.includes('MANAGER')) continue
+    if (cell0U.includes('EXTENSION') || cell0U === 'ARWIN') continue
+    if (cell0U.includes('PER AGENT') || cell0U.includes('CAMPAIGN')) continue
 
-    // ── Agent row — ext must be in col B (index 1) ──
+    // ── Agent row: col B must be 4-digit ext ──
     const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
@@ -158,11 +153,11 @@ function parseTeamSheet(rows, config) {
   }
 
   const agents = Object.values(agentMap)
-  const en = agents.reduce((s,a)=>s+a.english,0)
-  const sp = agents.reduce((s,a)=>s+a.spanish,0)
+  const en = agents.reduce((s,a) => s+a.english, 0)
+  const sp = agents.reduce((s,a) => s+a.spanish, 0)
   const totals = { english:en, spanish:sp, total:en+sp, activeAgents:agents.length }
 
-  console.log(`${config.label}: ${agents.length} agents, ${totals.english} EN${otTotals?' (OT included)':''}`)
+  console.log(`${config.label}: ${agents.length} agents, ${en} EN${inOT?' (OT merged)':''}`)
   return { agents, totals }
 }
 
@@ -762,10 +757,12 @@ export default function Dashboard() {
         if(extCheck<1000||extCheck>9999) continue
       }
       // Totals row
-      if(nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')||nameUp.includes('AGENT LOG IN')||(nameUp.includes('TOTAL')&&nameUp.includes('TRANSFER'))){
-        const sp=safeInt(row[inOT?otColSp:2]),en=safeInt(row[inOT?otColEn:3])
-        if(!inOT)mainTotals={spanish:sp,english:en,total:sp+en}
-        else otTotals={spanish:sp,english:en,total:sp+en}
+      // Totals/logged row — never break, always continue so OT section gets parsed
+      if(
+        nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')||nameUp.includes('AGENT LOG IN')||
+        (nameUp.includes('TOTAL')&&nameUp.includes('TRANSFER'))||
+        nameUp.includes('THIS HOUR')||nameUp.includes('THIS OUR')||nameUp.includes('HOURLY GOAL')
+      ){
         continue
       }
       if(nameUp.includes('REMOVED')||nameUp.includes('MANAGEMENT')||nameUp.includes('LEXNER'))continue
