@@ -26,7 +26,9 @@ function parseCSV(text) {
     result.push(current.trim()); return result
   })
 }
-async function fetchSheet(sheetId,name){const res=await fetch(csvUrl(sheetId,name));const text=await res.text();return parseCSV(text)}
+async function fetchSheet(sheetId,name){
+  const res=await fetch(csvUrl(sheetId,name)); const text=await res.text(); return parseCSV(text)
+}
 const safeInt=(val)=>parseInt((val||'').toString().replace(/,/g,''))||0
 
 async function loadUserPhotoFromSheets(userName) {
@@ -34,7 +36,7 @@ async function loadUserPhotoFromSheets(userName) {
     const url  = `${SCRIPT_URL}?action=getUserPhoto&userName=${encodeURIComponent(userName)}`
     const res  = await fetch(url)
     const data = await res.json()
-    if (data.photo) {
+    if (data.photo && data.photo.length > 10) {
       localStorage.setItem('pulse_user_photo', data.photo)
       return data.photo
     }
@@ -47,18 +49,43 @@ const E = {
   goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp', zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
 }
 const Img=({src,size=20})=><img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
-const MedalImg=({rank})=>{if(rank===1)return<Img src={E.medal1} size={22}/>;if(rank===2)return<Img src={E.medal2} size={22}/>;if(rank===3)return<Img src={E.medal3} size={22}/>;return<span style={{color:'#6b7280',fontSize:12}}>#{rank}</span>}
+const MedalImg=({rank})=>{
+  if(rank===1)return<Img src={E.medal1} size={22}/>
+  if(rank===2)return<Img src={E.medal2} size={22}/>
+  if(rank===3)return<Img src={E.medal3} size={22}/>
+  return<span style={{color:'#6b7280',fontSize:12}}>#{rank}</span>
+}
 
-// Detect team from ext prefix
 const getTeamFromExt = (ext) => {
   const e = String(ext)
-  if (e.startsWith('1')) return { id:'philippines', name:'Philippines', flag:'ph', hasSp:false, goal:10 }
-  if (e.startsWith('2')) return { id:'colombia',    name:'Colombia',    flag:'co', hasSp:true,  goal:10 }
-  if (e.startsWith('3')) return { id:'asia',        name:'Asia',        flag:'cn', hasSp:true,  goal:20 }
-  if (e.startsWith('4')) return { id:'central',     name:'Central America', flag:'hn', hasSp:true, goal:10 }
-  if (e.startsWith('5')) return { id:'mexico',      name:'Mexico Baja', flag:'mx', hasSp:false, goal:10 }
-  if (e.startsWith('6')) return { id:'venezuela',   name:'Venezuela',   flag:'ve', hasSp:true,  goal:10 }
-  return { id:'unknown', name:'Unknown', flag:'un', hasSp:false, goal:10 }
+  if (e.startsWith('1')) return { id:'philippines', name:'Philippines', flag:'ph', hasSp:false, goal:10, colEn:2, colSp:-1 }
+  if (e.startsWith('2')) return { id:'colombia',    name:'Colombia',    flag:'co', hasSp:true,  goal:10, colEn:3, colSp:4  }
+  if (e.startsWith('3')) return { id:'asia',        name:'Asia',        flag:'cn', hasSp:true,  goal:20, colEn:3, colSp:2  }
+  if (e.startsWith('4')) return { id:'central',     name:'Central America', flag:'hn', hasSp:true, goal:10, colEn:3, colSp:4 }
+  if (e.startsWith('5')) return { id:'mexico',      name:'Mexico Baja', flag:'mx', hasSp:false, goal:10, colEn:3, colSp:-1 }
+  if (e.startsWith('6')) return { id:'venezuela',   name:'Venezuela',   flag:'ve', hasSp:true,  goal:10, colEn:3, colSp:4  }
+  return { id:'unknown', name:'Unknown', flag:'un', hasSp:false, goal:10, colEn:2, colSp:-1 }
+}
+
+// Calculate rank for an ext from raw snapshot rows
+function calcRankFromRows(rows, ext, teamInfo) {
+  const agents = []
+  const isAsia = teamInfo.id === 'asia'
+  for (const row of rows) {
+    const cell0 = (row[0]||'').toString().trim()
+    const cell0U = cell0.toUpperCase()
+    if (cell0U.includes('AGENT') && (cell0U.includes('LOGGED')||cell0U.includes('LOG IN'))) break
+    if (cell0U.includes('OT ') || cell0U.endsWith(' OT')) break
+    const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
+    const extNum = parseInt(rawExt)
+    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
+    if (cell0.length < 2) continue
+    const en = isAsia ? safeInt(row[3]) : safeInt(row[teamInfo.colEn])
+    agents.push({ ext: String(extNum), english: en })
+  }
+  agents.sort((a,b) => b.english - a.english)
+  const idx = agents.findIndex(a => a.ext === String(ext))
+  return idx >= 0 ? idx + 1 : null
 }
 
 function findAgentInHistoryRows(rows, ext) {
@@ -66,16 +93,11 @@ function findAgentInHistoryRows(rows, ext) {
   for(let i=0;i<rows.length;i++){
     const row=rows[i], cell0=(row[0]||'').trim(), cell0U=cell0.toUpperCase()
     if(cell0U.includes('AGENT')&&cell0U.includes('LOGGED'))break
-    if(cell0U.includes('MANAGEMENT')||cell0U.includes('CALL')||cell0U.includes('TRANSFER')||cell0U.includes('LEXNER')||cell0U.includes('GENERAL')||cell0.length<=1)continue
+    if(cell0U.includes('MANAGEMENT')||cell0U.includes('LEXNER')||cell0U.includes('GENERAL')||cell0.length<=1)continue
     const extNum=safeInt(row[1]); if(extNum<1000||extNum>9999)continue
-    agents.push({ext:String(extNum),rank:agents.length})
+    agents.push({ ext:String(extNum), english:safeInt(row[3]) })
   }
-  agents.sort((a,b)=>{
-    // get english from rows
-    const rowA=rows.find(r=>safeInt(r[1])===parseInt(a.ext))
-    const rowB=rows.find(r=>safeInt(r[1])===parseInt(b.ext))
-    return safeInt(rowB?.[3]||0)-safeInt(rowA?.[3]||0)
-  })
+  agents.sort((a,b)=>b.english-a.english)
   for(let i=0;i<rows.length;i++){
     const row=rows[i],cell0=(row[0]||'').trim(),cell0U=cell0.toUpperCase()
     if(cell0U.includes('AGENT')&&cell0U.includes('LOGGED'))break
@@ -92,56 +114,54 @@ async function loadAgentData(ext) {
   const records = []
   const teamInfo = getTeamFromExt(ext)
 
-  // 1. Try Apps Script AGENT_SNAPSHOTS first
+  // 1. Load from localStorage snapshots — includes rank calculation
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i)
+    if(!k?.startsWith('pulse_snap_'))continue
+    try{
+      const date=k.replace('pulse_snap_','')
+      const data=JSON.parse(localStorage.getItem(k))
+      let sourceRows=[]
+      if(teamInfo.id==='asia') sourceRows=Array.isArray(data.asiaData)?data.asiaData:[]
+      else sourceRows=Array.isArray(data.teams?.[teamInfo.id])?data.teams[teamInfo.id]:[]
+      if(sourceRows.length===0)continue
+      for(const row of sourceRows){
+        const rawExt=(row[1]||'').toString().replace(/,/g,'').trim()
+        if(rawExt!==String(ext))continue
+        const cell0=(row[0]||'').trim()
+        if(cell0.length<=1)continue
+        const nameU=cell0.toUpperCase()
+        if(nameU.includes('AGENT')&&nameU.includes('LOGGED'))break
+        let en, sp
+        if(teamInfo.id==='asia'){sp=safeInt(row[2]);en=safeInt(row[3])}
+        else if(teamInfo.colSp>=0){en=safeInt(row[teamInfo.colEn]);sp=safeInt(row[teamInfo.colSp])}
+        else{en=safeInt(row[teamInfo.colEn]);sp=0}
+        const rank = calcRankFromRows(sourceRows, ext, teamInfo)
+        records.push({date,name:cell0,english:en,spanish:sp,total:en+sp,rank,source:'local'})
+        break
+      }
+    }catch(e){}
+  }
+
+  // 2. Try Apps Script AGENT_SNAPSHOTS for dates not in local
   try {
     const url = `${SCRIPT_URL}?action=getAgentSnapshots&ext=${encodeURIComponent(ext)}`
     const res  = await fetch(url)
     const data = await res.json()
     if (Array.isArray(data) && data.length > 0) {
       data.forEach(d => {
-        records.push({
-          date: d.date, name: d.name,
-          english: d.english||0, spanish: d.spanish||0,
-          total: d.total||0, rank: d.rank||null,
-          source: 'sheets'
-        })
+        if (!records.find(r => r.date === d.date)) {
+          records.push({
+            date:d.date, name:d.name,
+            english:d.english||0, spanish:d.spanish||0,
+            total:d.total||0, rank:null, source:'sheets'
+          })
+        }
       })
     }
-  } catch(e) { console.warn('AGENT_SNAPSHOTS fetch failed:', e) }
+  } catch(e) {}
 
-  // 2. Fall back to localStorage snapshots
-  for(let i=0;i<localStorage.length;i++){
-    const k=localStorage.key(i)
-    if(!k?.startsWith('pulse_snap_'))continue
-    try{
-      const date=k.replace('pulse_snap_','')
-      if(records.find(r=>r.date===date))continue // already have from Sheets
-      const data=JSON.parse(localStorage.getItem(k))
-      let sourceRows=[]
-      if(teamInfo.id==='asia')sourceRows=Array.isArray(data.asiaData)?data.asiaData:[]
-      else sourceRows=Array.isArray(data.teams?.[teamInfo.id])?data.teams[teamInfo.id]:[]
-      if(sourceRows.length===0)continue
-      // Find agent
-      for(const row of sourceRows){
-        const extNum=safeInt(row[1])
-        if(String(extNum)!==String(ext))continue
-        const name=(row[0]||'').trim()
-        if(name.length<=1)continue
-        const nameU=name.toUpperCase()
-        if(nameU.includes('AGENT')&&nameU.includes('LOGGED'))break
-        // Detect columns
-        const col2=safeInt(row[2]),col3=safeInt(row[3])
-        let en,sp
-        if(teamInfo.hasSp&&teamInfo.id==='asia'){sp=col2;en=col3}
-        else if(teamInfo.hasSp){en=col3;sp=safeInt(row[4])}
-        else{en=col2;sp=0}
-        records.push({date,name,english:en,spanish:sp,total:en+sp,rank:null,source:'local'})
-        break
-      }
-    }catch(e){}
-  }
-
-  // 3. For Asia: also load from history sheets
+  // 3. History sheets for Asia
   if(teamInfo.id==='asia'){
     for(const hd of HISTORY_DATES){
       if(records.find(r=>r.date===hd.isoDate))continue
@@ -153,7 +173,9 @@ async function loadAgentData(ext) {
     }
   }
 
-  return records.filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i).sort((a,b)=>a.date.localeCompare(b.date))
+  return records
+    .filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i)
+    .sort((a,b)=>a.date.localeCompare(b.date))
 }
 
 const formatDate=(d)=>{const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(`${d}T12:00:00`).getDay()]} ${dd}/${m}`}
@@ -163,13 +185,13 @@ export default function Profile() {
   const navigate  = useNavigate()
   const canvasRef = useRef(null)
   const user      = JSON.parse(localStorage.getItem('pulse_user')||'null')
-  const userPhoto = localStorage.getItem('pulse_user_photo')
   const isOwnProfile = String(user?.agentExt) === String(ext)
   const teamInfo  = getTeamFromExt(ext)
 
-  const [records, setRecords]     = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [agentName, setAgentName] = useState(`Agent #${ext}`)
+  const [records,    setRecords]    = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [agentName,  setAgentName]  = useState(`Agent #${ext}`)
+  const [userPhoto,  setUserPhoto]  = useState(localStorage.getItem('pulse_user_photo')||'')
 
   // Particles
   useEffect(()=>{
@@ -187,9 +209,8 @@ export default function Profile() {
   },[])
 
   useEffect(()=>{
-    if(!user){return} // will show login screen
-    // Sync photo from Sheets
-    loadUserPhotoFromSheets(user.name).then(p => { if(p) setUserPhoto(p) })
+    if(!user) return
+    loadUserPhotoFromSheets(user.name).then(p=>{ if(p) setUserPhoto(p) })
     setLoading(true)
     loadAgentData(ext).then(recs=>{
       setRecords(recs)
@@ -199,7 +220,6 @@ export default function Profile() {
     })
   },[ext])
 
-  // ── Not logged in ──
   if (!user) {
     return (
       <div className="profile-root">
@@ -236,7 +256,9 @@ export default function Profile() {
     const worstDay=[...withData].sort((a,b)=>a.english-b.english)[0]
     const top3Days=records.filter(r=>r.rank&&r.rank<=3)
     const top1Days=records.filter(r=>r.rank===1)
-    return{totalEn,totalSp,avgEn,bestDay,worstDay,activeDays:withData.length,zeroDays:records.length-withData.length,daysTracked:records.length,top3Days:top3Days.length,top1Days:top1Days.length}
+    return{totalEn,totalSp,avgEn,bestDay,worstDay,activeDays:withData.length,
+      zeroDays:records.length-withData.length,daysTracked:records.length,
+      top3Days:top3Days.length,top1Days:top1Days.length}
   })()
 
   const maxEnglish=Math.max(...records.map(r=>r.english),1)
@@ -262,7 +284,9 @@ export default function Profile() {
           <div className="profile-hero">
             <div className="profile-hero-inner">
               <div className="profile-avatar-ring">
-                {isOwnProfile&&userPhoto?<img src={userPhoto} alt="" className="profile-avatar-photo"/>:<div className="profile-avatar-letter">{agentName?.[0]?.toUpperCase()}</div>}
+                {isOwnProfile&&userPhoto
+                  ?<img src={userPhoto} alt="" className="profile-avatar-photo"/>
+                  :<div className="profile-avatar-letter">{agentName?.[0]?.toUpperCase()}</div>}
               </div>
               <div className="profile-hero-info">
                 <h1 className="profile-hero-name">{agentName}</h1>
@@ -272,7 +296,7 @@ export default function Profile() {
                   <span className="profile-ext-tag">#{ext}</span>
                   {isOwnProfile&&<span className="profile-own-tag">✓ You</span>}
                 </div>
-                {records.length===0&&<p style={{color:'#6b7280',marginTop:8,fontSize:12}}>No data yet. Appears as days are recorded.</p>}
+                {records.length===0&&<p style={{color:'#6b7280',marginTop:8,fontSize:12}}>No data yet.</p>}
               </div>
             </div>
             <div className="profile-share">
@@ -313,7 +337,9 @@ export default function Profile() {
                   {records.map((r,i)=>(
                     <div key={i} className="ptl-col" title={`${formatDate(r.date)}: ${r.english} EN${r.rank?` · Rank #${r.rank}`:''}`}>
                       <div className="ptl-bar-outer">
-                        <div className="ptl-bar" style={{height:`${(r.english/maxEnglish)*100}%`,background:r.rank===1?'#fbbf24':r.rank===2?'#9ca3af':r.rank===3?'#cd7f32':r.english>=teamInfo.goal?'#34d399':r.english>0?'#60a5fa':'#2a2d38'}}/>
+                        <div className="ptl-bar" style={{height:`${(r.english/maxEnglish)*100}%`,
+                          background:r.rank===1?'#fbbf24':r.rank===2?'#9ca3af':r.rank===3?'#cd7f32':
+                          r.english>=teamInfo.goal?'#34d399':r.english>0?'#60a5fa':'#2a2d38'}}/>
                       </div>
                       <div className="ptl-rank">{r.rank&&r.rank<=3?<MedalImg rank={r.rank}/>:null}</div>
                       <div className="ptl-val" style={{color:r.english===stats.bestDay.english?'#34d399':r.english===0?'#4b5563':'#9ca3af'}}>{r.english>0?r.english:'—'}</div>
@@ -355,7 +381,7 @@ export default function Profile() {
             <div className="profile-empty">
               <Img src={E.zero} size={54}/>
               <p style={{fontSize:18,fontWeight:700,color:'#e5e7eb',marginTop:16}}>No data found for #{ext}</p>
-              <p style={{color:'#6b7280',fontSize:13,marginTop:8}}>Data appears as days are recorded in the dashboard.</p>
+              <p style={{color:'#6b7280',fontSize:13,marginTop:8}}>Data appears as days are recorded.</p>
             </div>
           )}
         </div>
