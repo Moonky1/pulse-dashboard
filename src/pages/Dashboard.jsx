@@ -747,6 +747,19 @@ export default function Dashboard() {
     console.log('Asia: '+agents.length+' agents, '+en+' EN'+(inOT?' +OT':''))
     return{asiaAgents:agents,asiaTotals:{spanish:sp,english:en,total:en+sp,activeAgents:agents.length}}
   })()
+  const asiaAgentsFinal=(()=>{
+    void overridesTick
+    const ovr=JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'))||'{}')
+    let agents=asiaAgents.map(a=>ovr[a.ext]?{...a,...ovr[a.ext]}:a)
+    if(bulkEditMode&&Object.keys(bulkEdits).length>0){
+      agents=agents.map(a=>{
+        if(!bulkEdits[a.ext])return a
+        const en=parseInt(bulkEdits[a.ext].english),sp=parseInt(bulkEdits[a.ext].spanish)
+        return{...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}
+      })
+    }
+    return agents
+  })()
   const asiaOvrTotals=(()=>{void overridesTick;try{return JSON.parse(localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate,'asia'))||'null')}catch(e){return null}})()
   const totalSpanish=asiaOvrTotals?.spanish??(isToday?asiaTotals.spanish:(isHistDate?asiaTotals.spanish:asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0)))
   const totalEnglish=asiaOvrTotals?.english??(isToday?asiaTotals.english:(isHistDate?asiaTotals.english:asiaAgentsFinal.reduce((s,a)=>s+a.english,0)))
