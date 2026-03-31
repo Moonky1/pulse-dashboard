@@ -68,101 +68,7 @@ const extractPhones = (cell) => {
   return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length >= 7)
 }
 
-// ── Generic team sheet parser — reads main + OT, sums everything ──
-function parseTeamSheet(rows, config) {
-  const { extStart, hasSp, colEn, colSp } = config
-  if (!rows || !Array.isArray(rows) || rows.length === 0)
-    return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
 
-  const agentMap   = {}
-  let inOT         = false
-  let otColEn      = colEn
-  let otColSp      = colSp != null ? colSp : -1
-  let otHeaderDone = false
-
-  const SKIP_NAMES = new Set([
-    'USERS','USER','AGENT NAME','AGENTS','ARWIN','LEXNER',
-    'EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','OPENERS',
-    'PER AGENT','ENGLISH','SPANISH','TOTAL','SUPERVISOR','MANAGER',
-  ])
-
-  for (let i = 0; i < rows.length; i++) {
-    const row    = rows[i]
-    if (!Array.isArray(row)) continue
-    const cell0  = (row[0]||'').toString().trim()
-    const cell0U = cell0.toUpperCase().trim()
-
-    // Skip empty rows
-    if (!cell0) continue
-
-    // ── Detect OT section start ──
-    if (!inOT && (
-      cell0U.startsWith('OT ') ||
-      cell0U.endsWith(' OT') ||
-      cell0U.includes(' OT ') ||
-      cell0U.startsWith('PHILIPPINES OT') ||
-      cell0U.startsWith('OT AW')
-    )) {
-      inOT = true
-      otHeaderDone = false
-      otColEn = colEn
-      otColSp = colSp != null ? colSp : -1
-      continue
-    }
-
-    // ── Detect OT header row ──
-    if (inOT && !otHeaderDone) {
-      const hdrs = row.map(c => (c||'').toString().toUpperCase().trim())
-      const ei   = hdrs.findIndex(h => h === 'ENGLISH' || h === 'TRANSFER')
-      const si   = hdrs.findIndex(h => h === 'SPANISH')
-      if (ei > 1) {
-        otColEn = ei; otColSp = si > 0 ? si : -1; otHeaderDone = true; continue
-      }
-      // Not a header row — check if it has a valid ext in col 1
-      const ck = parseInt((row[1]||'').toString().replace(/,/g,''))
-      if (ck >= 1000 && ck <= 9999) {
-        otHeaderDone = true // skip header detection, go straight to agents
-      } else {
-        continue // skip this row
-      }
-    }
-
-    // ── Skip totals/meta rows ──
-    if (
-      (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN'))) ||
-      (cell0U.includes('TOTAL') && cell0U.includes('TRANSFER')) ||
-      cell0U.includes('THIS HOUR') || cell0U.includes('THIS OUR') ||
-      cell0U.includes('HOURLY GOAL') || cell0U.includes('HOUR GOAL') ||
-      cell0U.includes('WEEKLY') || cell0U.includes('DAILY SCHEDULE') ||
-      SKIP_NAMES.has(cell0U)
-    ) continue
-
-    // ── Agent row ──
-    const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
-    const extNum = parseInt(rawExt)
-    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
-    if (!rawExt.startsWith(extStart)) continue
-
-    const ec = inOT ? otColEn : colEn
-    const sc = inOT ? otColSp : (colSp != null ? colSp : -1)
-    const en = safeInt(row[ec])
-    const sp = sc >= 0 ? safeInt(row[sc]) : 0
-
-    if (agentMap[extNum]) {
-      agentMap[extNum].english += en
-      agentMap[extNum].spanish += sp
-      agentMap[extNum].total    = agentMap[extNum].english + agentMap[extNum].spanish
-    } else {
-      agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
-    }
-  }
-
-  const agents = Object.values(agentMap)
-  const en = agents.reduce((s,a) => s+a.english, 0)
-  const sp = agents.reduce((s,a) => s+a.spanish, 0)
-  console.log(`${config.label}: ${agents.length} agents, ${en} EN, ${sp} SP${inOT?' +OT':''}`)
-  return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
-}
 
 // ── Override keys ──
 const OVERRIDE_KEY_AGENTS = (date, teamId='asia') => teamId==='asia' ? `pulse_overrides_${date}` : `pulse_overrides_${teamId}_${date}`
@@ -209,6 +115,83 @@ async function saveAgentSnapshotsToSheets(date, allAgents) {
   } catch(e) {}
 }
 
+const E = {
+  goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp', goal3:'/emojis/goal3.webp', goal4:'/emojis/goal4.webp',
+  medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp', medal3:'/emojis/web3.webp',
+  zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
+}
+const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
+const MEDALS = [E.medal1, E.medal2, E.medal3]
+
+const todayKey = () => new Date().toISOString().slice(0,10)
+
+// Colombia timezone is UTC-5
+const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
+const includeOT    = () => colombiaHour() >= 18
+
+// ── Generic team sheet parser — reads main section always, OT after 6pm ──
+function parseTeamSheet(rows, config) {
+  const { extStart, hasSp, colEn, colSp } = config
+  if (!rows || !Array.isArray(rows) || rows.length === 0)
+    return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
+
+  const agentMap = {}
+  let inOT = false; let otColEn = -1; let otColSp = -1
+
+  const isOTRow = (r) => {
+    const c = (r[0]||'').toString().trim().toUpperCase()
+    return c.length > 0 && (c.startsWith('OT ') || c.endsWith(' OT') || c.includes(' OT '))
+  }
+  const isMeta = (u) =>
+    (u.includes('AGENT') && (u.includes('LOGGED') || u.includes('LOG IN'))) ||
+    (u.includes('TOTAL') && u.includes('TRANSFER')) ||
+    u.includes('THIS HOUR') || u.includes('THIS OUR') || u.includes('HOURLY') ||
+    u.includes('ON SITE') || u.includes('WEEKLY')
+  const SKIP = new Set(['USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR',
+    'MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT',
+    'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS'])
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]; if (!Array.isArray(row)) continue
+    const cell0 = (row[0]||'').toString().trim()
+    const cell0U = cell0.toUpperCase().trim()
+    if (isOTRow(row)) {
+      if (!includeOT()) break
+      inOT = true; otColEn = -1; otColSp = -1; continue
+    }
+    if (inOT && otColEn < 0) {
+      const hdrs = row.map(c => (c||'').toString().toUpperCase().trim())
+      const ei = hdrs.findIndex(h => h === 'ENGLISH' || h === 'TRANSFER')
+      const si = hdrs.findIndex(h => h === 'SPANISH')
+      if (ei >= 0) { otColEn = ei; otColSp = si >= 0 ? si : -1; continue }
+      const ck = parseInt((row[1]||'').toString().replace(/,/g,''))
+      if (ck >= 1000 && ck <= 9999 && String(ck).startsWith(extStart)) {
+        otColEn = Math.max(colEn - 1, 2)
+        otColSp = (hasSp && colSp != null) ? Math.max(colSp - 1, 3) : -1
+      } else continue
+    }
+    if (isMeta(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
+    const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
+    const extNum = parseInt(rawExt)
+    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
+    if (!rawExt.startsWith(extStart)) continue
+    const ec = inOT ? otColEn : colEn
+    const sc = inOT ? otColSp : (colSp != null ? colSp : -1)
+    if (ec < 0) continue
+    const en = safeInt(row[ec]); const sp = sc >= 0 ? safeInt(row[sc]) : 0
+    if (agentMap[extNum]) {
+      agentMap[extNum].english += en; agentMap[extNum].spanish += sp
+      agentMap[extNum].total = agentMap[extNum].english + agentMap[extNum].spanish
+    } else {
+      agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
+    }
+  }
+  const agents = Object.values(agentMap)
+  const en = agents.reduce((s,a)=>s+a.english,0), sp = agents.reduce((s,a)=>s+a.spanish,0)
+  console.log(`${config.label}: ${agents.length} agents, ${en} EN${inOT?' +OT':''}`)
+  return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
+}
+
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 const RANGES = [
   { label:'0',     min:0,  max:0,    color:'#f87171' },
@@ -219,16 +202,6 @@ const RANGES = [
   { label:'20+',   min:20, max:9999, color:'#22c55e' },
 ]
 
-const E = {
-  goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp', goal3:'/emojis/goal3.webp', goal4:'/emojis/goal4.webp',
-  medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp', medal3:'/emojis/web3.webp',
-  zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
-}
-const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
-const MEDALS = [E.medal1, E.medal2, E.medal3]
-
-
-const todayKey = () => new Date().toISOString().slice(0,10)
 
 // Saturday goals vary by team:
 // Colombia, Central, Venezuela → 5 EN
@@ -734,49 +707,46 @@ export default function Dashboard() {
 
   const {asiaAgents,asiaTotals}=(()=>{
     if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals}
-    const agentMap={}; let inOT=false; let otColEn=3; let otColSp=2; let otHeaderFound=false
-    const SKIP_META=['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR','AGENT NAME','ARWIN']
+    const agentMap={}; let inOT=false; let otColEn=-1; let otColSp=-1
+    const SKIP=new Set(['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER',
+      'SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'])
     for(const row of asiaDataRaw){
-      const name=(row[0]||'').toString().trim(), nameUp=name.toUpperCase().trim()
-      if(!name)continue
+      const cell0=(row[0]||'').toString().trim()
+      const nameUp=cell0.toUpperCase().trim()
       // Detect OT section
-      if(!inOT&&(nameUp.startsWith('OT ')||nameUp.endsWith(' OT')||nameUp.includes(' OT '))){
-        inOT=true;otHeaderFound=false;otColEn=3;otColSp=2;continue
+      if(!inOT && cell0.length>0 && (nameUp.startsWith('OT ')||nameUp.endsWith(' OT')||nameUp.includes(' OT '))){
+        if(!includeOT()) break  // before 6pm: stop reading
+        inOT=true; otColEn=-1; otColSp=-1; continue
       }
-      // Detect OT header row
-      if(inOT&&!otHeaderFound){
+      // Detect OT header (row[0] may be empty)
+      if(inOT && otColEn<0){
         const hdrs=row.map(c=>(c||'').toString().toUpperCase().trim())
-        const ei=hdrs.findIndex(h=>h==='ENGLISH');const si=hdrs.findIndex(h=>h==='SPANISH')
-        if(ei>1){otColEn=ei;otColSp=si>0?si:-1;otHeaderFound=true;continue}
+        const ei=hdrs.findIndex(h=>h==='ENGLISH')
+        const si=hdrs.findIndex(h=>h==='SPANISH')
+        if(ei>=0){otColEn=ei;otColSp=si>=0?si:-1;continue}
         const ck=parseInt((row[1]||'').toString().replace(/,/g,''))
-        if(ck>=1000&&ck<=9999)otHeaderFound=true; else continue
+        if(ck>=1000&&ck<=9999){otColEn=3;otColSp=2}
+        else continue
       }
-      // Skip meta/totals rows
+      // Skip meta rows
       if(
         (nameUp.includes('AGENT')&&(nameUp.includes('LOGGED')||nameUp.includes('LOG IN')))||
         (nameUp.includes('TOTAL')&&nameUp.includes('TRANSFER'))||
         nameUp.includes('THIS HOUR')||nameUp.includes('THIS OUR')||nameUp.includes('HOURLY')||
-        nameUp.includes('REMOVED')||SKIP_META.includes(nameUp)||name.length<2
+        nameUp.includes('REMOVED')||SKIP.has(nameUp)||cell0.length<2
       )continue
-      const ec=inOT?otColEn:3, sc=inOT?otColSp:2
+      const ec=inOT?otColEn:3, sc=inOT?(otColSp>=0?otColSp:-1):2
+      if(ec<0)continue
       const ext=safeInt(row[1]);if(isNaN(ext)||ext<1000||ext>9999)continue
       const en=safeInt(row[ec]),sp=sc>=0?safeInt(row[sc]):0
       if(agentMap[ext]){agentMap[ext].english+=en;agentMap[ext].spanish+=sp;agentMap[ext].total=agentMap[ext].english+agentMap[ext].spanish}
-      else agentMap[ext]={name,ext:String(ext),spanish:sp,english:en,total:sp+en}
+      else agentMap[ext]={name:cell0,ext:String(ext),spanish:sp,english:en,total:sp+en}
     }
     const agents=Object.values(agentMap)
     const en=agents.reduce((s,a)=>s+a.english,0),sp=agents.reduce((s,a)=>s+a.spanish,0)
-    console.log('Asia: '+agents.length+' agents, '+en+' EN, '+sp+' SP'+(inOT?' +OT':''))
+    console.log('Asia: '+agents.length+' agents, '+en+' EN'+(inOT?' +OT':''))
     return{asiaAgents:agents,asiaTotals:{spanish:sp,english:en,total:en+sp,activeAgents:agents.length}}
   })()
-  const asiaAgentsFinal=(()=>{
-    void overridesTick
-    const ovr=JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'))||'{}')
-    let agents=asiaAgents.map(a=>ovr[a.ext]?{...a,...ovr[a.ext]}:a)
-    if(bulkEditMode&&Object.keys(bulkEdits).length>0){agents=agents.map(a=>{if(!bulkEdits[a.ext])return a;const en=parseInt(bulkEdits[a.ext].english),sp=parseInt(bulkEdits[a.ext].spanish);return{...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}})}
-    return agents
-  })()
-
   const asiaOvrTotals=(()=>{void overridesTick;try{return JSON.parse(localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate,'asia'))||'null')}catch(e){return null}})()
   const totalSpanish=asiaOvrTotals?.spanish??(isToday?asiaTotals.spanish:(isHistDate?asiaTotals.spanish:asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0)))
   const totalEnglish=asiaOvrTotals?.english??(isToday?asiaTotals.english:(isHistDate?asiaTotals.english:asiaAgentsFinal.reduce((s,a)=>s+a.english,0)))
