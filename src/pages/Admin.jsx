@@ -58,17 +58,37 @@ export default function Admin() {
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1&t=${Date.now()}`
-      const res = await fetch(url)
-      const text = await res.text()
-      const rows = text.trim().split('\n').slice(1)
-        .map(row => {
-          const cols = row.split(',').map(c => c.replace(/"/g,'').trim())
-          return { name: cols[0], team: cols[1], role: cols[2], date: cols[3], time: cols[4] }
-        })
+      // Fetch via Apps Script to bypass sheet protection
+      const url = `${SCRIPT_URL}?sheetName=Sheet1&sheetId=${SHEET_ID}&t=${Date.now()}`
+      const res  = await fetch(url)
+      const data = await res.json()
+      if (!Array.isArray(data) || data.length < 2) throw new Error('No data')
+      const rows = data.slice(1)
+        .map(row => ({
+          name: String(row[0]||'').trim(),
+          team: String(row[1]||'').trim(),
+          role: String(row[2]||'').trim(),
+          date: String(row[3]||'').trim(),
+          time: String(row[4]||'').trim(),
+        }))
         .filter(r => r.name && r.name !== 'Name' && r.name !== '')
       setUsers(rows.reverse())
-    } catch(e) { console.error(e) }
+    } catch(e) {
+      console.error('fetchUsers error:', e)
+      // Fallback to direct CSV
+      try {
+        const url2 = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1&t=${Date.now()}`
+        const res2 = await fetch(url2)
+        const text = await res2.text()
+        const rows2 = text.trim().split('\n').slice(1)
+          .map(row => {
+            const cols = row.split(',').map(c => c.replace(/"/g,'').trim())
+            return { name: cols[0], team: cols[1], role: cols[2], date: cols[3], time: cols[4] }
+          })
+          .filter(r => r.name && r.name !== 'Name' && r.name !== '')
+        setUsers(rows2.reverse())
+      } catch(e2) { console.error(e2) }
+    }
     finally { setLoading(false) }
   }
 

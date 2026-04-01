@@ -28,9 +28,14 @@ export default function Register() {
 
   const saveToSheets = async (data) => {
     try {
+      // Use no-cors GET — Apps Script saves name/team/role to Sheet1
       const url = `${SCRIPT_URL}?name=${encodeURIComponent(data.name)}&team=${encodeURIComponent(data.team)}&role=${encodeURIComponent(data.role)}`
       await fetch(url, { mode: 'no-cors' })
-    } catch(e) { console.error('Sheet error:', e) }
+      console.log('Saved to Sheets:', data)
+    } catch(e) {
+      console.error('Sheet save error:', e)
+      // Still allow login even if sheet save fails
+    }
   }
 
   const next = async () => {
