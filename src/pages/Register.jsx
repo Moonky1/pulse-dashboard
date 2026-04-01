@@ -1,15 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { APP_CONFIG } from '../config'
 import { validateToken } from '../utils/token'
 import './Register.css'
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmiLdRPyx6IU65p8nW7A3lEncOBr74XIsP-9nsRkxZe2-GF6sqZgvfeS82EK_cTnve/exec'
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 const ROLES = [
   { id: 'supervisor', label: 'Supervisor',  icon: '🧑‍💼' },
   { id: 'qa',         label: 'QA',          icon: '🔍' },
   { id: 'leader',     label: 'Team Leader', icon: '🏆' },
 ]
-
 const STEPS = ['name', 'role', 'team', 'token']
 
 export default function Register() {
@@ -21,13 +20,17 @@ export default function Register() {
   const [error, setError]   = useState('')
   const [saving, setSaving] = useState(false)
 
+  // If already registered, redirect to dashboard
+  useEffect(() => {
+    const existing = localStorage.getItem('pulse_user')
+    if (existing) window.location.href = '/dashboard'
+  }, [])
+
   const saveToSheets = async (data) => {
     try {
       const url = `${SCRIPT_URL}?name=${encodeURIComponent(data.name)}&team=${encodeURIComponent(data.team)}&role=${encodeURIComponent(data.role)}`
       await fetch(url, { mode: 'no-cors' })
-    } catch(e) {
-      console.error('Sheet error:', e)
-    }
+    } catch(e) { console.error('Sheet error:', e) }
   }
 
   const next = async () => {
@@ -73,14 +76,9 @@ export default function Register() {
           <div className="reg-body">
             <h2>What's your name?</h2>
             <p>This is how you'll appear in the dashboard</p>
-            <input
-              className="reg-input"
-              placeholder="Your name"
-              value={name}
+            <input className="reg-input" placeholder="Your name" value={name}
               onChange={e => { setName(e.target.value); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && next()}
-              autoFocus
-            />
+              onKeyDown={e => e.key === 'Enter' && next()} autoFocus/>
             <div className="role-warning" style={{ marginTop: 12 }}>
               📝 <strong>Remember this name exactly.</strong> You'll use it to sign in later.
             </div>
@@ -96,11 +94,8 @@ export default function Register() {
             </div>
             <div className="role-grid">
               {ROLES.map(r => (
-                <div
-                  key={r.id}
-                  className={`role-card${role === r.id ? ' selected' : ''}`}
-                  onClick={() => { setRole(r.id); setError('') }}
-                >
+                <div key={r.id} className={`role-card${role === r.id ? ' selected' : ''}`}
+                  onClick={() => { setRole(r.id); setError('') }}>
                   <span className="role-icon">{r.icon}</span>
                   <span className="role-label">{r.label}</span>
                   {role === r.id && <span className="role-check">✓</span>}
@@ -116,11 +111,8 @@ export default function Register() {
             <p>Your team will be highlighted in the dashboard</p>
             <div className="team-grid">
               {APP_CONFIG.teams.map(t => (
-                <div
-                  key={t.id}
-                  className={`team-card${team === t.id ? ' selected' : ''}`}
-                  onClick={() => { setTeam(t.id); setError('') }}
-                >
+                <div key={t.id} className={`team-card${team === t.id ? ' selected' : ''}`}
+                  onClick={() => { setTeam(t.id); setError('') }}>
                   <img className="t-flag" src={`https://flagcdn.com/w40/${t.code}.png`} alt={t.name} />
                   <div className="t-name">{t.name}</div>
                   <div className="t-count">{t.agents} agents</div>
@@ -134,15 +126,9 @@ export default function Register() {
           <div className="reg-body">
             <h2>Access token</h2>
             <p>Enter the 6-digit code from your admin</p>
-            <input
-              className="reg-input token-input"
-              placeholder="000000"
-              value={token}
+            <input className="reg-input token-input" placeholder="000000" value={token}
               onChange={e => { setToken(e.target.value.replace(/\D/g,'').slice(0,6)); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && next()}
-              maxLength={6}
-              autoFocus
-            />
+              onKeyDown={e => e.key === 'Enter' && next()} maxLength={6} autoFocus/>
             <div className="sheet-note">
               This code changes every 5 minutes. Contact your Team Leader if you don't have it.
             </div>
