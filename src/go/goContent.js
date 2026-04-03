@@ -771,4 +771,13 @@ export const learnCategories = [
     type: 'dosdонts',
     ref: null,
   },
+  {
+    id: 'dialer-guide',
+    icon: '🖥️',
+    title: 'Dialer Guide',
+    description: 'IP validation, login, transfers EN/ES, dispositions — real screenshots',
+    color: '#1e40af',
+    type: 'dialer',
+    ref: null,
+  },
 ];
