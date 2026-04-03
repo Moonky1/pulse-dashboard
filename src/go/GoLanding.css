@@ -1,29 +1,25 @@
-/* ─────────────────────────────────────────────
-   PULSE GO — Landing Page
-   Mirrors Landing.css exactly + adds Go-specific styles
-───────────────────────────────────────────── */
-
-.go-landing {
+/* ── Base ── */
+.gol-wrap {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
+  background: #080a0f;
   user-select: none;
   -webkit-user-select: none;
-  background: #080a0f;
 }
 
-/* ── Same background effects as Landing ── */
-.go-trail-canvas {
+/* ── Background — identical to Landing.css ── */
+.gol-canvas {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 2;
 }
 
-.go-grid-bg {
+.gol-grid {
   position: absolute;
   inset: 0;
   background-image:
@@ -34,8 +30,8 @@
   pointer-events: none;
 }
 
-.go-particles { position: absolute; inset: 0; pointer-events: none; }
-.go-particle {
+.gol-particles { position: absolute; inset: 0; pointer-events: none; }
+.gol-particle {
   position: absolute;
   width: 2px; height: 2px;
   background: #f97316;
@@ -43,45 +39,44 @@
   opacity: 0;
   left: calc(var(--i) * 5.2% + 2%);
   top: calc(var(--i) * 4.7% + 5%);
-  animation: goFloat calc(4s + var(--i) * 0.3s) ease-in-out infinite alternate;
+  animation: golFloat calc(4s + var(--i) * 0.3s) ease-in-out infinite alternate;
   animation-delay: calc(var(--i) * 0.2s);
 }
-@keyframes goFloat {
+@keyframes golFloat {
   from { opacity: 0.15; transform: translateY(0) scale(1); }
   to   { opacity: 0.6;  transform: translateY(-40px) scale(2); }
 }
 
 /* ── Kahoot-style top nav ── */
-.go-topnav {
+.gol-nav {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 64px;
+  top: 0; left: 0; right: 0;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
-  background: rgba(8, 10, 15, 0.85);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(249,115,22,0.08);
+  padding: 0 24px;
+  background: rgba(8,10,15,0.9);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(249,115,22,0.1);
   z-index: 100;
 }
 
-.go-topnav-logo {
+.gol-nav-logo {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
 }
 
-.go-topnav-logoimg {
-  width: 32px;
-  height: 32px;
+.gol-nav-logoimg {
+  width: 34px;
+  height: 34px;
   object-fit: contain;
   filter: drop-shadow(0 0 8px rgba(249,115,22,0.5));
 }
 
-.go-topnav-logotext {
+.gol-nav-logotext {
   font-family: 'Sora', sans-serif;
   font-weight: 800;
   font-size: 18px;
@@ -89,7 +84,7 @@
   letter-spacing: 0.05em;
 }
 
-.go-topnav-badge {
+.gol-nav-badge {
   background: #f97316;
   color: #fff;
   font-family: 'Sora', sans-serif;
@@ -97,20 +92,19 @@
   font-weight: 800;
   padding: 2px 7px;
   border-radius: 5px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
-.go-topnav-tabs {
+.gol-nav-tabs {
   display: flex;
-  align-items: center;
   gap: 4px;
 }
 
-.go-topnav-tab {
+.gol-nav-tab {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 9px 20px;
+  padding: 9px 22px;
   border-radius: 10px;
   border: none;
   background: transparent;
@@ -119,16 +113,15 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
 }
-
-.go-topnav-tab:hover {
-  background: rgba(249,115,22,0.12);
+.gol-nav-tab:hover {
+  background: rgba(249,115,22,0.13);
   color: #f97316;
   transform: translateY(-1px);
 }
 
-.go-topnav-back {
+.gol-nav-back {
   background: #181b23;
   border: 0.5px solid #3a3d4a;
   border-radius: 10px;
@@ -137,46 +130,47 @@
   font-weight: 500;
   color: #e5e7eb;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+  transition: all 0.18s;
+  font-family: inherit;
 }
-.go-topnav-back:hover {
+.gol-nav-back:hover {
   border-color: #f97316;
   background: #1e2230;
   transform: translateY(-1px);
 }
 
-/* ── Hero content — mirrors landing-content exactly ── */
-.go-landing-content {
+/* ── Hero — mirrors landing-content ── */
+.gol-hero {
   text-align: center;
   z-index: 3;
   opacity: 0;
   transform: translateY(24px);
   transition: opacity 0.8s ease, transform 0.8s ease;
-  padding-top: 64px; /* offset for fixed nav */
+  padding-top: 60px;
 }
-.go-landing-content.visible { opacity: 1; transform: translateY(0); }
+.gol-hero.visible { opacity: 1; transform: translateY(0); }
 
-.go-kk-logo-img {
-  width: 140px;
+.gol-logo {
+  width: 120px;
   height: auto;
-  margin: 0 auto 1.5rem;
+  margin: 0 auto 1.4rem;
   display: block;
   filter: drop-shadow(0 0 24px rgba(249,115,22,0.5));
-  animation: goLogoPulse 3s ease-in-out infinite;
+  animation: golLogoPulse 3s ease-in-out infinite;
   pointer-events: none;
 }
-@keyframes goLogoPulse {
-  0%, 100% { filter: drop-shadow(0 0 24px rgba(249,115,22,0.5)); }
-  50%       { filter: drop-shadow(0 0 48px rgba(249,115,22,0.9)); }
+@keyframes golLogoPulse {
+  0%,100% { filter: drop-shadow(0 0 24px rgba(249,115,22,0.5)); }
+  50%      { filter: drop-shadow(0 0 48px rgba(249,115,22,0.9)); }
 }
 
 /* ── Title — same as .landing-title ── */
-.go-landing-title {
+.gol-title {
   font-family: 'Sora', sans-serif;
-  font-size: clamp(56px, 12vw, 120px);
+  font-size: clamp(52px, 10vw, 100px);
   font-weight: 800;
   letter-spacing: 0.15em;
-  margin-bottom: 1rem;
+  margin-bottom: 0.8rem;
   display: flex;
   justify-content: center;
   gap: 0.05em;
@@ -185,11 +179,11 @@
   will-change: transform;
 }
 
-.go-letter {
+.gol-letter {
   display: inline-block;
   opacity: 0;
   transform: translateY(30px);
-  animation: goLetterIn 0.5s ease forwards;
+  animation: golLetterIn 0.5s ease forwards;
   animation-delay: calc(0.3s + var(--d));
   background: linear-gradient(135deg, #fff 40%, #f97316);
   -webkit-background-clip: text;
@@ -197,72 +191,125 @@
   background-clip: text;
   transition: transform 0.2s ease;
 }
-.go-letter:hover { transform: translateY(-8px) scale(1.1) !important; filter: brightness(1.3); }
+.gol-letter:hover { transform: translateY(-8px) scale(1.1) !important; filter: brightness(1.3); }
 
-/* "GO" letters are pure orange */
-.go-letter-orange {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+.gol-space { background: none; -webkit-text-fill-color: transparent; }
+
+.gol-orange {
+  background: linear-gradient(135deg, #f97316, #ea580c);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-@keyframes goLetterIn { to { opacity: 1; transform: translateY(0); } }
+@keyframes golLetterIn { to { opacity: 1; transform: translateY(0); } }
 
-.go-landing-sub {
-  font-size: 16px;
+.gol-sub {
+  font-size: 14px;
   color: #6b7280;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   font-weight: 500;
 }
 
-/* ── Mode buttons ── */
-.go-landing-modes {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-}
-
-.go-landing-mode-btn {
+/* ── Kahoot-style code card ── */
+.gol-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 20px 32px;
-  background: #181b23;
-  border: 1px solid #3a3d4a;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-width: 120px;
+  gap: 10px;
+  width: 340px;
+  margin: 0 auto;
+  background: rgba(15, 17, 23, 0.85);
+  border: 1px solid rgba(249,115,22,0.15);
+  border-radius: 18px;
+  padding: 28px 28px 22px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
 }
 
-.go-landing-mode-btn:hover {
-  border-color: #f97316;
-  background: #1a1f2e;
-  transform: translateY(-4px);
-  box-shadow: 0 0 30px rgba(249,115,22,0.2);
+.gol-card-code {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 4px;
 }
-
-.go-landing-mode-icon {
-  font-size: 32px;
-}
-
-.go-landing-mode-label {
+.gol-card-code strong {
+  color: #f97316;
   font-family: 'Sora', sans-serif;
-  font-size: 14px;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+
+.gol-input {
+  width: 100%;
+  background: #0f1117;
+  border: 1.5px solid #2a2d38;
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-family: 'Sora', sans-serif;
+  font-size: 18px;
   font-weight: 700;
-  color: #e5e7eb;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.12em;
+  text-align: center;
+  color: #f97316;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.gol-input::placeholder {
+  color: #4b5563;
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.gol-input:focus { border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.12); }
+
+.gol-btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: #f97316;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Sora', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.02em;
+}
+.gol-btn-primary:hover:not(:disabled) {
+  background: #ea6c0a;
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(249,115,22,0.35);
+}
+.gol-btn-primary:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.gol-btn-ghost {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s;
+  font-family: inherit;
+  margin-top: 2px;
+}
+.gol-btn-ghost:hover { color: #f97316; }
+
+.gol-card-note {
+  font-size: 12px;
+  color: #4b5563;
+  margin-top: 4px;
 }
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  .go-topnav-tabs { gap: 2px; }
-  .go-topnav-tab { padding: 8px 12px; font-size: 13px; }
-  .go-topnav-back { display: none; }
-  .go-landing-modes { flex-wrap: wrap; padding: 0 20px; }
-  .go-landing-mode-btn { min-width: 100px; padding: 16px 20px; }
+  .gol-nav-tabs { gap: 2px; }
+  .gol-nav-tab  { padding: 8px 12px; font-size: 13px; }
+  .gol-nav-back { display: none; }
+  .gol-card     { width: calc(100vw - 48px); }
 }
