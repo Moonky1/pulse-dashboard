@@ -111,7 +111,7 @@ const DECKS = [
       {
         type: 'dialer-img', title: 'How to Read the Lead Form', icon: '📋',
         note: 'Only use the highlighted fields. Never mention the address, finance company name, or terms of loan to the customer.',
-        images: [{ src: 'vici-lead-form.png', alt: 'Lead Form', caption: '✓ USE: Name, Loan Monthly Cost, Origination Date, Loan Balance — ✗ SKIP everything else' }],
+        images: [{ src: 'vici-lead-form.png', alt: 'Lead Form', caption: '✓ USE: Name, Origination Date, Loan Balance — ✗ SKIP everything else' }],
       },
       {
         type: 'dialer-img', title: 'Dispositions', icon: '📊',
@@ -152,7 +152,7 @@ const DECKS = [
         tactic: '⚠️ You MUST confirm the vehicle is in good running condition before any transfer.',
         rebuttals: [
           '"I only see the finance info here — no make or model. That\'s why I need the manager who has the full picture. Is the vehicle in good running condition?"',
-          '"My system only shows your monthly payment and finance status. I\'m here to confirm your car\'s condition before transferring you to the person who\'ll break down coverage."',
+          '"My system only shows your finance status. I\'m here to confirm your car\'s condition before transferring you to the person who\'ll break down coverage."',
         ] },
       { type: 'objection-multi', emoji: '📞', title: '"Who is this?"', goal: 'Clarify & validate',
         tactic: 'First rebuttal is ALWAYS: "from the Vehicle Service Department." Do NOT give the company name right away.',
@@ -266,7 +266,7 @@ function renderSlide(slide) {
           <h2 className="gpr-slide-title">🇺🇸 English Script</h2>
           <div className="gpr-script-steps">
             {[
-              { label: 'INTRO', text: "Hi, [client's name] this is [your name] with the Vehicle Services Group. We're calling about the vehicle you financed on [month, year] with a monthly payment of [payment amount]." },
+              { label: 'INTRO', text: "Hi, [client's name] this is [your name] with the Vehicle Services Group. We're calling about the vehicle you financed on [month, year]." },
               { label: 'PURPOSE', text: "Our records indicate you haven't activated your vehicle's extended warranty yet." },
               { label: 'VEHICLE CHECK', text: "I just need to verify — is your vehicle still in good running condition?" },
               { label: 'RESPONSE', text: 'Perfect!', type: 'bridge' },
@@ -289,7 +289,7 @@ function renderSlide(slide) {
           <h2 className="gpr-slide-title">🇪🇸 Script en Español</h2>
           <div className="gpr-script-steps">
             {[
-              { label: 'INTRO', text: "Hola, [nombre del cliente], le habla [tu nombre] de Grupo de Servicios Vehiculares. Le llamamos con respecto al vehículo que usted financió en [mes, año], con un pago mensual de [monto del pago]." },
+              { label: 'INTRO', text: "Hola, [nombre del cliente], le habla [tu nombre] de Grupo de Servicios Vehiculares. Le llamamos con respecto al vehículo que usted financió en [mes, año]." },
               { label: 'PROPÓSITO', text: "Nuestros registros indican que aún no ha activado la garantía extendida de su vehículo." },
               { label: 'VERIFICACIÓN', text: "Solo necesito verificar: ¿Su vehículo se encuentra actualmente en buenas condiciones de funcionamiento?" },
               { label: 'RESPUESTA', text: '¡Perfecto!', type: 'bridge' },

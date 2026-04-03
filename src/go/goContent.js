@@ -466,7 +466,6 @@ export const dosAndDonts = {
   formFields: {
     use: [
       'First and Last Name',
-      'Loan Monthly Cost / Monthly Payment',
       'Origination Date / Date of Loan (Month/Day/Year)',
       'Loan Balance / Total Amount of the Loan',
     ],
@@ -678,7 +677,7 @@ export const quizQuestions = [
       'Terms of Loan',
     ],
     correct: 2,
-    explanation: 'You use: Name, Monthly Payment, Origination Date, and Loan Balance. Never use address or finance company name.',
+    explanation: 'You use: Name, Origination Date, and Loan Balance. Never use address or finance company name.',
   },
   {
     id: 14,
