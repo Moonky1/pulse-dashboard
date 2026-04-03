@@ -66,46 +66,47 @@ const DECKS = [
     desc: 'IP validation, login, go active, how to transfer EN/ES, form reading, dispositions',
     color: '#3b82f6',
     slides: [
-      { type: 'cover', title: 'Dialer Guide', sub: 'VICIdial · Auto Warranty Garrett', icon: '🖥️' },
+      { type: 'cover', title: 'Dialer Guide', sub: 'Campaign Dialer · Auto Warranty Garrett', icon: '🖥️' },
       {
         type: 'dialer-img', title: 'Step 0 — Validate Your IP', icon: '🌐',
-        note: '⚠️ Do this EVERY DAY before logging in. URL: https://alwaysbeclosing.ai:444/abc_validation.php — User: 9996 or 9995 — Password: validateme365',
-        images: [{ src: 'vici-ip-validation.png', alt: 'VICIbox Agent Validation', caption: 'Submit and confirm your IP appears as validated' }],
+        note: '⚠️ Do this EVERY DAY before logging in. Go to the validation URL provided by your supervisor and confirm your IP is validated before starting any calls.',
+        images: [{ src: 'vici-ip-validation.png', alt: 'Agent Validation Portal', caption: 'Submit and confirm your IP appears as validated — do this before anything else each day' }],
       },
       {
         type: 'dialer-img', title: 'Steps 1-2-3 — Login', icon: '🔐',
-        note: 'Follow these 3 steps in order. Use your assigned extension. Select openers2 or openers3 as your supervisor indicates.',
+        note: 'Follow these 3 steps in order. Use your assigned extension and credentials. Select openers2 or openers3 as your supervisor indicates.',
         layout: 'row',
         images: [
-          { src: 'vici-welcome.png', alt: 'Welcome Screen', caption: 'Step 1: Click Agent Login' },
-          { src: 'vici-phone-login.png', alt: 'Phone Login', caption: 'Step 2: Enter your extension' },
-          { src: 'vici-campaign-login.png', alt: 'Campaign Login', caption: 'Step 3: Select your campaign' },
+          { src: 'vici-welcome.png', alt: 'Welcome Screen', caption: 'Step 1 — Click Agent Login' },
+          { src: 'vici-phone-login.png', alt: 'Phone Login', caption: 'Step 2 — Enter your extension' },
+          { src: 'vici-campaign-login.png', alt: 'Campaign Login', caption: 'Step 3 — Select your campaign' },
         ],
       },
       {
         type: 'dialer-img', title: 'Go Active — Main Screen', icon: '📡',
         note: 'You start as PAUSED. To transfer a call, find TRANSFER - CONF on the left panel.',
-        images: [{ src: 'vici-go-active.png', alt: 'Dialer Main Screen - YOU ARE PAUSED', caption: 'Main dialer screen. TRANSFER - CONF button is on the left.' }],
+        images: [{ src: 'vici-go-active.png', alt: 'Dialer Main Screen - YOU ARE PAUSED', caption: 'Main dialer screen. TRANSFER - CONF button is on the left panel.' }],
       },
       {
+        // Fixed: vici-pauses-codes.png (with 's')
         type: 'dialer-img', title: 'Pause Codes', icon: '⏸️',
         note: 'Always use the correct pause code. Break = 10min max | RR = 5min max | Lunch = 1hr | Manage = only when supervisor requests.',
-        images: [{ src: 'vici-pause-codes.png', alt: 'Pause Codes Screen', caption: 'Select the correct pause code for every break' }],
+        images: [{ src: 'vici-pauses-codes.png', alt: 'Pause Codes Screen', caption: 'Select the correct pause code for every break — MANAGE is only for supervisor requests' }],
       },
       {
         type: 'dialer-img', title: 'How to Transfer — English 🇺🇸', icon: '🔄',
         note: 'Wait for SA to pick up and speak FIRST before introducing the customer. Stay on the 3-way call for at least 15 seconds.',
         images: [
-          { src: 'vici-live-call.png', alt: 'Live Call Screen', caption: '1. Click TRANSFER - CONF on the left panel' },
-          { src: 'vici-transfer-functions.png', alt: 'Transfer Functions', caption: '2. DIAL WITH CUSTOMER → SA speaks first → 3. LEAVE 3-WAY CALL (after 15 seconds)' },
+          { src: 'vici-live-call.png', alt: 'Live Call Screen', caption: 'Step 1 — Click TRANSFER - CONF on the left panel during a live call' },
+          { src: 'vici-transfer-functions.png', alt: 'Transfer Functions', caption: 'Step 2 — DIAL WITH CUSTOMER → SA speaks first → Step 3 — LEAVE 3-WAY CALL (after 15 seconds minimum)' },
         ],
       },
       {
         type: 'dialer-img', title: 'How to Transfer — Spanish 🇪🇸', icon: '🔄',
         note: 'Select BlindSpanishXfer from the dropdown BEFORE clicking Dial with Customer.',
         images: [
-          { src: 'vici-live-call.png', alt: 'Live Call - Spanish', caption: '1. Click TRANSFER - CONF' },
-          { src: 'vici-transfer-functions.png', alt: 'Spanish Transfer Functions', caption: '2. Select BlindSpanishXfer → DIAL WITH CUSTOMER → wait for SA → LEAVE 3-WAY CALL' },
+          { src: 'vici-live-call.png', alt: 'Live Call - Spanish', caption: 'Step 1 — Click TRANSFER - CONF on the left panel' },
+          { src: 'vici-transfer-functions.png', alt: 'Spanish Transfer Functions', caption: 'Step 2 — Select BlindSpanishXfer → DIAL WITH CUSTOMER → wait for SA → Step 3 — LEAVE 3-WAY CALL' },
         ],
       },
       {
@@ -116,7 +117,7 @@ const DECKS = [
       {
         type: 'dialer-img', title: 'Dispositions', icon: '📊',
         note: 'Use ONLY the listed dispositions. XFER = successful transfer | NI = not interested | CALLBK = call back | SPXFER = Spanish transfer',
-        images: [{ src: 'vici-dispositions.png', alt: 'Call Dispositions', caption: 'Only use these options — no others' }],
+        images: [{ src: 'vici-dispositions.png', alt: 'Call Dispositions', caption: 'Only use these options — no others. XFER is the only successful disposition.' }],
       },
       { type: 'cover', title: "You're Ready to Dial!", sub: 'Stay focused · Follow the script · Transfer clean', icon: '📞' },
     ],

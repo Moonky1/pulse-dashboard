@@ -14,7 +14,7 @@ import './go.css'
 /* ─── Training Image Component ─── */
 function TrainingImg({ src, alt, caption }) {
   return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 20 }}>
       <img
         src={`/training/${src}`}
         alt={alt}
@@ -43,9 +43,16 @@ function TrainingImg({ src, alt, caption }) {
       </div>
       {caption && (
         <div style={{
-          fontSize: 12, color: '#9ca3af', textAlign: 'center',
-          maxWidth: 700, lineHeight: 1.5,
-          background: 'rgba(249,115,22,0.06)', borderRadius: 6, padding: '6px 12px',
+          fontSize: 13,
+          fontWeight: 600,
+          color: '#f1f5f9',
+          textAlign: 'center',
+          maxWidth: 720,
+          lineHeight: 1.6,
+          background: 'rgba(249,115,22,0.1)',
+          border: '1px solid rgba(249,115,22,0.2)',
+          borderRadius: 8,
+          padding: '8px 16px',
         }}>
           {caption}
         </div>
@@ -236,57 +243,113 @@ function DosDontsView() {
   )
 }
 
-/* ─── Dialer Guide View (REAL IMAGES) ─── */
+/* ─── Dialer Guide View ─── */
 function DialerGuideView() {
   return (
     <div>
+
       {/* Step 0: IP Validation */}
       <div className="go-block-title">🌐 Step 0 — Validate Your IP (Every Day)</div>
-      <div style={{ marginBottom: 16, fontSize: 13, color: '#f59e0b', background: 'rgba(245,158,11,0.08)', padding: '10px 14px', borderRadius: 8 }}>
-        ⚠️ Do this EVERY DAY before logging in. URL: <strong>https://alwaysbeclosing.ai:444/abc_validation.php</strong> — User: 9996 or 9995 — Password: validateme365
+      <div style={{
+        marginBottom: 16, fontSize: 13, color: '#f59e0b',
+        background: 'rgba(245,158,11,0.08)', padding: '10px 14px', borderRadius: 8, lineHeight: 1.6,
+      }}>
+        ⚠️ Do this EVERY DAY before logging in. Go to the <strong>validation URL provided by your supervisor</strong> and confirm your IP is validated before starting any calls.
       </div>
-      <TrainingImg src="vici-ip-validation.png" alt="VICIbox Agent Validation" caption="Submit and confirm your IP address appears as validated" />
+      <TrainingImg
+        src="vici-ip-validation.png"
+        alt="Agent Validation Portal"
+        caption="Submit and confirm your IP address appears as validated — do this before anything else each day"
+      />
 
       {/* Step 1: Welcome */}
       <div className="go-block-title" style={{ marginTop: 32 }}>🔐 Step 1 — Welcome Screen</div>
-      <TrainingImg src="vici-welcome.png" alt="VICIdial Welcome Screen" caption="Click 'Agent Login' to proceed" />
+      <TrainingImg
+        src="vici-welcome.png"
+        alt="Dialer Welcome Screen"
+        caption="Click 'Agent Login' to proceed — do NOT click Admin"
+      />
 
       {/* Step 2: Phone Login */}
       <div className="go-block-title" style={{ marginTop: 24 }}>📞 Step 2 — Phone Login</div>
-      <TrainingImg src="vici-phone-login.png" alt="VICIdial Phone Login" caption="Enter your Phone Login (extension) and Phone Password, then click SUBMIT" />
+      <TrainingImg
+        src="vici-phone-login.png"
+        alt="Dialer Phone Login"
+        caption="Enter your assigned Phone Login (extension) and Phone Password, then click SUBMIT"
+      />
 
       {/* Step 3: Campaign Login */}
       <div className="go-block-title" style={{ marginTop: 24 }}>🎯 Step 3 — Campaign Login</div>
-      <TrainingImg src="vici-campaign-login.png" alt="VICIdial Campaign Login" caption="Enter your credentials and select your campaign: openers2 or openers3 (as instructed by your supervisor)" />
+      <TrainingImg
+        src="vici-campaign-login.png"
+        alt="Dialer Campaign Login"
+        caption="Enter your credentials and select your campaign — use openers2 or openers3 as instructed by your supervisor"
+      />
 
       {/* Go Active */}
       <div className="go-block-title" style={{ marginTop: 24 }}>📡 Main Dialer Screen — Go Active</div>
-      <TrainingImg src="vici-go-active.png" alt="Dialer Main Screen - YOU ARE PAUSED" caption="Once logged in you will see YOU ARE PAUSED. To transfer a call, click TRANSFER - CONF on the left panel." />
+      <TrainingImg
+        src="vici-go-active.png"
+        alt="Dialer Main Screen - YOU ARE PAUSED"
+        caption="Once logged in you will see YOU ARE PAUSED. To transfer a call, click TRANSFER - CONF on the left panel"
+      />
 
-      {/* Pause Codes */}
+      {/* Pause Codes — filename fixed: vici-pauses-codes.png */}
       <div className="go-block-title" style={{ marginTop: 24 }}>⏸️ Pause Codes</div>
-      <TrainingImg src="vici-pause-codes.png" alt="Dialer Pause Codes" caption="Always use the correct pause code. Break = 10min max | RR = 5min max | Lunch = 1hr | Manage = only when supervisor requests" />
+      <TrainingImg
+        src="vici-pauses-codes.png"
+        alt="Dialer Pause Codes"
+        caption="Always use the correct pause code — Break = 10min max | RR = 5min max | Lunch = 1hr | Manage = only when supervisor requests"
+      />
 
       {/* How to Transfer - English */}
       <div className="go-block-title" style={{ marginTop: 24 }}>🇺🇸 How to Transfer — English</div>
-      <TrainingImg src="vici-live-call.png" alt="Live Call Screen with Transfer-Conf" caption="1. During a LIVE CALL, click TRANSFER - CONF on the left panel" />
-      <TrainingImg src="vici-transfer-functions.png" alt="Transfer Conference Functions" caption="2. Click DIAL WITH CUSTOMER → Wait for SA to pick up and speak first → 3. Click LEAVE 3-WAY CALL (stay at least 15 seconds before leaving)" />
+      <TrainingImg
+        src="vici-live-call.png"
+        alt="Live Call Screen"
+        caption="Step 1 — During a LIVE CALL, click TRANSFER - CONF on the left panel"
+      />
+      <TrainingImg
+        src="vici-transfer-functions.png"
+        alt="Transfer Conference Functions"
+        caption="Step 2 — Click DIAL WITH CUSTOMER → wait for SA to pick up and speak first → Step 3 — Click LEAVE 3-WAY CALL (stay at least 15 seconds before leaving)"
+      />
 
       {/* How to Transfer - Spanish */}
       <div className="go-block-title" style={{ marginTop: 24 }}>🇪🇸 How to Transfer — Spanish</div>
-      <div style={{ fontSize: 13, color: '#f97316', background: 'rgba(249,115,22,0.08)', padding: '8px 14px', borderRadius: 8, marginBottom: 12 }}>
+      <div style={{
+        fontSize: 13, color: '#f97316', background: 'rgba(249,115,22,0.08)',
+        padding: '8px 14px', borderRadius: 8, marginBottom: 12, fontWeight: 600,
+      }}>
         ⚡ For Spanish: Select <strong>BlindSpanishXfer</strong> from the dropdown BEFORE clicking Dial with Customer
       </div>
-      <TrainingImg src="vici-live-call.png" alt="Live Call - Spanish Transfer" caption="1. Click TRANSFER - CONF on the left panel" />
-      <TrainingImg src="vici-transfer-functions.png" alt="Transfer Functions - Select Spanish" caption="2. Select BlindSpanishXfer from dropdown → DIAL WITH CUSTOMER → wait for SA → LEAVE 3-WAY CALL" />
+      <TrainingImg
+        src="vici-live-call.png"
+        alt="Live Call - Spanish Transfer"
+        caption="Step 1 — Click TRANSFER - CONF on the left panel"
+      />
+      <TrainingImg
+        src="vici-transfer-functions.png"
+        alt="Transfer Functions - Spanish"
+        caption="Step 2 — Select BlindSpanishXfer from the dropdown → DIAL WITH CUSTOMER → wait for SA to pick up → Step 3 — LEAVE 3-WAY CALL"
+      />
 
       {/* Lead Form */}
       <div className="go-block-title" style={{ marginTop: 24 }}>📋 How to Read the Lead Form</div>
-      <TrainingImg src="vici-lead-form.png" alt="VICIdial Lead Form" caption="✓ USE: First/Last Name, Origination Date, Loan Balance — ✗ NEVER mention: Address, Finance Company, Terms of Loan" />
+      <TrainingImg
+        src="vici-lead-form.png"
+        alt="Lead Form"
+        caption="✓ USE: First/Last Name, Origination Date, Loan Balance — ✗ NEVER mention: Address, Finance Company, Terms of Loan"
+      />
 
       {/* Dispositions */}
       <div className="go-block-title" style={{ marginTop: 24 }}>📊 Disposition Screen</div>
-      <TrainingImg src="vici-dispositions.png" alt="Call Dispositions" caption="Use ONLY these dispositions. XFER = successful transfer ✓ | NI = not interested | CALLBK = call back | SPXFER = Spanish transfer" />
+      <TrainingImg
+        src="vici-dispositions.png"
+        alt="Call Dispositions"
+        caption="Use ONLY these dispositions — XFER = successful transfer ✓ | NI = not interested | CALLBK = call back | SPXFER = Spanish transfer"
+      />
+
     </div>
   )
 }
