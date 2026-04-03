@@ -1,0 +1,237 @@
+.gqp-page {
+  min-height: 100vh;
+  background: #080a0f;
+  color: #f5f5f5;
+  font-family: 'DM Sans', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Nav */
+.gqp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 56px;
+  background: rgba(8,10,15,0.95);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.gqp-nav-brand { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.gqp-nav-text  { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 17px; color: #fff; }
+.gqp-nav-badge {
+  background: #f97316; color: #fff;
+  font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 800;
+  padding: 2px 7px; border-radius: 5px;
+}
+.gqp-nav-meta { display: flex; align-items: center; gap: 16px; }
+.gqp-nav-counter { font-size: 14px; color: #6b7280; }
+.gqp-nav-timer  {
+  font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800;
+  min-width: 48px; text-align: center; transition: color 0.3s;
+}
+.gqp-nav-exit {
+  background: none; border: 1px solid #2a2d38;
+  border-radius: 8px; padding: 6px 14px;
+  font-size: 13px; color: #6b7280; cursor: pointer;
+  transition: all 0.2s; font-family: inherit;
+}
+.gqp-nav-exit:hover { border-color: #ef4444; color: #ef4444; }
+
+/* Timer bar */
+.gqp-timer-bar {
+  height: 6px;
+  background: #1c2130;
+  flex-shrink: 0;
+}
+.gqp-timer-fill {
+  height: 100%;
+  transition: width 1s linear, background 0.3s;
+  border-radius: 0 3px 3px 0;
+}
+
+/* Progress dots */
+.gqp-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 0 8px;
+  flex-shrink: 0;
+}
+.gqp-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #2a2d38;
+  transition: all 0.2s;
+}
+.gqp-dot.done   { background: #f97316; }
+.gqp-dot.active { background: #fff; transform: scale(1.3); }
+
+/* Question */
+.gqp-question-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px 16px;
+  flex-shrink: 0;
+}
+.gqp-question {
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(17px, 2.5vw, 24px);
+  font-weight: 700;
+  text-align: center;
+  max-width: 800px;
+  line-height: 1.4;
+  background: rgba(15,17,23,0.8);
+  border: 1px solid rgba(249,115,22,0.15);
+  border-radius: 16px;
+  padding: 24px 32px;
+  width: 100%;
+}
+
+/* Options — 2x2 Kahoot grid */
+.gqp-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 24px 16px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+.gqp-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: none;
+  background: var(--opt-color);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  min-height: 72px;
+  position: relative;
+  overflow: hidden;
+}
+.gqp-option::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.15);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.gqp-option:hover:not(:disabled)::before { opacity: 1; }
+.gqp-option:hover:not(:disabled) { transform: scale(1.02); }
+
+.gqp-option.correct { outline: 4px solid #fff; box-shadow: 0 0 24px rgba(255,255,255,0.3); }
+.gqp-option.wrong   { opacity: 0.5; filter: brightness(0.6); }
+.gqp-option.dim     { opacity: 0.35; filter: grayscale(0.5); }
+.gqp-option:disabled { cursor: not-allowed; }
+
+.gqp-opt-shape {
+  font-size: 18px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.gqp-opt-letter {
+  width: 28px; height: 28px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Sora', sans-serif;
+  font-size: 13px; font-weight: 800;
+  flex-shrink: 0;
+}
+.gqp-opt-text { flex: 1; line-height: 1.4; }
+
+/* Explanation */
+.gqp-explanation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 24px 12px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  background: rgba(15,17,23,0.9);
+  border: 1px solid rgba(249,115,22,0.2);
+  border-left: 3px solid #f97316;
+  border-radius: 0 10px 10px 0;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #d1d5db;
+  line-height: 1.6;
+  animation: fadeUp 0.3s ease;
+  width: calc(100% - 48px);
+  box-sizing: border-box;
+}
+.gqp-exp-icon { font-size: 18px; flex-shrink: 0; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* Next button */
+.gqp-next-row {
+  display: flex;
+  justify-content: center;
+  padding: 8px 24px 24px;
+}
+
+.gqp-btn-primary {
+  padding: 13px 32px;
+  background: #f97316;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Sora', sans-serif;
+  font-size: 15px; font-weight: 700;
+  color: #fff; cursor: pointer;
+  transition: all 0.18s;
+}
+.gqp-btn-primary:hover { background: #ea6c0a; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(249,115,22,0.3); }
+
+/* Results */
+.gqp-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 48px 24px;
+  text-align: center;
+}
+.gqp-results-score {
+  font-family: 'Sora', sans-serif;
+  font-size: 80px; font-weight: 800; line-height: 1;
+  margin-bottom: 8px;
+}
+.gqp-results-grade { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 700; margin-bottom: 32px; }
+.gqp-results-row { display: flex; gap: 32px; margin-bottom: 36px; }
+.gqp-results-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.gqp-results-num { font-family: 'Sora', sans-serif; font-size: 36px; font-weight: 800; }
+.gqp-results-lbl { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+.gqp-results-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.gqp-btn-outline {
+  padding: 12px 22px;
+  background: transparent;
+  border: 1px solid #3a3d4a;
+  border-radius: 10px;
+  font-size: 14px; font-weight: 600;
+  color: #e5e7eb; cursor: pointer;
+  transition: all 0.18s; font-family: inherit;
+}
+.gqp-btn-outline:hover { border-color: #f97316; color: #f97316; }
+
+@media (max-width: 600px) {
+  .gqp-options { grid-template-columns: 1fr; gap: 10px; padding: 0 16px 12px; }
+  .gqp-question-wrap { padding: 16px 16px 12px; }
+  .gqp-question { padding: 18px 20px; font-size: 16px; }
+  .gqp-option { min-height: 60px; }
+}
