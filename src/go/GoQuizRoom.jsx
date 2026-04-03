@@ -3,72 +3,110 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { quizQuestions } from './goContent'
 import './GoQuizRoom.css'
 
-const API = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
-const POLL_MS  = 2000
-const Q_TIME   = 20
-const AVATARS  = ['🦊','🐺','🦁','🐯','🐻','🦅','🐬','🦋','🐲','🦄','🐸','🐧','🦩','🐙','🐼','🦒','🐨','🐔','🦉','🦓']
-const OPTS     = [{ color:'#ef4444',shape:'▲' },{ color:'#3b82f6',shape:'◆' },{ color:'#f59e0b',shape:'●' },{ color:'#22c55e',shape:'■' }]
-const LETTERS  = ['A','B','C','D']
+// ─────────────────────────────────────────────
+//  CONSTANTS
+// ─────────────────────────────────────────────
+const API        = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
+const POLL_MS    = 1500   // poll every 1.5s for snappier feel
+const Q_TIME     = 20     // seconds per question
+const RESULT_SEC = 5      // seconds to show results before auto-next
+const AVATARS    = ['🦊','🐺','🦁','🐯','🐻','🦅','🐬','🦋','🐲','🦄','🐸','🐧','🦩','🐙','🐼','🦒','🐨','🐔','🦉','🦓']
+const OPTS       = [{ color:'#ef4444',shape:'▲' },{ color:'#3b82f6',shape:'◆' },{ color:'#f59e0b',shape:'●' },{ color:'#22c55e',shape:'■' }]
+const LETTERS    = ['A','B','C','D']
 
-// ── utils ──
+// ─────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────
 async function api(params) {
   try {
     const res = await fetch(API + '?' + new URLSearchParams(params))
     return await res.json()
   } catch { return { success: false } }
 }
+
 function getQ(id) { return quizQuestions.find(q => q.id === id) || null }
+
 function sorted(players) {
   return Object.entries(players || {})
     .map(([name, p]) => ({ name, ...p }))
     .sort((a, b) => (b.score || 0) - (a.score || 0))
 }
 
-// ── sound ──
+// Server-based time remaining
+function calcTimeLeft(questionStartedAt) {
+  if (!questionStartedAt) return Q_TIME
+  const started = new Date(questionStartedAt).getTime()
+  const elapsed = (Date.now() - started) / 1000
+  return Math.max(0, Q_TIME - elapsed)
+}
+
+// ─────────────────────────────────────────────
+//  SOUND
+// ─────────────────────────────────────────────
 function useSound() {
   const ctx = useRef(null)
-  const ac = () => { if (!ctx.current) ctx.current = new (window.AudioContext || window.webkitAudioContext)(); return ctx.current }
-  const beep = (f, d, t = 'sine', v = 0.25) => { try { const o = ac().createOscillator(), g = ac().createGain(); o.connect(g); g.connect(ac().destination); o.frequency.value = f; o.type = t; g.gain.setValueAtTime(v, ac().currentTime); g.gain.exponentialRampToValueAtTime(0.001, ac().currentTime + d); o.start(); o.stop(ac().currentTime + d) } catch {} }
+  const ac  = () => {
+    if (!ctx.current) ctx.current = new (window.AudioContext || window.webkitAudioContext)()
+    return ctx.current
+  }
+  const beep = (f, d, t = 'sine', v = 0.2) => {
+    try {
+      const o = ac().createOscillator(), g = ac().createGain()
+      o.connect(g); g.connect(ac().destination)
+      o.frequency.value = f; o.type = t
+      g.gain.setValueAtTime(v, ac().currentTime)
+      g.gain.exponentialRampToValueAtTime(0.001, ac().currentTime + d)
+      o.start(); o.stop(ac().currentTime + d)
+    } catch {}
+  }
   return {
     correct: () => { beep(600, 0.1); setTimeout(() => beep(900, 0.15), 100) },
-    wrong:   () => beep(180, 0.4, 'sawtooth', 0.2),
-    tick:    () => beep(440, 0.05, 'square', 0.1),
+    wrong:   () => beep(180, 0.4, 'sawtooth', 0.18),
+    tick:    () => beep(440, 0.05, 'square', 0.08),
     start:   () => { beep(400, 0.08); setTimeout(() => beep(600, 0.1), 150); setTimeout(() => beep(800, 0.15), 300) },
     join:    () => beep(520, 0.12),
+    ding:    () => { beep(800, 0.08); setTimeout(() => beep(1000, 0.12), 80) },
   }
 }
 
-// ────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  MAIN COMPONENT
+// ─────────────────────────────────────────────
 export default function GoQuizRoom() {
-  const { code } = useParams()
-  const [urlParams] = useSearchParams()
-  const navigate = useNavigate()
-  const isHost = urlParams.get('host') === 'true'
-  const snd = useSound()
+  const { code }     = useParams()
+  const [urlParams]  = useSearchParams()
+  const navigate     = useNavigate()
+  const isHost       = urlParams.get('host') === 'true'
+  const snd          = useSound()
 
-  // ── join form state ──
+  // ── JOIN FORM STATE ──
   const [joinName,   setJoinName]   = useState('')
   const [joinAvatar, setJoinAvatar] = useState('🦊')
   const [joinError,  setJoinError]  = useState('')
   const [joining,    setJoining]    = useState(false)
 
-  // ── session state (server is source of truth) ──
+  // ── SESSION STATE (server is source of truth) ──
   const [session,  setSession]  = useState(null)
-  const [joined,   setJoined]   = useState(isHost)
+  const [joined,   setJoined]   = useState(isHost)   // host is auto-joined
   const [myName,   setMyName]   = useState('')
   const [myAvatar, setMyAvatar] = useState('🦊')
 
-  // ── question-local state ──
-  const [selected, setSelected] = useState(null)  // player's answer this question
-  const [timeLeft, setTimeLeft] = useState(Q_TIME)
-  const [hostBusy, setHostBusy] = useState(false)
+  // ── LOCAL QUESTION STATE ──
+  const [selected,    setSelected]    = useState(null)   // player's answer index
+  const [timeLeft,    setTimeLeft]    = useState(Q_TIME)
+  const [resultTimer, setResultTimer] = useState(RESULT_SEC) // countdown after answer shown
+  const [hostBusy,    setHostBusy]    = useState(false)
 
-  // ── refs ──
-  const prevQRef    = useRef(-1)   // detect question change
-  const timerRef    = useRef(null)
-  const prevStateRef = useRef('')  // detect state change for sounds
+  // ── REFS ──
+  const prevQRef       = useRef(-1)   // detect question change
+  const prevStateRef   = useRef('')   // detect state change
+  const autoActionRef  = useRef(false) // prevent double auto-trigger
+  const resultCountRef = useRef(null)  // result countdown interval
+  const tickRef        = useRef(null)  // local timer interval
 
-  // ── POLLING: runs when joined ──
+  // ─────────────────────────────────────────────
+  //  POLLING
+  // ─────────────────────────────────────────────
   useEffect(() => {
     if (!joined) return
     let active = true
@@ -83,41 +121,145 @@ export default function GoQuizRoom() {
     return () => { active = false; clearInterval(interval) }
   }, [joined, code])
 
-  // ── TIMER: resets when question changes ──
+  // ─────────────────────────────────────────────
+  //  CLIENT-SIDE TIMER (synced to server start time)
+  // ─────────────────────────────────────────────
   useEffect(() => {
-    if (!session || session.state !== 'question') return
+    if (!session || session.state !== 'question') {
+      clearInterval(tickRef.current)
+      return
+    }
 
-    const q = session.currentQ
-    if (q === prevQRef.current) return  // same question, don't reset
-    prevQRef.current = q
-    setSelected(null)
-    setTimeLeft(Q_TIME)
+    // Reset on new question
+    const qIdx = session.currentQ
+    if (qIdx !== prevQRef.current) {
+      prevQRef.current    = qIdx
+      autoActionRef.current = false
+      setSelected(null)
+    }
 
-    clearInterval(timerRef.current)
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 5 && t > 0) snd.tick()
-        if (t <= 1) { clearInterval(timerRef.current); return 0 }
-        return t - 1
-      })
-    }, 1000)
+    clearInterval(tickRef.current)
+    tickRef.current = setInterval(() => {
+      const remaining = calcTimeLeft(session.questionStartedAt)
+      setTimeLeft(remaining)
 
-    return () => clearInterval(timerRef.current)
-  }, [session?.state, session?.currentQ])
+      if (remaining <= 5 && remaining > 0) snd.tick()
 
-  // ── SOUNDS on state change ──
+      // Time's up — auto-trigger show answer (HOST only)
+      if (remaining <= 0 && isHost && !autoActionRef.current) {
+        autoActionRef.current = true
+        clearInterval(tickRef.current)
+        doShowAnswer(session)
+      }
+    }, 250)
+
+    return () => clearInterval(tickRef.current)
+  }, [session?.state, session?.currentQ, session?.questionStartedAt])
+
+  // ─────────────────────────────────────────────
+  //  AUTO-TRIGGER: all players answered
+  // ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!session || session.state !== 'question' || !isHost || autoActionRef.current) return
+    const players    = session.players || {}
+    const playerList = Object.values(players)
+    const total      = playerList.length
+    const answered   = playerList.filter(p => p.answered).length
+
+    if (total > 0 && answered >= total) {
+      autoActionRef.current = true
+      clearInterval(tickRef.current)
+      // Small delay so last player sees their answer registered
+      setTimeout(() => doShowAnswer(session), 800)
+    }
+  }, [session?.players, session?.state])
+
+  // ─────────────────────────────────────────────
+  //  SOUND on state change
+  // ─────────────────────────────────────────────
   useEffect(() => {
     if (!session) return
     if (session.state !== prevStateRef.current) {
-      if (session.state === 'question') snd.start()
+      if (session.state === 'question') { snd.start(); setResultTimer(RESULT_SEC) }
+      if (session.state === 'showAnswer') snd.ding()
       prevStateRef.current = session.state
     }
   }, [session?.state])
 
-  // cleanup timer on unmount
-  useEffect(() => () => clearInterval(timerRef.current), [])
+  // ─────────────────────────────────────────────
+  //  AUTO-ADVANCE after showAnswer (HOST)
+  // ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!session || session.state !== 'showAnswer' || !isHost) return
 
-  // ── JOIN ──
+    clearInterval(resultCountRef.current)
+    setResultTimer(RESULT_SEC)
+
+    resultCountRef.current = setInterval(() => {
+      setResultTimer(t => {
+        if (t <= 1) {
+          clearInterval(resultCountRef.current)
+          doNext()
+          return 0
+        }
+        return t - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(resultCountRef.current)
+  }, [session?.state, session?.currentQ])
+
+  // cleanup
+  useEffect(() => () => {
+    clearInterval(tickRef.current)
+    clearInterval(resultCountRef.current)
+  }, [])
+
+  // ─────────────────────────────────────────────
+  //  HOST ACTIONS
+  // ─────────────────────────────────────────────
+  const doShowAnswer = async (sess) => {
+    if (hostBusy) return
+    setHostBusy(true)
+    const q = getQ(sess?.questionIds?.[sess?.currentQ])
+    if (q) await api({ action: 'quizScore', code, correctAnswer: q.correct })
+    await api({ action: 'quizShowAnswer', code })
+    const updated = await api({ action: 'quizGet', code })
+    if (updated.success) setSession(updated)
+    setHostBusy(false)
+  }
+
+  const doNext = async () => {
+    if (hostBusy) return
+    setHostBusy(true)
+    autoActionRef.current = false
+    await api({ action: 'quizNext', code })
+    const updated = await api({ action: 'quizGet', code })
+    if (updated.success) setSession(updated)
+    setHostBusy(false)
+  }
+
+  const hostStart = async () => {
+    setHostBusy(true)
+    await api({ action: 'quizStart', code })
+    setHostBusy(false)
+  }
+
+  // ─────────────────────────────────────────────
+  //  PLAYER ANSWER
+  // ─────────────────────────────────────────────
+  const handleAnswer = async (idx) => {
+    if (selected !== null || session?.state !== 'question') return
+    setSelected(idx)
+    clearInterval(tickRef.current)
+    const tl = Math.round(calcTimeLeft(session?.questionStartedAt))
+    await api({ action: 'quizAnswer', code, name: myName, answer: idx, timeLeft: tl })
+    if (idx === currentQ?.correct) snd.correct(); else snd.wrong()
+  }
+
+  // ─────────────────────────────────────────────
+  //  JOIN
+  // ─────────────────────────────────────────────
   const handleJoin = async () => {
     if (!joinName.trim()) return
     setJoining(true)
@@ -130,68 +272,35 @@ export default function GoQuizRoom() {
       setJoined(true)
     } else {
       setJoinError(
-        data.error === 'started' ? 'This game has already started.' :
-        data.error === 'name taken' ? 'That name is already taken. Choose another.' :
-        data.error === 'not found' ? 'Room not found. Check the code.' :
+        data.error === 'started'    ? 'Game already started.' :
+        data.error === 'name taken' ? 'Name taken — choose another.' :
+        data.error === 'not found'  ? 'Room not found. Check the code.' :
         'Could not join. Try again.'
       )
     }
     setJoining(false)
   }
 
-  // ── HOST CONTROLS ──
-  const hostStart = async () => {
-    setHostBusy(true)
-    await api({ action: 'quizStart', code })
-    setHostBusy(false)
-  }
-
-  const hostShowAnswer = async () => {
-    setHostBusy(true)
-    clearInterval(timerRef.current)
-    const q = currentQ
-    if (q) await api({ action: 'quizScore', code, correctAnswer: q.correct })
-    await api({ action: 'quizShowAnswer', code })
-    const updated = await api({ action: 'quizGet', code })
-    if (updated.success) setSession(updated)
-    setHostBusy(false)
-  }
-
-  const hostNext = async () => {
-    setHostBusy(true)
-    await api({ action: 'quizNext', code })
-    const updated = await api({ action: 'quizGet', code })
-    if (updated.success) setSession(updated)
-    setHostBusy(false)
-  }
-
-  // ── PLAYER ANSWER ──
-  const handleAnswer = async (idx) => {
-    if (selected !== null) return
-    setSelected(idx)
-    clearInterval(timerRef.current)
-    if (myName) {
-      await api({ action: 'quizAnswer', code, name: myName, answer: idx, timeLeft })
-    }
-    if (idx === currentQ?.correct) snd.correct(); else snd.wrong()
-  }
-
-  // ── DERIVED DATA ──
-  const currentQ    = session?.questionIds?.[session.currentQ] ? getQ(session.questionIds[session.currentQ]) : null
-  const players     = session?.players || {}
-  const playerList  = sorted(players)
-  const totalP      = playerList.length
+  // ─────────────────────────────────────────────
+  //  DERIVED
+  // ─────────────────────────────────────────────
+  const currentQ   = session?.questionIds?.[session.currentQ] ? getQ(session.questionIds[session.currentQ]) : null
+  const players    = session?.players || {}
+  const playerList = sorted(players)
+  const totalP     = playerList.length
   const answeredCnt = playerList.filter(p => p.answered).length
-  const myData      = players[myName] || null
-  const timerPct    = (timeLeft / Q_TIME) * 100
-  const timerColor  = timeLeft <= 5 ? '#ef4444' : timeLeft <= 10 ? '#f59e0b' : '#f97316'
+  const myData     = players[myName] || null
   const serverState = session?.state || 'lobby'
+  const tLeft      = Math.ceil(timeLeft)
+  const timerColor = tLeft <= 5 ? '#ef4444' : tLeft <= 10 ? '#f59e0b' : '#f97316'
+  const timerPct   = Math.max(0, (timeLeft / Q_TIME) * 100)
+  const isCorrect  = !isHost && selected === currentQ?.correct
 
-  // ═══════════════════════════════════════════
-  // RENDER
-  // ═══════════════════════════════════════════
+  // ═════════════════════════════════════════════
+  //  RENDER
+  // ═════════════════════════════════════════════
 
-  // ── JOIN SCREEN (player only) ──
+  // ── JOIN SCREEN (players only) ──
   if (!joined) return (
     <div className="grm-page grm-join-page">
       <div className="grm-join-box">
@@ -231,7 +340,7 @@ export default function GoQuizRoom() {
   // ── LOADING ──
   if (!session) return (
     <div className="grm-page grm-center">
-      <div className="grm-loader">⏳ Connecting to room <strong>{code}</strong>...</div>
+      <div className="grm-loader">⏳ Connecting to <strong>{code}</strong>...</div>
     </div>
   )
 
@@ -242,7 +351,6 @@ export default function GoQuizRoom() {
         <span>Join at <strong>pulse-kk.com/go</strong> — Code:</span>
         <span className="grm-lobby-code">{code}</span>
       </div>
-
       <div className="grm-lobby-body">
         <h1 className="grm-lobby-title">
           {isHost ? '⏳ Waiting for players...' : `${myAvatar} You're in! Waiting for host...`}
@@ -251,8 +359,7 @@ export default function GoQuizRoom() {
           {playerList.length === 0 && <p className="grm-lobby-empty">No players yet — share the code!</p>}
           {playerList.map(p => (
             <div key={p.name} className="grm-lobby-player">
-              <span>{p.avatar}</span>
-              <span>{p.name}</span>
+              <span>{p.avatar}</span><span>{p.name}</span>
             </div>
           ))}
         </div>
@@ -269,19 +376,24 @@ export default function GoQuizRoom() {
   // ── QUESTION ──
   if (serverState === 'question') return (
     <div className="grm-page grm-q-page">
+      {/* Timer bar */}
       <div className="grm-timer-bar">
         <div className="grm-timer-fill" style={{ width: `${timerPct}%`, background: timerColor }} />
       </div>
 
+      {/* Meta row */}
       <div className="grm-q-meta">
         <span className="grm-q-counter">{(session.currentQ ?? 0) + 1} / {session.questionIds?.length ?? 10}</span>
-        <span className="grm-q-timer" style={{ color: timerColor }}>{timeLeft}s</span>
-        {isHost && <span className="grm-q-anscount" style={{ color: '#f97316' }}>{answeredCnt}/{totalP} answered</span>}
+        <span className="grm-q-timer" style={{ color: timerColor }}>{tLeft}s</span>
+        <span className="grm-q-anscount" style={{ color: answeredCnt === totalP ? '#22c55e' : '#f97316' }}>
+          {answeredCnt}/{totalP} ✓
+        </span>
       </div>
 
+      {/* Question */}
       <div className="grm-question-box">{currentQ?.question || '...'}</div>
 
-      {/* PLAYER: colored option buttons */}
+      {/* PLAYER: colored options */}
       {!isHost && (
         <div className="grm-options-grid">
           {currentQ?.options.map((opt, i) => (
@@ -297,13 +409,18 @@ export default function GoQuizRoom() {
               <span className="grm-opt-text">{opt}</span>
             </button>
           ))}
-          {selected !== null && <div className="grm-waiting">⏳ Waiting for results...</div>}
+          {selected !== null && (
+            <div className="grm-waiting">
+              ⏳ Waiting for others... ({answeredCnt}/{totalP} answered)
+            </div>
+          )}
         </div>
       )}
 
-      {/* HOST: answer count bars + show answer button */}
+      {/* HOST: answer bars (read-only, auto-advances) */}
       {isHost && (
         <div className="grm-host-view">
+          <div className="grm-auto-note">⚡ Auto-advancing when all answer or time runs out</div>
           <div className="grm-bars">
             {currentQ?.options.map((opt, i) => {
               const cnt = playerList.filter(p => p.answered && p.lastAnswer === i).length
@@ -319,68 +436,100 @@ export default function GoQuizRoom() {
               )
             })}
           </div>
-          <button className="grm-btn-primary" onClick={hostShowAnswer} disabled={hostBusy} style={{ marginTop: 20 }}>
-            {hostBusy ? 'Scoring...' : '📊 Show Answer'}
+          <p className="grm-bar-opt-text" style={{ marginTop: 16, textAlign: 'center', fontSize: 13, color: '#6b7280' }}>
+            {answeredCnt === totalP && totalP > 0 ? '✅ All answered — showing results...' : `Waiting for ${totalP - answeredCnt} more...`}
+          </p>
+          {/* Manual override — skip wait */}
+          <button
+            className="grm-btn-skip"
+            onClick={() => { autoActionRef.current = true; clearInterval(tickRef.current); doShowAnswer(session) }}
+            disabled={hostBusy}
+          >
+            Skip wait →
           </button>
         </div>
       )}
     </div>
   )
 
-  // ── SHOW ANSWER ──
-  if (serverState === 'showAnswer') {
-    const isCorrect = !isHost && selected === currentQ?.correct
-    const myPoints = isCorrect ? 1000 + Math.round((timeLeft / Q_TIME) * 500) : 0
-    return (
-      <div className="grm-page grm-answer-page">
-        {!isHost && (
-          <div className={`grm-result-banner ${isCorrect ? 'correct' : 'wrong'}`}>
-            {isCorrect ? `✅ Correct! +${myPoints} pts` : '❌ Wrong'}
-          </div>
-        )}
-
-        {isHost && <h2 className="grm-answer-title">📊 Results</h2>}
-
-        <div className="grm-answer-opts">
-          {currentQ?.options.map((opt, i) => (
-            <div
-              key={i}
-              className={`grm-answer-opt ${i === currentQ.correct ? 'correct' : ''} ${!isHost && selected === i && i !== currentQ.correct ? 'wrong' : ''}`}
-              style={{ '--c': OPTS[i].color }}
-            >
-              <span className="grm-ao-shape">{OPTS[i].shape}</span>
-              <span className="grm-ao-text">{opt}</span>
-              {i === currentQ.correct && <span className="grm-ao-check">✓</span>}
-            </div>
-          ))}
+  // ── SHOW ANSWER (auto-advances after RESULT_SEC) ──
+  if (serverState === 'showAnswer') return (
+    <div className="grm-page grm-answer-page">
+      {/* Player result banner */}
+      {!isHost && (
+        <div className={`grm-result-banner ${isCorrect ? 'correct' : 'wrong'}`}>
+          {isCorrect
+            ? `✅ Correct! +${1000 + Math.round((Math.max(0, tLeft) / Q_TIME) * 500)} pts`
+            : selected === null ? '⏱️ Time\'s up!' : '❌ Wrong'}
         </div>
+      )}
 
-        {currentQ?.explanation && (
-          <div className="grm-explanation">💡 {currentQ.explanation}</div>
-        )}
+      {isHost && <h2 className="grm-answer-title">📊 Results</h2>}
 
-        <div className="grm-mini-lb">
-          <div className="grm-mini-lb-title">🏆 Leaderboard</div>
-          {playerList.slice(0, 6).map((p, i) => (
-            <div key={p.name} className={`grm-mini-row ${p.name === myName ? 'me' : ''}`}>
-              <span className="grm-mini-rank">{i + 1}</span>
-              <span className="grm-mini-av">{p.avatar}</span>
-              <span className="grm-mini-name">{p.name}</span>
-              <span className="grm-mini-score">{(p.score || 0).toLocaleString()}</span>
-            </div>
-          ))}
+      {/* Auto-next countdown */}
+      <div className="grm-auto-next">
+        <div className="grm-auto-next-ring">
+          <svg viewBox="0 0 44 44" className="grm-ring-svg">
+            <circle cx="22" cy="22" r="18" className="grm-ring-bg" />
+            <circle
+              cx="22" cy="22" r="18"
+              className="grm-ring-fill"
+              strokeDasharray={`${(resultTimer / RESULT_SEC) * 113} 113`}
+            />
+          </svg>
+          <span className="grm-ring-num">{resultTimer}</span>
         </div>
-
-        {isHost && (
-          <button className="grm-btn-primary" onClick={hostNext} disabled={hostBusy} style={{ marginTop: 16 }}>
-            {hostBusy ? 'Loading...' :
-              (session.currentQ ?? 0) + 1 >= (session.questionIds?.length ?? 10)
-                ? '🏁 Final Results' : '▶ Next Question'}
-          </button>
-        )}
+        <span className="grm-auto-next-label">Next question in...</span>
       </div>
-    )
-  }
+
+      {/* Correct/wrong options */}
+      <div className="grm-answer-opts">
+        {currentQ?.options.map((opt, i) => (
+          <div
+            key={i}
+            className={`grm-answer-opt ${i === currentQ.correct ? 'correct' : ''} ${!isHost && selected === i && i !== currentQ.correct ? 'wrong' : ''}`}
+            style={{ '--c': OPTS[i].color }}
+          >
+            <span className="grm-ao-shape">{OPTS[i].shape}</span>
+            <span className="grm-ao-text">{opt}</span>
+            {i === currentQ.correct && <span className="grm-ao-check">✓</span>}
+          </div>
+        ))}
+      </div>
+
+      {/* Explanation */}
+      {currentQ?.explanation && (
+        <div className="grm-explanation">💡 {currentQ.explanation}</div>
+      )}
+
+      {/* Leaderboard */}
+      <div className="grm-mini-lb">
+        <div className="grm-mini-lb-title">🏆 Leaderboard</div>
+        {playerList.slice(0, 6).map((p, i) => (
+          <div key={p.name} className={`grm-mini-row ${p.name === myName ? 'me' : ''}`}>
+            <span className="grm-mini-rank">{i + 1}</span>
+            <span className="grm-mini-av">{p.avatar}</span>
+            <span className="grm-mini-name">{p.name}</span>
+            <span className="grm-mini-score">{(p.score || 0).toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Host manual override */}
+      {isHost && (
+        <button
+          className="grm-btn-skip"
+          onClick={() => { clearInterval(resultCountRef.current); doNext() }}
+          disabled={hostBusy}
+          style={{ marginTop: 8 }}
+        >
+          {hostBusy ? 'Loading...' :
+            (session.currentQ ?? 0) + 1 >= (session.questionIds?.length ?? 10)
+              ? '🏁 Final Results now' : '▶ Next now'}
+        </button>
+      )}
+    </div>
+  )
 
   // ── FINISHED ──
   if (serverState === 'finished') {
@@ -429,5 +578,9 @@ export default function GoQuizRoom() {
     )
   }
 
-  return <div className="grm-page grm-center"><p style={{ color: '#6b7280' }}>Syncing... ({serverState})</p></div>
+  return (
+    <div className="grm-page grm-center">
+      <p style={{ color: '#6b7280' }}>Syncing... ({serverState})</p>
+    </div>
+  )
 }
