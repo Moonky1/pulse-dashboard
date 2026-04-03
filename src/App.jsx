@@ -13,6 +13,7 @@ import GoLearn       from './go/GoLearn'
 import GoLearnDetail from './go/GoLearnDetail'
 import GoQuiz        from './go/GoQuiz'
 import GoQuizPlay    from './go/GoQuizPlay'
+import GoQuizRoom    from './go/GoQuizRoom'
 import GoPresent     from './go/GoPresent'
 
 const PrivateRoute = ({ children }) => {
@@ -39,8 +40,8 @@ export default function App() {
         <Route path="/go/learn/:id"    element={<GoLearnDetail />} />
         <Route path="/go/quiz"         element={<GoQuiz />} />
         <Route path="/go/quiz/play"    element={<GoQuizPlay />} />
+        <Route path="/go/quiz/:code"   element={<GoQuizRoom />} />
         <Route path="/go/present"      element={<GoPresent />} />
-        {/* /go/quiz/:code → GoQuizRoom (coming — needs Apps Script) */}
       </Routes>
     </BrowserRouter>
   )
