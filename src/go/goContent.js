@@ -66,6 +66,13 @@ export const scripts = {
         text: "Hello Service Advisor, I have [client's name] on the line — can you please assist?",
         tip: 'Stay on the line until the SA confirms they have the customer.',
       },
+      {
+        id: 9,
+        type: 'action',
+        label: '⏱️ 15-Second Rule',
+        text: 'After the SA joins, stay on the call for at least 15 seconds before disconnecting. Make sure the SA and customer are actively talking before you leave.',
+        tip: 'Never hang up the moment the SA joins — confirm the handoff is clean.',
+      },
     ],
   },
   es: {
@@ -128,6 +135,13 @@ export const scripts = {
         label: 'Introducción al Asesor',
         text: 'Hola, Asesor de Servicio, tengo a [nombre del cliente] en la línea. ¿Podría asistir, por favor?',
         tip: 'Quédate en la línea hasta que el SA confirme que tiene al cliente.',
+      },
+      {
+        id: 9,
+        type: 'action',
+        label: '⏱️ Regla de 15 segundos',
+        text: 'Después de que el Asesor se une, permanece en la llamada al menos 15 segundos antes de desconectarte. Asegúrate de que el SA y el cliente estén hablando activamente antes de salir.',
+        tip: 'Nunca cuelgues en el momento en que el SA se une — confirma que el traspaso fue limpio.',
       },
     ],
   },
@@ -425,6 +439,7 @@ export const callFlow = {
     'Initiate transfer — stay on the line',
     'Wait for Service Advisor to pick up and speak first',
     'Introduce client: "Hello SA, I have [name] on the line — can you please assist?"',
+    '⏱️ Stay on the 3-way call for at least 15 seconds — confirm SA and customer are talking before you disconnect',
   ],
   waitingQuestions: [
     'Has your vehicle received maintenance recently?',
@@ -756,4 +771,4 @@ export const learnCategories = [
     type: 'dosdонts',
     ref: null,
   },
-]; 
+];

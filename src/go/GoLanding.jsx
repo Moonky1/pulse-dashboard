@@ -7,13 +7,12 @@ export default function GoLanding() {
   const [visible, setVisible] = useState(false)
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
-  const [step, setStep] = useState('code') // 'code' | 'name'
+  const [step, setStep] = useState('code')
   const titleRef = useRef(null)
   const canvasRef = useRef(null)
 
   useEffect(() => { setTimeout(() => setVisible(true), 100) }, [])
 
-  // 3D tilt
   useEffect(() => {
     const title = titleRef.current
     if (!title) return
@@ -23,15 +22,12 @@ export default function GoLanding() {
       const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)
       title.style.transform = `perspective(600px) rotateX(${-dy * 8}deg) rotateY(${dx * 8}deg) scale(1.04)`
     }
-    const onLeave = () => {
-      title.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)'
-    }
+    const onLeave = () => { title.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)' }
     title.addEventListener('mousemove', onMove)
     title.addEventListener('mouseleave', onLeave)
     return () => { title.removeEventListener('mousemove', onMove); title.removeEventListener('mouseleave', onLeave) }
   }, [visible])
 
-  // Canvas trail
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -69,10 +65,7 @@ export default function GoLanding() {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('resize', onResize); cancelAnimationFrame(raf) }
   }, [])
 
-  const handleCodeNext = () => {
-    if (code.trim().length >= 4) setStep('name')
-  }
-
+  const handleCodeNext = () => { if (code.trim().length >= 4) setStep('name') }
   const handleJoin = () => {
     if (!name.trim()) return
     navigate(`/go/quiz/${code.trim().toUpperCase()}?name=${encodeURIComponent(name.trim())}`)
@@ -92,10 +85,9 @@ export default function GoLanding() {
         {[...Array(20)].map((_, i) => <div key={i} className="gol-particle" style={{ '--i': i }} />)}
       </div>
 
-      {/* ── Kahoot top nav ── */}
+      {/* Nav — no logo image, just text */}
       <nav className="gol-nav">
         <div className="gol-nav-logo" onClick={() => navigate('/dashboard')}>
-          <img src="/kk-logo.png" alt="KK" className="gol-nav-logoimg" />
           <span className="gol-nav-logotext">Pulse</span>
           <span className="gol-nav-badge">GO</span>
         </div>
@@ -114,7 +106,7 @@ export default function GoLanding() {
         </button>
       </nav>
 
-      {/* ── Hero ── */}
+      {/* Hero */}
       <div className={`gol-hero ${visible ? 'visible' : ''}`}>
         <img src="/kk-logo.png" alt="Kampaign Kings" className="gol-logo" />
 
@@ -130,7 +122,6 @@ export default function GoLanding() {
 
         <p className="gol-sub">Kampaign Kings Training Hub</p>
 
-        {/* ── Code input (Kahoot style) ── */}
         <div className="gol-card">
           {step === 'code' ? (
             <>
@@ -144,14 +135,10 @@ export default function GoLanding() {
                 maxLength={8}
                 autoComplete="off"
               />
-              <button
-                className="gol-btn-primary"
-                onClick={handleCodeNext}
-                disabled={code.trim().length < 4}
-              >
+              <button className="gol-btn-primary" onClick={handleCodeNext} disabled={code.trim().length < 4}>
                 Enter →
               </button>
-              <p className="gol-card-note">Or go directly to a section above ↑</p>
+              <p className="gol-card-note">Or pick a section above ↑</p>
             </>
           ) : (
             <>
@@ -166,11 +153,7 @@ export default function GoLanding() {
                 autoComplete="off"
                 autoFocus
               />
-              <button
-                className="gol-btn-primary"
-                onClick={handleJoin}
-                disabled={!name.trim()}
-              >
+              <button className="gol-btn-primary" onClick={handleJoin} disabled={!name.trim()}>
                 Join Session →
               </button>
               <button className="gol-btn-ghost" onClick={() => setStep('code')}>← Back</button>

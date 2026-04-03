@@ -13,6 +13,7 @@ import GoLearn       from './go/GoLearn'
 import GoLearnDetail from './go/GoLearnDetail'
 import GoQuiz        from './go/GoQuiz'
 import GoQuizPlay    from './go/GoQuizPlay'
+import GoPresent     from './go/GoPresent'
 
 const PrivateRoute = ({ children }) => {
   const user = localStorage.getItem('pulse_user')
@@ -38,8 +39,8 @@ export default function App() {
         <Route path="/go/learn/:id"    element={<GoLearnDetail />} />
         <Route path="/go/quiz"         element={<GoQuiz />} />
         <Route path="/go/quiz/play"    element={<GoQuizPlay />} />
-        {/* /go/quiz/:code  → GoQuizRoom (coming next — needs Apps Script) */}
-        {/* /go/present     → GoPresent  (coming next) */}
+        <Route path="/go/present"      element={<GoPresent />} />
+        {/* /go/quiz/:code → GoQuizRoom (coming — needs Apps Script) */}
       </Routes>
     </BrowserRouter>
   )
