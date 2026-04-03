@@ -5,7 +5,7 @@ import './GoQuizRoom.css'
 
 // ─────────────────────────────────────
 const API        = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
-const POLL_MS    = 1500
+const POLL_MS    = 800   // ⚡ was 1500 — más rápido para todos
 const Q_TIME     = 20
 const RESULT_SEC = 5
 const AVATARS    = ['🦊','🐺','🦁','🐯','🐻','🦅','🐬','🦋','🐲','🦄','🐸','🐧','🦩','🐙','🐼','🦒','🐨','🐔','🦉','🦓']
@@ -61,16 +61,16 @@ export default function GoQuizRoom() {
   const [myAv,    setMyAv]   = useState('🦊')
 
   // Question UI
-  const [picked,  setPicked]  = useState(null)  // player's choice (display only)
-  const [tLeft,   setTLeft]   = useState(Q_TIME) // visual timer — NEVER stops on player
-  const [rCount,  setRCount]  = useState(RESULT_SEC) // result countdown
+  const [picked,  setPicked]  = useState(null)
+  const [tLeft,   setTLeft]   = useState(Q_TIME)
+  const [rCount,  setRCount]  = useState(RESULT_SEC)
   const [busy,    setBusy]    = useState(false)
 
-  // Refs for latest session in callbacks
+  // Refs
   const sessRef    = useRef(null)
   const prevQ      = useRef(-1)
   const prevState  = useRef('')
-  const autoFired  = useRef(false)  // prevent double auto-trigger per question
+  const autoFired  = useRef(false)
   const tickRef    = useRef(null)
   const rCountRef  = useRef(null)
   sessRef.current  = sess
@@ -85,15 +85,14 @@ export default function GoQuizRoom() {
     return () => { live=false; clearInterval(t) }
   }, [joined, code])
 
-  // ── TIMER — runs for EVERYONE, never stops when player answers ──
+  // ── TIMER ──
   useEffect(() => {
     if (!sess || sess.state !== 'question') {
       clearInterval(tickRef.current)
       return
     }
-    // New question reset
     if (sess.currentQ !== prevQ.current) {
-      prevQ.current   = sess.currentQ
+      prevQ.current     = sess.currentQ
       autoFired.current = false
       setPicked(null)
     }
@@ -102,7 +101,6 @@ export default function GoQuizRoom() {
       const tl = calcTL(sessRef.current?.questionStartedAt)
       setTLeft(tl)
       if (tl <= 5 && tl > 0.5) snd.tick()
-      // HOST only: auto show answer when time is up
       if (tl <= 0 && isHost && !autoFired.current) {
         autoFired.current = true
         clearInterval(tickRef.current)
@@ -131,7 +129,7 @@ export default function GoQuizRoom() {
     prevState.current = sess.state
   }, [sess?.state])
 
-  // ── RESULT COUNTDOWN — HOST auto-advances, PLAYER just sees it ──
+  // ── RESULT COUNTDOWN ──
   useEffect(() => {
     if (!sess || sess.state !== 'showAnswer') return
     clearInterval(rCountRef.current)
@@ -152,24 +150,29 @@ export default function GoQuizRoom() {
   useEffect(() => () => { clearInterval(tickRef.current); clearInterval(rCountRef.current) }, [])
 
   // ── HOST ACTIONS ──
+  // ⚡ OPTIMIZADO: era 3 llamadas (quizScore + quizShowAnswer + quizGet)
+  // Ahora es 1 sola llamada que hace todo y devuelve el estado actualizado
   const triggerShowAnswer = async () => {
     if (busy) return
     setBusy(true)
     const s = sessRef.current
     const q = getQ(s?.questionIds?.[s?.currentQ])
-    if (q) await api({action:'quizScore', code, correctAnswer: q.correct})
-    await api({action:'quizShowAnswer', code})
-    const upd = await api({action:'quizGet', code})
+    const upd = await api({
+      action: 'quizScoreAndShow',
+      code,
+      correctAnswer: q ? q.correct : -1
+    })
     if (upd.success) setSess(upd)
     setBusy(false)
   }
 
+  // ⚡ OPTIMIZADO: era quizNext + quizGet (2 llamadas)
+  // Ahora quizNext devuelve el estado completo directamente
   const triggerNext = async () => {
     if (busy) return
     setBusy(true)
     autoFired.current = false
-    await api({action:'quizNext', code})
-    const upd = await api({action:'quizGet', code})
+    const upd = await api({action:'quizNext', code})
     if (upd.success) setSess(upd)
     setBusy(false)
   }
@@ -180,11 +183,10 @@ export default function GoQuizRoom() {
     setBusy(false)
   }
 
-  // ── PLAYER ANSWER — does NOT stop the visual timer ──
+  // ── PLAYER ANSWER ──
   const handleAnswer = async (idx) => {
     if (picked !== null || sess?.state !== 'question') return
     setPicked(idx)
-    // NOTE: tickRef keeps running — timer continues on player screen
     const tl = Math.round(calcTL(sess?.questionStartedAt))
     await api({action:'quizAnswer', code, name: myName, answer: idx, timeLeft: tl})
     if (idx === currentQ?.correct) snd.correct(); else snd.wrong()
@@ -288,12 +290,9 @@ export default function GoQuizRoom() {
   // QUESTION
   if (state === 'question') return (
     <div className="grm grm-q">
-      {/* Timer bar — smooth, always moving */}
       <div className="grm-tbar">
         <div className="grm-tfill" style={{width:`${tPct}%`, background: tColor}} />
       </div>
-
-      {/* Top meta */}
       <div className="grm-qmeta">
         <span className="grm-qnum">{(sess.currentQ??0)+1}/{sess.questionIds?.length??10}</span>
         <span className="grm-qtimer" style={{color:tColor}}>{tDisp}s</span>
@@ -301,11 +300,8 @@ export default function GoQuizRoom() {
           {answeredN}/{totalP} ✓
         </span>
       </div>
-
-      {/* Question */}
       <div className="grm-qtext">{currentQ?.question||'...'}</div>
 
-      {/* PLAYER: option buttons */}
       {!isHost && (
         <div className="grm-opts">
           {currentQ?.options.map((opt,i) => (
@@ -329,7 +325,6 @@ export default function GoQuizRoom() {
         </div>
       )}
 
-      {/* HOST: answer bars */}
       {isHost && (
         <div className="grm-host-q">
           <div className="grm-auto-badge">⚡ Auto-advances when all answer or time runs out</div>
@@ -351,7 +346,7 @@ export default function GoQuizRoom() {
             {answeredN===totalP&&totalP>0 ? '✅ All answered!' : `${totalP-answeredN} still thinking...`}
           </p>
           <button className="grm-btn-skip" onPointerDown={() => { autoFired.current=true; clearInterval(tickRef.current); triggerShowAnswer() }} disabled={busy}>
-            Skip →
+            {busy ? 'Loading...' : 'Skip →'}
           </button>
         </div>
       )}
@@ -361,7 +356,6 @@ export default function GoQuizRoom() {
   // SHOW ANSWER
   if (state === 'showAnswer') return (
     <div className="grm grm-answer">
-      {/* Player result */}
       {!isHost && (
         <div className={`grm-result-banner ${isCorrect?'ok':'no'}`}>
           {isCorrect
@@ -371,7 +365,6 @@ export default function GoQuizRoom() {
       )}
       {isHost && <h2 className="grm-answer-h">📊 Results</h2>}
 
-      {/* Countdown ring */}
       <div className="grm-ring-wrap">
         <svg viewBox="0 0 48 48" className="grm-ring-svg">
           <circle cx="24" cy="24" r="20" className="grm-ring-bg" />
@@ -382,7 +375,6 @@ export default function GoQuizRoom() {
       </div>
       <p className="grm-ring-label">Next in...</p>
 
-      {/* Options with correct highlighted */}
       <div className="grm-answer-opts">
         {currentQ?.options.map((opt,i) => (
           <div key={i}
@@ -397,7 +389,6 @@ export default function GoQuizRoom() {
 
       {currentQ?.explanation && <div className="grm-exp">💡 {currentQ.explanation}</div>}
 
-      {/* Leaderboard */}
       <div className="grm-mini-lb">
         <div className="grm-mini-lb-hd">🏆 Leaderboard</div>
         {list.slice(0,6).map((p,i) => (
@@ -466,4 +457,4 @@ export default function GoQuizRoom() {
   }
 
   return <div className="grm grm-center"><p className="grm-muted">Syncing... ({state})</p></div>
-} 
+}
