@@ -454,7 +454,7 @@ export default function GoQuizRoom() {
         </div>
       </div>
     )
-  }
+  } 
 
   return <div className="grm grm-center"><p className="grm-muted">Syncing... ({state})</p></div>
 }
