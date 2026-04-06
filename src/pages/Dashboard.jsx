@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { APP_CONFIG } from '../config'
 import './dashboard.css'
@@ -20,11 +20,6 @@ const HISTORY_DATES = [
 ]
 const HISTORY_ISO_SET = new Set(HISTORY_DATES.map(d => d.isoDate))
 
-// ── Team config — explicit column indices ──
-// colEn/colSp are 0-based index in the CSV row
-// Philippines: no openers → A=name, B=ext, C=english
-// Colombia/Central/Venezuela: has openers → A=name, B=ext, C=openers, D=english, E=spanish
-// Mexico: has openers, no spanish → A=name, B=ext, C=openers, D=english
 const TEAM_SHEETS = [
   { id:'philippines', label:'🇵🇭 Philippines', sheetName:'AW GARRET PHILIPPINES ',               extStart:'1', hasSp:false, goal:10, flag:'ph', colEn:2, colSp:null, protected:true  },
   { id:'colombia',    label:'🇨🇴 Colombia',    sheetName:'AW GARRET COLOMBIA JUAN GARCIA',       extStart:'2', hasSp:true,  goal:10, flag:'co', colEn:3, colSp:4,    protected:false },
@@ -32,6 +27,14 @@ const TEAM_SHEETS = [
   { id:'mexico',      label:'🇲🇽 Mexico',      sheetName:'AW GARRET BAJA MX KEVIN',              extStart:'5', hasSp:false, goal:10, flag:'mx', colEn:3, colSp:null, protected:false },
   { id:'venezuela',   label:'🇻🇪 Venezuela',   sheetName:'AW GARRET VENEZUELA PATRICIA ',         extStart:'6', hasSp:true,  goal:10, flag:'ve', colEn:3, colSp:4,    protected:true  },
 ]
+
+const TEAM_DISPLAY_NAMES = {
+  philippines: 'Philippines',
+  colombia:    'Colombia',
+  central:     'Central America',
+  mexico:      'Mexico Baja',
+  venezuela:   'Venezuela',
+}
 
 const csvUrl = (sheetId, sheet) =>
   `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}&t=${Date.now()}`
@@ -58,7 +61,6 @@ async function fetchSheetViaScript(sheetId, sheetName) {
   const res  = await fetch(url)
   const data = await res.json()
   if (!Array.isArray(data)) throw new Error(`getSheet error: ${JSON.stringify(data)}`)
-  // Convert array-of-arrays to array-of-string-arrays (same format as parseCSV)
   return data.map(row => row.map(cell => String(cell===null||cell===undefined?'':cell)))
 }
 
@@ -68,9 +70,6 @@ const extractPhones = (cell) => {
   return cell.split('/').map(p => p.trim().replace(/^tel:/i,'')).filter(p => p.length >= 7)
 }
 
-
-
-// ── Override keys ──
 const OVERRIDE_KEY_AGENTS = (date, teamId='asia') => teamId==='asia' ? `pulse_overrides_${date}` : `pulse_overrides_${teamId}_${date}`
 const OVERRIDE_KEY_TOTALS = (date, teamId='asia') => teamId==='asia' ? `pulse_totals_override_${date}` : `pulse_totals_override_${teamId}_${date}`
 
@@ -88,7 +87,7 @@ async function loadRemoteOverrides() {
     const data = await res.json()
     if (!Array.isArray(data)) return
     data.forEach(([date, key, value]) => {
-      try { if (!localStorage.getItem(key)) localStorage.setItem(key, value) } catch(e) {} 
+      try { if (!localStorage.getItem(key)) localStorage.setItem(key, value) } catch(e) {}
     })
   } catch(e) {}
 }
@@ -124,12 +123,13 @@ const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={
 const MEDALS = [E.medal1, E.medal2, E.medal3]
 
 const todayKey = () => new Date().toISOString().slice(0,10)
-
-// Colombia timezone is UTC-5
 const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
 const includeOT    = () => colombiaHour() >= 18
 
-// ── Generic team sheet parser — reads main section always, OT after 6pm ──
+// ─────────────────────────────────────────────────────────────────
+// parseTeamSheet — FIX: captures "X Agents Log In" totals row
+// so overview numbers exactly match what the sheet shows
+// ─────────────────────────────────────────────────────────────────
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
@@ -137,6 +137,7 @@ function parseTeamSheet(rows, config) {
 
   const agentMap = {}
   let inOT = false; let otColEn = -1; let otColSp = -1
+  let sheetTotals = null  // captured from "X Agents Log In" / "Total Transfers" row
 
   const isOTRow = (r) => {
     const c = (r[0]||'').toString().trim().toUpperCase()
@@ -155,6 +156,7 @@ function parseTeamSheet(rows, config) {
     const row = rows[i]; if (!Array.isArray(row)) continue
     const cell0 = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase().trim()
+
     if (isOTRow(row)) {
       if (!includeOT()) break
       inOT = true; otColEn = -1; otColSp = -1; continue
@@ -170,6 +172,31 @@ function parseTeamSheet(rows, config) {
         otColSp = (hasSp && colSp != null) ? Math.max(colSp - 1, 3) : -1
       } else continue
     }
+
+    // ── Capture sheet totals BEFORE filtering ──
+    // Matches: "55 AGENTS LOG IN", "70 Agents Logged in", "TOTAL TRANSFERS" in col1, etc.
+    const isAgentsRow = cell0U.includes('AGENT') && (cell0U.includes('LOG') || cell0U.includes('LOGGED'))
+    const isTotalRow  = cell0U.includes('TOTAL') && cell0U.includes('TRANSFER')
+    if (isAgentsRow || isTotalRow) {
+      const ec = inOT ? otColEn : colEn
+      const sc = inOT ? otColSp : (colSp != null ? colSp : -1)
+      if (ec >= 0) {
+        const ten = safeInt(row[ec])
+        const tsp = sc >= 0 ? safeInt(row[sc]) : 0
+        if (ten > 0 || tsp > 0) sheetTotals = { english: ten, spanish: tsp, total: ten + tsp }
+      }
+      // Also check col1 for "TOTAL TRANSFERS" pattern (Mexico layout)
+      if (!sheetTotals || sheetTotals.english === 0) {
+        const b1 = (row[1]||'').toString().toUpperCase()
+        if (b1.includes('TOTAL')) {
+          const ten = safeInt(row[colEn])
+          const tsp = (colSp != null) ? safeInt(row[colSp]) : 0
+          if (ten > 0 || tsp > 0) sheetTotals = { english: ten, spanish: tsp, total: ten + tsp }
+        }
+      }
+      break
+    }
+
     if (isMeta(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
     const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
@@ -186,10 +213,16 @@ function parseTeamSheet(rows, config) {
       agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
     }
   }
+
   const agents = Object.values(agentMap)
-  const en = agents.reduce((s,a)=>s+a.english,0), sp = agents.reduce((s,a)=>s+a.spanish,0)
-  console.log(`${config.label}: ${agents.length} agents, ${en} EN${inOT?' +OT':''}`)
-  return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
+  const agentEn = agents.reduce((s,a)=>s+a.english,0)
+  const agentSp = agents.reduce((s,a)=>s+a.spanish,0)
+  // Use sheet-provided totals when available — exact match with what the sheet shows
+  const totals = sheetTotals
+    ? { ...sheetTotals, activeAgents: agents.length }
+    : { english: agentEn, spanish: agentSp, total: agentEn + agentSp, activeAgents: agents.length }
+  console.log(`${config.label}: ${agents.length} agents | EN:${totals.english} SP:${totals.spanish}${sheetTotals?' (sheet)':' (computed)'}`)
+  return { agents, totals }
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
@@ -202,17 +235,8 @@ const RANGES = [
   { label:'20+',   min:20, max:9999, color:'#22c55e' },
 ]
 
-
-// Saturday goals vary by team:
-// Colombia, Central, Venezuela → 5 EN
-// Philippines, Mexico, Asia   → 10 EN
 const SAT_GOALS = {
-  colombia:    5,
-  central:     5,
-  venezuela:   5,
-  philippines: 10,
-  mexico:      5,
-  asia:        10,
+  colombia:5, central:5, venezuela:5, philippines:10, mexico:5, asia:10,
 }
 const getGoalForDate = (dateStr, baseGoal, teamId='asia') => {
   try {
@@ -237,8 +261,8 @@ const loadAllSnapshots = () => {
         const data = JSON.parse(localStorage.getItem(k))
         snaps.push({
           date,
-          generalData:     Array.isArray(data.generalData)     ? data.generalData     : [],
-          asiaData:        Array.isArray(data.asiaData)        ? data.asiaData        : [],
+          generalData: Array.isArray(data.generalData) ? data.generalData : [],
+          asiaData:    Array.isArray(data.asiaData)    ? data.asiaData    : [],
           teams: data.teams || { philippines: Array.isArray(data.philippinesData) ? data.philippinesData : [] },
           savedAt: data.savedAt,
         })
@@ -375,7 +399,6 @@ function TeamCard({row,rank,isMyTeam,isFirst}) {
   )
 }
 
-// ── Generic Team Detail ──
 function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOverrideTick,navigate}) {
   const [view,setView]=useState('stats')
   const [menuOpen,setMenuOpen]=useState(false)
@@ -445,7 +468,6 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
   }
 
   const showEditBtn=!isToday&&canEdit
-  const colCount=config.hasSp?7:6
 
   return(
     <div className="fade-in" onClick={()=>setMenuOpen(false)}>
@@ -479,7 +501,6 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
         </div>
       </div>
 
-      {/* Summary */}
       {bulkMode?(
         <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`,marginBottom:'1.5rem'}}>
           <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
@@ -600,7 +621,6 @@ export default function Dashboard() {
   const [bulkTotalsEdit,setBulkTotalsEdit] = useState(null)
   const [histCache,setHistCache]           = useState({})
   const [histLoading,setHistLoading]       = useState(false)
-  const [expandedAgent,setExpandedAgent]   = useState(null)
 
   const isToday    = selectedDate === todayKey()
   const isHistDate = HISTORY_ISO_SET.has(selectedDate)
@@ -612,7 +632,7 @@ export default function Dashboard() {
 
   const getTeamData = (teamId) => isToday ? (liveTeams[teamId]||[]) : (activeSnap?.teams?.[teamId]||[])
 
-  // Canvas
+  // Canvas trail
   useEffect(()=>{
     const canvas=canvasRef.current;if(!canvas)return
     const ctx=canvas.getContext('2d');canvas.width=window.innerWidth;canvas.height=window.innerHeight
@@ -627,6 +647,7 @@ export default function Dashboard() {
     return()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('resize',onResize);cancelAnimationFrame(raf)}
   },[])
 
+  // ── Full data load (every 60s) ──
   const loadData = async () => {
     try {
       const [general,asia,slacks] = await Promise.all([
@@ -650,14 +671,12 @@ export default function Dashboard() {
           newTeams[t.id]=results[i].value
           const {agents}=parseTeamSheet(results[i].value, t)
           agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}))
-          console.log(`✓ ${t.label}: ${agents.length} agents`)
         } else {
           console.warn(`✗ ${t.label} failed:`, results[i].reason?.message)
         }
       })
       setLiveTeams(newTeams)
 
-      // Asia agents for snapshots
       for(const row of asia){
         const name=(row[0]||'').trim(),nameUp=name.toUpperCase()
         if(nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN'))break
@@ -673,15 +692,34 @@ export default function Dashboard() {
     finally{setLoading(false)}
   }
 
+  // ── Fast team-only refresh (every 5s) — feeds overview directly ──
+  const loadTeamsOnly = async () => {
+    try {
+      const results = await Promise.allSettled(
+        TEAM_SHEETS.map(t => t.protected
+          ? fetchSheetViaScript(SHEET_ID, t.sheetName)
+          : fetchSheet(SHEET_ID, t.sheetName)
+        )
+      )
+      const newTeams = {}
+      TEAM_SHEETS.forEach((t,i)=>{
+        newTeams[t.id] = results[i].status==='fulfilled' ? results[i].value : (liveTeams[t.id]||[])
+      })
+      setLiveTeams(newTeams)
+      setLastUpdate(new Date())
+    } catch(e){ console.warn('loadTeamsOnly error:', e) }
+  }
+
   useEffect(()=>{
     loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1))
-    // Sync profile photo from Sheets on every load
     if (user?.name) loadUserPhotoFromSheets(user.name).then(() => {
-      const p = localStorage.getItem('pulse_user_photo')
-      if (p) setUserPhoto(p)
+      const p = localStorage.getItem('pulse_user_photo'); if (p) setUserPhoto(p)
     })
-    setSnapshots(loadAllSnapshots());loadData()
-    const iv=setInterval(loadData,60000);return()=>clearInterval(iv)
+    setSnapshots(loadAllSnapshots())
+    loadData()
+    const fullIv = setInterval(loadData, 60_000)
+    const fastIv = setInterval(loadTeamsOnly, 5_000)
+    return () => { clearInterval(fullIv); clearInterval(fastIv) }
   },[])
 
   useEffect(()=>{
@@ -694,70 +732,51 @@ export default function Dashboard() {
 
   const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
 
-  const teamRows=(()=>{
-    const found=[]
-    for(const row of generalDataRaw){
-      const name=row[0]?.toUpperCase().trim()
-      if(TEAMS_ORDER.some(t=>name===t)){if(!found.find(f=>f.name.toUpperCase()===name)){const rawSpanish=row[4]?.trim();found.push({name:row[0]?.trim()||'',agents:safeInt(row[2]),english:safeInt(row[3]),spanish:safeInt(rawSpanish),total:safeInt(row[5]),noSpanish:rawSpanish==='-'||rawSpanish===''||!rawSpanish})}}
-      if(found.length===6)break
+  // ── Overview: derived from liveTeams (5s refresh) for today, snapshot for historical ──
+  const teamRows = useMemo(() => {
+    if (!isToday) {
+      const found=[]
+      for(const row of generalDataRaw){
+        const name=row[0]?.toUpperCase().trim()
+        if(TEAMS_ORDER.some(t=>name===t)){if(!found.find(f=>f.name.toUpperCase()===name)){const rawSpanish=row[4]?.trim();found.push({name:row[0]?.trim()||'',agents:safeInt(row[2]),english:safeInt(row[3]),spanish:safeInt(rawSpanish),total:safeInt(row[5]),noSpanish:rawSpanish==='-'||rawSpanish===''||!rawSpanish})}}
+        if(found.length===6)break
+      }
+      return found
     }
-    return found
-  })()
+    return TEAM_SHEETS.map(t => {
+      const rawRows = liveTeams[t.id]
+      if (!rawRows || rawRows.length === 0) return null
+      const { agents, totals } = parseTeamSheet(rawRows, t)
+      return { name:TEAM_DISPLAY_NAMES[t.id]||t.id, agents:agents.length, english:totals.english, spanish:totals.spanish, total:totals.total, noSpanish:!t.hasSp }
+    }).filter(Boolean)
+  }, [isToday, liveTeams, generalDataRaw])
+
   const teamsSorted=[...teamRows].sort((a,b)=>b.english-a.english)
 
   const {asiaAgents,asiaTotals}=(()=>{
     if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals}
     const agentMap={}; let inOT=false; let otColEn=-1; let otColSp=-1
-    const SKIP=new Set(['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER',
-      'SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'])
+    const SKIP=new Set(['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'])
     for(const row of asiaDataRaw){
-      const cell0=(row[0]||'').toString().trim()
-      const nameUp=cell0.toUpperCase().trim()
-      // Detect OT section
-      if(!inOT && cell0.length>0 && (nameUp.startsWith('OT ')||nameUp.endsWith(' OT')||nameUp.includes(' OT '))){
-        if(!includeOT()) break  // before 6pm: stop reading
-        inOT=true; otColEn=-1; otColSp=-1; continue
-      }
-      // Detect OT header (row[0] may be empty)
-      if(inOT && otColEn<0){
-        const hdrs=row.map(c=>(c||'').toString().toUpperCase().trim())
-        const ei=hdrs.findIndex(h=>h==='ENGLISH')
-        const si=hdrs.findIndex(h=>h==='SPANISH')
-        if(ei>=0){otColEn=ei;otColSp=si>=0?si:-1;continue}
-        const ck=parseInt((row[1]||'').toString().replace(/,/g,''))
-        if(ck>=1000&&ck<=9999){otColEn=3;otColSp=2}
-        else continue
-      }
-      // Skip meta rows
-      if(
-        (nameUp.includes('AGENT')&&(nameUp.includes('LOGGED')||nameUp.includes('LOG IN')))||
-        (nameUp.includes('TOTAL')&&nameUp.includes('TRANSFER'))||
-        nameUp.includes('THIS HOUR')||nameUp.includes('THIS OUR')||nameUp.includes('HOURLY')||
-        nameUp.includes('REMOVED')||SKIP.has(nameUp)||cell0.length<2
-      )continue
-      const ec=inOT?otColEn:3, sc=inOT?(otColSp>=0?otColSp:-1):2
-      if(ec<0)continue
+      const cell0=(row[0]||'').toString().trim(), nameUp=cell0.toUpperCase().trim()
+      if(!inOT&&cell0.length>0&&(nameUp.startsWith('OT ')||nameUp.endsWith(' OT')||nameUp.includes(' OT '))){if(!includeOT())break;inOT=true;otColEn=-1;otColSp=-1;continue}
+      if(inOT&&otColEn<0){const hdrs=row.map(c=>(c||'').toString().toUpperCase().trim());const ei=hdrs.findIndex(h=>h==='ENGLISH');const si=hdrs.findIndex(h=>h==='SPANISH');if(ei>=0){otColEn=ei;otColSp=si>=0?si:-1;continue}const ck=parseInt((row[1]||'').toString().replace(/,/g,''));if(ck>=1000&&ck<=9999){otColEn=3;otColSp=2}else continue}
+      if((nameUp.includes('AGENT')&&(nameUp.includes('LOGGED')||nameUp.includes('LOG IN')))||(nameUp.includes('TOTAL')&&nameUp.includes('TRANSFER'))||nameUp.includes('THIS HOUR')||nameUp.includes('THIS OUR')||nameUp.includes('HOURLY')||nameUp.includes('REMOVED')||SKIP.has(nameUp)||cell0.length<2)continue
+      const ec=inOT?otColEn:3,sc=inOT?(otColSp>=0?otColSp:-1):2;if(ec<0)continue
       const ext=safeInt(row[1]);if(isNaN(ext)||ext<1000||ext>9999)continue
       const en=safeInt(row[ec]),sp=sc>=0?safeInt(row[sc]):0
       if(agentMap[ext]){agentMap[ext].english+=en;agentMap[ext].spanish+=sp;agentMap[ext].total=agentMap[ext].english+agentMap[ext].spanish}
       else agentMap[ext]={name:cell0,ext:String(ext),spanish:sp,english:en,total:sp+en}
     }
-    const agents=Object.values(agentMap)
-    const en=agents.reduce((s,a)=>s+a.english,0),sp=agents.reduce((s,a)=>s+a.spanish,0)
-    console.log('Asia: '+agents.length+' agents, '+en+' EN'+(inOT?' +OT':''))
+    const agents=Object.values(agentMap),en=agents.reduce((s,a)=>s+a.english,0),sp=agents.reduce((s,a)=>s+a.spanish,0)
     return{asiaAgents:agents,asiaTotals:{spanish:sp,english:en,total:en+sp,activeAgents:agents.length}}
   })()
+
   const asiaAgentsFinal=(()=>{
     void overridesTick
     const ovr=JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'))||'{}')
     let agents=asiaAgents.map(a=>ovr[a.ext]?{...a,...ovr[a.ext]}:a)
-    if(bulkEditMode&&Object.keys(bulkEdits).length>0){
-      agents=agents.map(a=>{
-        if(!bulkEdits[a.ext])return a
-        const en=parseInt(bulkEdits[a.ext].english),sp=parseInt(bulkEdits[a.ext].spanish)
-        return{...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}
-      })
-    }
+    if(bulkEditMode&&Object.keys(bulkEdits).length>0){agents=agents.map(a=>{if(!bulkEdits[a.ext])return a;const en=parseInt(bulkEdits[a.ext].english),sp=parseInt(bulkEdits[a.ext].spanish);return{...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}})}
     return agents
   })()
   const asiaOvrTotals=(()=>{void overridesTick;try{return JSON.parse(localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate,'asia'))||'null')}catch(e){return null}})()
@@ -792,7 +811,6 @@ export default function Dashboard() {
   return(
     <div className="dash-root" onClick={()=>setEditMenuOpen(false)}>
       <canvas ref={canvasRef} className="dash-trail-canvas"/>
-
       <nav className="dash-nav">
         <div className="dash-nav-left">
           <div className="nav-logo-wrap"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#f97316"/><polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
@@ -958,7 +976,7 @@ export default function Dashboard() {
                   :<><h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>Agent Summary — {formatDateLabel(selectedDate)}</h3>
                     <div className="agent-table-wrap"><table className="agent-table">
                       <thead><tr><th>#</th><th>Agent</th><th>ID Opener</th><th style={{textAlign:'center'}}>Reports</th></tr></thead>
-                      <tbody>{slackAgentsForDate.map((a,i)=>{const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'};const isExp=expandedAgent===a.agent;return(<tr key={i}><td style={rs}>#{i+1}</td><td className="agent-name">{a.agent}</td><td className="agent-ext">{a.opener}</td><td style={{textAlign:'center',color:'#f97316',fontWeight:700,fontSize:15}}>{a.reports}</td></tr>)})}</tbody>
+                      <tbody>{slackAgentsForDate.map((a,i)=>{const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'};return(<tr key={i}><td style={rs}>#{i+1}</td><td className="agent-name">{a.agent}</td><td className="agent-ext">{a.opener}</td><td style={{textAlign:'center',color:'#f97316',fontWeight:700,fontSize:15}}>{a.reports}</td></tr>)})}</tbody>
                     </table></div></>
                 }
               </div>
