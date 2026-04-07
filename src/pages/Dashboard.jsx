@@ -65,7 +65,7 @@ async function scriptCall(params) {
     const url = `${SCRIPT_URL}?${new URLSearchParams(params)}&t=${Date.now()}`
     const res = await fetch(url)
     return await res.json()
-  } catch(e) { return { ok: false, error: String(e) } }
+  } catch(e) { return { ok:false, error:String(e) } }
 }
 
 const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
@@ -114,26 +114,16 @@ async function saveAgentSnapshotsToSheets(date, allAgents) {
   } catch(e) {}
 }
 
-// ── Save daily team totals to Sheets (cross-device) ──
 async function saveDailyTotalsToSheets(date, teamRows) {
   const flag = `pulse_totals_saved_${date}`
   if (sessionStorage.getItem(flag)) return
   sessionStorage.setItem(flag, '1')
   try {
-    const teams = teamRows.map(t => ({
-      id:       t.id || t.name.toLowerCase().replace(/\s+/g,'_'),
-      name:     t.name,
-      english:  t.english,
-      spanish:  t.spanish,
-      total:    t.total,
-      agents:   t.agents,
-      noSpanish: t.noSpanish || false,
-    }))
+    const teams = teamRows.map(t=>({ id:t.id||t.name.toLowerCase().replace(/\s+/g,'_'), name:t.name, english:t.english, spanish:t.spanish, total:t.total, agents:t.agents, noSpanish:t.noSpanish||false }))
     await fetch(`${SCRIPT_URL}?action=saveDailyTotals&date=${encodeURIComponent(date)}&teams=${encodeURIComponent(JSON.stringify(teams))}`, { mode:'no-cors' })
   } catch(e) {}
 }
 
-// ── Save per-team agent snapshot to Sheets (cross-device) ──
 async function saveTeamSnapshotToSheets(date, teamId, agents) {
   const flag = `pulse_team_snap_${date}_${teamId}`
   if (sessionStorage.getItem(flag)) return
@@ -155,6 +145,15 @@ const todayKey = () => new Date().toISOString().slice(0,10)
 const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
 const includeOT    = () => colombiaHour() >= 18
 
+// ─────────────────────────────────────────────────────────────────
+// parseTeamSheet
+//
+// KEY FIX: isEndRow checks ALL columns (not just col A).
+// Some sheets have "N Agents Logged In" / "TOTAL TRANSFERS" in a
+// MERGED cell whose anchor is col B or C, making row[0] arrive blank.
+// Checking every cell in the row ensures we always break at the
+// correct end-of-data boundary.
+// ─────────────────────────────────────────────────────────────────
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
@@ -167,24 +166,34 @@ function parseTeamSheet(rows, config) {
     const c = (r[0]||'').toString().trim().toUpperCase()
     return c.length > 0 && (c.startsWith('OT ') || c.endsWith(' OT') || c.includes(' OT '))
   }
-  const isEndRow = (cell0U, row) => {
-    if (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN'))) return true
-    const col1U = (row[1]||'').toString().toUpperCase()
-    if (col1U.includes('TOTAL') && col1U.includes('TRANSFER')) return true
+
+  // ── FIXED: scan ALL columns for end-of-data markers ──
+  const isEndRow = (row) => {
+    for (let c = 0; c < Math.min(row.length, 8); c++) {
+      const v = (row[c]||'').toString().toUpperCase().trim()
+      if (v.length < 3) continue
+      // "77 Agents Logged In" / "55 AGENTS LOG IN" / "81 AGENTS LOGGED"
+      if (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) return true
+      // "TOTAL TRANSFERS" (Mexico col B pattern)
+      if (v.includes('TOTAL') && v.includes('TRANSFER')) return true
+    }
     return false
   }
+
   const isSkipRow = (u) =>
     (u.includes('TOTAL') && u.includes('TRANSFER')) ||
     u.includes('THIS HOUR') || u.includes('THIS OUR') || u.includes('HOURLY') ||
-    u.includes('ON SITE') || u.includes('WEEKLY')
+    u.includes('ON SITE') || u.includes('WEEKLY') || u.includes('NEW AGENT')
+
   const SKIP = new Set(['USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR',
     'MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT',
-    'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS'])
+    'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT'])
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]; if (!Array.isArray(row)) continue
-    const cell0 = (row[0]||'').toString().trim()
+    const cell0  = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase().trim()
+
     if (isOTRow(row)) {
       if (!includeOT()) break
       inOT = true; otColEn = -1; otColSp = -1; continue
@@ -199,7 +208,10 @@ function parseTeamSheet(rows, config) {
         otColEn = Math.max(colEn - 1, 2); otColSp = (hasSp && colSp != null) ? Math.max(colSp - 1, 3) : -1
       } else continue
     }
-    if (isEndRow(cell0U, row)) break
+
+    // ── Break on ANY column matching end-of-data ──
+    if (isEndRow(row)) break
+
     if (isSkipRow(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
     const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
@@ -216,6 +228,7 @@ function parseTeamSheet(rows, config) {
       agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
     }
   }
+
   const agents = Object.values(agentMap)
   const en = agents.reduce((s,a)=>s+a.english,0), sp = agents.reduce((s,a)=>s+a.spanish,0)
   return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
@@ -445,10 +458,9 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
 
   const showEditBtn=!isToday&&canEdit
 
-  if (loadingRemote) return (
+  if(loadingRemote)return(
     <div style={{color:'#6b7280',padding:'3rem',textAlign:'center',background:'#181b23',borderRadius:12,border:'0.5px solid #2a2d38'}}>
-      <div style={{fontSize:24,marginBottom:8}}>⏳</div>
-      Loading historical data from server...
+      <div style={{fontSize:24,marginBottom:8}}>⏳</div>Loading historical data...
     </div>
   )
 
@@ -595,10 +607,7 @@ export default function Dashboard() {
   const [overridesTick,setOverridesTick] = useState(0)
   const [savingOverride,setSavingOverride] = useState(false)
 
-  // ── Cross-device remote snapshots ──
-  // remoteDailyTotals: [{date, teams:[{id,name,english,spanish,total,agents,noSpanish}]}]
   const [remoteDailyTotals,setRemoteDailyTotals] = useState([])
-  // remoteTeamAgents: { "date_teamId": agents[] }
   const [remoteTeamAgents,setRemoteTeamAgents]   = useState({})
   const [loadingRemoteTeam,setLoadingRemoteTeam] = useState(false)
 
@@ -619,23 +628,11 @@ export default function Dashboard() {
   const generalDataRaw = isToday ? liveGeneral : (activeSnap?.generalData || [])
   const histParsed     = isHistDate ? (histCache[selectedDate]||null) : null
 
-  // ── Get team data for a historical date — local first, then remote ──
-  const getTeamData = useCallback((teamId) => {
-    if (isToday) return liveTeams[teamId] || []
-    if (activeSnap?.teams?.[teamId]?.length > 0) return activeSnap.teams[teamId]
-    // Fall back to remote agents stored as raw-like format
-    const key = `${selectedDate}_${teamId}`
-    const remoteAgents = remoteTeamAgents[key]
-    if (remoteAgents) return remoteAgents  // already parsed agents array
-    return []
-  }, [isToday, liveTeams, activeSnap, remoteTeamAgents, selectedDate])
-
-  // For TeamDetail, when we have remote agents we pass them directly (not raw rows)
   const getTeamAgents = useCallback((teamId) => {
     if (isToday) {
       const raw = liveTeams[teamId] || []
       const config = TEAM_SHEETS.find(t=>t.id===teamId)
-      if (!config) return []
+      if (!config || raw.length===0) return []
       return parseTeamSheet(raw, config).agents
     }
     if (activeSnap?.teams?.[teamId]?.length > 0) {
@@ -647,7 +644,6 @@ export default function Dashboard() {
     return remoteTeamAgents[key] || []
   }, [isToday, liveTeams, activeSnap, remoteTeamAgents, selectedDate])
 
-  // Canvas trail
   useEffect(()=>{
     const canvas=canvasRef.current;if(!canvas)return
     const ctx=canvas.getContext('2d');canvas.width=window.innerWidth;canvas.height=window.innerHeight
@@ -662,41 +658,32 @@ export default function Dashboard() {
     return()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('resize',onResize);cancelAnimationFrame(raf)}
   },[])
 
-  // ── Load remote daily totals on startup (cross-device history) ──
   const loadDailyTotals = async () => {
     try {
       const data = await scriptCall({ action:'getDailyTotals' })
       if (Array.isArray(data)) setRemoteDailyTotals(data)
-    } catch(e) { console.warn('getDailyTotals failed:', e) }
+    } catch(e) {}
   }
 
-  // ── Load remote team agents for a specific date (on-demand) ──
   const loadRemoteTeamAgents = useCallback(async (date, teamId) => {
     const key = `${date}_${teamId}`
-    if (remoteTeamAgents[key] !== undefined) return  // already loaded
+    if (remoteTeamAgents[key] !== undefined) return
     setLoadingRemoteTeam(true)
     try {
       const data = await scriptCall({ action:'getTeamSnapshot', date, teamId })
-      if (data?.ok && Array.isArray(data.agents)) {
-        setRemoteTeamAgents(prev => ({ ...prev, [key]: data.agents }))
-      } else {
-        // Mark as checked (empty) so we don't retry
-        setRemoteTeamAgents(prev => ({ ...prev, [key]: [] }))
-      }
+      setRemoteTeamAgents(prev => ({ ...prev, [key]: data?.ok && Array.isArray(data.agents) ? data.agents : [] }))
     } catch(e) {
       setRemoteTeamAgents(prev => ({ ...prev, [`${date}_${teamId}`]: [] }))
     }
     setLoadingRemoteTeam(false)
   }, [remoteTeamAgents])
 
-  // ── Trigger remote load when switching to a historical team tab ──
   useEffect(() => {
     if (isToday || isHistDate) return
     const teamId = TEAM_SHEETS.find(t=>t.id===activeTab)?.id
-    if (!teamId) return
-    if (activeSnap?.teams?.[teamId]?.length > 0) return  // local data exists
+    if (!teamId || activeSnap?.teams?.[teamId]?.length > 0) return
     const key = `${selectedDate}_${teamId}`
-    if (remoteTeamAgents[key] !== undefined) return  // already fetched
+    if (remoteTeamAgents[key] !== undefined) return
     loadRemoteTeamAgents(selectedDate, teamId)
   }, [activeTab, selectedDate, isToday, isHistDate, activeSnap])
 
@@ -716,8 +703,7 @@ export default function Dashboard() {
           newTeams[t.id]=results[i].value
           const{agents}=parseTeamSheet(results[i].value,t)
           agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}))
-          // Save team snapshot to Sheets (cross-device)
-          saveTeamSnapshotToSheets(todayKey(), t.id, agents)
+          saveTeamSnapshotToSheets(todayKey(),t.id,agents)
         } else console.warn(`✗ ${t.label}:`,results[i].reason?.message)
       })
       setLiveTeams(newTeams)
@@ -745,9 +731,7 @@ export default function Dashboard() {
   useEffect(()=>{
     loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1))
     if(user?.name)loadUserPhotoFromSheets(user.name).then(()=>{const p=localStorage.getItem('pulse_user_photo');if(p)setUserPhoto(p)})
-    setSnapshots(loadAllSnapshots())
-    loadDailyTotals()  // ← load cross-device historical data
-    loadData()
+    setSnapshots(loadAllSnapshots());loadDailyTotals();loadData()
     const fullIv=setInterval(loadData,60_000)
     const fastIv=setInterval(loadTeamsOnly,5_000)
     return()=>{clearInterval(fullIv);clearInterval(fastIv)}
@@ -814,38 +798,22 @@ export default function Dashboard() {
 
   const isMyTeam=(name)=>{const n=name.toUpperCase();return(team?.id==='asia'&&n.includes('ASIA'))||(team?.id==='philippines'&&n.includes('PHIL'))||(team?.id==='venezuela'&&n.includes('VENE'))||(team?.id==='colombia'&&n.includes('COLOM'))||(team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))}
 
-  // ── Date tabs: local + remote + history ──
-  const dateTabs = useMemo(()=>{
-    const dates=new Set()
-    dates.add(todayKey())
-    snapshots.forEach(s=>dates.add(s.date))
-    remoteDailyTotals.forEach(r=>dates.add(r.date))
-    HISTORY_DATES.forEach(d=>dates.add(d.isoDate))
+  const dateTabs=useMemo(()=>{
+    const dates=new Set();dates.add(todayKey());snapshots.forEach(s=>dates.add(s.date));remoteDailyTotals.forEach(r=>dates.add(r.date));HISTORY_DATES.forEach(d=>dates.add(d.isoDate))
     return[...dates].sort((a,b)=>b.localeCompare(a))
-  },[snapshots, remoteDailyTotals])
+  },[snapshots,remoteDailyTotals])
 
-  // ── Overview rows: today from liveTeams, historical from local snap or remote ──
-  const teamRows = useMemo(()=>{
+  const teamRows=useMemo(()=>{
     if(isToday){
-      const rows = TEAM_SHEETS.map(t=>{
-        const rawRows=liveTeams[t.id]
-        if(!rawRows||rawRows.length===0)return null
+      const rows=TEAM_SHEETS.map(t=>{
+        const rawRows=liveTeams[t.id];if(!rawRows||rawRows.length===0)return null
         const{agents,totals}=parseTeamSheet(rawRows,t)
-        return{ name:TEAM_DISPLAY_NAMES[t.id]||t.id, agents:agents.length, english:totals.english, spanish:totals.spanish, total:totals.total, noSpanish:!t.hasSp }
+        return{name:TEAM_DISPLAY_NAMES[t.id]||t.id,agents:agents.length,english:totals.english,spanish:totals.spanish,total:totals.total,noSpanish:!t.hasSp}
       }).filter(Boolean)
-      if(asiaAgents.length>0||asiaTotals.english>0){
-        rows.push({ name:'Asia', agents:asiaAgents.length, english:totalEnglish, spanish:totalSpanish, total:totalXfers, noSpanish:false })
-      }
+      if(asiaAgents.length>0||asiaTotals.english>0)rows.push({name:'Asia',agents:asiaAgents.length,english:totalEnglish,spanish:totalSpanish,total:totalXfers,noSpanish:false})
       return rows
     }
-
-    // Historical / snapshot
-    if(isHistDate){
-      // History sheet doesn't have team breakdown — use remote if available
-    }
-
-    // Try local snapshot first (generalData from WELL'S REPORT)
-    if(activeSnap?.generalData?.length > 0){
+    if(activeSnap?.generalData?.length>0){
       const found=[]
       for(const row of activeSnap.generalData){
         const name=row[0]?.toUpperCase().trim()
@@ -854,40 +822,24 @@ export default function Dashboard() {
       }
       if(found.length>0)return found
     }
-
-    // Fall back to remote daily totals (cross-device)
-    const remote = remoteDailyTotals.find(r=>r.date===selectedDate)
-    if(remote?.teams?.length>0){
-      return remote.teams.map(t=>({
-        name: t.name, agents: t.agents||0, english: t.english||0,
-        spanish: t.spanish||0, total: t.total||0, noSpanish: t.noSpanish||false
-      }))
-    }
-
-    return []
-  },[isToday,isHistDate,liveTeams,activeSnap,remoteDailyTotals,selectedDate,asiaAgents,asiaTotals,totalEnglish,totalSpanish,totalXfers])
+    const remote=remoteDailyTotals.find(r=>r.date===selectedDate)
+    if(remote?.teams?.length>0)return remote.teams.map(t=>({name:t.name,agents:t.agents||0,english:t.english||0,spanish:t.spanish||0,total:t.total||0,noSpanish:t.noSpanish||false}))
+    return[]
+  },[isToday,liveTeams,activeSnap,remoteDailyTotals,selectedDate,asiaAgents,asiaTotals,totalEnglish,totalSpanish,totalXfers])
 
   const teamsSorted=[...teamRows].sort((a,b)=>b.english-a.english)
-  const showAsiaEditBtn=!isToday&&canEdit
-  const currentTeamConfig=TEAM_SHEETS.find(t=>t.id===activeTab)
 
-  // ── Save today's totals to Sheets once per session (after first load) ──
   useEffect(()=>{
     if(!isToday||teamsSorted.length===0)return
-    const flag = `pulse_daily_totals_saved_${todayKey()}`
-    if(sessionStorage.getItem(flag))return
-    sessionStorage.setItem(flag,'1')
-    const teamsWithId = teamsSorted.map(t=>({
-      ...t,
-      id: TEAM_SHEETS.find(ts=>TEAM_DISPLAY_NAMES[ts.id]===t.name)?.id || t.name.toLowerCase().replace(/\s+/g,'_')
-    }))
-    saveDailyTotalsToSheets(todayKey(), teamsWithId)
-  },[teamsSorted, isToday])
+    const flag=`pulse_daily_totals_saved_${todayKey()}`
+    if(sessionStorage.getItem(flag))return;sessionStorage.setItem(flag,'1')
+    const teamsWithId=teamsSorted.map(t=>({...t,id:TEAM_SHEETS.find(ts=>TEAM_DISPLAY_NAMES[ts.id]===t.name)?.id||t.name.toLowerCase().replace(/\s+/g,'_')}))
+    saveDailyTotalsToSheets(todayKey(),teamsWithId)
+  },[teamsSorted,isToday])
 
-  // Check if current non-today team tab needs remote loading
-  const needsRemoteLoad = !isToday && !isHistDate && currentTeamConfig &&
-    !(activeSnap?.teams?.[currentTeamConfig?.id]?.length > 0) &&
-    remoteTeamAgents[`${selectedDate}_${currentTeamConfig?.id}`] === undefined
+  const showAsiaEditBtn=!isToday&&canEdit
+  const currentTeamConfig=TEAM_SHEETS.find(t=>t.id===activeTab)
+  const needsRemoteLoad=!isToday&&!isHistDate&&currentTeamConfig&&!(activeSnap?.teams?.[currentTeamConfig?.id]?.length>0)&&remoteTeamAgents[`${selectedDate}_${currentTeamConfig?.id}`]===undefined
 
   return(
     <div className="dash-root" onClick={()=>setEditMenuOpen(false)}>
@@ -931,12 +883,7 @@ export default function Dashboard() {
               <h2 className="section-title" style={{marginBottom:0}}>Auto Warranty Garrett {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}</h2>
               <span className="vteams-sub">{teamsSorted.length} teams · ranked by English xfers</span>
             </div>
-            {teamsSorted.length===0?(
-              <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>
-                No data for {formatDateLabel(selectedDate)}.
-                {!isToday&&<p style={{fontSize:12,marginTop:8}}>Data for past days is saved automatically on the device that was open that day.</p>}
-              </div>
-            ):(
+            {teamsSorted.length===0?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No data for {formatDateLabel(selectedDate)}.</div>:(
               <div className="vteams-grid">
                 {teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0}/>)}
               </div>
@@ -1096,7 +1043,7 @@ export default function Dashboard() {
             selectedDate={selectedDate}
             onOverrideTick={()=>setOverridesTick(t=>t+1)}
             navigate={navigate}
-            loadingRemote={!isToday && needsRemoteLoad && loadingRemoteTeam}
+            loadingRemote={!isToday&&needsRemoteLoad&&loadingRemoteTeam}
           />
         ):null}
       </div>
