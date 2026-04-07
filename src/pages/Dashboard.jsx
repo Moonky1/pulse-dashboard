@@ -119,7 +119,10 @@ const todayKey = () => new Date().toISOString().slice(0,10)
 const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
 const includeOT    = () => colombiaHour() >= 18
 
-// ── Original parseTeamSheet — sums agents individually (no sheet totals row) ──
+// ─────────────────────────────────────────────────────────────────
+// parseTeamSheet — FIXED: break on "AGENT LOGGED IN" / "TOTAL TRANSFERS"
+// so NEW AGENT sections below are never read
+// ─────────────────────────────────────────────────────────────────
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
@@ -132,11 +135,23 @@ function parseTeamSheet(rows, config) {
     const c = (r[0]||'').toString().trim().toUpperCase()
     return c.length > 0 && (c.startsWith('OT ') || c.endsWith(' OT') || c.includes(' OT '))
   }
-  const isMeta = (u) =>
-    (u.includes('AGENT') && (u.includes('LOGGED') || u.includes('LOG IN'))) ||
+
+  // Rows that signal END OF DATA → break the loop
+  const isEndRow = (cell0U, row) => {
+    // "54 AGENT LOGGED IN", "81 AGENTS LOGGED", "55 AGENTS LOG IN" etc.
+    if (cell0U.includes('AGENT') && (cell0U.includes('LOGGED') || cell0U.includes('LOG IN'))) return true
+    // Mexico pattern: col B = "TOTAL TRANSFERS"
+    const col1U = (row[1]||'').toString().toUpperCase()
+    if (col1U.includes('TOTAL') && col1U.includes('TRANSFER')) return true
+    return false
+  }
+
+  // Mid-sheet noise rows → skip (continue)
+  const isSkipRow = (u) =>
     (u.includes('TOTAL') && u.includes('TRANSFER')) ||
     u.includes('THIS HOUR') || u.includes('THIS OUR') || u.includes('HOURLY') ||
     u.includes('ON SITE') || u.includes('WEEKLY')
+
   const SKIP = new Set(['USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR',
     'MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT',
     'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS'])
@@ -145,6 +160,7 @@ function parseTeamSheet(rows, config) {
     const row = rows[i]; if (!Array.isArray(row)) continue
     const cell0 = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase().trim()
+
     if (isOTRow(row)) {
       if (!includeOT()) break
       inOT = true; otColEn = -1; otColSp = -1; continue
@@ -160,7 +176,11 @@ function parseTeamSheet(rows, config) {
         otColSp = (hasSp && colSp != null) ? Math.max(colSp - 1, 3) : -1
       } else continue
     }
-    if (isMeta(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
+
+    // BREAK on end-of-data markers — stops reading NEW AGENT sections
+    if (isEndRow(cell0U, row)) break
+
+    if (isSkipRow(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
     const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
@@ -176,9 +196,9 @@ function parseTeamSheet(rows, config) {
       agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
     }
   }
+
   const agents = Object.values(agentMap)
   const en = agents.reduce((s,a)=>s+a.english,0), sp = agents.reduce((s,a)=>s+a.spanish,0)
-  console.log(`${config.label}: ${agents.length} agents, ${en} EN`)
   return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
 }
 
@@ -612,7 +632,6 @@ export default function Dashboard() {
     finally{setLoading(false)}
   }
 
-  // Fast refresh every 5s — only team sheets (feeds overview)
   const loadTeamsOnly = async () => {
     try {
       const results = await Promise.allSettled(TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName)))
@@ -696,7 +715,6 @@ export default function Dashboard() {
   const showAsiaEditBtn=!isToday&&canEdit
   const currentTeamConfig=TEAM_SHEETS.find(t=>t.id===activeTab)
 
-  // Overview: liveTeams (5s) + Asia for today; WELL'S REPORT snapshot for historical
   const teamRows = useMemo(()=>{
     if(!isToday){
       const found=[]
@@ -713,7 +731,6 @@ export default function Dashboard() {
       const{agents,totals}=parseTeamSheet(rawRows,t)
       return{ name:TEAM_DISPLAY_NAMES[t.id]||t.id, agents:agents.length, english:totals.english, spanish:totals.spanish, total:totals.total, noSpanish:!t.hasSp }
     }).filter(Boolean)
-    // Add Asia
     if(asiaAgents.length>0||asiaTotals.english>0){
       rows.push({ name:'Asia', agents:asiaAgents.length, english:totalEnglish, spanish:totalSpanish, total:totalXfers, noSpanish:false })
     }
