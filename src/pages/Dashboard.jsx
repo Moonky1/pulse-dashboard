@@ -119,21 +119,14 @@ const todayKey = () => new Date().toISOString().slice(0,10)
 const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
 const includeOT    = () => colombiaHour() >= 18
 
-// ─────────────────────────────────────────────────────────────────
-// parseTeamSheet
-// Totals detection: ONLY fires when a row STARTS with a number
-// e.g. "70 Agents Logged in" or "55 AGENTS LOG IN"
-// This avoids false-positives on header rows like "AGENT NAME | LOG IN"
-// ─────────────────────────────────────────────────────────────────
+// ── Original parseTeamSheet — sums agents individually (no sheet totals row) ──
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
-    return { agents:[], totals:{ english:0, spanish:0, total:0, activeAgents:0 } }
+    return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
 
   const agentMap = {}
   let inOT = false; let otColEn = -1; let otColSp = -1
-  let sheetTotals = null
-  let sheetAgentCount = 0
 
   const isOTRow = (r) => {
     const c = (r[0]||'').toString().trim().toUpperCase()
@@ -152,53 +145,30 @@ function parseTeamSheet(rows, config) {
     const row = rows[i]; if (!Array.isArray(row)) continue
     const cell0 = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase().trim()
-
     if (isOTRow(row)) {
       if (!includeOT()) break
       inOT = true; otColEn = -1; otColSp = -1; continue
     }
     if (inOT && otColEn < 0) {
-      const hdrs = row.map(c=>(c||'').toString().toUpperCase().trim())
-      const ei = hdrs.findIndex(h=>h==='ENGLISH'||h==='TRANSFER')
-      const si = hdrs.findIndex(h=>h==='SPANISH')
-      if (ei >= 0) { otColEn=ei; otColSp=si>=0?si:-1; continue }
+      const hdrs = row.map(c => (c||'').toString().toUpperCase().trim())
+      const ei = hdrs.findIndex(h => h === 'ENGLISH' || h === 'TRANSFER')
+      const si = hdrs.findIndex(h => h === 'SPANISH')
+      if (ei >= 0) { otColEn = ei; otColSp = si >= 0 ? si : -1; continue }
       const ck = parseInt((row[1]||'').toString().replace(/,/g,''))
-      if (ck>=1000&&ck<=9999&&String(ck).startsWith(extStart)) {
-        otColEn=Math.max(colEn-1,2); otColSp=(hasSp&&colSp!=null)?Math.max(colSp-1,3):-1
+      if (ck >= 1000 && ck <= 9999 && String(ck).startsWith(extStart)) {
+        otColEn = Math.max(colEn - 1, 2)
+        otColSp = (hasSp && colSp != null) ? Math.max(colSp - 1, 3) : -1
       } else continue
     }
-
-    // ── Totals row detection ──
-    // Only matches rows that START with a number: "70 Agents Logged in", "55 AGENTS LOG IN"
-    // col1="TOTAL TRANSFERS" pattern (Mexico) is also caught here
-    const agentCountMatch = cell0.match(/^(\d+)\s+agent/i)
-    const col1Upper = (row[1]||'').toString().toUpperCase()
-    const isMexicoTotalRow = col1Upper.includes('TOTAL') && col1Upper.includes('TRANSFER')
-
-    if (agentCountMatch || isMexicoTotalRow) {
-      const ec = inOT ? otColEn : colEn
-      const sc = inOT ? otColSp : (colSp!=null ? colSp : -1)
-      if (ec >= 0) {
-        const ten = safeInt(row[ec])
-        const tsp = sc >= 0 ? safeInt(row[sc]) : 0
-        // Only use sheet totals if value is sane (> 0)
-        if (ten > 0 || tsp > 0) {
-          sheetTotals = { english:ten, spanish:tsp, total:ten+tsp }
-          sheetAgentCount = agentCountMatch ? parseInt(agentCountMatch[1]) : Object.keys(agentMap).length
-        }
-      }
-      break
-    }
-
     if (isMeta(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
     const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
-    if (isNaN(extNum)||extNum<1000||extNum>9999) continue
+    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (!rawExt.startsWith(extStart)) continue
     const ec = inOT ? otColEn : colEn
-    const sc = inOT ? otColSp : (colSp!=null ? colSp : -1)
+    const sc = inOT ? otColSp : (colSp != null ? colSp : -1)
     if (ec < 0) continue
-    const en = safeInt(row[ec]); const sp = sc>=0 ? safeInt(row[sc]) : 0
+    const en = safeInt(row[ec]); const sp = sc >= 0 ? safeInt(row[sc]) : 0
     if (agentMap[extNum]) {
       agentMap[extNum].english += en; agentMap[extNum].spanish += sp
       agentMap[extNum].total = agentMap[extNum].english + agentMap[extNum].spanish
@@ -206,15 +176,10 @@ function parseTeamSheet(rows, config) {
       agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
     }
   }
-
   const agents = Object.values(agentMap)
-  const agentEn = agents.reduce((s,a)=>s+a.english,0)
-  const agentSp = agents.reduce((s,a)=>s+a.spanish,0)
-  const activeAgents = sheetAgentCount || agents.length
-  const totals = sheetTotals
-    ? { ...sheetTotals, activeAgents }
-    : { english:agentEn, spanish:agentSp, total:agentEn+agentSp, activeAgents:agents.length }
-  return { agents, totals }
+  const en = agents.reduce((s,a)=>s+a.english,0), sp = agents.reduce((s,a)=>s+a.spanish,0)
+  console.log(`${config.label}: ${agents.length} agents, ${en} EN`)
+  return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
@@ -560,7 +525,6 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
   )
 }
 
-// ── Main Dashboard ──
 export default function Dashboard() {
   const canvasRef = useRef(null)
   const navigate  = useNavigate()
@@ -603,7 +567,6 @@ export default function Dashboard() {
   const histParsed     = isHistDate ? (histCache[selectedDate]||null) : null
   const getTeamData    = (teamId) => isToday ? (liveTeams[teamId]||[]) : (activeSnap?.teams?.[teamId]||[])
 
-  // Canvas trail
   useEffect(()=>{
     const canvas=canvasRef.current;if(!canvas)return
     const ctx=canvas.getContext('2d');canvas.width=window.innerWidth;canvas.height=window.innerHeight
@@ -649,6 +612,7 @@ export default function Dashboard() {
     finally{setLoading(false)}
   }
 
+  // Fast refresh every 5s — only team sheets (feeds overview)
   const loadTeamsOnly = async () => {
     try {
       const results = await Promise.allSettled(TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName)))
@@ -677,7 +641,6 @@ export default function Dashboard() {
 
   const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
 
-  // ── Asia agents computed ──
   const {asiaAgents,asiaTotals}=(()=>{
     if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals}
     const agentMap={}; let inOT=false,otColEn=-1,otColSp=-1
@@ -733,10 +696,9 @@ export default function Dashboard() {
   const showAsiaEditBtn=!isToday&&canEdit
   const currentTeamConfig=TEAM_SHEETS.find(t=>t.id===activeTab)
 
-  // ── Overview rows: 5 teams from liveTeams + Asia ──
+  // Overview: liveTeams (5s) + Asia for today; WELL'S REPORT snapshot for historical
   const teamRows = useMemo(()=>{
     if(!isToday){
-      // Historical: read from WELL'S REPORT snapshot
       const found=[]
       for(const row of generalDataRaw){
         const name=row[0]?.toUpperCase().trim()
@@ -745,15 +707,14 @@ export default function Dashboard() {
       }
       return found
     }
-    // TODAY: compute from liveTeams (updates every 5s) + Asia
     const rows = TEAM_SHEETS.map(t=>{
       const rawRows=liveTeams[t.id]
       if(!rawRows||rawRows.length===0)return null
       const{agents,totals}=parseTeamSheet(rawRows,t)
-      return{ name:TEAM_DISPLAY_NAMES[t.id]||t.id, agents:totals.activeAgents||agents.length, english:totals.english, spanish:totals.spanish, total:totals.total, noSpanish:!t.hasSp }
+      return{ name:TEAM_DISPLAY_NAMES[t.id]||t.id, agents:agents.length, english:totals.english, spanish:totals.spanish, total:totals.total, noSpanish:!t.hasSp }
     }).filter(Boolean)
-    // Add Asia from liveAsia data
-    if(asiaTotals.english>0||asiaTotals.spanish>0||asiaAgents.length>0){
+    // Add Asia
+    if(asiaAgents.length>0||asiaTotals.english>0){
       rows.push({ name:'Asia', agents:asiaAgents.length, english:totalEnglish, spanish:totalSpanish, total:totalXfers, noSpanish:false })
     }
     return rows
