@@ -106,30 +106,41 @@ async function loadUserPhotoFromSheets(userName) {
 }
 
 async function saveAgentSnapshotsToSheets(date, allAgents) {
-  const flag = `pulse_snap_sheets_${date}`
-  if (sessionStorage.getItem(flag)) return
-  sessionStorage.setItem(flag, '1')
+  const payload = JSON.stringify(allAgents || [])
+  const cacheKey = `pulse_snap_sheets_${date}`
+  if (sessionStorage.getItem(cacheKey) === payload) return
+  sessionStorage.setItem(cacheKey, payload)
   try {
-    await fetch(`${SCRIPT_URL}?action=saveAgentSnapshots&date=${encodeURIComponent(date)}&snapshots=${encodeURIComponent(JSON.stringify(allAgents))}`, { mode:'no-cors' })
+    await fetch(`${SCRIPT_URL}?action=saveAgentSnapshots&date=${encodeURIComponent(date)}&snapshots=${encodeURIComponent(payload)}`, { mode:'no-cors' })
   } catch(e) {}
 }
 
 async function saveDailyTotalsToSheets(date, teamRows) {
-  const flag = `pulse_totals_saved_${date}`
-  if (sessionStorage.getItem(flag)) return
-  sessionStorage.setItem(flag, '1')
+  const teams = teamRows.map(t=>({
+    id:t.id||t.name.toLowerCase().replace(/\s+/g,'_'),
+    name:t.name,
+    english:t.english,
+    spanish:t.spanish,
+    total:t.total,
+    agents:t.agents,
+    noSpanish:t.noSpanish||false
+  }))
+  const payload = JSON.stringify(teams)
+  const cacheKey = `pulse_totals_saved_${date}`
+  if (sessionStorage.getItem(cacheKey) === payload) return
+  sessionStorage.setItem(cacheKey, payload)
   try {
-    const teams = teamRows.map(t=>({ id:t.id||t.name.toLowerCase().replace(/\s+/g,'_'), name:t.name, english:t.english, spanish:t.spanish, total:t.total, agents:t.agents, noSpanish:t.noSpanish||false }))
-    await fetch(`${SCRIPT_URL}?action=saveDailyTotals&date=${encodeURIComponent(date)}&teams=${encodeURIComponent(JSON.stringify(teams))}`, { mode:'no-cors' })
+    await fetch(`${SCRIPT_URL}?action=saveDailyTotals&date=${encodeURIComponent(date)}&teams=${encodeURIComponent(payload)}`, { mode:'no-cors' })
   } catch(e) {}
 }
 
 async function saveTeamSnapshotToSheets(date, teamId, agents) {
-  const flag = `pulse_team_snap_${date}_${teamId}`
-  if (sessionStorage.getItem(flag)) return
-  sessionStorage.setItem(flag, '1')
+  const payload = JSON.stringify(agents || [])
+  const cacheKey = `pulse_team_snap_${date}_${teamId}`
+  if (sessionStorage.getItem(cacheKey) === payload) return
+  sessionStorage.setItem(cacheKey, payload)
   try {
-    await fetch(`${SCRIPT_URL}?action=saveTeamSnapshot&date=${encodeURIComponent(date)}&teamId=${encodeURIComponent(teamId)}&agents=${encodeURIComponent(JSON.stringify(agents))}`, { mode:'no-cors' })
+    await fetch(`${SCRIPT_URL}?action=saveTeamSnapshot&date=${encodeURIComponent(date)}&teamId=${encodeURIComponent(teamId)}&agents=${encodeURIComponent(payload)}`, { mode:'no-cors' })
   } catch(e) {}
 }
 
@@ -144,15 +155,26 @@ const MEDALS = [E.medal1, E.medal2, E.medal3]
 const todayKey = () => new Date().toISOString().slice(0,10)
 const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
 const includeOT    = () => colombiaHour() >= 18
+const cellUpper    = (v) => (v || '').toString().toUpperCase().trim()
+const rowHasMarker = (row, matcher, limit=8) => {
+  if (!Array.isArray(row)) return false
+  for (let c = 0; c < Math.min(row.length, limit); c++) {
+    const v = cellUpper(row[c])
+    if (!v) continue
+    if (matcher(v)) return true
+  }
+  return false
+}
 
 // ─────────────────────────────────────────────────────────────────
 // parseTeamSheet
 //
-// KEY FIX: isEndRow checks ALL columns (not just col A).
-// Some sheets have "N Agents Logged In" / "TOTAL TRANSFERS" in a
-// MERGED cell whose anchor is col B or C, making row[0] arrive blank.
-// Checking every cell in the row ensures we always break at the
-// correct end-of-data boundary.
+// Main fix:
+// - Before 6pm: parse only main chart
+// - After 6pm: parse main chart + OT chart
+// - Do NOT stop forever at the first "AGENTS LOGGED"
+// - Instead, move to an intermediate state and keep scanning until OT
+// - Merge same agent by ext so main + OT are summed correctly
 // ─────────────────────────────────────────────────────────────────
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
@@ -160,69 +182,105 @@ function parseTeamSheet(rows, config) {
     return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
 
   const agentMap = {}
-  let inOT = false; let otColEn = -1; let otColSp = -1
+  let inOT = false
+  let afterMainEnd = false
+  let otColEn = -1
+  let otColSp = -1
 
-  const isOTRow = (r) => {
-    const c = (r[0]||'').toString().trim().toUpperCase()
-    return c.length > 0 && (c.startsWith('OT ') || c.endsWith(' OT') || c.includes(' OT '))
-  }
+  const isOTRow = (row) =>
+    rowHasMarker(row, v => v === 'OT TAKERS' || v.startsWith('OT ') || v.endsWith(' OT') || v.includes(' OT '), 6)
 
-  // ── FIXED: scan ALL columns for end-of-data markers ──
-  const isEndRow = (row) => {
-    for (let c = 0; c < Math.min(row.length, 8); c++) {
-      const v = (row[c]||'').toString().toUpperCase().trim()
-      if (v.length < 3) continue
-      // "77 Agents Logged In" / "55 AGENTS LOG IN" / "81 AGENTS LOGGED"
-      if (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) return true
-      // "TOTAL TRANSFERS" (Mexico col B pattern)
-      if (v.includes('TOTAL') && v.includes('TRANSFER')) return true
-    }
-    return false
-  }
+  const isEndRow = (row) =>
+    rowHasMarker(row, v =>
+      (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) ||
+      (v.includes('TOTAL') && v.includes('TRANSFER'))
+    )
 
-  const isSkipRow = (u) =>
-    (u.includes('TOTAL') && u.includes('TRANSFER')) ||
-    u.includes('THIS HOUR') || u.includes('THIS OUR') || u.includes('HOURLY') ||
-    u.includes('ON SITE') || u.includes('WEEKLY') || u.includes('NEW AGENT')
+  const isSkipMarkerRow = (row) =>
+    rowHasMarker(row, v =>
+      (v.includes('TOTAL') && v.includes('TRANSFER')) ||
+      v.includes('THIS HOUR') || v.includes('THIS OUR') || v.includes('HOURLY') ||
+      v.includes('ON SITE') || v.includes('WEEKLY') || v.includes('NEW AGENT')
+    )
 
-  const SKIP = new Set(['USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR',
+  const SKIP = new Set([
+    'USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR',
     'MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT',
-    'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT'])
+    'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT'
+  ])
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]; if (!Array.isArray(row)) continue
-    const cell0  = (row[0]||'').toString().trim()
-    const cell0U = cell0.toUpperCase().trim()
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
 
-    if (isOTRow(row)) {
+    const cell0  = (row[0] || '').toString().trim()
+    const cell0U = cellUpper(cell0)
+
+    if (!inOT && isOTRow(row)) {
       if (!includeOT()) break
-      inOT = true; otColEn = -1; otColSp = -1; continue
+      inOT = true
+      afterMainEnd = false
+      otColEn = -1
+      otColSp = -1
+      continue
     }
+
+    if (!inOT && isEndRow(row)) {
+      if (!includeOT()) break
+      afterMainEnd = true
+      continue
+    }
+
+    if (afterMainEnd && !inOT) continue
+
     if (inOT && otColEn < 0) {
-      const hdrs = row.map(c => (c||'').toString().toUpperCase().trim())
-      const ei = hdrs.findIndex(h => h === 'ENGLISH' || h === 'TRANSFER')
+      const hdrs = row.map(cellUpper)
+      const ei = hdrs.findIndex(h => h === 'ENGLISH')
       const si = hdrs.findIndex(h => h === 'SPANISH')
-      if (ei >= 0) { otColEn = ei; otColSp = si >= 0 ? si : -1; continue }
-      const ck = parseInt((row[1]||'').toString().replace(/,/g,''))
+
+      if (ei >= 0 || si >= 0) {
+        otColEn = ei >= 0 ? ei : -1
+        otColSp = si >= 0 ? si : -1
+        continue
+      }
+
+      if (!hasSp) {
+        const transferIdx = hdrs.findIndex(h => h === 'TRANSFER' || h === 'TRANSFERS')
+        if (transferIdx >= 0) {
+          otColEn = transferIdx
+          otColSp = -1
+          continue
+        }
+      }
+
+      const ck = parseInt((row[1] || '').toString().replace(/,/g,''))
       if (ck >= 1000 && ck <= 9999 && String(ck).startsWith(extStart)) {
-        otColEn = Math.max(colEn - 1, 2); otColSp = (hasSp && colSp != null) ? Math.max(colSp - 1, 3) : -1
-      } else continue
+        otColEn = Math.max(colEn - 1, 2)
+        otColSp = (hasSp && colSp != null) ? Math.max(colSp - 1, 3) : -1
+      } else {
+        continue
+      }
     }
 
-    // ── Break on ANY column matching end-of-data ──
-    if (isEndRow(row)) break
+    if (inOT && isEndRow(row)) break
 
-    if (isSkipRow(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
-    const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
+    if (isSkipMarkerRow(row) || cell0.length < 2 || SKIP.has(cell0U)) continue
+
+    const rawExt = (row[1] || '').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (!rawExt.startsWith(extStart)) continue
+
     const ec = inOT ? otColEn : colEn
     const sc = inOT ? otColSp : (colSp != null ? colSp : -1)
     if (ec < 0) continue
-    const en = safeInt(row[ec]); const sp = sc >= 0 ? safeInt(row[sc]) : 0
+
+    const en = safeInt(row[ec])
+    const sp = sc >= 0 ? safeInt(row[sc]) : 0
+
     if (agentMap[extNum]) {
-      agentMap[extNum].english += en; agentMap[extNum].spanish += sp
+      agentMap[extNum].english += en
+      agentMap[extNum].spanish += sp
       agentMap[extNum].total = agentMap[extNum].english + agentMap[extNum].spanish
     } else {
       agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
@@ -230,8 +288,116 @@ function parseTeamSheet(rows, config) {
   }
 
   const agents = Object.values(agentMap)
-  const en = agents.reduce((s,a)=>s+a.english,0), sp = agents.reduce((s,a)=>s+a.spanish,0)
+  const en = agents.reduce((s,a)=>s+a.english,0)
+  const sp = agents.reduce((s,a)=>s+a.spanish,0)
+
   return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
+}
+
+function parseAsiaSheet(rows) {
+  if (!rows || !Array.isArray(rows) || rows.length === 0)
+    return { agents: [], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
+
+  const agentMap = {}
+  let inOT = false
+  let afterMainEnd = false
+  let otColEn = -1
+  let otColSp = -1
+
+  const isOTRow = (row) =>
+    rowHasMarker(row, v => v === 'OT TAKERS' || v.startsWith('OT ') || v.endsWith(' OT') || v.includes(' OT '), 6)
+
+  const isEndRow = (row) =>
+    rowHasMarker(row, v =>
+      (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) ||
+      (v.includes('TOTAL') && v.includes('TRANSFER'))
+    )
+
+  const isSkipMarkerRow = (row) =>
+    rowHasMarker(row, v =>
+      v.includes('THIS HOUR') || v.includes('THIS OUR') || v.includes('HOURLY') || v.includes('REMOVED')
+    )
+
+  const SKIP = new Set([
+    'MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR',
+    'AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'
+  ])
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
+
+    const cell0 = (row[0] || '').toString().trim()
+    const nameUp = cellUpper(cell0)
+
+    if (!inOT && isOTRow(row)) {
+      if (!includeOT()) break
+      inOT = true
+      afterMainEnd = false
+      otColEn = -1
+      otColSp = -1
+      continue
+    }
+
+    if (!inOT && isEndRow(row)) {
+      if (!includeOT()) break
+      afterMainEnd = true
+      continue
+    }
+
+    if (afterMainEnd && !inOT) continue
+
+    if (inOT && otColEn < 0) {
+      const hdrs = row.map(cellUpper)
+      const ei = hdrs.findIndex(h => h === 'ENGLISH')
+      const si = hdrs.findIndex(h => h === 'SPANISH')
+
+      if (ei >= 0 || si >= 0) {
+        otColEn = ei >= 0 ? ei : -1
+        otColSp = si >= 0 ? si : -1
+        continue
+      }
+
+      const ck = parseInt((row[1] || '').toString().replace(/,/g,''))
+      if (ck >= 1000 && ck <= 9999) {
+        otColEn = 3
+        otColSp = 2
+      } else {
+        continue
+      }
+    }
+
+    if (inOT && isEndRow(row)) break
+
+    if (isSkipMarkerRow(row) || SKIP.has(nameUp) || cell0.length < 2) continue
+
+    const ext = safeInt(row[1])
+    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
+
+    const ec = inOT ? otColEn : 3
+    const sc = inOT ? otColSp : 2
+    if (ec < 0) continue
+
+    const en = safeInt(row[ec])
+    const sp = sc >= 0 ? safeInt(row[sc]) : 0
+
+    if (agentMap[ext]) {
+      agentMap[ext].english += en
+      agentMap[ext].spanish += sp
+      agentMap[ext].total = agentMap[ext].english + agentMap[ext].spanish
+    } else {
+      agentMap[ext] = { name:cell0, ext:String(ext), spanish:sp, english:en, total:sp+en }
+    }
+  }
+
+  const agents = Object.values(agentMap)
+  const en = agents.reduce((s,a)=>s+a.english,0)
+  const sp = agents.reduce((s,a)=>s+a.spanish,0)
+
+  return {
+    agents,
+    totals:{ spanish:sp, english:en, total:sp+en, activeAgents:agents.length }
+  }
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
@@ -279,7 +445,7 @@ const formatDateLabel = (dateStr) => {
 function parseHistorySheet(rows) {
   const agents=[]; let totals={spanish:0,english:0,total:0,activeAgents:0}; let foundTotal=false
   for(let i=0;i<rows.length;i++){
-    const row=rows[i],cell0=(row[0]||'').trim(),cell0U=cell0.toUpperCase()
+    const row=rows[i],cell0=(row[0]||'').trim(),cell0U=cellUpper(cell0)
     if(cell0U.includes('AGENT')&&cell0U.includes('LOGGED')){const sp=safeInt(row[2]),en=safeInt(row[3]);totals={spanish:sp,english:en,total:sp+en,activeAgents:agents.length};foundTotal=true;break}
     if(cell0U.includes('MANAGEMENT')||cell0U.includes('CALL')||cell0U.includes('TRANSFER')||cell0U.includes('LEXNER')||cell0U.includes('GENERAL')||cell0.length<=1)continue
     const ext=safeInt(row[1]);if(ext<1000||ext>9999)continue
@@ -496,23 +662,95 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
         </div>
       </div>
 
-      {bulkMode?(
-        <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`,marginBottom:'1.5rem'}}>
-          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
-          <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-          {config.hasSp&&<div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotals?.spanish??totalSp} onChange={e=>setBulkTotals(t=>({spanish:e.target.value,english:t?.english??totalEn}))}/><div className="sum-label">Spanish Xfers ✏️</div></div>}
-          <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotals?.english??totalEn} onChange={e=>setBulkTotals(t=>({english:e.target.value,spanish:t?.spanish??totalSp}))}/><div className="sum-label">English Xfers ✏️</div></div>
-          <div className="sum-card indigo"><div className="sum-val">{((parseInt(bulkTotals?.spanish)||totalSp)+(parseInt(bulkTotals?.english)||totalEn)).toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
-        </div>
-      ):(
-        <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`}}>
-          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
-          <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-          {config.hasSp&&<div className="sum-card teal"><div className="sum-val">{totalSp.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>}
-          <div className="sum-card blue"><div className="sum-val">{totalEn.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
-          <div className="sum-card indigo"><div className="sum-val">{totalXf.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
-        </div>
-      )}
+{bulkMode ? (
+  <div
+    className="summary-grid"
+    style={{ gridTemplateColumns: `repeat(${config.hasSp ? 5 : 4},1fr)`, marginBottom: '1.5rem' }}
+  >
+    <div className="sum-card green">
+      <div className="sum-val">{hitGoal.length}</div>
+      <div className="sum-label">Hit Goal (≥{goal} EN)</div>
+    </div>
+
+    <div className="sum-card orange">
+      <div className="sum-val">{agentsFinal.length - hitGoal.length - atZero.length}</div>
+      <div className="sum-label">In Progress</div>
+    </div>
+
+    {config.hasSp && (
+      <div className="sum-card teal">
+        <input
+          type="number"
+          className="sum-edit-input"
+          style={{ color: '#2dd4bf' }}
+          value={bulkTotals?.spanish ?? totalSp}
+          onChange={(e) =>
+            setBulkTotals((t) => ({
+              spanish: e.target.value,
+              english: t?.english ?? totalEn,
+            }))
+          }
+        />
+        <div className="sum-label">Spanish Xfers ✏️</div>
+      </div>
+    )}
+
+    <div className="sum-card blue">
+      <input
+        type="number"
+        className="sum-edit-input"
+        style={{ color: '#60a5fa' }}
+        value={bulkTotals?.english ?? totalEn}
+        onChange={(e) =>
+          setBulkTotals((t) => ({
+            english: e.target.value,
+            spanish: t?.spanish ?? totalSp,
+          }))
+        }
+      />
+      <div className="sum-label">English Xfers ✏️</div>
+    </div>
+
+    <div className="sum-card indigo">
+      <div className="sum-val">
+        {(
+          (parseInt(bulkTotals?.spanish) || totalSp) +
+          (parseInt(bulkTotals?.english) || totalEn)
+        ).toLocaleString()}
+      </div>
+      <div className="sum-label">Total Xfers</div>
+    </div>
+  </div>
+) : (
+  <div className="summary-grid" style={{ gridTemplateColumns: `repeat(${config.hasSp ? 5 : 4},1fr)` }}>
+    <div className="sum-card green">
+      <div className="sum-val">{hitGoal.length}</div>
+      <div className="sum-label">Hit Goal (≥{goal} EN)</div>
+    </div>
+
+    <div className="sum-card orange">
+      <div className="sum-val">{agentsFinal.length - hitGoal.length - atZero.length}</div>
+      <div className="sum-label">In Progress</div>
+    </div>
+
+    {config.hasSp && (
+      <div className="sum-card teal">
+        <div className="sum-val">{totalSp.toLocaleString()}</div>
+        <div className="sum-label">Spanish Xfers</div>
+      </div>
+    )}
+
+    <div className="sum-card blue">
+      <div className="sum-val">{totalEn.toLocaleString()}</div>
+      <div className="sum-label">English Xfers</div>
+    </div>
+
+    <div className="sum-card indigo">
+      <div className="sum-val">{totalXf.toLocaleString()}</div>
+      <div className="sum-label">Total Xfers</div>
+    </div>
+  </div>
+)}
 
       {agentsFinal.length===0&&<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280',marginTop:'0.5rem'}}>No data available for this date.</div>}
 
@@ -696,7 +934,11 @@ export default function Dashboard() {
       ])
       setLiveGeneral(general);setLiveAsia(asia);setLastUpdate(new Date())
       setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]))
-      const results = await Promise.allSettled(TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName)))
+
+      const results = await Promise.allSettled(
+        TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName))
+      )
+
       const newTeams={},allAgents=[]
       TEAM_SHEETS.forEach((t,i)=>{
         if(results[i].status==='fulfilled'){
@@ -707,13 +949,12 @@ export default function Dashboard() {
         } else console.warn(`✗ ${t.label}:`,results[i].reason?.message)
       })
       setLiveTeams(newTeams)
-      for(const row of asia){
-        const name=(row[0]||'').trim(),nameUp=name.toUpperCase()
-        if(nameUp.includes('AGENT LOGGED')||nameUp.includes('LOGGED IN')||nameUp.includes('REMOVED'))break
-        const ext=safeInt(row[1]);if(isNaN(ext)||ext<1000||ext>9999||name.length<=1)continue
-        allAgents.push({ext:String(ext),name,english:safeInt(row[3]),spanish:safeInt(row[2]),total:safeInt(row[2])+safeInt(row[3]),team:'asia'})
-      }
-      saveLocalSnapshot(general,asia,newTeams);setSnapshots(loadAllSnapshots())
+
+      const { agents:asiaAgentsLive } = parseAsiaSheet(asia)
+      asiaAgentsLive.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:'asia'}))
+
+      saveLocalSnapshot(general,asia,newTeams)
+      setSnapshots(loadAllSnapshots())
       saveAgentSnapshotsToSheets(todayKey(),allAgents)
     } catch(e){console.error('loadData error:',e)}
     finally{setLoading(false)}
@@ -749,21 +990,7 @@ export default function Dashboard() {
 
   const {asiaAgents,asiaTotals}=(()=>{
     if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals}
-    const agentMap={}; let inOT=false,otColEn=-1,otColSp=-1
-    const SKIP=new Set(['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'])
-    for(const row of asiaDataRaw){
-      const cell0=(row[0]||'').toString().trim(),nameUp=cell0.toUpperCase().trim()
-      if(!inOT&&cell0.length>0&&(nameUp.startsWith('OT ')||nameUp.endsWith(' OT')||nameUp.includes(' OT '))){if(!includeOT())break;inOT=true;otColEn=-1;otColSp=-1;continue}
-      if(inOT&&otColEn<0){const hdrs=row.map(c=>(c||'').toString().toUpperCase().trim());const ei=hdrs.findIndex(h=>h==='ENGLISH');const si=hdrs.findIndex(h=>h==='SPANISH');if(ei>=0){otColEn=ei;otColSp=si>=0?si:-1;continue}const ck=parseInt((row[1]||'').toString().replace(/,/g,''));if(ck>=1000&&ck<=9999){otColEn=3;otColSp=2}else continue}
-      if((nameUp.includes('AGENT')&&(nameUp.includes('LOGGED')||nameUp.includes('LOG IN')))||(nameUp.includes('TOTAL')&&nameUp.includes('TRANSFER'))||nameUp.includes('THIS HOUR')||nameUp.includes('THIS OUR')||nameUp.includes('HOURLY')||nameUp.includes('REMOVED')||SKIP.has(nameUp)||cell0.length<2)continue
-      const ec=inOT?otColEn:3,sc=inOT?(otColSp>=0?otColSp:-1):2;if(ec<0)continue
-      const ext=safeInt(row[1]);if(isNaN(ext)||ext<1000||ext>9999)continue
-      const en=safeInt(row[ec]),sp=sc>=0?safeInt(row[sc]):0
-      if(agentMap[ext]){agentMap[ext].english+=en;agentMap[ext].spanish+=sp;agentMap[ext].total=agentMap[ext].english+agentMap[ext].spanish}
-      else agentMap[ext]={name:cell0,ext:String(ext),spanish:sp,english:en,total:sp+en}
-    }
-    const agents=Object.values(agentMap),en=agents.reduce((s,a)=>s+a.english,0),sp=agents.reduce((s,a)=>s+a.spanish,0)
-    return{asiaAgents:agents,asiaTotals:{spanish:sp,english:en,total:en+sp,activeAgents:agents.length}}
+    return parseAsiaSheet(asiaDataRaw)
   })()
 
   const asiaAgentsFinal=(()=>{
@@ -773,6 +1000,7 @@ export default function Dashboard() {
     if(bulkEditMode&&Object.keys(bulkEdits).length>0)agents=agents.map(a=>{if(!bulkEdits[a.ext])return a;const en=parseInt(bulkEdits[a.ext].english),sp=parseInt(bulkEdits[a.ext].spanish);return{...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}})
     return agents
   })()
+
   const asiaOvrTotals=(()=>{void overridesTick;try{return JSON.parse(localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate,'asia'))||'null')}catch(e){return null}})()
   const totalSpanish=asiaOvrTotals?.spanish??(isToday?asiaTotals.spanish:(isHistDate?asiaTotals.spanish:asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0)))
   const totalEnglish=asiaOvrTotals?.english??(isToday?asiaTotals.english:(isHistDate?asiaTotals.english:asiaAgentsFinal.reduce((s,a)=>s+a.english,0)))
@@ -831,8 +1059,6 @@ export default function Dashboard() {
 
   useEffect(()=>{
     if(!isToday||teamsSorted.length===0)return
-    const flag=`pulse_daily_totals_saved_${todayKey()}`
-    if(sessionStorage.getItem(flag))return;sessionStorage.setItem(flag,'1')
     const teamsWithId=teamsSorted.map(t=>({...t,id:TEAM_SHEETS.find(ts=>TEAM_DISPLAY_NAMES[ts.id]===t.name)?.id||t.name.toLowerCase().replace(/\s+/g,'_')}))
     saveDailyTotalsToSheets(todayKey(),teamsWithId)
   },[teamsSorted,isToday])
