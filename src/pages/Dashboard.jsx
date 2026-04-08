@@ -122,9 +122,8 @@ async function loadUserPhotoFromSheets(userName) {
 async function saveAgentSnapshotsToSheets(date, allAgents) {
   const payload = JSON.stringify(allAgents || [])
   const cacheKey = `pulse_snap_sheets_${date}`
-  const lastSaved = sessionStorage.getItem(cacheKey)
-  if (lastSaved && (Date.now() - parseInt(lastSaved)) < 3 * 60 * 1000) return
-  sessionStorage.setItem(cacheKey, String(Date.now()))
+  if (sessionStorage.getItem(cacheKey) === payload) return
+  sessionStorage.setItem(cacheKey, payload)
   try {
     await fetch(`${SCRIPT_URL}?action=saveAgentSnapshots&date=${encodeURIComponent(date)}&snapshots=${encodeURIComponent(payload)}`, { mode:'no-cors' })
   } catch(e) {}
@@ -209,12 +208,13 @@ function parseTeamSheet(rows, config) {
   const isSkipRow = (u) =>
     (u.includes('TOTAL') && u.includes('TRANSFER')) ||
     u.includes('THIS HOUR') || u.includes('THIS OUR') || u.includes('HOURLY') ||
-    u.includes('ON SITE') || u.includes('WEEKLY') || u.includes('NEW AGENT')
+    u.includes('ON SITE') || u.includes('WEEKLY')
 
   const SKIP = new Set([
     'USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR',
     'MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT',
-    'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT'
+    'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT',
+    'AGENTS','NEW AGENTS'
   ])
 
   for (let i = 0; i < rows.length; i++) {
@@ -290,121 +290,75 @@ function parseTeamSheet(rows, config) {
 }
 
 function parseAsiaSheet(rows) {
-  if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return { agents: [], totals: { spanish: 0, english: 0, total: 0, activeAgents: 0 } }
-  }
+  if (!rows || !Array.isArray(rows) || rows.length === 0)
+    return { agents:[], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
 
-  const agentMap = {}
-  let inOT = false
-  let readingMain = true
-  let readingOT = false
-  let otColEn = 3
-  let otColSp = 2
+  const agentMap   = {}
+  let inOT         = false
+  let afterMainEnd = false
+  let otColEn      = -1
+  let otColSp      = -1
 
-  const isOTRow = (row) =>
-    rowHasMarker(
-      row,
-      v => v === 'OT TAKERS' || v.startsWith('OT ') || v.endsWith(' OT') || v.includes(' OT '),
-      6
-    )
-
-  const isAgentsLoggedRow = (row) =>
-    rowHasMarker(
-      row,
-      v => v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN')),
-      8
-    )
-
-  const isSkipRow = (row) =>
-    rowHasMarker(
-      row,
-      v =>
-        v.includes('THIS HOUR') ||
-        v.includes('THIS OUR') ||
-        v.includes('HOURLY') ||
-        v.includes('REMOVED'),
-      8
-    )
-
-  const SKIP = new Set([
-    'MANAGEMENT',
-    'LEXNER',
-    'GENERAL MANAGER',
-    'USERS',
-    'USER',
-    'SUPERVISOR',
-    'AGENT NAME',
-    'ARWIN',
-    'ENGLISH',
-    'SPANISH',
-    'TOTAL',
-    'TRANSFER',
-    'TRANSFERS'
-  ])
+  const isOTRow    = (row) => rowHasMarker(row, v => v==='OT TAKERS'||v.startsWith('OT ')||v.endsWith(' OT')||v.includes(' OT '), 6)
+  const isEndRow   = (row) => rowHasMarker(row, v =>
+    (v.includes('AGENT')&&(v.includes('LOGGED')||v.includes('LOG IN'))) ||
+    (v.includes('TOTAL')&&v.includes('TRANSFER'))
+  )
+  const isSkipRow  = (row) => rowHasMarker(row, v =>
+    v.includes('THIS HOUR')||v.includes('THIS OUR')||v.includes('HOURLY')||v.includes('REMOVED')
+  )
+  const SKIP = new Set(['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'])
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]
-    if (!Array.isArray(row)) continue
-
+    const row   = rows[i]; if (!Array.isArray(row)) continue
     const cell0 = (row[0] || '').toString().trim()
-    const cell0U = cellUpper(cell0)
+    const nameUp = cellUpper(cell0)
 
-    if (isOTRow(row)) {
+    if (!inOT && isOTRow(row)) {
       if (!includeOT()) break
-      inOT = true
-      readingMain = false
-      readingOT = true
-      otColEn = 3
-      otColSp = 2
+      inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
       continue
     }
-
-    if (readingMain && isAgentsLoggedRow(row)) {
+    if (!inOT && isEndRow(row)) {
       if (!includeOT()) break
-      readingMain = false
-      continue
+      afterMainEnd = true; continue
+    }
+    if (afterMainEnd && !inOT) continue
+
+    if (inOT && otColEn < 0) {
+      const hdrs = row.map(cellUpper)
+      const ei   = hdrs.findIndex(h => h === 'ENGLISH')
+      const si   = hdrs.findIndex(h => h === 'SPANISH')
+      if (ei >= 0 || si >= 0) { otColEn = ei>=0?ei:3; otColSp = si>=0?si:2; continue }
+      const ck = parseInt((row[1]||'').toString().replace(/,/g,''))
+      if (ck>=1000&&ck<=9999) { otColEn=3; otColSp=2 } else continue
     }
 
-    if (readingOT && isAgentsLoggedRow(row)) {
-      break
-    }
-
-    if (isSkipRow(row) || SKIP.has(cell0U) || cell0.length < 2) continue
+    if (inOT && isEndRow(row)) break
+    if (isSkipRow(row) || SKIP.has(nameUp) || cell0.length < 2) continue
 
     const ext = safeInt(row[1])
-    if (ext < 1000 || ext > 9999) continue
+    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
 
-    const en = safeInt(row[inOT ? otColEn : 3])
-    const sp = safeInt(row[inOT ? otColSp : 2])
+    const ec = inOT ? otColEn : 3
+    const sc = inOT ? otColSp : 2
+    if (ec < 0) continue
+
+    const en = safeInt(row[ec])
+    const sp = sc >= 0 ? safeInt(row[sc]) : 0
 
     if (agentMap[ext]) {
-      agentMap[ext].english += en
-      agentMap[ext].spanish += sp
+      agentMap[ext].english += en; agentMap[ext].spanish += sp
       agentMap[ext].total = agentMap[ext].english + agentMap[ext].spanish
     } else {
-      agentMap[ext] = {
-        name: cell0,
-        ext: String(ext),
-        spanish: sp,
-        english: en,
-        total: sp + en
-      }
+      agentMap[ext] = { name:cell0, ext:String(ext), spanish:sp, english:en, total:sp+en }
     }
   }
 
   const agents = Object.values(agentMap)
-  const en = agents.reduce((s, a) => s + a.english, 0)
-  const sp = agents.reduce((s, a) => s + a.spanish, 0)
-
-  return {
-    agents,
-    totals: {
-      spanish: sp,
-      english: en,
-      total: sp + en,
-      activeAgents: agents.length
-    }
-  }
+  const en = agents.reduce((s,a) => s+a.english, 0)
+  const sp = agents.reduce((s,a) => s+a.spanish, 0)
+  return { agents, totals:{ spanish:sp, english:en, total:sp+en, activeAgents:agents.length } }
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
