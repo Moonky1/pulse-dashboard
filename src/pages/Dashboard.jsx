@@ -1019,8 +1019,9 @@ export default function Dashboard() {
 
   const {asiaAgents,asiaTotals}=(()=>{
     if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals}
-    return parseAsiaSheet(asiaDataRaw)
-  })()
+    const {agents,totals} = parseAsiaSheet(asiaDataRaw)
+    return {asiaAgents:agents, asiaTotals:totals}
+  })()s
 
   const asiaAgentsFinal=(()=>{
     void overridesTick
