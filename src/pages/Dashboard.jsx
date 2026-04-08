@@ -33,6 +33,22 @@ const TEAM_DISPLAY_NAMES = {
   mexico:'Mexico Baja', venezuela:'Venezuela',
 }
 
+// ── Normalize any date string → YYYY-MM-DD ──
+function normalizeDate(raw) {
+  if (!raw) return null
+  const s = String(raw).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  try {
+    const d = new Date(s)
+    if (isNaN(d.getTime())) return null
+    // Use UTC to avoid timezone shift
+    const y = d.getUTCFullYear()
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(d.getUTCDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  } catch(e) { return null }
+}
+
 const csvUrl = (sheetId, sheet) =>
   `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}&t=${Date.now()}`
 
@@ -148,47 +164,54 @@ const E = {
 const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
 const MEDALS = [E.medal1, E.medal2, E.medal3]
 
-const todayKey = () => new Date().toISOString().slice(0,10)
+const todayKey     = () => new Date().toISOString().slice(0,10)
 const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
 const includeOT    = () => colombiaHour() >= 18
 const cellUpper    = (v) => (v || '').toString().toUpperCase().trim()
 const rowHasMarker = (row, matcher, limit=8) => {
   if (!Array.isArray(row)) return false
   for (let c = 0; c < Math.min(row.length, limit); c++) {
-    const v = cellUpper(row[c])
-    if (!v) continue
-    if (matcher(v)) return true
+    const v = cellUpper(row[c]); if (!v) continue; if (matcher(v)) return true
   }
   return false
 }
 
+// ─────────────────────────────────────────────────────────────────
+// parseTeamSheet
+//
+// Before 6pm  → parse main section only, break at AGENTS LOGGED IN
+// After  6pm  → parse main + OT section if present
+//               If no OT section exists yet, main agents still returned
+//
+// KEY FIX: OT column fallback uses same columns as main section
+// (not colEn-1 which was wrong for Philippines)
+// ─────────────────────────────────────────────────────────────────
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
-    return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
+    return { agents:[], totals:{ english:0, spanish:0, total:0, activeAgents:0 } }
 
-  const agentMap = {}
-  let inOT = false
+  const agentMap  = {}
+  let inOT        = false
   let afterMainEnd = false
-  let otColEn = -1
-  let otColSp = -1
+  let otColEn     = -1
+  let otColSp     = -1
 
   const isOTRow = (row) => {
     for (let c = 0; c < Math.min(row.length, 6); c++) {
-      const v = (row[c] || '').toString().toUpperCase().trim()
-      if (!v) continue
-      if (v === 'OT TAKERS') return true
-      if (v.startsWith('OT ')) return true
-      if (v.endsWith(' OT')) return true
-      if (v.includes(' OT ')) return true
+      const v = cellUpper(row[c]); if (!v) continue
+      if (v === 'OT TAKERS')      return true
+      if (v.startsWith('OT '))    return true
+      if (v.endsWith(' OT'))      return true
+      if (v.includes(' OT '))     return true
     }
     return false
   }
 
+  // Checks ALL columns for end-of-data markers (handles merged cells)
   const isEndRow = (row) => {
     for (let c = 0; c < Math.min(row.length, 8); c++) {
-      const v = (row[c] || '').toString().toUpperCase().trim()
-      if (v.length < 3) continue
+      const v = cellUpper(row[c]); if (v.length < 3) continue
       if (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) return true
       if (v.includes('TOTAL') && v.includes('TRANSFER')) return true
     }
@@ -207,43 +230,57 @@ function parseTeamSheet(rows, config) {
   ])
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]
-    if (!Array.isArray(row)) continue
+    const row    = rows[i]; if (!Array.isArray(row)) continue
     const cell0  = (row[0] || '').toString().trim()
     const cell0U = cell0.toUpperCase().trim()
 
+    // ── Detect OT section header ──
     if (!inOT && isOTRow(row)) {
-      if (!includeOT()) break
+      if (!includeOT()) break          // Before 6pm: stop entirely
       inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
       continue
     }
 
+    // ── Detect main section end ──
     if (!inOT && isEndRow(row)) {
-      if (!includeOT()) break
-      afterMainEnd = true
+      if (!includeOT()) break          // Before 6pm: stop
+      afterMainEnd = true              // After 6pm: skip until OT section
       continue
     }
 
+    // Skip rows between main end and OT header
     if (afterMainEnd && !inOT) continue
 
+    // ── Detect OT column headers ──
     if (inOT && otColEn < 0) {
       const hdrs = row.map(c => (c || '').toString().toUpperCase().trim())
       if (hasSp) {
         const ei = hdrs.findIndex(h => h === 'ENGLISH')
         const si = hdrs.findIndex(h => h === 'SPANISH')
-        if (ei >= 0 || si >= 0) { otColEn = ei >= 0 ? ei : -1; otColSp = si >= 0 ? si : -1; continue }
+        if (ei >= 0 || si >= 0) {
+          otColEn = ei >= 0 ? ei : colEn
+          otColSp = si >= 0 ? si : (colSp != null ? colSp : -1)
+          continue
+        }
       } else {
         const ei = hdrs.findIndex(h => h === 'ENGLISH' || h === 'TRANSFER' || h === 'TRANSFERS')
         if (ei >= 0) { otColEn = ei; otColSp = -1; continue }
       }
+      // No header row found — check if this is already a data row
       const ck = parseInt((row[1] || '').toString().replace(/,/g,''))
       if (ck >= 1000 && ck <= 9999 && String(ck).startsWith(extStart)) {
-        otColEn = hasSp ? Math.max(colEn - 1, 2) : colEn
-        otColSp = hasSp && colSp != null ? Math.max(colSp - 1, 3) : -1
-      } else continue
+        // Use same columns as main section (most reliable fallback)
+        otColEn = colEn
+        otColSp = colSp != null ? colSp : -1
+        // Don't continue — fall through to parse this row
+      } else {
+        continue
+      }
     }
 
+    // End of OT section
     if (inOT && isEndRow(row)) break
+
     if (isSkipRow(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
 
     const rawExt = (row[1] || '').toString().replace(/,/g,'').trim()
@@ -259,8 +296,9 @@ function parseTeamSheet(rows, config) {
     const sp = sc >= 0 ? safeInt(row[sc]) : 0
 
     if (agentMap[extNum]) {
-      agentMap[extNum].english += en; agentMap[extNum].spanish += sp
-      agentMap[extNum].total = agentMap[extNum].english + agentMap[extNum].spanish
+      agentMap[extNum].english += en
+      agentMap[extNum].spanish += sp
+      agentMap[extNum].total   = agentMap[extNum].english + agentMap[extNum].spanish
     } else {
       agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
     }
@@ -272,38 +310,29 @@ function parseTeamSheet(rows, config) {
   return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
 }
 
+// ── Asia sheet parser (same logic, Asia-specific column indices) ──
 function parseAsiaSheet(rows) {
   if (!rows || !Array.isArray(rows) || rows.length === 0)
     return { agents:[], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
 
-  const agentMap = {}
-  let inOT = false
+  const agentMap   = {}
+  let inOT         = false
   let afterMainEnd = false
-  let otColEn = -1
-  let otColSp = -1
+  let otColEn      = -1
+  let otColSp      = -1
 
-  const isOTRow = (row) =>
-    rowHasMarker(row, v => v === 'OT TAKERS' || v.startsWith('OT ') || v.endsWith(' OT') || v.includes(' OT '), 6)
-
-  const isEndRow = (row) =>
-    rowHasMarker(row, v =>
-      (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) ||
-      (v.includes('TOTAL') && v.includes('TRANSFER'))
-    )
-
-  const isSkipMarkerRow = (row) =>
-    rowHasMarker(row, v =>
-      v.includes('THIS HOUR') || v.includes('THIS OUR') || v.includes('HOURLY') || v.includes('REMOVED')
-    )
-
-  const SKIP = new Set([
-    'MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR',
-    'AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'
-  ])
+  const isOTRow    = (row) => rowHasMarker(row, v => v==='OT TAKERS'||v.startsWith('OT ')||v.endsWith(' OT')||v.includes(' OT '), 6)
+  const isEndRow   = (row) => rowHasMarker(row, v =>
+    (v.includes('AGENT')&&(v.includes('LOGGED')||v.includes('LOG IN'))) ||
+    (v.includes('TOTAL')&&v.includes('TRANSFER'))
+  )
+  const isSkipRow  = (row) => rowHasMarker(row, v =>
+    v.includes('THIS HOUR')||v.includes('THIS OUR')||v.includes('HOURLY')||v.includes('REMOVED')
+  )
+  const SKIP = new Set(['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'])
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]
-    if (!Array.isArray(row)) continue
+    const row   = rows[i]; if (!Array.isArray(row)) continue
     const cell0 = (row[0] || '').toString().trim()
     const nameUp = cellUpper(cell0)
 
@@ -312,26 +341,23 @@ function parseAsiaSheet(rows) {
       inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
       continue
     }
-
     if (!inOT && isEndRow(row)) {
       if (!includeOT()) break
-      afterMainEnd = true
-      continue
+      afterMainEnd = true; continue
     }
-
     if (afterMainEnd && !inOT) continue
 
     if (inOT && otColEn < 0) {
       const hdrs = row.map(cellUpper)
-      const ei = hdrs.findIndex(h => h === 'ENGLISH')
-      const si = hdrs.findIndex(h => h === 'SPANISH')
-      if (ei >= 0 || si >= 0) { otColEn = ei >= 0 ? ei : -1; otColSp = si >= 0 ? si : -1; continue }
-      const ck = parseInt((row[1] || '').toString().replace(/,/g,''))
-      if (ck >= 1000 && ck <= 9999) { otColEn = 3; otColSp = 2 } else continue
+      const ei   = hdrs.findIndex(h => h === 'ENGLISH')
+      const si   = hdrs.findIndex(h => h === 'SPANISH')
+      if (ei >= 0 || si >= 0) { otColEn = ei>=0?ei:3; otColSp = si>=0?si:2; continue }
+      const ck = parseInt((row[1]||'').toString().replace(/,/g,''))
+      if (ck>=1000&&ck<=9999) { otColEn=3; otColSp=2 } else continue
     }
 
     if (inOT && isEndRow(row)) break
-    if (isSkipMarkerRow(row) || SKIP.has(nameUp) || cell0.length < 2) continue
+    if (isSkipRow(row) || SKIP.has(nameUp) || cell0.length < 2) continue
 
     const ext = safeInt(row[1])
     if (isNaN(ext) || ext < 1000 || ext > 9999) continue
@@ -457,7 +483,11 @@ function DatePicker({dateTabs,selectedDate,onSelect}) {
   const today=todayKey(); const yest=new Date(); yest.setDate(yest.getDate()-1); const yKey=yest.toISOString().slice(0,10)
   useEffect(()=>{const h=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false)};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h)},[])
   const groups={}
-  dateTabs.forEach(date=>{const[y,m]=date.split('-');const mk=`${y}-${m}`;const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const label=`${mn[parseInt(m)-1]} ${y}`;if(!groups[mk])groups[mk]={label,dates:[]};groups[mk].dates.push(date)})
+  dateTabs.forEach(date=>{
+    // Only process valid YYYY-MM-DD dates
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return
+    const[y,m]=date.split('-');const mk=`${y}-${m}`;const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const label=`${mn[parseInt(m)-1]} ${y}`;if(!groups[mk])groups[mk]={label,dates:[]};groups[mk].dates.push(date)
+  })
   const formatFull=(d)=>{if(d===today)return'Today — LIVE';if(d===yKey)return'Yesterday';const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(d+'T12:00:00').getDay()]} ${dd}/${m}/${y}`}
   return(
     <div className="datepicker-wrap" ref={ref}>
@@ -621,7 +651,7 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
 
       {bulkMode?(
         <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`,marginBottom:'1.5rem'}}>
-          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({'>'}={goal} EN)</div></div>
+          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
           <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
           {config.hasSp&&<div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotals?.spanish??totalSp} onChange={e=>setBulkTotals(t=>({spanish:e.target.value,english:t?.english??totalEn}))}/><div className="sum-label">Spanish Xfers ✏️</div></div>}
           <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotals?.english??totalEn} onChange={e=>setBulkTotals(t=>({english:e.target.value,spanish:t?.spanish??totalSp}))}/><div className="sum-label">English Xfers ✏️</div></div>
@@ -629,7 +659,7 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
         </div>
       ):(
         <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`}}>
-          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({'>'}={goal} EN)</div></div>
+          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
           <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
           {config.hasSp&&<div className="sum-card teal"><div className="sum-val">{totalSp.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>}
           <div className="sum-card blue"><div className="sum-val">{totalEn.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
@@ -681,7 +711,7 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
           <BarChart agents={agentsFinal} metric="english"/>
           <div className="chart-goal-row">
             <div className="goal-stat green-stat"><div className="goal-stat-val">{hitGoal.length}</div><div className="goal-stat-label"><Img src={E.goal} size={14}/> Reached goal ({goal}+ EN)</div></div>
-            <div className="goal-stat yellow-stat"><div className="goal-stat-val">{agentsFinal.filter(a=>a.english>=(goal-3)&&a.english<goal).length}</div><div className="goal-stat-label">Almost there ({goal-3}-{goal-1} EN)</div></div>
+            <div className="goal-stat yellow-stat"><div className="goal-stat-val">{agentsFinal.filter(a=>a.english>=(goal-3)&&a.english<goal).length}</div><div className="goal-stat-label">Almost ({goal-3}-{goal-1} EN)</div></div>
             <div className="goal-stat red-stat"><div className="goal-stat-val">{atZero.length}</div><div className="goal-stat-label"><Img src={E.zero} size={14}/> At zero</div></div>
           </div>
         </div>
@@ -781,10 +811,16 @@ export default function Dashboard() {
     return()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('resize',onResize);cancelAnimationFrame(raf)}
   },[])
 
+  // ── Load remote daily totals — normalize dates to YYYY-MM-DD ──
   const loadDailyTotals = async () => {
     try {
       const data = await scriptCall({ action:'getDailyTotals' })
-      if (Array.isArray(data)) setRemoteDailyTotals(data)
+      if (Array.isArray(data)) {
+        const normalized = data
+          .map(entry => ({ ...entry, date: normalizeDate(entry.date) }))
+          .filter(entry => entry.date) // drop any that failed to parse
+        setRemoteDailyTotals(normalized)
+      }
     } catch(e) {}
   }
 
@@ -827,7 +863,7 @@ export default function Dashboard() {
       TEAM_SHEETS.forEach((t,i)=>{
         if(results[i].status==='fulfilled'){
           newTeams[t.id]=results[i].value
-          const {agents} = parseTeamSheet(results[i].value,t)
+          const{agents}=parseTeamSheet(results[i].value,t)
           agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}))
           saveTeamSnapshotToSheets(todayKey(),t.id,agents)
         } else console.warn(`✗ ${t.label}:`,results[i].reason?.message)
@@ -872,11 +908,9 @@ export default function Dashboard() {
 
   const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
 
-  // ── Asia agents — uses parseAsiaSheet, correctly destructured ──
+  // ── Asia agents — correctly destructured ──
   const { asiaAgents, asiaTotals } = (() => {
-    if (isHistDate && histParsed) {
-      return { asiaAgents: histParsed.agents, asiaTotals: histParsed.totals }
-    }
+    if (isHistDate && histParsed) return { asiaAgents: histParsed.agents, asiaTotals: histParsed.totals }
     const { agents, totals } = parseAsiaSheet(asiaDataRaw)
     return { asiaAgents: agents, asiaTotals: totals }
   })()
@@ -888,7 +922,6 @@ export default function Dashboard() {
     if(bulkEditMode&&Object.keys(bulkEdits).length>0)agents=agents.map(a=>{if(!bulkEdits[a.ext])return a;const en=parseInt(bulkEdits[a.ext].english),sp=parseInt(bulkEdits[a.ext].spanish);return{...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}})
     return agents
   })()
-
   const asiaOvrTotals=(()=>{void overridesTick;try{return JSON.parse(localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate,'asia'))||'null')}catch(e){return null}})()
   const totalSpanish=asiaOvrTotals?.spanish??(isToday?asiaTotals.spanish:(isHistDate?asiaTotals.spanish:asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0)))
   const totalEnglish=asiaOvrTotals?.english??(isToday?asiaTotals.english:(isHistDate?asiaTotals.english:asiaAgentsFinal.reduce((s,a)=>s+a.english,0)))
@@ -914,8 +947,13 @@ export default function Dashboard() {
 
   const isMyTeam=(name)=>{const n=name.toUpperCase();return(team?.id==='asia'&&n.includes('ASIA'))||(team?.id==='philippines'&&n.includes('PHIL'))||(team?.id==='venezuela'&&n.includes('VENE'))||(team?.id==='colombia'&&n.includes('COLOM'))||(team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))}
 
+  // ── Date tabs — filter out any non-YYYY-MM-DD dates ──
   const dateTabs=useMemo(()=>{
-    const dates=new Set();dates.add(todayKey());snapshots.forEach(s=>dates.add(s.date));remoteDailyTotals.forEach(r=>dates.add(r.date));HISTORY_DATES.forEach(d=>dates.add(d.isoDate))
+    const dates=new Set()
+    dates.add(todayKey())
+    snapshots.forEach(s=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(s.date)) dates.add(s.date) })
+    remoteDailyTotals.forEach(r=>{ if(r.date&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)) dates.add(r.date) })
+    HISTORY_DATES.forEach(d=>dates.add(d.isoDate))
     return[...dates].sort((a,b)=>b.localeCompare(a))
   },[snapshots,remoteDailyTotals])
 
@@ -1037,7 +1075,7 @@ export default function Dashboard() {
               histLoading?<div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading...</div>
               :bulkEditMode?(
                 <div className="summary-grid" style={{marginBottom:'1.5rem'}}>
-                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({'>'}={goal} EN)</div></div>
+                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
                   <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
                   <div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotalsEdit?.spanish??totalSpanish} onChange={e=>setBulkTotalsEdit(t=>({spanish:e.target.value,english:t?.english??totalEnglish}))}/><div className="sum-label">Spanish Xfers ✏️</div></div>
                   <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotalsEdit?.english??totalEnglish} onChange={e=>setBulkTotalsEdit(t=>({english:e.target.value,spanish:t?.spanish??totalSpanish}))}/><div className="sum-label">English Xfers ✏️</div></div>
@@ -1045,7 +1083,7 @@ export default function Dashboard() {
                 </div>
               ):(
                 <div className="summary-grid">
-                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({'>'}={goal} EN)</div></div>
+                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
                   <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
                   <div className="sum-card teal"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
                   <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
