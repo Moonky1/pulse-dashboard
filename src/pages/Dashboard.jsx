@@ -33,7 +33,6 @@ const TEAM_DISPLAY_NAMES = {
   mexico:'Mexico Baja', venezuela:'Venezuela',
 }
 
-// ── Normalize any date string → YYYY-MM-DD ──
 function normalizeDate(raw) {
   if (!raw) return null
   const s = String(raw).trim()
@@ -41,7 +40,6 @@ function normalizeDate(raw) {
   try {
     const d = new Date(s)
     if (isNaN(d.getTime())) return null
-    // Use UTC to avoid timezone shift
     const y = d.getUTCFullYear()
     const m = String(d.getUTCMonth() + 1).padStart(2, '0')
     const day = String(d.getUTCDate()).padStart(2, '0')
@@ -176,16 +174,6 @@ const rowHasMarker = (row, matcher, limit=8) => {
   return false
 }
 
-// ─────────────────────────────────────────────────────────────────
-// parseTeamSheet
-//
-// Before 6pm  → parse main section only, break at AGENTS LOGGED IN
-// After  6pm  → parse main + OT section if present
-//               If no OT section exists yet, main agents still returned
-//
-// KEY FIX: OT column fallback uses same columns as main section
-// (not colEn-1 which was wrong for Philippines)
-// ─────────────────────────────────────────────────────────────────
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows || !Array.isArray(rows) || rows.length === 0)
@@ -208,7 +196,6 @@ function parseTeamSheet(rows, config) {
     return false
   }
 
-  // Checks ALL columns for end-of-data markers (handles merged cells)
   const isEndRow = (row) => {
     for (let c = 0; c < Math.min(row.length, 8); c++) {
       const v = cellUpper(row[c]); if (v.length < 3) continue
@@ -234,24 +221,20 @@ function parseTeamSheet(rows, config) {
     const cell0  = (row[0] || '').toString().trim()
     const cell0U = cell0.toUpperCase().trim()
 
-    // ── Detect OT section header ──
     if (!inOT && isOTRow(row)) {
-      if (!includeOT()) break          // Before 6pm: stop entirely
+      if (!includeOT()) break
       inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
       continue
     }
 
-    // ── Detect main section end ──
     if (!inOT && isEndRow(row)) {
-      if (!includeOT()) break          // Before 6pm: stop
-      afterMainEnd = true              // After 6pm: skip until OT section
+      if (!includeOT()) break
+      afterMainEnd = true
       continue
     }
 
-    // Skip rows between main end and OT header
     if (afterMainEnd && !inOT) continue
 
-    // ── Detect OT column headers ──
     if (inOT && otColEn < 0) {
       const hdrs = row.map(c => (c || '').toString().toUpperCase().trim())
       if (hasSp) {
@@ -266,21 +249,16 @@ function parseTeamSheet(rows, config) {
         const ei = hdrs.findIndex(h => h === 'ENGLISH' || h === 'TRANSFER' || h === 'TRANSFERS')
         if (ei >= 0) { otColEn = ei; otColSp = -1; continue }
       }
-      // No header row found — check if this is already a data row
       const ck = parseInt((row[1] || '').toString().replace(/,/g,''))
       if (ck >= 1000 && ck <= 9999 && String(ck).startsWith(extStart)) {
-        // Use same columns as main section (most reliable fallback)
         otColEn = colEn
         otColSp = colSp != null ? colSp : -1
-        // Don't continue — fall through to parse this row
       } else {
         continue
       }
     }
 
-    // End of OT section
     if (inOT && isEndRow(row)) break
-
     if (isSkipRow(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
 
     const rawExt = (row[1] || '').toString().replace(/,/g,'').trim()
@@ -310,7 +288,6 @@ function parseTeamSheet(rows, config) {
   return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
 }
 
-// ── Asia sheet parser (same logic, Asia-specific column indices) ──
 function parseAsiaSheet(rows) {
   if (!rows || !Array.isArray(rows) || rows.length === 0)
     return { agents:[], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
@@ -386,10 +363,10 @@ function parseAsiaSheet(rows) {
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 const RANGES = [
   { label:'0',     min:0,  max:0,    color:'#f87171' },
-  { label:'1–4',   min:1,  max:4,    color:'#fb923c' },
-  { label:'5–9',   min:5,  max:9,    color:'#fbbf24' },
-  { label:'10–14', min:10, max:14,   color:'#a3e635' },
-  { label:'15–19', min:15, max:19,   color:'#34d399' },
+  { label:'1-4',   min:1,  max:4,    color:'#fb923c' },
+  { label:'5-9',   min:5,  max:9,    color:'#fbbf24' },
+  { label:'10-14', min:10, max:14,   color:'#a3e635' },
+  { label:'15-19', min:15, max:19,   color:'#34d399' },
   { label:'20+',   min:20, max:9999, color:'#22c55e' },
 ]
 
@@ -484,16 +461,15 @@ function DatePicker({dateTabs,selectedDate,onSelect}) {
   useEffect(()=>{const h=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false)};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h)},[])
   const groups={}
   dateTabs.forEach(date=>{
-    // Only process valid YYYY-MM-DD dates
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return
     const[y,m]=date.split('-');const mk=`${y}-${m}`;const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const label=`${mn[parseInt(m)-1]} ${y}`;if(!groups[mk])groups[mk]={label,dates:[]};groups[mk].dates.push(date)
   })
-  const formatFull=(d)=>{if(d===today)return'Today — LIVE';if(d===yKey)return'Yesterday';const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(d+'T12:00:00').getDay()]} ${dd}/${m}/${y}`}
+  const formatFull=(d)=>{if(d===today)return'Today - LIVE';if(d===yKey)return'Yesterday';const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(d+'T12:00:00').getDay()]} ${dd}/${m}/${y}`}
   return(
     <div className="datepicker-wrap" ref={ref}>
       <button className="datepicker-btn" onClick={()=>setOpen(o=>!o)}>
         <span>📅</span>
-        <span className="datepicker-label">{selectedDate===today?<><span className="dp-live-dot"/>Today — LIVE</>:formatFull(selectedDate)}</span>
+        <span className="datepicker-label">{selectedDate===today?<><span className="dp-live-dot"/>Today - LIVE</>:formatFull(selectedDate)}</span>
         {HISTORY_ISO_SET.has(selectedDate)&&<span className="dp-hist-badge">H</span>}
         <span className="datepicker-arrow">{open?'▲':'▼'}</span>
       </button>
@@ -635,9 +611,9 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
                 <div className="asia-menu-dropdown">
                   {!bulkMode
                     ?<button className="asia-menu-item" onClick={()=>{setBulkMode(true);setMenuOpen(false);setView('stats')}}>✏️ Edit this day's data</button>
-                    :<><button className="asia-menu-item green-item" onClick={()=>{saveBulk();setMenuOpen(false)}}>{saving?'⏳ Saving...':'✅ Save all changes'}</button>
-                       <button className="asia-menu-item red-item" onClick={()=>{setBulkMode(false);setBulkEdits({});setBulkTotals(null);setMenuOpen(false)}}>✖ Cancel edit</button></>}
-                  {hasOvr&&<button className="asia-menu-item" style={{borderTop:'0.5px solid #2a2d38',marginTop:4,paddingTop:10,color:'#f87171'}} onClick={resetOvr}>🗑 Reset to original data</button>}
+                    :<><button className="asia-menu-item green-item" onClick={()=>{saveBulk();setMenuOpen(false)}}>{saving?'Saving...':'Save all changes'}</button>
+                       <button className="asia-menu-item red-item" onClick={()=>{setBulkMode(false);setBulkEdits({});setBulkTotals(null);setMenuOpen(false)}}>Cancel edit</button></>}
+                  {hasOvr&&<button className="asia-menu-item" style={{borderTop:'0.5px solid #2a2d38',marginTop:4,paddingTop:10,color:'#f87171'}} onClick={resetOvr}>Reset to original data</button>}
                 </div>
               )}
             </div>
@@ -651,15 +627,15 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
 
       {bulkMode?(
         <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`,marginBottom:'1.5rem'}}>
-          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({goal}+ EN)</div></div>
           <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-          {config.hasSp&&<div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotals?.spanish??totalSp} onChange={e=>setBulkTotals(t=>({spanish:e.target.value,english:t?.english??totalEn}))}/><div className="sum-label">Spanish Xfers ✏️</div></div>}
-          <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotals?.english??totalEn} onChange={e=>setBulkTotals(t=>({english:e.target.value,spanish:t?.spanish??totalSp}))}/><div className="sum-label">English Xfers ✏️</div></div>
+          {config.hasSp&&<div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotals?.spanish??totalSp} onChange={e=>setBulkTotals(t=>({spanish:e.target.value,english:t?.english??totalEn}))}/><div className="sum-label">Spanish Xfers</div></div>}
+          <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotals?.english??totalEn} onChange={e=>setBulkTotals(t=>({english:e.target.value,spanish:t?.spanish??totalSp}))}/><div className="sum-label">English Xfers</div></div>
           <div className="sum-card indigo"><div className="sum-val">{((parseInt(bulkTotals?.spanish)||totalSp)+(parseInt(bulkTotals?.english)||totalEn)).toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
         </div>
       ):(
         <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`}}>
-          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({goal}+ EN)</div></div>
           <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
           {config.hasSp&&<div className="sum-card teal"><div className="sum-val">{totalSp.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>}
           <div className="sum-card blue"><div className="sum-val">{totalEn.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
@@ -678,7 +654,7 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
               <div className="top-block red-block"><h3 className="top-title"><Img src={E.zero} size={16}/> At Zero</h3>{atZero.length===0?<p className="top-empty"><Img src={E.firework} size={16}/> Everyone has transfers!</p>:atZero.slice(0,3).map((a,i)=>(<div key={i} className="top-item"><span className="top-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score red">0</span></div>))}</div>
             </div>
           )}
-          {bulkMode&&<div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>✏️ Edit mode activo</span><span style={{fontSize:12,color:'#9ca3af'}}>— modifica y usa "Save all changes" en ···</span></div>}
+          {bulkMode&&<div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>Edit mode active</span><span style={{fontSize:12,color:'#9ca3af'}}> - modify then use Save all changes in ···</span></div>}
           <div className="agent-table-wrap">
             <table className="agent-table">
               <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th>{config.hasSp&&<th>Spanish</th>}<th>Total</th><th>Goal</th>{showEditBtn&&<th className="th-edit"></th>}</tr></thead>
@@ -695,14 +671,14 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
                     <td className="val-english">{bulkMode?<input type="number" className="bulk-edit-input" value={beEn!==''?beEn:a.english} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],english:e.target.value}}))}/>:a.english}</td>
                     {config.hasSp&&<td className="val-spanish">{bulkMode?<input type="number" className="bulk-edit-input" value={beSp!==''?beSp:a.spanish} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],spanish:e.target.value}}))}/>:a.spanish}</td>}
                     <td className="val-total">{config.hasSp?dEn+dSp:dEn}</td>
-                    <td>{dEn>=goal?<span className="badge-goal">✓ Goal</span>:<span className="badge-pending">{goal-dEn} left</span>}</td>
+                    <td>{dEn>=goal?<span className="badge-goal">Goal</span>:<span className="badge-pending">{goal-dEn} left</span>}</td>
                     {showEditBtn&&<td className="td-edit">{!bulkMode&&<button className="edit-agent-btn" onClick={e=>{e.stopPropagation();setEditForm({english:a.english,spanish:a.spanish||0});setEditAgent(a)}}>✏️</button>}</td>}
                   </tr>)
                 })}
               </tbody>
             </table>
           </div>
-          {bulkMode&&<div style={{display:'flex',gap:10,marginTop:12,justifyContent:'flex-end'}}><button className="btn-cancel" onClick={()=>{setBulkMode(false);setBulkEdits({});setBulkTotals(null)}}>Cancel</button><button className="btn-save" onClick={saveBulk}>{saving?'⏳ Saving...':'✅ Save all changes'}</button></div>}
+          {bulkMode&&<div style={{display:'flex',gap:10,marginTop:12,justifyContent:'flex-end'}}><button className="btn-cancel" onClick={()=>{setBulkMode(false);setBulkEdits({});setBulkTotals(null)}}>Cancel</button><button className="btn-save" onClick={saveBulk}>{saving?'Saving...':'Save all changes'}</button></div>}
         </>
       )}
 
@@ -720,14 +696,14 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
       {editAgent&&(
         <div className="edit-modal-overlay" onClick={()=>setEditAgent(null)}>
           <div className="edit-modal" onClick={e=>e.stopPropagation()}>
-            <h3 className="edit-modal-title">Edit — {editAgent.name} <span style={{color:'#6b7280',fontSize:12}}>#{editAgent.ext}</span></h3>
+            <h3 className="edit-modal-title">Edit - {editAgent.name} <span style={{color:'#6b7280',fontSize:12}}>#{editAgent.ext}</span></h3>
             <div className="edit-modal-fields">
               <label>English<input type="number" value={editForm.english} onChange={e=>setEditForm(f=>({...f,english:e.target.value}))}/></label>
               {config.hasSp&&<label>Spanish<input type="number" value={editForm.spanish} onChange={e=>setEditForm(f=>({...f,spanish:e.target.value}))}/></label>}
             </div>
             <div className="edit-modal-actions">
               <button className="btn-cancel" onClick={()=>setEditAgent(null)}>Cancel</button>
-              <button className="btn-save" onClick={saveQuick}>{saving?'⏳ Saving...':'Save'}</button>
+              <button className="btn-save" onClick={saveQuick}>{saving?'Saving...':'Save'}</button>
             </div>
           </div>
         </div>
@@ -811,14 +787,13 @@ export default function Dashboard() {
     return()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('resize',onResize);cancelAnimationFrame(raf)}
   },[])
 
-  // ── Load remote daily totals — normalize dates to YYYY-MM-DD ──
   const loadDailyTotals = async () => {
     try {
       const data = await scriptCall({ action:'getDailyTotals' })
       if (Array.isArray(data)) {
         const normalized = data
           .map(entry => ({ ...entry, date: normalizeDate(entry.date) }))
-          .filter(entry => entry.date) // drop any that failed to parse
+          .filter(entry => entry.date)
         setRemoteDailyTotals(normalized)
       }
     } catch(e) {}
@@ -880,7 +855,8 @@ export default function Dashboard() {
     finally{setLoading(false)}
   }
 
- const loadTeamsOnly = async () => {
+  // ── KEY FIX: loadTeamsOnly now also refreshes Asia every 5s ──
+  const loadTeamsOnly = async () => {
     try {
       const [asiaResult, ...teamResults] = await Promise.allSettled([
         fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),
@@ -912,7 +888,6 @@ export default function Dashboard() {
 
   const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
 
-  // ── Asia agents — correctly destructured ──
   const { asiaAgents, asiaTotals } = (() => {
     if (isHistDate && histParsed) return { asiaAgents: histParsed.agents, asiaTotals: histParsed.totals }
     const { agents, totals } = parseAsiaSheet(asiaDataRaw)
@@ -951,7 +926,6 @@ export default function Dashboard() {
 
   const isMyTeam=(name)=>{const n=name.toUpperCase();return(team?.id==='asia'&&n.includes('ASIA'))||(team?.id==='philippines'&&n.includes('PHIL'))||(team?.id==='venezuela'&&n.includes('VENE'))||(team?.id==='colombia'&&n.includes('COLOM'))||(team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))}
 
-  // ── Date tabs — filter out any non-YYYY-MM-DD dates ──
   const dateTabs=useMemo(()=>{
     const dates=new Set()
     dates.add(todayKey())
@@ -968,6 +942,7 @@ export default function Dashboard() {
         const{agents,totals}=parseTeamSheet(rawRows,t)
         return{name:TEAM_DISPLAY_NAMES[t.id]||t.id,agents:agents.length,english:totals.english,spanish:totals.spanish,total:totals.total,noSpanish:!t.hasSp}
       }).filter(Boolean)
+      // Always include Asia regardless of xfer count
       rows.push({name:'Asia',agents:asiaAgents.length,english:totalEnglish,spanish:totalSpanish,total:totalXfers,noSpanish:false})
       return rows
     }
@@ -1060,9 +1035,9 @@ export default function Dashboard() {
                     {editMenuOpen&&(
                       <div className="asia-menu-dropdown">
                         {!bulkEditMode?<button className="asia-menu-item" onClick={()=>{setBulkEditMode(true);setEditMenuOpen(false);setAsiaView('stats')}}>✏️ Edit this day's data</button>
-                          :<><button className="asia-menu-item green-item" onClick={()=>{saveAsiaBulk();setEditMenuOpen(false)}}>{savingOverride?'⏳ Saving...':'✅ Save all changes'}</button>
-                             <button className="asia-menu-item red-item" onClick={()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)}}>✖ Cancel edit</button></>}
-                        {hasAsiaOverrides&&<button className="asia-menu-item" style={{borderTop:'0.5px solid #2a2d38',marginTop:4,paddingTop:10,color:'#f87171'}} onClick={resetAsiaOverrides}>🗑 Reset to original data</button>}
+                          :<><button className="asia-menu-item green-item" onClick={()=>{saveAsiaBulk();setEditMenuOpen(false)}}>{savingOverride?'Saving...':'Save all changes'}</button>
+                             <button className="asia-menu-item red-item" onClick={()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)}}>Cancel edit</button></>}
+                        {hasAsiaOverrides&&<button className="asia-menu-item" style={{borderTop:'0.5px solid #2a2d38',marginTop:4,paddingTop:10,color:'#f87171'}} onClick={resetAsiaOverrides}>Reset to original data</button>}
                       </div>
                     )}
                   </div>
@@ -1079,15 +1054,15 @@ export default function Dashboard() {
               histLoading?<div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading...</div>
               :bulkEditMode?(
                 <div className="summary-grid" style={{marginBottom:'1.5rem'}}>
-                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({goal}+ EN)</div></div>
                   <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
-                  <div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotalsEdit?.spanish??totalSpanish} onChange={e=>setBulkTotalsEdit(t=>({spanish:e.target.value,english:t?.english??totalEnglish}))}/><div className="sum-label">Spanish Xfers ✏️</div></div>
-                  <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotalsEdit?.english??totalEnglish} onChange={e=>setBulkTotalsEdit(t=>({english:e.target.value,spanish:t?.spanish??totalSpanish}))}/><div className="sum-label">English Xfers ✏️</div></div>
+                  <div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotalsEdit?.spanish??totalSpanish} onChange={e=>setBulkTotalsEdit(t=>({spanish:e.target.value,english:t?.english??totalEnglish}))}/><div className="sum-label">Spanish Xfers</div></div>
+                  <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotalsEdit?.english??totalEnglish} onChange={e=>setBulkTotalsEdit(t=>({english:e.target.value,spanish:t?.spanish??totalSpanish}))}/><div className="sum-label">English Xfers</div></div>
                   <div className="sum-card indigo"><div className="sum-val">{((parseInt(bulkTotalsEdit?.spanish)||totalSpanish)+(parseInt(bulkTotalsEdit?.english)||totalEnglish)).toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
                 </div>
               ):(
                 <div className="summary-grid">
-                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({goal}+ EN)</div></div>
                   <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
                   <div className="sum-card teal"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
                   <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
@@ -1105,7 +1080,7 @@ export default function Dashboard() {
                     <div className="top-block red-block"><h3 className="top-title"><Img src={E.zero} size={16}/> At Zero</h3>{atZero.length===0?<p className="top-empty"><Img src={E.firework} size={16}/> Everyone has transfers!</p>:atZero.slice(0,3).map((a,i)=>(<div key={i} className="top-item"><span className="top-name agent-link" onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span><span className="top-ext">#{a.ext}</span><span className="top-score red">0</span></div>))}</div>
                   </div>
                 )}
-                {bulkEditMode&&<div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>✏️ Edit mode activo</span><span style={{fontSize:12,color:'#9ca3af'}}>— modifica y usa "Save all changes" en ···</span></div>}
+                {bulkEditMode&&<div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>Edit mode active</span><span style={{fontSize:12,color:'#9ca3af'}}> - modify then Save all changes in ···</span></div>}
                 <div className="agent-table-wrap">
                   <table className="agent-table">
                     <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th><th>Spanish</th><th>Total</th><th>Goal</th>{showAsiaEditBtn&&<th className="th-edit"></th>}</tr></thead>
@@ -1122,14 +1097,14 @@ export default function Dashboard() {
                           <td className="val-english">{bulkEditMode?<input type="number" className="bulk-edit-input" value={beEn!==''?beEn:a.english} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],english:e.target.value}}))}/>:a.english}</td>
                           <td className="val-spanish">{bulkEditMode?<input type="number" className="bulk-edit-input" value={beSp!==''?beSp:a.spanish} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],spanish:e.target.value}}))}/>:a.spanish}</td>
                           <td className="val-total">{dEn+dSp}</td>
-                          <td>{dEn>=goal?<span className="badge-goal">✓ Goal</span>:<span className="badge-pending">{goal-dEn} left</span>}</td>
+                          <td>{dEn>=goal?<span className="badge-goal">Goal</span>:<span className="badge-pending">{goal-dEn} left</span>}</td>
                           {showAsiaEditBtn&&<td className="td-edit">{!bulkEditMode&&<button className="edit-agent-btn" onClick={e=>{e.stopPropagation();setEditForm({spanish:a.spanish,english:a.english});setEditingAgent(a)}}>✏️</button>}</td>}
                         </tr>)
                       })}
                     </tbody>
                   </table>
                 </div>
-                {bulkEditMode&&<div style={{display:'flex',gap:10,marginTop:12,justifyContent:'flex-end'}}><button className="btn-cancel" onClick={()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null)}}>Cancel</button><button className="btn-save" onClick={saveAsiaBulk}>{savingOverride?'⏳ Saving...':'✅ Save all changes'}</button></div>}
+                {bulkEditMode&&<div style={{display:'flex',gap:10,marginTop:12,justifyContent:'flex-end'}}><button className="btn-cancel" onClick={()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null)}}>Cancel</button><button className="btn-save" onClick={saveAsiaBulk}>{savingOverride?'Saving...':'Save all changes'}</button></div>}
               </>
             )}
 
@@ -1156,11 +1131,11 @@ export default function Dashboard() {
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:'1.5rem'}}>
                   <div className="sum-card blue"><div className="sum-val">{slackAgentsForDate.length}</div><div className="sum-label">Agents</div></div>
                   <div className="sum-card gold"><div className="sum-val">{totalReportsForDate}</div><div className="sum-label">Total Reports</div></div>
-                  <div className="sum-card green">{topAgent?<><div className="sum-val" style={{fontSize:15,paddingTop:6,lineHeight:1.3}}>{topAgent.agent}</div><div className="sum-label">Top Agent ({topAgent.reports} reports)</div></>:<><div className="sum-val">—</div><div className="sum-label">Top Agent</div></>}</div>
+                  <div className="sum-card green">{topAgent?<><div className="sum-val" style={{fontSize:15,paddingTop:6,lineHeight:1.3}}>{topAgent.agent}</div><div className="sum-label">Top Agent ({topAgent.reports} reports)</div></>:<><div className="sum-val">-</div><div className="sum-label">Top Agent</div></>}</div>
                 </div>
                 {slackRowsForDate.length===0
                   ?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No slack reports for {formatDateLabel(selectedDate)}.</div>
-                  :<><h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>Agent Summary — {formatDateLabel(selectedDate)}</h3>
+                  :<><h3 style={{fontFamily:"'Sora',sans-serif",fontSize:13,color:'#9ca3af',marginBottom:12}}>Agent Summary - {formatDateLabel(selectedDate)}</h3>
                     <div className="agent-table-wrap"><table className="agent-table">
                       <thead><tr><th>#</th><th>Agent</th><th>ID Opener</th><th style={{textAlign:'center'}}>Reports</th></tr></thead>
                       <tbody>{slackAgentsForDate.map((a,i)=>{const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'};return(<tr key={i}><td style={rs}>#{i+1}</td><td className="agent-name">{a.agent}</td><td className="agent-ext">{a.opener}</td><td style={{textAlign:'center',color:'#f97316',fontWeight:700,fontSize:15}}>{a.reports}</td></tr>)})}</tbody>
@@ -1172,14 +1147,14 @@ export default function Dashboard() {
             {editingAgent&&(
               <div className="edit-modal-overlay" onClick={()=>setEditingAgent(null)}>
                 <div className="edit-modal" onClick={e=>e.stopPropagation()}>
-                  <h3 className="edit-modal-title">Edit — {editingAgent.name} <span style={{color:'#6b7280',fontSize:12}}>#{editingAgent.ext}</span></h3>
+                  <h3 className="edit-modal-title">Edit - {editingAgent.name} <span style={{color:'#6b7280',fontSize:12}}>#{editingAgent.ext}</span></h3>
                   <div className="edit-modal-fields">
                     <label>English<input type="number" value={editForm.english} onChange={e=>setEditForm(f=>({...f,english:e.target.value}))}/></label>
                     <label>Spanish<input type="number" value={editForm.spanish} onChange={e=>setEditForm(f=>({...f,spanish:e.target.value}))}/></label>
                   </div>
                   <div className="edit-modal-actions">
                     <button className="btn-cancel" onClick={()=>setEditingAgent(null)}>Cancel</button>
-                    <button className="btn-save" onClick={saveAsiaAgentEdit}>{savingOverride?'⏳ Saving...':'Save'}</button>
+                    <button className="btn-save" onClick={saveAsiaAgentEdit}>{savingOverride?'Saving...':'Save'}</button>
                   </div>
                 </div>
               </div>
