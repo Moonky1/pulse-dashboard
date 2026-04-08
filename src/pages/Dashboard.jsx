@@ -880,11 +880,15 @@ export default function Dashboard() {
     finally{setLoading(false)}
   }
 
-  const loadTeamsOnly = async () => {
+ const loadTeamsOnly = async () => {
     try {
-      const results = await Promise.allSettled(TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName)))
+      const [asiaResult, ...teamResults] = await Promise.allSettled([
+        fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),
+        ...TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName))
+      ])
+      if (asiaResult.status==='fulfilled') setLiveAsia(asiaResult.value)
       const newTeams={}
-      TEAM_SHEETS.forEach((t,i)=>{newTeams[t.id]=results[i].status==='fulfilled'?results[i].value:(liveTeams[t.id]||[])})
+      TEAM_SHEETS.forEach((t,i)=>{newTeams[t.id]=teamResults[i].status==='fulfilled'?teamResults[i].value:(liveTeams[t.id]||[])})
       setLiveTeams(newTeams);setLastUpdate(new Date())
     } catch(e){console.warn('loadTeamsOnly:',e)}
   }
