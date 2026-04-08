@@ -118,12 +118,8 @@ async function saveAgentSnapshotsToSheets(date, allAgents) {
 async function saveDailyTotalsToSheets(date, teamRows) {
   const teams = teamRows.map(t=>({
     id:t.id||t.name.toLowerCase().replace(/\s+/g,'_'),
-    name:t.name,
-    english:t.english,
-    spanish:t.spanish,
-    total:t.total,
-    agents:t.agents,
-    noSpanish:t.noSpanish||false
+    name:t.name, english:t.english, spanish:t.spanish,
+    total:t.total, agents:t.agents, noSpanish:t.noSpanish||false
   }))
   const payload = JSON.stringify(teams)
   const cacheKey = `pulse_totals_saved_${date}`
@@ -166,22 +162,10 @@ const rowHasMarker = (row, matcher, limit=8) => {
   return false
 }
 
-// ─────────────────────────────────────────────────────────────────
-// parseTeamSheet
-//
-// Main fix:
-// - Before 6pm: parse only main chart
-// - After 6pm: parse main chart + OT chart
-// - Do NOT stop forever at the first "AGENTS LOGGED"
-// - Instead, move to an intermediate state and keep scanning until OT
-// - Merge same agent by ext so main + OT are summed correctly
-// ─────────────────────────────────────────────────────────────────
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
-
-  if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 } }
-  }
+  if (!rows || !Array.isArray(rows) || rows.length === 0)
+    return { agents: [], totals: { english:0, spanish:0, total:0, activeAgents:0 } }
 
   const agentMap = {}
   let inOT = false
@@ -217,24 +201,20 @@ function parseTeamSheet(rows, config) {
     u.includes('ON SITE') || u.includes('WEEKLY') || u.includes('NEW AGENT')
 
   const SKIP = new Set([
-    'USERS', 'USER', 'AGENT NAME', 'ARWIN', 'LEXNER', 'SUPERVISOR',
-    'MANAGER', 'EXTENSION', 'TRANSFER', 'TRANSFERS', 'CAMPAIGN', 'PER AGENT',
-    'ENGLISH', 'SPANISH', 'TOTAL', 'GENERAL MANAGER', 'OPENERS', 'NEW AGENT'
+    'USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR',
+    'MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT',
+    'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT'
   ])
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
     if (!Array.isArray(row)) continue
-
-    const cell0 = (row[0] || '').toString().trim()
+    const cell0  = (row[0] || '').toString().trim()
     const cell0U = cell0.toUpperCase().trim()
 
     if (!inOT && isOTRow(row)) {
       if (!includeOT()) break
-      inOT = true
-      afterMainEnd = false
-      otColEn = -1
-      otColSp = -1
+      inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
       continue
     }
 
@@ -248,84 +228,53 @@ function parseTeamSheet(rows, config) {
 
     if (inOT && otColEn < 0) {
       const hdrs = row.map(c => (c || '').toString().toUpperCase().trim())
-
       if (hasSp) {
         const ei = hdrs.findIndex(h => h === 'ENGLISH')
         const si = hdrs.findIndex(h => h === 'SPANISH')
-        if (ei >= 0 || si >= 0) {
-          otColEn = ei >= 0 ? ei : -1
-          otColSp = si >= 0 ? si : -1
-          continue
-        }
+        if (ei >= 0 || si >= 0) { otColEn = ei >= 0 ? ei : -1; otColSp = si >= 0 ? si : -1; continue }
       } else {
         const ei = hdrs.findIndex(h => h === 'ENGLISH' || h === 'TRANSFER' || h === 'TRANSFERS')
-        if (ei >= 0) {
-          otColEn = ei
-          otColSp = -1
-          continue
-        }
+        if (ei >= 0) { otColEn = ei; otColSp = -1; continue }
       }
-
-      const ck = parseInt((row[1] || '').toString().replace(/,/g, ''))
+      const ck = parseInt((row[1] || '').toString().replace(/,/g,''))
       if (ck >= 1000 && ck <= 9999 && String(ck).startsWith(extStart)) {
         otColEn = hasSp ? Math.max(colEn - 1, 2) : colEn
         otColSp = hasSp && colSp != null ? Math.max(colSp - 1, 3) : -1
-      } else {
-        continue
-      }
+      } else continue
     }
 
     if (inOT && isEndRow(row)) break
-
     if (isSkipRow(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
 
-    const rawExt = (row[1] || '').toString().replace(/,/g, '').trim()
+    const rawExt = (row[1] || '').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
-
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (!rawExt.startsWith(extStart)) continue
 
     const ec = inOT ? otColEn : colEn
     const sc = inOT ? otColSp : (colSp != null ? colSp : -1)
-
     if (ec < 0) continue
 
     const en = safeInt(row[ec])
     const sp = sc >= 0 ? safeInt(row[sc]) : 0
 
     if (agentMap[extNum]) {
-      agentMap[extNum].english += en
-      agentMap[extNum].spanish += sp
+      agentMap[extNum].english += en; agentMap[extNum].spanish += sp
       agentMap[extNum].total = agentMap[extNum].english + agentMap[extNum].spanish
     } else {
-      agentMap[extNum] = {
-        name: cell0,
-        ext: String(extNum),
-        english: en,
-        spanish: sp,
-        total: en + sp
-      }
+      agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
     }
   }
 
   const agents = Object.values(agentMap)
-  const en = agents.reduce((s, a) => s + a.english, 0)
-  const sp = agents.reduce((s, a) => s + a.spanish, 0)
-
-  return {
-    agents,
-    totals: {
-      english: en,
-      spanish: sp,
-      total: en + sp,
-      activeAgents: agents.length
-    }
-  }
+  const en = agents.reduce((s,a) => s+a.english, 0)
+  const sp = agents.reduce((s,a) => s+a.spanish, 0)
+  return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
 }
 
 function parseAsiaSheet(rows) {
   if (!rows || !Array.isArray(rows) || rows.length === 0)
-    return { agents: [], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
+    return { agents:[], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
 
   const agentMap = {}
   let inOT = false
@@ -355,16 +304,12 @@ function parseAsiaSheet(rows) {
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
     if (!Array.isArray(row)) continue
-
     const cell0 = (row[0] || '').toString().trim()
     const nameUp = cellUpper(cell0)
 
     if (!inOT && isOTRow(row)) {
       if (!includeOT()) break
-      inOT = true
-      afterMainEnd = false
-      otColEn = -1
-      otColSp = -1
+      inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
       continue
     }
 
@@ -380,24 +325,12 @@ function parseAsiaSheet(rows) {
       const hdrs = row.map(cellUpper)
       const ei = hdrs.findIndex(h => h === 'ENGLISH')
       const si = hdrs.findIndex(h => h === 'SPANISH')
-
-      if (ei >= 0 || si >= 0) {
-        otColEn = ei >= 0 ? ei : -1
-        otColSp = si >= 0 ? si : -1
-        continue
-      }
-
+      if (ei >= 0 || si >= 0) { otColEn = ei >= 0 ? ei : -1; otColSp = si >= 0 ? si : -1; continue }
       const ck = parseInt((row[1] || '').toString().replace(/,/g,''))
-      if (ck >= 1000 && ck <= 9999) {
-        otColEn = 3
-        otColSp = 2
-      } else {
-        continue
-      }
+      if (ck >= 1000 && ck <= 9999) { otColEn = 3; otColSp = 2 } else continue
     }
 
     if (inOT && isEndRow(row)) break
-
     if (isSkipMarkerRow(row) || SKIP.has(nameUp) || cell0.length < 2) continue
 
     const ext = safeInt(row[1])
@@ -411,8 +344,7 @@ function parseAsiaSheet(rows) {
     const sp = sc >= 0 ? safeInt(row[sc]) : 0
 
     if (agentMap[ext]) {
-      agentMap[ext].english += en
-      agentMap[ext].spanish += sp
+      agentMap[ext].english += en; agentMap[ext].spanish += sp
       agentMap[ext].total = agentMap[ext].english + agentMap[ext].spanish
     } else {
       agentMap[ext] = { name:cell0, ext:String(ext), spanish:sp, english:en, total:sp+en }
@@ -420,13 +352,9 @@ function parseAsiaSheet(rows) {
   }
 
   const agents = Object.values(agentMap)
-  const en = agents.reduce((s,a)=>s+a.english,0)
-  const sp = agents.reduce((s,a)=>s+a.spanish,0)
-
-  return {
-    agents,
-    totals:{ spanish:sp, english:en, total:sp+en, activeAgents:agents.length }
-  }
+  const en = agents.reduce((s,a) => s+a.english, 0)
+  const sp = agents.reduce((s,a) => s+a.spanish, 0)
+  return { agents, totals:{ spanish:sp, english:en, total:sp+en, activeAgents:agents.length } }
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
@@ -691,95 +619,23 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
         </div>
       </div>
 
-{bulkMode ? (
-  <div
-    className="summary-grid"
-    style={{ gridTemplateColumns: `repeat(${config.hasSp ? 5 : 4},1fr)`, marginBottom: '1.5rem' }}
-  >
-    <div className="sum-card green">
-      <div className="sum-val">{hitGoal.length}</div>
-      <div className="sum-label">Hit Goal (≥{goal} EN)</div>
-    </div>
-
-    <div className="sum-card orange">
-      <div className="sum-val">{agentsFinal.length - hitGoal.length - atZero.length}</div>
-      <div className="sum-label">In Progress</div>
-    </div>
-
-    {config.hasSp && (
-      <div className="sum-card teal">
-        <input
-          type="number"
-          className="sum-edit-input"
-          style={{ color: '#2dd4bf' }}
-          value={bulkTotals?.spanish ?? totalSp}
-          onChange={(e) =>
-            setBulkTotals((t) => ({
-              spanish: e.target.value,
-              english: t?.english ?? totalEn,
-            }))
-          }
-        />
-        <div className="sum-label">Spanish Xfers ✏️</div>
-      </div>
-    )}
-
-    <div className="sum-card blue">
-      <input
-        type="number"
-        className="sum-edit-input"
-        style={{ color: '#60a5fa' }}
-        value={bulkTotals?.english ?? totalEn}
-        onChange={(e) =>
-          setBulkTotals((t) => ({
-            english: e.target.value,
-            spanish: t?.spanish ?? totalSp,
-          }))
-        }
-      />
-      <div className="sum-label">English Xfers ✏️</div>
-    </div>
-
-    <div className="sum-card indigo">
-      <div className="sum-val">
-        {(
-          (parseInt(bulkTotals?.spanish) || totalSp) +
-          (parseInt(bulkTotals?.english) || totalEn)
-        ).toLocaleString()}
-      </div>
-      <div className="sum-label">Total Xfers</div>
-    </div>
-  </div>
-) : (
-  <div className="summary-grid" style={{ gridTemplateColumns: `repeat(${config.hasSp ? 5 : 4},1fr)` }}>
-    <div className="sum-card green">
-      <div className="sum-val">{hitGoal.length}</div>
-      <div className="sum-label">Hit Goal (≥{goal} EN)</div>
-    </div>
-
-    <div className="sum-card orange">
-      <div className="sum-val">{agentsFinal.length - hitGoal.length - atZero.length}</div>
-      <div className="sum-label">In Progress</div>
-    </div>
-
-    {config.hasSp && (
-      <div className="sum-card teal">
-        <div className="sum-val">{totalSp.toLocaleString()}</div>
-        <div className="sum-label">Spanish Xfers</div>
-      </div>
-    )}
-
-    <div className="sum-card blue">
-      <div className="sum-val">{totalEn.toLocaleString()}</div>
-      <div className="sum-label">English Xfers</div>
-    </div>
-
-    <div className="sum-card indigo">
-      <div className="sum-val">{totalXf.toLocaleString()}</div>
-      <div className="sum-label">Total Xfers</div>
-    </div>
-  </div>
-)}
+      {bulkMode?(
+        <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`,marginBottom:'1.5rem'}}>
+          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({'>'}={goal} EN)</div></div>
+          <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
+          {config.hasSp&&<div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotals?.spanish??totalSp} onChange={e=>setBulkTotals(t=>({spanish:e.target.value,english:t?.english??totalEn}))}/><div className="sum-label">Spanish Xfers ✏️</div></div>}
+          <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotals?.english??totalEn} onChange={e=>setBulkTotals(t=>({english:e.target.value,spanish:t?.spanish??totalSp}))}/><div className="sum-label">English Xfers ✏️</div></div>
+          <div className="sum-card indigo"><div className="sum-val">{((parseInt(bulkTotals?.spanish)||totalSp)+(parseInt(bulkTotals?.english)||totalEn)).toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
+        </div>
+      ):(
+        <div className="summary-grid" style={{gridTemplateColumns:`repeat(${config.hasSp?5:4},1fr)`}}>
+          <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({'>'}={goal} EN)</div></div>
+          <div className="sum-card orange"><div className="sum-val">{agentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
+          {config.hasSp&&<div className="sum-card teal"><div className="sum-val">{totalSp.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>}
+          <div className="sum-card blue"><div className="sum-val">{totalEn.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
+          <div className="sum-card indigo"><div className="sum-val">{totalXf.toLocaleString()}</div><div className="sum-label">Total Xfers</div></div>
+        </div>
+      )}
 
       {agentsFinal.length===0&&<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280',marginTop:'0.5rem'}}>No data available for this date.</div>}
 
@@ -825,7 +681,7 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
           <BarChart agents={agentsFinal} metric="english"/>
           <div className="chart-goal-row">
             <div className="goal-stat green-stat"><div className="goal-stat-val">{hitGoal.length}</div><div className="goal-stat-label"><Img src={E.goal} size={14}/> Reached goal ({goal}+ EN)</div></div>
-            <div className="goal-stat yellow-stat"><div className="goal-stat-val">{agentsFinal.filter(a=>a.english>=(goal-3)&&a.english<goal).length}</div><div className="goal-stat-label">Almost there ({goal-3}–{goal-1} EN)</div></div>
+            <div className="goal-stat yellow-stat"><div className="goal-stat-val">{agentsFinal.filter(a=>a.english>=(goal-3)&&a.english<goal).length}</div><div className="goal-stat-label">Almost there ({goal-3}-{goal-1} EN)</div></div>
             <div className="goal-stat red-stat"><div className="goal-stat-val">{atZero.length}</div><div className="goal-stat-label"><Img src={E.zero} size={14}/> At zero</div></div>
           </div>
         </div>
@@ -866,26 +722,26 @@ export default function Dashboard() {
   const [loading,setLoading]         = useState(true)
   const [lastUpdate,setLastUpdate]   = useState(null)
 
-  const [activeTab,setActiveTab]         = useState('general')
-  const [asiaView,setAsiaView]           = useState('stats')
-  const [chartMetric,setChartMetric]     = useState('english')
-  const [snapshots,setSnapshots]         = useState([])
-  const [selectedDate,setSelectedDate]   = useState(todayKey())
-  const [overridesTick,setOverridesTick] = useState(0)
+  const [activeTab,setActiveTab]           = useState('general')
+  const [asiaView,setAsiaView]             = useState('stats')
+  const [chartMetric,setChartMetric]       = useState('english')
+  const [snapshots,setSnapshots]           = useState([])
+  const [selectedDate,setSelectedDate]     = useState(todayKey())
+  const [overridesTick,setOverridesTick]   = useState(0)
   const [savingOverride,setSavingOverride] = useState(false)
 
   const [remoteDailyTotals,setRemoteDailyTotals] = useState([])
   const [remoteTeamAgents,setRemoteTeamAgents]   = useState({})
   const [loadingRemoteTeam,setLoadingRemoteTeam] = useState(false)
 
-  const [editingAgent,setEditingAgent]   = useState(null)
-  const [editForm,setEditForm]           = useState({})
-  const [editMenuOpen,setEditMenuOpen]   = useState(false)
-  const [bulkEditMode,setBulkEditMode]   = useState(false)
-  const [bulkEdits,setBulkEdits]         = useState({})
+  const [editingAgent,setEditingAgent]     = useState(null)
+  const [editForm,setEditForm]             = useState({})
+  const [editMenuOpen,setEditMenuOpen]     = useState(false)
+  const [bulkEditMode,setBulkEditMode]     = useState(false)
+  const [bulkEdits,setBulkEdits]           = useState({})
   const [bulkTotalsEdit,setBulkTotalsEdit] = useState(null)
-  const [histCache,setHistCache]         = useState({})
-  const [histLoading,setHistLoading]     = useState(false)
+  const [histCache,setHistCache]           = useState({})
+  const [histLoading,setHistLoading]       = useState(false)
 
   const isToday    = selectedDate === todayKey()
   const isHistDate = HISTORY_ISO_SET.has(selectedDate)
@@ -967,12 +823,11 @@ export default function Dashboard() {
       const results = await Promise.allSettled(
         TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName))
       )
-
       const newTeams={},allAgents=[]
       TEAM_SHEETS.forEach((t,i)=>{
         if(results[i].status==='fulfilled'){
           newTeams[t.id]=results[i].value
-          const{agents}=parseTeamSheet(results[i].value,t)
+          const {agents} = parseTeamSheet(results[i].value,t)
           agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}))
           saveTeamSnapshotToSheets(todayKey(),t.id,agents)
         } else console.warn(`✗ ${t.label}:`,results[i].reason?.message)
@@ -1017,11 +872,14 @@ export default function Dashboard() {
 
   const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
 
-  const {asiaAgents,asiaTotals}=(()=>{
-    if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals}
-    const {agents,totals} = parseAsiaSheet(asiaDataRaw)
-    return {asiaAgents:agents, asiaTotals:totals}
-  })()s
+  // ── Asia agents — uses parseAsiaSheet, correctly destructured ──
+  const { asiaAgents, asiaTotals } = (() => {
+    if (isHistDate && histParsed) {
+      return { asiaAgents: histParsed.agents, asiaTotals: histParsed.totals }
+    }
+    const { agents, totals } = parseAsiaSheet(asiaDataRaw)
+    return { asiaAgents: agents, asiaTotals: totals }
+  })()
 
   const asiaAgentsFinal=(()=>{
     void overridesTick
@@ -1132,7 +990,6 @@ export default function Dashboard() {
       <div className="dash-content">
         {loading?(
           <div className="dash-loading"><div className="dash-spinner"/><p>Loading live data...</p></div>
-
         ):activeTab==='general'?(
           <div className="fade-in">
             <div className="vteams-header">
@@ -1145,7 +1002,6 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-
         ):activeTab==='asia'?(
           <div className="fade-in">
             <div className="asia-header-row">
@@ -1181,7 +1037,7 @@ export default function Dashboard() {
               histLoading?<div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading...</div>
               :bulkEditMode?(
                 <div className="summary-grid" style={{marginBottom:'1.5rem'}}>
-                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({'>'}={goal} EN)</div></div>
                   <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
                   <div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotalsEdit?.spanish??totalSpanish} onChange={e=>setBulkTotalsEdit(t=>({spanish:e.target.value,english:t?.english??totalEnglish}))}/><div className="sum-label">Spanish Xfers ✏️</div></div>
                   <div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotalsEdit?.english??totalEnglish} onChange={e=>setBulkTotalsEdit(t=>({english:e.target.value,spanish:t?.spanish??totalSpanish}))}/><div className="sum-label">English Xfers ✏️</div></div>
@@ -1189,7 +1045,7 @@ export default function Dashboard() {
                 </div>
               ):(
                 <div className="summary-grid">
-                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal (≥{goal} EN)</div></div>
+                  <div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({'>'}={goal} EN)</div></div>
                   <div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div>
                   <div className="sum-card teal"><div className="sum-val">{totalSpanish.toLocaleString()}</div><div className="sum-label">Spanish Xfers</div></div>
                   <div className="sum-card blue"><div className="sum-val">{totalEnglish.toLocaleString()}</div><div className="sum-label">English Xfers</div></div>
@@ -1247,7 +1103,7 @@ export default function Dashboard() {
                 <BarChart agents={asiaAgentsFinal} metric={chartMetric}/>
                 <div className="chart-goal-row">
                   <div className="goal-stat green-stat"><div className="goal-stat-val">{hitGoal.length}</div><div className="goal-stat-label"><Img src={E.goal} size={14}/> Reached goal (20+ EN)</div></div>
-                  <div className="goal-stat yellow-stat"><div className="goal-stat-val">{asiaAgentsFinal.filter(a=>a.english>=15&&a.english<20).length}</div><div className="goal-stat-label">Almost there (15–19 EN)</div></div>
+                  <div className="goal-stat yellow-stat"><div className="goal-stat-val">{asiaAgentsFinal.filter(a=>a.english>=15&&a.english<20).length}</div><div className="goal-stat-label">Almost there (15-19 EN)</div></div>
                   <div className="goal-stat red-stat"><div className="goal-stat-val">{atZero.length}</div><div className="goal-stat-label"><Img src={E.zero} size={14}/> At zero</div></div>
                 </div>
               </div>
@@ -1287,7 +1143,6 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-
         ):currentTeamConfig?(
           <TeamDetail
             key={`${activeTab}_${selectedDate}`}
