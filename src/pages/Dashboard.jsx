@@ -295,65 +295,98 @@ function parseTeamSheet(rows, config) {
 }
 
 function parseAsiaSheet(rows) {
+  // Asia sheet layout (confirmed from screenshot):
+  // Row 1: ASIA header
+  // Row 2: MANAGEMENT | USER | TRANSFERS | TRANSFERS | TRANSFERS
+  // Row 3: LEXNER | GENERAL MANAGER | SPANISH | ENGLISH | TOTAL
+  // Row 4+: agent name | ext(3xxx) | spanish | english | total
+  // col index:          0           1          2          3        4
+  // End marker: row with "X AGENTS LOGGED IN" or "TOTAL TRANSFERS" in col A/B
+  // OT section: after end marker if colombiaHour >= 18
+
   if (!rows || !Array.isArray(rows) || rows.length === 0)
     return { agents:[], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
 
-  const agentMap   = {}
-  let inOT         = false
+  const agentMap = {}
   let afterMainEnd = false
-  let otColEn      = -1
-  let otColSp      = -1
+  let inOT = false
+  let otDetected = false
 
-  const isOTRow    = (row) => rowHasMarker(row, v => v==='OT TAKERS'||v.startsWith('OT ')||v.endsWith(' OT')||v.includes(' OT '), 6)
-  const isEndRow   = (row) => rowHasMarker(row, v =>
-    (v.includes('AGENT')&&(v.includes('LOGGED')||v.includes('LOG IN'))) ||
-    (v.includes('TOTAL')&&v.includes('TRANSFER'))
-  )
-  const isSkipRow  = (row) => rowHasMarker(row, v =>
-    v.includes('THIS HOUR')||v.includes('THIS OUR')||v.includes('HOURLY')||v.includes('REMOVED')
-  )
-  const SKIP = new Set(['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'])
+  // Fixed columns for Asia main section
+  const COL_EXT = 1
+  const COL_SP  = 2
+  const COL_EN  = 3
+
+  const SKIP_NAMES = new Set([
+    'ASIA','MANAGEMENT','LEXNER','GENERAL MANAGER',
+    'USER','USERS','SUPERVISOR','AGENT NAME','ARWIN',
+    'ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS',
+    'AGENTS'
+  ])
+
+  const isEndMarker = (row) => {
+    for (let c = 0; c < Math.min(row.length, 4); c++) {
+      const v = cellUpper(row[c])
+      if (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) return true
+      if (v.includes('TOTAL') && v.includes('TRANSFER')) return true
+    }
+    return false
+  }
+
+  const isOTHeader = (row) => {
+    for (let c = 0; c < Math.min(row.length, 4); c++) {
+      const v = cellUpper(row[c])
+      if (v === 'OT TAKERS' || v.startsWith('OT ') || v.endsWith(' OT') || v.includes(' OT ')) return true
+    }
+    return false
+  }
 
   for (let i = 0; i < rows.length; i++) {
-    const row   = rows[i]; if (!Array.isArray(row)) continue
-    const cell0 = (row[0] || '').toString().trim()
-    const nameUp = cellUpper(cell0)
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
 
-    if (!inOT && isOTRow(row)) {
+    const cell0  = (row[0] || '').toString().trim()
+    const cell0U = cellUpper(cell0)
+
+    // Detect OT section header
+    if (!inOT && isOTHeader(row)) {
       if (!includeOT()) break
-      inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
+      inOT = true
+      otDetected = true
+      afterMainEnd = false
       continue
     }
-    if (!inOT && isEndRow(row)) {
+
+    // Detect end of main section
+    if (!inOT && isEndMarker(row)) {
       if (!includeOT()) break
-      afterMainEnd = true; continue
+      afterMainEnd = true
+      continue
     }
+
+    // Skip rows between main end and OT section
     if (afterMainEnd && !inOT) continue
 
-    if (inOT && otColEn < 0) {
-      const hdrs = row.map(cellUpper)
-      const ei   = hdrs.findIndex(h => h === 'ENGLISH')
-      const si   = hdrs.findIndex(h => h === 'SPANISH')
-      if (ei >= 0 || si >= 0) { otColEn = ei>=0?ei:3; otColSp = si>=0?si:2; continue }
-      const ck = parseInt((row[1]||'').toString().replace(/,/g,''))
-      if (ck>=1000&&ck<=9999) { otColEn=3; otColSp=2 } else continue
-    }
+    // Skip OT header row that has column labels
+    if (inOT && !otDetected) { otDetected = true; continue }
 
-    if (inOT && isEndRow(row)) break
-    if (isSkipRow(row) || SKIP.has(nameUp) || cell0.length < 2) continue
+    // End of OT section
+    if (inOT && isEndMarker(row)) break
 
-    const ext = safeInt(row[1])
+    // Skip non-agent rows
+    if (SKIP_NAMES.has(cell0U) || cell0.length < 2) continue
+
+    // Get extension
+    const extRaw = (row[COL_EXT] || '').toString().replace(/,/g,'').trim()
+    const ext = parseInt(extRaw)
     if (isNaN(ext) || ext < 1000 || ext > 9999) continue
 
-    const ec = inOT ? otColEn : 3
-    const sc = inOT ? otColSp : 2
-    if (ec < 0) continue
-
-    const en = safeInt(row[ec])
-    const sp = sc >= 0 ? safeInt(row[sc]) : 0
+    const en = safeInt(row[COL_EN])
+    const sp = safeInt(row[COL_SP])
 
     if (agentMap[ext]) {
-      agentMap[ext].english += en; agentMap[ext].spanish += sp
+      agentMap[ext].english += en
+      agentMap[ext].spanish += sp
       agentMap[ext].total = agentMap[ext].english + agentMap[ext].spanish
     } else {
       agentMap[ext] = { name:cell0, ext:String(ext), spanish:sp, english:en, total:sp+en }
