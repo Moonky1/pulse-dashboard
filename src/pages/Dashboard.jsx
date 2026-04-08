@@ -122,8 +122,9 @@ async function loadUserPhotoFromSheets(userName) {
 async function saveAgentSnapshotsToSheets(date, allAgents) {
   const payload = JSON.stringify(allAgents || [])
   const cacheKey = `pulse_snap_sheets_${date}`
-  if (sessionStorage.getItem(cacheKey) === payload) return
-  sessionStorage.setItem(cacheKey, payload)
+  const lastSaved = sessionStorage.getItem(cacheKey)
+  if (lastSaved && (Date.now() - parseInt(lastSaved)) < 3 * 60 * 1000) return
+  sessionStorage.setItem(cacheKey, String(Date.now()))
   try {
     await fetch(`${SCRIPT_URL}?action=saveAgentSnapshots&date=${encodeURIComponent(date)}&snapshots=${encodeURIComponent(payload)}`, { mode:'no-cors' })
   } catch(e) {}
