@@ -964,7 +964,7 @@ export default function Dashboard() {
         const{agents,totals}=parseTeamSheet(rawRows,t)
         return{name:TEAM_DISPLAY_NAMES[t.id]||t.id,agents:agents.length,english:totals.english,spanish:totals.spanish,total:totals.total,noSpanish:!t.hasSp}
       }).filter(Boolean)
-      if(asiaAgents.length>0||asiaTotals.english>0)rows.push({name:'Asia',agents:asiaAgents.length,english:totalEnglish,spanish:totalSpanish,total:totalXfers,noSpanish:false})
+      rows.push({name:'Asia',agents:asiaAgents.length,english:totalEnglish,spanish:totalSpanish,total:totalXfers,noSpanish:false})
       return rows
     }
     if(activeSnap?.generalData?.length>0){
