@@ -188,34 +188,48 @@ const rowHasMarker = (row, matcher, limit=8) => {
 // ─────────────────────────────────────────────────────────────────
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
-  if (!rows || !Array.isArray(rows) || rows.length === 0)
-    return { agents:[], totals:{ english:0, spanish:0, total:0, activeAgents:0 } }
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 } }
+  }
 
-  const agentMap  = {}
-  let inOT        = false
+  const agentMap = {}
+  let inOT = false
   let afterMainEnd = false
-  let otColEn     = -1
-  let otColSp     = -1
+  let otColEn = -1
+  let otColSp = -1
 
   const isOTRow = (row) => {
     for (let c = 0; c < Math.min(row.length, 6); c++) {
-      const v = cellUpper(row[c]); if (!v) continue
-      if (v === 'OT TAKERS')      return true
-      if (v.startsWith('OT '))    return true
-      if (v.endsWith(' OT'))      return true
-      if (v.includes(' OT '))     return true
+      const v = cellUpper(row[c])
+      if (!v) continue
+      if (v === 'OT TAKERS') return true
+      if (v.startsWith('OT ')) return true
+      if (v.endsWith(' OT')) return true
+      if (v.includes(' OT ')) return true
     }
     return false
   }
 
-  // Checks ALL columns for end-of-data markers (handles merged cells)
-  const isEndRow = (row) => {
+  const getEndType = (row) => {
+    let hasLogged = false
+    let hasTotalTransfers = false
+
     for (let c = 0; c < Math.min(row.length, 8); c++) {
-      const v = cellUpper(row[c]); if (v.length < 3) continue
-      if (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) return true
-      if (v.includes('TOTAL') && v.includes('TRANSFER')) return true
+      const v = cellUpper(row[c])
+      if (!v) continue
+
+      if (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) {
+        hasLogged = true
+      }
+
+      if (v === 'TOTAL TRANSFERS') {
+        hasTotalTransfers = true
+      }
     }
-    return false
+
+    if (hasLogged) return 'logged'
+    if (hasTotalTransfers) return 'totalTransfers'
+    return null
   }
 
   const isSkipRow = (u) =>
@@ -224,36 +238,39 @@ function parseTeamSheet(rows, config) {
     u.includes('ON SITE') || u.includes('WEEKLY') || u.includes('NEW AGENT')
 
   const SKIP = new Set([
-    'USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR',
-    'MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT',
-    'ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT'
+    'USERS', 'USER', 'AGENT NAME', 'ARWIN', 'LEXNER', 'SUPERVISOR',
+    'MANAGER', 'EXTENSION', 'TRANSFER', 'TRANSFERS', 'CAMPAIGN', 'PER AGENT',
+    'ENGLISH', 'SPANISH', 'TOTAL', 'GENERAL MANAGER', 'OPENERS', 'NEW AGENT'
   ])
 
   for (let i = 0; i < rows.length; i++) {
-    const row    = rows[i]; if (!Array.isArray(row)) continue
-    const cell0  = (row[0] || '').toString().trim()
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
+
+    const cell0 = (row[0] || '').toString().trim()
     const cell0U = cell0.toUpperCase().trim()
+    const endType = getEndType(row)
 
-    // ── Detect OT section header ──
     if (!inOT && isOTRow(row)) {
-      if (!includeOT()) break          // Before 6pm: stop entirely
-      inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
+      if (!includeOT()) break
+      inOT = true
+      afterMainEnd = false
+      otColEn = -1
+      otColSp = -1
       continue
     }
 
-    // ── Detect main section end ──
-    if (!inOT && isEndRow(row)) {
-      if (!includeOT()) break          // Before 6pm: stop
-      afterMainEnd = true              // After 6pm: skip until OT section
+    if (!inOT && endType) {
+      if (!includeOT()) break
+      afterMainEnd = true
       continue
     }
 
-    // Skip rows between main end and OT header
     if (afterMainEnd && !inOT) continue
 
-    // ── Detect OT column headers ──
     if (inOT && otColEn < 0) {
       const hdrs = row.map(c => (c || '').toString().toUpperCase().trim())
+
       if (hasSp) {
         const ei = hdrs.findIndex(h => h === 'ENGLISH')
         const si = hdrs.findIndex(h => h === 'SPANISH')
@@ -264,26 +281,27 @@ function parseTeamSheet(rows, config) {
         }
       } else {
         const ei = hdrs.findIndex(h => h === 'ENGLISH' || h === 'TRANSFER' || h === 'TRANSFERS')
-        if (ei >= 0) { otColEn = ei; otColSp = -1; continue }
+        if (ei >= 0) {
+          otColEn = ei
+          otColSp = -1
+          continue
+        }
       }
-      // No header row found — check if this is already a data row
-      const ck = parseInt((row[1] || '').toString().replace(/,/g,''))
+
+      const ck = parseInt((row[1] || '').toString().replace(/,/g, ''))
       if (ck >= 1000 && ck <= 9999 && String(ck).startsWith(extStart)) {
-        // Use same columns as main section (most reliable fallback)
         otColEn = colEn
         otColSp = colSp != null ? colSp : -1
-        // Don't continue — fall through to parse this row
       } else {
         continue
       }
     }
 
-    // End of OT section
-    if (inOT && isEndRow(row)) break
+    if (inOT && endType) break
 
     if (isSkipRow(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
 
-    const rawExt = (row[1] || '').toString().replace(/,/g,'').trim()
+    const rawExt = (row[1] || '').toString().replace(/,/g, '').trim()
     const extNum = parseInt(rawExt)
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (!rawExt.startsWith(extStart)) continue
@@ -298,69 +316,130 @@ function parseTeamSheet(rows, config) {
     if (agentMap[extNum]) {
       agentMap[extNum].english += en
       agentMap[extNum].spanish += sp
-      agentMap[extNum].total   = agentMap[extNum].english + agentMap[extNum].spanish
+      agentMap[extNum].total = agentMap[extNum].english + agentMap[extNum].spanish
     } else {
-      agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
+      agentMap[extNum] = {
+        name: cell0,
+        ext: String(extNum),
+        english: en,
+        spanish: sp,
+        total: en + sp
+      }
     }
   }
 
   const agents = Object.values(agentMap)
-  const en = agents.reduce((s,a) => s+a.english, 0)
-  const sp = agents.reduce((s,a) => s+a.spanish, 0)
-  return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
+  const en = agents.reduce((s, a) => s + a.english, 0)
+  const sp = agents.reduce((s, a) => s + a.spanish, 0)
+
+  return {
+    agents,
+    totals: {
+      english: en,
+      spanish: sp,
+      total: en + sp,
+      activeAgents: agents.length
+    }
+  }
 }
 
 // ── Asia sheet parser (same logic, Asia-specific column indices) ──
 function parseAsiaSheet(rows) {
-  if (!rows || !Array.isArray(rows) || rows.length === 0)
-    return { agents:[], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return { agents: [], totals: { spanish: 0, english: 0, total: 0, activeAgents: 0 } }
+  }
 
-  const agentMap   = {}
-  let inOT         = false
+  const agentMap = {}
+  let inOT = false
   let afterMainEnd = false
-  let otColEn      = -1
-  let otColSp      = -1
+  let otColEn = -1
+  let otColSp = -1
 
-  const isOTRow    = (row) => rowHasMarker(row, v => v==='OT TAKERS'||v.startsWith('OT ')||v.endsWith(' OT')||v.includes(' OT '), 6)
-  const isEndRow   = (row) => rowHasMarker(row, v =>
-    (v.includes('AGENT')&&(v.includes('LOGGED')||v.includes('LOG IN'))) ||
-    (v.includes('TOTAL')&&v.includes('TRANSFER'))
-  )
-  const isSkipRow  = (row) => rowHasMarker(row, v =>
-    v.includes('THIS HOUR')||v.includes('THIS OUR')||v.includes('HOURLY')||v.includes('REMOVED')
-  )
-  const SKIP = new Set(['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'])
+  const isOTRow = (row) =>
+    rowHasMarker(row, v => v === 'OT TAKERS' || v.startsWith('OT ') || v.endsWith(' OT') || v.includes(' OT '), 6)
+
+  const getEndType = (row) => {
+    let hasLogged = false
+    let hasTotalTransfers = false
+
+    for (let c = 0; c < Math.min(row.length, 8); c++) {
+      const v = cellUpper(row[c])
+      if (!v) continue
+
+      if (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) {
+        hasLogged = true
+      }
+
+      if (v === 'TOTAL TRANSFERS') {
+        hasTotalTransfers = true
+      }
+    }
+
+    if (hasLogged) return 'logged'
+    if (hasTotalTransfers) return 'totalTransfers'
+    return null
+  }
+
+  const isSkipRow = (row) =>
+    rowHasMarker(row, v =>
+      v.includes('THIS HOUR') || v.includes('THIS OUR') || v.includes('HOURLY') || v.includes('REMOVED')
+    )
+
+  const SKIP = new Set([
+    'MANAGEMENT', 'LEXNER', 'GENERAL MANAGER', 'USERS', 'USER', 'SUPERVISOR',
+    'AGENT NAME', 'ARWIN', 'ENGLISH', 'SPANISH', 'TOTAL', 'TRANSFER', 'TRANSFERS'
+  ])
 
   for (let i = 0; i < rows.length; i++) {
-    const row   = rows[i]; if (!Array.isArray(row)) continue
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
+
     const cell0 = (row[0] || '').toString().trim()
     const nameUp = cellUpper(cell0)
+    const endType = getEndType(row)
 
     if (!inOT && isOTRow(row)) {
       if (!includeOT()) break
-      inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
+      inOT = true
+      afterMainEnd = false
+      otColEn = -1
+      otColSp = -1
       continue
     }
-    if (!inOT && isEndRow(row)) {
+
+    if (!inOT && endType) {
       if (!includeOT()) break
-      afterMainEnd = true; continue
+      afterMainEnd = true
+      continue
     }
+
     if (afterMainEnd && !inOT) continue
 
     if (inOT && otColEn < 0) {
       const hdrs = row.map(cellUpper)
-      const ei   = hdrs.findIndex(h => h === 'ENGLISH')
-      const si   = hdrs.findIndex(h => h === 'SPANISH')
-      if (ei >= 0 || si >= 0) { otColEn = ei>=0?ei:3; otColSp = si>=0?si:2; continue }
-      const ck = parseInt((row[1]||'').toString().replace(/,/g,''))
-      if (ck>=1000&&ck<=9999) { otColEn=3; otColSp=2 } else continue
+      const ei = hdrs.findIndex(h => h === 'ENGLISH')
+      const si = hdrs.findIndex(h => h === 'SPANISH')
+
+      if (ei >= 0 || si >= 0) {
+        otColEn = ei >= 0 ? ei : 3
+        otColSp = si >= 0 ? si : 2
+        continue
+      }
+
+      const ck = parseInt((row[1] || '').toString().replace(/,/g, ''))
+      if (ck >= 1000 && ck <= 9999) {
+        otColEn = 3
+        otColSp = 2
+      } else {
+        continue
+      }
     }
 
-    if (inOT && isEndRow(row)) break
+    if (inOT && endType) break
     if (isSkipRow(row) || SKIP.has(nameUp) || cell0.length < 2) continue
 
     const ext = safeInt(row[1])
-    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
+    if (ext < 1000 || ext > 9999) continue
 
     const ec = inOT ? otColEn : 3
     const sc = inOT ? otColSp : 2
@@ -370,59 +449,33 @@ function parseAsiaSheet(rows) {
     const sp = sc >= 0 ? safeInt(row[sc]) : 0
 
     if (agentMap[ext]) {
-      agentMap[ext].english += en; agentMap[ext].spanish += sp
+      agentMap[ext].english += en
+      agentMap[ext].spanish += sp
       agentMap[ext].total = agentMap[ext].english + agentMap[ext].spanish
     } else {
-      agentMap[ext] = { name:cell0, ext:String(ext), spanish:sp, english:en, total:sp+en }
+      agentMap[ext] = {
+        name: cell0,
+        ext: String(ext),
+        spanish: sp,
+        english: en,
+        total: sp + en
+      }
     }
   }
 
   const agents = Object.values(agentMap)
-  const en = agents.reduce((s,a) => s+a.english, 0)
-  const sp = agents.reduce((s,a) => s+a.spanish, 0)
-  return { agents, totals:{ spanish:sp, english:en, total:sp+en, activeAgents:agents.length } }
-}
+  const en = agents.reduce((s, a) => s + a.english, 0)
+  const sp = agents.reduce((s, a) => s + a.spanish, 0)
 
-const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
-const RANGES = [
-  { label:'0',     min:0,  max:0,    color:'#f87171' },
-  { label:'1–4',   min:1,  max:4,    color:'#fb923c' },
-  { label:'5–9',   min:5,  max:9,    color:'#fbbf24' },
-  { label:'10–14', min:10, max:14,   color:'#a3e635' },
-  { label:'15–19', min:15, max:19,   color:'#34d399' },
-  { label:'20+',   min:20, max:9999, color:'#22c55e' },
-]
-
-const SAT_GOALS = { colombia:5, central:5, venezuela:5, philippines:10, mexico:5, asia:10 }
-const getGoalForDate = (dateStr, baseGoal, teamId='asia') => {
-  try { const day=new Date(dateStr+'T12:00:00').getDay(); if(day!==6)return baseGoal; return SAT_GOALS[teamId]??10 }
-  catch(e) { return baseGoal }
-}
-
-const saveLocalSnapshot = (generalData, asiaData, teamsData={}) => {
-  const key = `pulse_snap_${todayKey()}`
-  try { localStorage.setItem(key, JSON.stringify({ generalData:generalData||[], asiaData:asiaData||[], teams:teamsData, savedAt:new Date().toISOString() })) } catch(e) {}
-}
-
-const loadAllSnapshots = () => {
-  const snaps = []
-  for (let i=0; i<localStorage.length; i++) {
-    const k = localStorage.key(i)
-    if (k?.startsWith('pulse_snap_')) {
-      try {
-        const date = k.replace('pulse_snap_','')
-        const data = JSON.parse(localStorage.getItem(k))
-        snaps.push({ date, generalData:Array.isArray(data.generalData)?data.generalData:[], asiaData:Array.isArray(data.asiaData)?data.asiaData:[], teams:data.teams||{}, savedAt:data.savedAt })
-      } catch(e) {}
+  return {
+    agents,
+    totals: {
+      spanish: sp,
+      english: en,
+      total: sp + en,
+      activeAgents: agents.length
     }
   }
-  return snaps.sort((a,b)=>b.date.localeCompare(a.date))
-}
-
-const formatDateLabel = (dateStr) => {
-  const today=todayKey(), yest=new Date(); yest.setDate(yest.getDate()-1); const yKey=yest.toISOString().slice(0,10)
-  if(dateStr===today)return'Today'; if(dateStr===yKey)return'Yesterday'
-  const[y,m,d]=dateStr.split('-'); return`${d}/${m}/${y}`
 }
 
 function parseHistorySheet(rows) {
