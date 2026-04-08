@@ -137,20 +137,24 @@ async function saveDailyTotalsToSheets(date, teamRows) {
   }))
   const payload = JSON.stringify(teams)
   const cacheKey = `pulse_totals_saved_${date}`
-  if (sessionStorage.getItem(cacheKey) === payload) return
-  sessionStorage.setItem(cacheKey, payload)
+  const lastSaved = sessionStorage.getItem(cacheKey)
+  if (lastSaved && (Date.now() - parseInt(lastSaved)) < 3 * 60 * 1000) return
+  sessionStorage.setItem(cacheKey, String(Date.now()))
   try {
-    await fetch(`${SCRIPT_URL}?action=saveDailyTotals&date=${encodeURIComponent(date)}&teams=${encodeURIComponent(payload)}`, { mode:'no-cors' })
+    const body = new URLSearchParams({ action:'saveDailyTotals', date, teams:payload })
+    await fetch(SCRIPT_URL, { method:'POST', body })
   } catch(e) {}
 }
 
 async function saveTeamSnapshotToSheets(date, teamId, agents) {
   const payload = JSON.stringify(agents || [])
   const cacheKey = `pulse_team_snap_${date}_${teamId}`
-  if (sessionStorage.getItem(cacheKey) === payload) return
-  sessionStorage.setItem(cacheKey, payload)
+  const lastSaved = sessionStorage.getItem(cacheKey)
+  if (lastSaved && (Date.now() - parseInt(lastSaved)) < 3 * 60 * 1000) return
+  sessionStorage.setItem(cacheKey, String(Date.now()))
   try {
-    await fetch(`${SCRIPT_URL}?action=saveTeamSnapshot&date=${encodeURIComponent(date)}&teamId=${encodeURIComponent(teamId)}&agents=${encodeURIComponent(payload)}`, { mode:'no-cors' })
+    const body = new URLSearchParams({ action:'saveTeamSnapshot', date, teamId, agents:payload })
+    await fetch(SCRIPT_URL, { method:'POST', body })
   } catch(e) {}
 }
 
@@ -196,8 +200,9 @@ function parseTeamSheet(rows, config) {
     return false
   }
 
+  // Only check cols 0-2 for end markers — data columns (English/Spanish) should never trigger end
   const isEndRow = (row) => {
-    for (let c = 0; c < Math.min(row.length, 8); c++) {
+    for (let c = 0; c < Math.min(row.length, 3); c++) {
       const v = cellUpper(row[c]); if (v.length < 3) continue
       if (v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN'))) return true
       if (v.includes('TOTAL') && v.includes('TRANSFER')) return true
