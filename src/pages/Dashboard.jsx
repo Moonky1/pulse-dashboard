@@ -289,75 +289,121 @@ function parseTeamSheet(rows, config) {
 }
 
 function parseAsiaSheet(rows) {
-  if (!rows || !Array.isArray(rows) || rows.length === 0)
-    return { agents:[], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return { agents: [], totals: { spanish: 0, english: 0, total: 0, activeAgents: 0 } }
+  }
 
-  const agentMap   = {}
-  let inOT         = false
-  let afterMainEnd = false
-  let otColEn      = -1
-  let otColSp      = -1
+  const agentMap = {}
+  let inOT = false
+  let readingMain = true
+  let readingOT = false
+  let otColEn = 3
+  let otColSp = 2
 
-  const isOTRow    = (row) => rowHasMarker(row, v => v==='OT TAKERS'||v.startsWith('OT ')||v.endsWith(' OT')||v.includes(' OT '), 6)
-  const isEndRow   = (row) => rowHasMarker(row, v =>
-    (v.includes('AGENT')&&(v.includes('LOGGED')||v.includes('LOG IN'))) ||
-    (v.includes('TOTAL')&&v.includes('TRANSFER'))
-  )
-  const isSkipRow  = (row) => rowHasMarker(row, v =>
-    v.includes('THIS HOUR')||v.includes('THIS OUR')||v.includes('HOURLY')||v.includes('REMOVED')
-  )
-  const SKIP = new Set(['MANAGEMENT','LEXNER','GENERAL MANAGER','USERS','USER','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS'])
+  const isOTRow = (row) =>
+    rowHasMarker(
+      row,
+      v => v === 'OT TAKERS' || v.startsWith('OT ') || v.endsWith(' OT') || v.includes(' OT '),
+      6
+    )
+
+  const isAgentsLoggedRow = (row) =>
+    rowHasMarker(
+      row,
+      v => v.includes('AGENT') && (v.includes('LOGGED') || v.includes('LOG IN')),
+      8
+    )
+
+  const isSkipRow = (row) =>
+    rowHasMarker(
+      row,
+      v =>
+        v.includes('THIS HOUR') ||
+        v.includes('THIS OUR') ||
+        v.includes('HOURLY') ||
+        v.includes('REMOVED'),
+      8
+    )
+
+  const SKIP = new Set([
+    'MANAGEMENT',
+    'LEXNER',
+    'GENERAL MANAGER',
+    'USERS',
+    'USER',
+    'SUPERVISOR',
+    'AGENT NAME',
+    'ARWIN',
+    'ENGLISH',
+    'SPANISH',
+    'TOTAL',
+    'TRANSFER',
+    'TRANSFERS'
+  ])
 
   for (let i = 0; i < rows.length; i++) {
-    const row   = rows[i]; if (!Array.isArray(row)) continue
-    const cell0 = (row[0] || '').toString().trim()
-    const nameUp = cellUpper(cell0)
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
 
-    if (!inOT && isOTRow(row)) {
+    const cell0 = (row[0] || '').toString().trim()
+    const cell0U = cellUpper(cell0)
+
+    if (isOTRow(row)) {
       if (!includeOT()) break
-      inOT = true; afterMainEnd = false; otColEn = -1; otColSp = -1
+      inOT = true
+      readingMain = false
+      readingOT = true
+      otColEn = 3
+      otColSp = 2
       continue
     }
-    if (!inOT && isEndRow(row)) {
+
+    if (readingMain && isAgentsLoggedRow(row)) {
       if (!includeOT()) break
-      afterMainEnd = true; continue
-    }
-    if (afterMainEnd && !inOT) continue
-
-    if (inOT && otColEn < 0) {
-      const hdrs = row.map(cellUpper)
-      const ei   = hdrs.findIndex(h => h === 'ENGLISH')
-      const si   = hdrs.findIndex(h => h === 'SPANISH')
-      if (ei >= 0 || si >= 0) { otColEn = ei>=0?ei:3; otColSp = si>=0?si:2; continue }
-      const ck = parseInt((row[1]||'').toString().replace(/,/g,''))
-      if (ck>=1000&&ck<=9999) { otColEn=3; otColSp=2 } else continue
+      readingMain = false
+      continue
     }
 
-    if (inOT && isEndRow(row)) break
-    if (isSkipRow(row) || SKIP.has(nameUp) || cell0.length < 2) continue
+    if (readingOT && isAgentsLoggedRow(row)) {
+      break
+    }
+
+    if (isSkipRow(row) || SKIP.has(cell0U) || cell0.length < 2) continue
 
     const ext = safeInt(row[1])
-    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
+    if (ext < 1000 || ext > 9999) continue
 
-    const ec = inOT ? otColEn : 3
-    const sc = inOT ? otColSp : 2
-    if (ec < 0) continue
-
-    const en = safeInt(row[ec])
-    const sp = sc >= 0 ? safeInt(row[sc]) : 0
+    const en = safeInt(row[inOT ? otColEn : 3])
+    const sp = safeInt(row[inOT ? otColSp : 2])
 
     if (agentMap[ext]) {
-      agentMap[ext].english += en; agentMap[ext].spanish += sp
+      agentMap[ext].english += en
+      agentMap[ext].spanish += sp
       agentMap[ext].total = agentMap[ext].english + agentMap[ext].spanish
     } else {
-      agentMap[ext] = { name:cell0, ext:String(ext), spanish:sp, english:en, total:sp+en }
+      agentMap[ext] = {
+        name: cell0,
+        ext: String(ext),
+        spanish: sp,
+        english: en,
+        total: sp + en
+      }
     }
   }
 
   const agents = Object.values(agentMap)
-  const en = agents.reduce((s,a) => s+a.english, 0)
-  const sp = agents.reduce((s,a) => s+a.spanish, 0)
-  return { agents, totals:{ spanish:sp, english:en, total:sp+en, activeAgents:agents.length } }
+  const en = agents.reduce((s, a) => s + a.english, 0)
+  const sp = agents.reduce((s, a) => s + a.spanish, 0)
+
+  return {
+    agents,
+    totals: {
+      spanish: sp,
+      english: en,
+      total: sp + en,
+      activeAgents: agents.length
+    }
+  }
 }
 
 const TEAMS_ORDER = ['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
