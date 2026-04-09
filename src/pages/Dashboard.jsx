@@ -918,7 +918,7 @@ export default function Dashboard() {
           const{agents}=parseTeamSheet(results[i].value,t)
           agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}))
           saveTeamSnapshotToSheets(todayKey(),t.id,agents)
-        } else console.warn(`✗ ${t.label}:`,results[i].reason?.message)
+        }
       })
       setLiveTeams(newTeams)
 
@@ -928,7 +928,7 @@ export default function Dashboard() {
       saveLocalSnapshot(general,asia,newTeams)
       setSnapshots(loadAllSnapshots())
       saveAgentSnapshotsToSheets(todayKey(),allAgents)
-    } catch(e){console.error('loadData error:',e)}
+    } catch(e){}
     finally{setLoading(false)}
   }
 
@@ -943,7 +943,7 @@ export default function Dashboard() {
       const newTeams={}
       TEAM_SHEETS.forEach((t,i)=>{newTeams[t.id]=teamResults[i].status==='fulfilled'?teamResults[i].value:(liveTeams[t.id]||[])})
       setLiveTeams(newTeams);setLastUpdate(new Date())
-    } catch(e){console.warn('loadTeamsOnly:',e)}
+    } catch(e){}
   }
 
   useEffect(()=>{
@@ -958,7 +958,7 @@ export default function Dashboard() {
   useEffect(()=>{
     if(!isHistDate||!histMeta||histCache[selectedDate])return
     setHistLoading(true)
-    fetchSheet(HISTORY_SHEET_ID,histMeta.tab).then(rows=>setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)}))).catch(console.error).finally(()=>setHistLoading(false))
+    fetchSheet(HISTORY_SHEET_ID,histMeta.tab).then(rows=>setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)}))).catch(()=>{}).finally(()=>setHistLoading(false))
   },[selectedDate])
 
   useEffect(()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)},[selectedDate])
