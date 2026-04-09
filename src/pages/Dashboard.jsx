@@ -733,7 +733,7 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
           {bulkMode&&<div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>Edit mode active</span><span style={{fontSize:12,color:'#9ca3af'}}> - modify then use Save all changes in ···</span></div>}
           <div className="agent-table-wrap">
             <table className="agent-table">
-              <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th>{config.hasSp&&<th>Spanish</th>}<th>Total</th><th>Goal</th>{showEditBtn&&<th className="th-edit"></th>}</tr></thead>
+              <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th>{config.hasSp&&<th>Spanish</th>}<th>Total</th><th>Goal</th><th style={{color:'#a78bfa',fontSize:11}}>Share%</th>{showEditBtn&&<th className="th-edit"></th>}</tr></thead>
               <tbody>
                 {[...agentsFinal].sort((a,b)=>b.english-a.english).map((a,i)=>{
                   const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
@@ -748,6 +748,7 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
                     {config.hasSp&&<td className="val-spanish">{bulkMode?<input type="number" className="bulk-edit-input" value={beSp!==''?beSp:a.spanish} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],spanish:e.target.value}}))}/>:a.spanish}</td>}
                     <td className="val-total">{config.hasSp?dEn+dSp:dEn}</td>
                     <td>{dEn>=goal?<span className="badge-goal">Goal</span>:<span className="badge-pending">{goal-dEn} left</span>}</td>
+                    <td style={{color:'#a78bfa',fontSize:12,textAlign:'center',fontWeight:600}}>{totalEn>0?(((dEn/totalEn)*100).toFixed(1)+'%'):'—'}</td>
                     {showEditBtn&&<td className="td-edit">{!bulkMode&&<button className="edit-agent-btn" onClick={e=>{e.stopPropagation();setEditForm({english:a.english,spanish:a.spanish||0});setEditAgent(a)}}>✏️</button>}</td>}
                   </tr>)
                 })}
@@ -1159,7 +1160,7 @@ export default function Dashboard() {
                 {bulkEditMode&&<div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'10px 16px',background:'#1a1310',border:'0.5px solid #f97316',borderRadius:8}}><span style={{fontSize:13,color:'#f97316',fontWeight:600}}>Edit mode active</span><span style={{fontSize:12,color:'#9ca3af'}}> - modify then Save all changes in ···</span></div>}
                 <div className="agent-table-wrap">
                   <table className="agent-table">
-                    <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th><th>Spanish</th><th>Total</th><th>Goal</th>{showAsiaEditBtn&&<th className="th-edit"></th>}</tr></thead>
+                    <thead><tr><th>#</th><th>Agent</th><th>Ext</th><th>English</th><th>Spanish</th><th>Total</th><th>Goal</th><th style={{color:'#a78bfa',fontSize:11}}>Share%</th>{showAsiaEditBtn&&<th className="th-edit"></th>}</tr></thead>
                     <tbody>
                       {[...asiaAgentsFinal].sort((a,b)=>b.english-a.english).map((a,i)=>{
                         const rs=i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#6b7280'}
@@ -1174,6 +1175,7 @@ export default function Dashboard() {
                           <td className="val-spanish">{bulkEditMode?<input type="number" className="bulk-edit-input" value={beSp!==''?beSp:a.spanish} onChange={e=>setBulkEdits(b=>({...b,[a.ext]:{...b[a.ext],spanish:e.target.value}}))}/>:a.spanish}</td>
                           <td className="val-total">{dEn+dSp}</td>
                           <td>{dEn>=goal?<span className="badge-goal">Goal</span>:<span className="badge-pending">{goal-dEn} left</span>}</td>
+                          <td style={{color:'#a78bfa',fontSize:12,textAlign:'center',fontWeight:600}}>{totalEnglish>0?(((dEn/totalEnglish)*100).toFixed(1)+'%'):'—'}</td>
                           {showAsiaEditBtn&&<td className="td-edit">{!bulkEditMode&&<button className="edit-agent-btn" onClick={e=>{e.stopPropagation();setEditForm({spanish:a.spanish,english:a.english});setEditingAgent(a)}}>✏️</button>}</td>}
                         </tr>)
                       })}
