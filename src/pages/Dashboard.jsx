@@ -142,7 +142,7 @@ async function saveDailyTotalsToSheets(date, teamRows) {
   sessionStorage.setItem(cacheKey, String(Date.now()))
   try {
     const body = new URLSearchParams({ action:'saveDailyTotals', date, teams:payload })
-    await fetch(SCRIPT_URL, { method:'POST', body })
+    await fetch(SCRIPT_URL, { method:'POST', body, mode:'no-cors' })
   } catch(e) {}
 }
 
@@ -154,7 +154,7 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
   sessionStorage.setItem(cacheKey, String(Date.now()))
   try {
     const body = new URLSearchParams({ action:'saveTeamSnapshot', date, teamId, agents:payload })
-    await fetch(SCRIPT_URL, { method:'POST', body })
+    await fetch(SCRIPT_URL, { method:'POST', body, mode:'no-cors' })
   } catch(e) {}
 }
 
