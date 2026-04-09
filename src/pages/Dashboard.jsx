@@ -234,6 +234,23 @@ function parseTeamSheet(rows, config) {
     }
 
     if (!inOT && isEndRow(row)) {
+      // Read official totals from this summary row (e.g. "77 Agents Logged in | | | 112 | 116 | 228")
+      // These are more reliable than summing individual agents (some rows lack ext/name)
+      const summaryEn = safeInt(row[colEn])
+      const summarySp = colSp != null ? safeInt(row[colSp]) : 0
+      if (summaryEn > 0 || summarySp > 0) {
+        agentMap['__MAIN_TOTAL__'] = {
+          name: '__MAIN_TOTAL__', ext: '__MAIN_TOTAL__',
+          english: summaryEn - Object.values(agentMap).filter(a=>a.ext!=='__MAIN_TOTAL__').reduce((s,a)=>s+a.english,0),
+          spanish: summarySp - Object.values(agentMap).filter(a=>a.ext!=='__MAIN_TOTAL__').reduce((s,a)=>s+a.spanish,0),
+          total: 0, _synthetic: true
+        }
+        agentMap['__MAIN_TOTAL__'].total = agentMap['__MAIN_TOTAL__'].english + agentMap['__MAIN_TOTAL__'].spanish
+        // Clean up if diff is zero or negative (means individual agents already covered it)
+        if (agentMap['__MAIN_TOTAL__'].english <= 0 && agentMap['__MAIN_TOTAL__'].spanish <= 0) {
+          delete agentMap['__MAIN_TOTAL__']
+        }
+      }
       if (!includeOT()) break
       afterMainEnd = true
       continue
@@ -304,7 +321,7 @@ function parseTeamSheet(rows, config) {
 
   // Filter out synthetic OT total entry from agents list but keep in totals
   const allEntries = Object.values(agentMap)
-  const agents = allEntries.filter(a => a.ext !== '__OT__').map(a => {
+  const agents = allEntries.filter(a => a.ext !== '__OT__' && a.ext !== '__MAIN_TOTAL__').map(a => {
     const { _fromOT, ...rest } = a
     return rest
   })
