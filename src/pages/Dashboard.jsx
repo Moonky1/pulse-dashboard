@@ -125,7 +125,8 @@ async function saveAgentSnapshotsToSheets(date, allAgents) {
   if (sessionStorage.getItem(cacheKey) === payload) return
   sessionStorage.setItem(cacheKey, payload)
   try {
-    await fetch(`${SCRIPT_URL}?action=saveAgentSnapshots&date=${encodeURIComponent(date)}&snapshots=${encodeURIComponent(payload)}`, { mode:'no-cors' })
+    const body = new URLSearchParams({ action:'saveAgentSnapshots', date, snapshots:payload })
+    await fetch(SCRIPT_URL, { method:'POST', body, mode:'no-cors' })
   } catch(e) {}
 }
 
