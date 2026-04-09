@@ -264,7 +264,20 @@ function parseTeamSheet(rows, config) {
       }
     }
 
-    if (inOT && isEndRow(row)) break
+    if (inOT && isEndRow(row)) {
+      // OT section ended — if no individual OT agents were found, read totals from this summary row
+      // e.g. "21 Agents Logged in | | | 33 | 15 | 48" (Colombia OT pattern)
+      const otAgentCount = Object.values(agentMap).filter(a => a._fromOT).length
+      if (otColEn >= 0 && otAgentCount === 0) {
+        const en = safeInt(row[otColEn])
+        const sp = otColSp >= 0 ? safeInt(row[otColSp]) : 0
+        if (en > 0 || sp > 0) {
+          // Add OT totals to a special key so they get summed into team totals
+          agentMap['__OT__'] = { name:'__OT__', ext:'__OT__', english:en, spanish:sp, total:en+sp, _fromOT:true }
+        }
+      }
+      break
+    }
     if (isSkipRow(cell0U) || cell0.length < 2 || SKIP.has(cell0U)) continue
 
     const rawExt = (row[1] || '').toString().replace(/,/g,'').trim()
@@ -283,14 +296,21 @@ function parseTeamSheet(rows, config) {
       agentMap[extNum].english += en
       agentMap[extNum].spanish += sp
       agentMap[extNum].total   = agentMap[extNum].english + agentMap[extNum].spanish
+      if (inOT) agentMap[extNum]._fromOT = true
     } else {
-      agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp }
+      agentMap[extNum] = { name:cell0, ext:String(extNum), english:en, spanish:sp, total:en+sp, _fromOT:inOT }
     }
   }
 
-  const agents = Object.values(agentMap)
-  const en = agents.reduce((s,a) => s+a.english, 0)
-  const sp = agents.reduce((s,a) => s+a.spanish, 0)
+  // Filter out synthetic OT total entry from agents list but keep in totals
+  const allEntries = Object.values(agentMap)
+  const agents = allEntries.filter(a => a.ext !== '__OT__').map(a => {
+    const { _fromOT, ...rest } = a
+    return rest
+  })
+  // Include synthetic OT entry in totals
+  const en = allEntries.reduce((s,a) => s+a.english, 0)
+  const sp = allEntries.reduce((s,a) => s+a.spanish, 0)
   return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
 }
 
