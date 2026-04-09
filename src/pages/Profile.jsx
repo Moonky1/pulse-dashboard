@@ -44,6 +44,26 @@ async function loadUserPhotoFromSheets(userName) {
   return localStorage.getItem('pulse_user_photo') || null
 }
 
+// Load daily totals from Apps Script for share% calculation
+async function loadDailyTotals() {
+  try {
+    const url  = `${SCRIPT_URL}?action=getDailyTotals`
+    const res  = await fetch(url)
+    const data = await res.json()
+    if (!Array.isArray(data)) return {}
+    // Build map: date → { teamId: englishTotal }
+    const map = {}
+    data.forEach(entry => {
+      if (!entry.date || !Array.isArray(entry.teams)) return
+      map[entry.date] = {}
+      entry.teams.forEach(t => {
+        if (t.id) map[entry.date][t.id] = t.english || 0
+      })
+    })
+    return map
+  } catch(e) { return {} }
+}
+
 const E = {
   medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp', medal3:'/emojis/web3.webp',
   goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp', zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
@@ -67,7 +87,6 @@ const getTeamFromExt = (ext) => {
   return { id:'unknown', name:'Unknown', flag:'un', hasSp:false, goal:10, colEn:2, colSp:-1 }
 }
 
-// Calculate rank for an ext from raw snapshot rows
 function calcRankFromRows(rows, ext, teamInfo) {
   const agents = []
   const isAsia = teamInfo.id === 'asia'
@@ -114,7 +133,6 @@ async function loadAgentData(ext) {
   const records = []
   const teamInfo = getTeamFromExt(ext)
 
-  // 1. Load from localStorage snapshots — includes rank calculation
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i)
     if(!k?.startsWith('pulse_snap_'))continue
@@ -143,7 +161,6 @@ async function loadAgentData(ext) {
     }catch(e){}
   }
 
-  // 2. Try Apps Script AGENT_SNAPSHOTS for dates not in local
   try {
     const url = `${SCRIPT_URL}?action=getAgentSnapshots&ext=${encodeURIComponent(ext)}`
     const res  = await fetch(url)
@@ -161,7 +178,6 @@ async function loadAgentData(ext) {
     }
   } catch(e) {}
 
-  // 3. History sheets for Asia
   if(teamInfo.id==='asia'){
     for(const hd of HISTORY_DATES){
       if(records.find(r=>r.date===hd.isoDate))continue
@@ -178,6 +194,21 @@ async function loadAgentData(ext) {
     .sort((a,b)=>a.date.localeCompare(b.date))
 }
 
+// Share% color coding
+const getShareColor = (pct) => {
+  if (pct >= 20) return '#f87171'   // red — high dependency risk
+  if (pct >= 12) return '#fb923c'   // orange — notable
+  if (pct >= 6)  return '#a78bfa'   // purple — normal
+  return '#6b7280'                   // gray — low
+}
+
+const getShareLabel = (pct) => {
+  if (pct >= 20) return '🔥 Franchise'
+  if (pct >= 12) return '⭐ Key Player'
+  if (pct >= 6)  return 'Contributor'
+  return 'Support'
+}
+
 const formatDate=(d)=>{const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(`${d}T12:00:00`).getDay()]} ${dd}/${m}`}
 
 export default function Profile() {
@@ -188,12 +219,12 @@ export default function Profile() {
   const isOwnProfile = String(user?.agentExt) === String(ext)
   const teamInfo  = getTeamFromExt(ext)
 
-  const [records,    setRecords]    = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [agentName,  setAgentName]  = useState(`Agent #${ext}`)
-  const [userPhoto,  setUserPhoto]  = useState(localStorage.getItem('pulse_user_photo')||'')
+  const [records,      setRecords]      = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [agentName,    setAgentName]    = useState(`Agent #${ext}`)
+  const [userPhoto,    setUserPhoto]    = useState(localStorage.getItem('pulse_user_photo')||'')
+  const [teamTotals,   setTeamTotals]   = useState({}) // date → team english total
 
-  // Particles
   useEffect(()=>{
     const canvas=canvasRef.current;if(!canvas)return
     const ctx=canvas.getContext('2d');canvas.width=window.innerWidth;canvas.height=window.innerHeight
@@ -212,10 +243,22 @@ export default function Profile() {
     if(!user) return
     loadUserPhotoFromSheets(user.name).then(p=>{ if(p) setUserPhoto(p) })
     setLoading(true)
-    loadAgentData(ext).then(recs=>{
+
+    // Load agent data and team totals in parallel
+    Promise.all([
+      loadAgentData(ext),
+      loadDailyTotals()
+    ]).then(([recs, totalsMap]) => {
       setRecords(recs)
       const named=recs.filter(r=>r.name&&r.name.length>1)
       if(named.length>0)setAgentName(named[named.length-1].name)
+
+      // Extract this team's english totals per day
+      const teamMap = {}
+      Object.entries(totalsMap).forEach(([date, teams]) => {
+        if (teams[teamInfo.id] !== undefined) teamMap[date] = teams[teamInfo.id]
+      })
+      setTeamTotals(teamMap)
       setLoading(false)
     })
   },[ext])
@@ -256,9 +299,25 @@ export default function Profile() {
     const worstDay=[...withData].sort((a,b)=>a.english-b.english)[0]
     const top3Days=records.filter(r=>r.rank&&r.rank<=3)
     const top1Days=records.filter(r=>r.rank===1)
+
+    // Best share day
+    const withShare = withData.filter(r => teamTotals[r.date] > 0)
+    const bestShareDay = withShare.length > 0
+      ? [...withShare].sort((a,b) => (b.english/(teamTotals[b.date]||1)) - (a.english/(teamTotals[a.date]||1)))[0]
+      : null
+    const bestSharePct = bestShareDay
+      ? ((bestShareDay.english / teamTotals[bestShareDay.date]) * 100).toFixed(1)
+      : null
+
+    // Avg share across all days with team data
+    const avgShare = withShare.length > 0
+      ? (withShare.reduce((s,r) => s + (r.english / (teamTotals[r.date]||1)), 0) / withShare.length * 100).toFixed(1)
+      : null
+
     return{totalEn,totalSp,avgEn,bestDay,worstDay,activeDays:withData.length,
       zeroDays:records.length-withData.length,daysTracked:records.length,
-      top3Days:top3Days.length,top1Days:top1Days.length}
+      top3Days:top3Days.length,top1Days:top1Days.length,
+      bestShareDay,bestSharePct,avgShare}
   })()
 
   const maxEnglish=Math.max(...records.map(r=>r.english),1)
@@ -316,6 +375,36 @@ export default function Profile() {
                 <div className="pstat teal"><div className="pstat-val" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}}><Img src={E.medal1} size={24}/>{stats.top1Days}</div><div className="pstat-lbl">#1 Days</div></div>
               </div>
 
+              {/* Share of Success section */}
+              {stats.avgShare && (
+                <div className="profile-section" style={{marginTop:16}}>
+                  <h2 className="profile-section-title">🎯 Share of Success</h2>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+                    <div style={{background:'#181b23',borderRadius:12,padding:'18px 20px',border:'0.5px solid #2a2d38',textAlign:'center'}}>
+                      <div style={{fontSize:28,fontWeight:800,color:getShareColor(parseFloat(stats.avgShare))}}>{stats.avgShare}%</div>
+                      <div style={{fontSize:12,color:'#9ca3af',marginTop:4}}>Avg Team Contribution</div>
+                      <div style={{fontSize:11,color:getShareColor(parseFloat(stats.avgShare)),marginTop:6,fontWeight:600}}>{getShareLabel(parseFloat(stats.avgShare))}</div>
+                    </div>
+                    {stats.bestShareDay && (
+                      <div style={{background:'#181b23',borderRadius:12,padding:'18px 20px',border:'0.5px solid #2a2d38',textAlign:'center'}}>
+                        <div style={{fontSize:28,fontWeight:800,color:'#a78bfa'}}>{stats.bestSharePct}%</div>
+                        <div style={{fontSize:12,color:'#9ca3af',marginTop:4}}>Best Share Day</div>
+                        <div style={{fontSize:11,color:'#6b7280',marginTop:6}}>{formatDate(stats.bestShareDay.date)} · {stats.bestShareDay.english} EN</div>
+                      </div>
+                    )}
+                    <div style={{background:'#181b23',borderRadius:12,padding:'18px 20px',border:'0.5px solid #2a2d38',textAlign:'center',display:'flex',flexDirection:'column',justifyContent:'center'}}>
+                      <div style={{fontSize:12,color:'#9ca3af',marginBottom:8}}>Risk Level</div>
+                      {parseFloat(stats.avgShare) >= 20
+                        ? <div style={{color:'#f87171',fontWeight:700,fontSize:14}}>⚠️ High Dependency<br/><span style={{fontSize:11,fontWeight:400,color:'#6b7280'}}>Team relies heavily on this agent</span></div>
+                        : parseFloat(stats.avgShare) >= 12
+                        ? <div style={{color:'#fb923c',fontWeight:700,fontSize:14}}>⚡ Notable Contributor<br/><span style={{fontSize:11,fontWeight:400,color:'#6b7280'}}>Significant impact on team output</span></div>
+                        : <div style={{color:'#34d399',fontWeight:700,fontSize:14}}>✅ Balanced<br/><span style={{fontSize:11,fontWeight:400,color:'#6b7280'}}>Healthy contribution level</span></div>
+                      }
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="profile-highlights">
                 <div className="phighlight">
                   <div className="phighlight-left"><Img src={E.goal} size={26}/><div><div className="phighlight-title">Best Day</div><div className="phighlight-date">{formatDate(stats.bestDay.date)}</div></div></div>
@@ -335,7 +424,7 @@ export default function Profile() {
                 <h2 className="profile-section-title">📈 Performance Timeline</h2>
                 <div className="profile-chart">
                   {records.map((r,i)=>(
-                    <div key={i} className="ptl-col" title={`${formatDate(r.date)}: ${r.english} EN${r.rank?` · Rank #${r.rank}`:''}`}>
+                    <div key={i} className="ptl-col" title={`${formatDate(r.date)}: ${r.english} EN${r.rank?` · Rank #${r.rank}`:''}${teamTotals[r.date]?` · ${((r.english/(teamTotals[r.date]||1))*100).toFixed(1)}% share`:''}`}>
                       <div className="ptl-bar-outer">
                         <div className="ptl-bar" style={{height:`${(r.english/maxEnglish)*100}%`,
                           background:r.rank===1?'#fbbf24':r.rank===2?'#9ca3af':r.rank===3?'#cd7f32':
@@ -359,17 +448,33 @@ export default function Profile() {
                 <h2 className="profile-section-title">📋 Daily Records</h2>
                 <div className="profile-table-wrap">
                   <table className="profile-table">
-                    <thead><tr><th>Date</th><th>English</th>{teamInfo.hasSp&&<th>Spanish</th>}<th>Total</th><th>Rank</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>English</th>
+                        {teamInfo.hasSp&&<th>Spanish</th>}
+                        <th>Total</th>
+                        <th>Rank</th>
+                        <th style={{color:'#a78bfa'}}>Share%</th>
+                      </tr>
+                    </thead>
                     <tbody>
-                      {[...records].reverse().map((r,i)=>(
-                        <tr key={i} className={r.rank===1?'ptr-gold':r.rank===2?'ptr-silver':r.rank===3?'ptr-bronze':r.total===0?'ptr-zero':''}>
-                          <td style={{color:'#9ca3af'}}>{formatDate(r.date)}</td>
-                          <td style={{color:'#60a5fa',fontWeight:600}}>{r.english}</td>
-                          {teamInfo.hasSp&&<td style={{color:'#34d399',fontWeight:600}}>{r.spanish}</td>}
-                          <td style={{color:'#f97316',fontWeight:600}}>{r.total}</td>
-                          <td>{r.rank?<MedalImg rank={r.rank}/>:<span style={{color:'#4b5563'}}>—</span>}</td>
-                        </tr>
-                      ))}
+                      {[...records].reverse().map((r,i)=>{
+                        const teamTotal = teamTotals[r.date] || 0
+                        const sharePct  = teamTotal > 0 ? ((r.english / teamTotal) * 100) : null
+                        return (
+                          <tr key={i} className={r.rank===1?'ptr-gold':r.rank===2?'ptr-silver':r.rank===3?'ptr-bronze':r.total===0?'ptr-zero':''}>
+                            <td style={{color:'#9ca3af'}}>{formatDate(r.date)}</td>
+                            <td style={{color:'#60a5fa',fontWeight:600}}>{r.english}</td>
+                            {teamInfo.hasSp&&<td style={{color:'#34d399',fontWeight:600}}>{r.spanish}</td>}
+                            <td style={{color:'#f97316',fontWeight:600}}>{r.total}</td>
+                            <td>{r.rank?<MedalImg rank={r.rank}/>:<span style={{color:'#4b5563'}}>—</span>}</td>
+                            <td style={{color: sharePct !== null ? getShareColor(sharePct) : '#4b5563', fontWeight:600, fontSize:13}}>
+                              {sharePct !== null ? `${sharePct.toFixed(1)}%` : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -388,4 +493,4 @@ export default function Profile() {
       )}
     </div>
   )
-} 
+}
