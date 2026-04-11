@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import './profile.css'
 
@@ -18,6 +18,18 @@ const HISTORY_DATES = [
 
 const csvUrl = (sheetId, sheet) =>
   `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}&t=${Date.now()}`
+
+async function fetchWithTimeout(url, options = {}, timeout = 8000) {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    return res
+  } finally {
+    clearTimeout(id)
+  }
+}
 
 function parseCSV(text) {
   return text.trim().split('\n').map(row => {
@@ -44,7 +56,7 @@ function parseCSV(text) {
 }
 
 async function fetchSheet(sheetId, name) {
-  const res  = await fetch(csvUrl(sheetId, name))
+  const res  = await fetchWithTimeout(csvUrl(sheetId, name), {}, 9000)
   const text = await res.text()
   return parseCSV(text)
 }
@@ -57,7 +69,6 @@ function normalizeDate(raw) {
   const s = String(raw).trim()
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
-
   if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10)
 
   const d = new Date(s)
@@ -69,14 +80,14 @@ function normalizeDate(raw) {
   return `${y}-${m}-${day}`
 }
 
-function isValidIsoDate(d) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))
+function isValidIsoDate(val) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(val || ''))
 }
 
 async function loadUserPhotoFromSheets(userName) {
   try {
     const url  = `${SCRIPT_URL}?action=getUserPhoto&userName=${encodeURIComponent(userName)}`
-    const res  = await fetch(url)
+    const res  = await fetchWithTimeout(url, {}, 7000)
     const data = await res.json()
     if (data.photo && data.photo.length > 10) {
       localStorage.setItem('pulse_user_photo', data.photo)
@@ -94,30 +105,36 @@ async function loadDailyTotals() {
     const cached = localStorage.getItem(CACHE_KEY)
     if (cached) {
       const { data, timestamp } = JSON.parse(cached)
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        return data
-      }
+      if (Date.now() - timestamp < CACHE_DURATION) return data
     }
 
     const url = `${SCRIPT_URL}?action=getDailyTotals`
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url, {}, 8000)
     const apiData = await res.json()
+
     if (!Array.isArray(apiData)) return {}
 
     const map = {}
     apiData.forEach(entry => {
-      const normalized = normalizeDate(entry.date)
-      if (!normalized || !Array.isArray(entry.teams)) return
+      const date = normalizeDate(entry.date)
+      if (!date || !Array.isArray(entry.teams)) return
 
-      map[normalized] = {}
+      map[date] = {}
       entry.teams.forEach(t => {
-        if (t.id) map[normalized][t.id] = t.english || 0
+        if (t.id) map[date][t.id] = t.english || 0
       })
     })
 
     localStorage.setItem(CACHE_KEY, JSON.stringify({ data: map, timestamp: Date.now() }))
     return map
   } catch (e) {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const { data } = JSON.parse(cached)
+        return data || {}
+      }
+    } catch (_) {}
     return {}
   }
 }
@@ -177,7 +194,7 @@ function calcRankFromRows(rows, ext, teamInfo) {
     if (cell0.length < 2) continue
 
     const en = isAsia ? safeInt(row[3]) : safeInt(row[teamInfo.colEn])
-    agents.push({ ext:String(extNum), english:en })
+    agents.push({ ext: String(extNum), english: en })
   }
 
   agents.sort((a, b) => b.english - a.english)
@@ -199,7 +216,7 @@ function findAgentInHistoryRows(rows, ext) {
     const extNum = safeInt(row[1])
     if (extNum < 1000 || extNum > 9999) continue
 
-    agents.push({ ext:String(extNum), english:safeInt(row[3]) })
+    agents.push({ ext: String(extNum), english: safeInt(row[3]) })
   }
 
   agents.sort((a, b) => b.english - a.english)
@@ -223,14 +240,22 @@ function findAgentInHistoryRows(rows, ext) {
       english: en,
       spanish: sp,
       total: sp + en,
-      rank: rankIdx >= 0 ? rankIdx + 1 : null
+      rank: rankIdx >= 0 ? rankIdx + 1 : null,
     }
   }
 
   return null
 }
 
-async function loadAgentData(ext) {
+function dedupeAndSortRecords(records) {
+  return records
+    .map(r => ({ ...r, date: normalizeDate(r.date) }))
+    .filter(r => r.date && isValidIsoDate(r.date))
+    .filter((r, i, arr) => arr.findIndex(x => x.date === r.date) === i)
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
+
+async function loadAgentBaseData(ext) {
   const records = []
   const teamInfo = getTeamFromExt(ext)
 
@@ -283,7 +308,7 @@ async function loadAgentData(ext) {
           spanish: sp,
           total: en + sp,
           rank,
-          source: 'local'
+          source: 'local',
         })
         break
       }
@@ -292,57 +317,52 @@ async function loadAgentData(ext) {
 
   try {
     const url = `${SCRIPT_URL}?action=getAgentSnapshots&ext=${encodeURIComponent(ext)}`
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url, {}, 8000)
     const data = await res.json()
 
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       data.forEach(d => {
-        const normalized = normalizeDate(d.date)
-        if (!normalized) return
+        const date = normalizeDate(d.date)
+        if (!date) return
+        if (records.find(r => r.date === date)) return
 
-        if (!records.find(r => r.date === normalized)) {
-          records.push({
-            date: normalized,
-            name: d.name,
-            english: d.english || 0,
-            spanish: d.spanish || 0,
-            total: d.total || 0,
-            rank: null,
-            source: 'sheets'
-          })
-        }
+        records.push({
+          date,
+          name: d.name || '',
+          english: d.english || 0,
+          spanish: d.spanish || 0,
+          total: d.total || 0,
+          rank: null,
+          source: 'sheets',
+        })
       })
     }
   } catch (e) {}
 
-  if (teamInfo.id === 'asia') {
-    const missingHistory = HISTORY_DATES.filter(hd => !records.find(r => r.date === hd.isoDate))
+  return dedupeAndSortRecords(records)
+}
 
-    const historyResults = await Promise.all(
-      missingHistory.map(async (hd) => {
-        try {
-          const rows = await fetchSheet(HISTORY_SHEET_ID, hd.tab)
-          const agent = findAgentInHistoryRows(rows, ext)
-          if (!agent) return null
-          return { date: hd.isoDate, ...agent, source:'history' }
-        } catch (e) {
-          return null
-        }
-      })
-    )
+async function loadAsiaHistoryData(ext, existingDates = []) {
+  const existing = new Set(existingDates)
+  const missing = HISTORY_DATES.filter(h => !existing.has(h.isoDate))
 
-    historyResults.forEach(r => {
-      if (r && !records.find(x => x.date === r.date)) {
-        records.push(r)
-      }
+  if (missing.length === 0) return []
+
+  const results = await Promise.allSettled(
+    missing.map(async (h) => {
+      const rows = await fetchSheet(HISTORY_SHEET_ID, h.tab)
+      const agent = findAgentInHistoryRows(rows, ext)
+      if (!agent) return null
+      return { date: h.isoDate, ...agent, source:'history' }
     })
-  }
+  )
 
-  return records
-    .map(r => ({ ...r, date: normalizeDate(r.date) }))
-    .filter(r => r.date && isValidIsoDate(r.date))
-    .filter((r, i, arr) => arr.findIndex(x => x.date === r.date) === i)
-    .sort((a, b) => a.date.localeCompare(b.date))
+  const records = []
+  results.forEach(r => {
+    if (r.status === 'fulfilled' && r.value) records.push(r.value)
+  })
+
+  return dedupeAndSortRecords(records)
 }
 
 const getShareColor = (pct) => {
@@ -364,26 +384,25 @@ const formatDate = (d) => {
   if (!iso) return '—'
 
   const [y, m, dd] = iso.split('-')
-  const dateObj = new Date(`${iso}T12:00:00`)
-  if (isNaN(dateObj.getTime())) return '—'
+  const obj = new Date(`${iso}T12:00:00`)
+  if (isNaN(obj.getTime())) return '—'
 
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const dayName = days[dateObj.getDay()]
-  return `${dayName} ${dd}/${m}`
+  return `${days[obj.getDay()]} ${dd}/${m}`
 }
 
 export default function Profile() {
-  const { ext } = useParams()
-  const navigate = useNavigate()
+  const { ext }   = useParams()
+  const navigate  = useNavigate()
   const canvasRef = useRef(null)
-  const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
+  const user      = JSON.parse(localStorage.getItem('pulse_user') || 'null')
   const isOwnProfile = String(user?.agentExt) === String(ext)
-  const teamInfo = getTeamFromExt(ext)
+  const teamInfo  = getTeamFromExt(ext)
 
-  const [records, setRecords] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [agentName, setAgentName] = useState(`Agent #${ext}`)
-  const [userPhoto, setUserPhoto] = useState(localStorage.getItem('pulse_user_photo') || '')
+  const [records, setRecords]       = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [agentName, setAgentName]   = useState(`Agent #${ext}`)
+  const [userPhoto, setUserPhoto]   = useState(localStorage.getItem('pulse_user_photo') || '')
   const [teamTotals, setTeamTotals] = useState({})
 
   useEffect(() => {
@@ -404,7 +423,7 @@ export default function Profile() {
           size: Math.random() * 3 + 1,
           life: 1,
           vx: (Math.random() - 0.5) * 1.5,
-          vy: (Math.random() - 0.5) * 1.5 - 0.5
+          vy: (Math.random() - 0.5) * 1.5 - 0.5,
         })
       }
     }
@@ -414,6 +433,7 @@ export default function Profile() {
     let raf
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i]
         p.life -= 0.03
@@ -430,6 +450,7 @@ export default function Profile() {
         ctx.fillStyle = `rgba(249,115,22,${p.life * 0.5})`
         ctx.fill()
       }
+
       raf = requestAnimationFrame(draw)
     }
 
@@ -455,30 +476,52 @@ export default function Profile() {
     let cancelled = false
     setLoading(true)
 
-    loadUserPhotoFromSheets(user.name).then(p => {
+    loadUserPhotoFromSheets(user.name).then((p) => {
       if (!cancelled && p) setUserPhoto(p)
     })
 
-    Promise.all([
-      loadAgentData(ext),
-      loadDailyTotals()
-    ]).then(([recs, totalsMap]) => {
+    Promise.allSettled([
+      loadAgentBaseData(ext),
+      loadDailyTotals(),
+    ]).then(async ([agentRes, totalsRes]) => {
       if (cancelled) return
 
-      setRecords(recs)
+      const baseRecords =
+        agentRes.status === 'fulfilled' && Array.isArray(agentRes.value)
+          ? agentRes.value
+          : []
 
-      const named = recs.filter(r => r.name && r.name.length > 1)
+      const totalsMap =
+        totalsRes.status === 'fulfilled' && totalsRes.value
+          ? totalsRes.value
+          : {}
+
+      setRecords(baseRecords)
+
+      const named = baseRecords.filter(r => r.name && r.name.length > 1)
       if (named.length > 0) setAgentName(named[named.length - 1].name)
 
       const teamMap = {}
       Object.entries(totalsMap).forEach(([date, teams]) => {
         const normalized = normalizeDate(date)
         if (!normalized) return
-        if (teams[teamInfo.id] !== undefined) teamMap[normalized] = teams[teamInfo.id]
+        if (teams?.[teamInfo.id] !== undefined) teamMap[normalized] = teams[teamInfo.id]
       })
-
       setTeamTotals(teamMap)
+
       setLoading(false)
+
+      if (teamInfo.id === 'asia') {
+        const extra = await loadAsiaHistoryData(ext, baseRecords.map(r => r.date))
+        if (cancelled || extra.length === 0) return
+
+        setRecords(prev => {
+          const merged = dedupeAndSortRecords([...prev, ...extra])
+          const namedMerged = merged.filter(r => r.name && r.name.length > 1)
+          if (namedMerged.length > 0) setAgentName(namedMerged[namedMerged.length - 1].name)
+          return merged
+        })
+      }
     }).catch(() => {
       if (!cancelled) setLoading(false)
     })
@@ -488,10 +531,12 @@ export default function Profile() {
     }
   }, [ext, user, teamInfo.id])
 
-  const stats = useMemo(() => {
-    if (records.length === 0) return null
+  const validRecords = useMemo(
+    () => records.filter(r => r.date && isValidIsoDate(r.date)),
+    [records]
+  )
 
-    const validRecords = records.filter(r => r.date && isValidIsoDate(r.date))
+  const stats = useMemo(() => {
     if (validRecords.length === 0) return null
 
     const withData = validRecords.filter(r => r.total > 0)
@@ -531,17 +576,12 @@ export default function Profile() {
       top1Days: top1Days.length,
       bestShareDay,
       bestSharePct,
-      avgShare
+      avgShare,
     }
-  }, [records, teamTotals])
-
-  const validRecords = useMemo(
-    () => records.filter(r => r.date && isValidIsoDate(r.date)),
-    [records]
-  )
+  }, [validRecords, teamTotals])
 
   const maxEnglish = Math.max(...validRecords.map(r => r.english), 1)
-  const timelineMinWidth = Math.max(validRecords.length * 72, 900)
+  const timelineMinWidth = Math.max(validRecords.length * 76, 980)
 
   if (!user) {
     return (
@@ -770,16 +810,16 @@ export default function Profile() {
               <div className="profile-section">
                 <h2 className="profile-section-title">📈 Performance Timeline</h2>
 
-                <div style={{ overflowX:'auto', overflowY:'hidden', paddingBottom:14, marginTop:8 }}>
+                <div style={{ overflowX:'auto', overflowY:'hidden', paddingBottom:16, marginTop:8 }}>
                   <div
                     className="profile-chart"
                     style={{
                       minWidth: `${timelineMinWidth}px`,
                       display:'grid',
                       gridAutoFlow:'column',
-                      gridAutoColumns:'60px',
+                      gridAutoColumns:'64px',
                       gap:'12px',
-                      alignItems:'end'
+                      alignItems:'end',
                     }}
                   >
                     {validRecords.map((r, i) => {
@@ -792,9 +832,9 @@ export default function Profile() {
                           key={i}
                           className="ptl-col"
                           title={tooltipText}
-                          style={{ minWidth:60, cursor:'pointer' }}
+                          style={{ minWidth:64, cursor:'pointer' }}
                         >
-                          <div className="ptl-bar-outer" style={{ height:180 }}>
+                          <div className="ptl-bar-outer" style={{ height:190 }}>
                             <div
                               className="ptl-bar"
                               style={{
@@ -805,7 +845,7 @@ export default function Profile() {
                                   r.rank === 3 ? '#cd7f32' :
                                   r.english >= teamInfo.goal ? '#34d399' :
                                   r.english > 0 ? '#60a5fa' :
-                                  '#2a2d38'
+                                  '#2a2d38',
                               }}
                             />
                           </div>
