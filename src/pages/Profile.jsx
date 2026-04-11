@@ -44,22 +44,39 @@ async function loadUserPhotoFromSheets(userName) {
   return localStorage.getItem('pulse_user_photo') || null
 }
 
-// Load daily totals from Apps Script for share% calculation
+// Load daily totals from Apps Script for share% calculation (with cache)
 async function loadDailyTotals() {
+  const CACHE_KEY = 'pulse_daily_totals_cache'
+  const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+  
   try {
+    // Check cache first
+    const cached = localStorage.getItem(CACHE_KEY)
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached)
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data
+      }
+    }
+
+    // Fetch fresh data
     const url  = `${SCRIPT_URL}?action=getDailyTotals`
     const res  = await fetch(url)
-    const data = await res.json()
-    if (!Array.isArray(data)) return {}
+    const apiData = await res.json()
+    if (!Array.isArray(apiData)) return {}
+    
     // Build map: date → { teamId: englishTotal }
     const map = {}
-    data.forEach(entry => {
+    apiData.forEach(entry => {
       if (!entry.date || !Array.isArray(entry.teams)) return
       map[entry.date] = {}
       entry.teams.forEach(t => {
         if (t.id) map[entry.date][t.id] = t.english || 0
       })
     })
+
+    // Cache result
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data: map, timestamp: Date.now() }))
     return map
   } catch(e) { return {} }
 }
@@ -209,7 +226,12 @@ const getShareLabel = (pct) => {
   return 'Support'
 }
 
-const formatDate=(d)=>{const[y,m,dd]=d.split('-');const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return`${days[new Date(`${d}T12:00:00`).getDay()]} ${dd}/${m}`}
+const formatDate=(d)=>{
+  const[y,m,dd]=d.split('-')
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+  const dayName = days[new Date(`${d}T12:00:00`).getDay()]
+  return`${dayName} ${dd}/${m}`
+}
 
 export default function Profile() {
   const { ext }   = useParams()
@@ -423,18 +445,24 @@ export default function Profile() {
               <div className="profile-section">
                 <h2 className="profile-section-title">📈 Performance Timeline</h2>
                 <div className="profile-chart">
-                  {records.map((r,i)=>(
-                    <div key={i} className="ptl-col" title={`${formatDate(r.date)}: ${r.english} EN${r.rank?` · Rank #${r.rank}`:''}${teamTotals[r.date]?` · ${((r.english/(teamTotals[r.date]||1))*100).toFixed(1)}% share`:''}`}>
-                      <div className="ptl-bar-outer">
-                        <div className="ptl-bar" style={{height:`${(r.english/maxEnglish)*100}%`,
-                          background:r.rank===1?'#fbbf24':r.rank===2?'#9ca3af':r.rank===3?'#cd7f32':
-                          r.english>=teamInfo.goal?'#34d399':r.english>0?'#60a5fa':'#2a2d38'}}/>
+                  {records.map((r,i)=>{
+                    const teamTotal = teamTotals[r.date] || 0
+                    const sharePct = teamTotal > 0 ? ((r.english / teamTotal) * 100).toFixed(1) : null
+                    const tooltipText = `${formatDate(r.date)}: ${r.english} EN${r.rank?` · Rank #${r.rank}`:''}${sharePct?` · ${sharePct}% share`:''}`
+                    
+                    return(
+                      <div key={i} className="ptl-col" title={tooltipText}>
+                        <div className="ptl-bar-outer">
+                          <div className="ptl-bar" style={{height:`${(r.english/maxEnglish)*100}%`,
+                            background:r.rank===1?'#fbbf24':r.rank===2?'#9ca3af':r.rank===3?'#cd7f32':
+                            r.english>=teamInfo.goal?'#34d399':r.english>0?'#60a5fa':'#2a2d38'}}/>
+                        </div>
+                        <div className="ptl-rank">{r.rank&&r.rank<=3?<MedalImg rank={r.rank}/>:null}</div>
+                        <div className="ptl-val" style={{color:r.english===stats.bestDay.english?'#34d399':r.english===0?'#4b5563':'#9ca3af'}}>{r.english>0?r.english:'—'}</div>
+                        <div className="ptl-date">{formatDate(r.date)}</div>
                       </div>
-                      <div className="ptl-rank">{r.rank&&r.rank<=3?<MedalImg rank={r.rank}/>:null}</div>
-                      <div className="ptl-val" style={{color:r.english===stats.bestDay.english?'#34d399':r.english===0?'#4b5563':'#9ca3af'}}>{r.english>0?r.english:'—'}</div>
-                      <div className="ptl-date">{formatDate(r.date)}</div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 <div className="ptl-legend">
                   <span><Img src={E.medal1} size={13}/> #1 day</span>
