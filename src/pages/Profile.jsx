@@ -19,7 +19,7 @@ const HISTORY_DATES = [
 const csvUrl = (sheetId, sheet) =>
   `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}&t=${Date.now()}`
 
-async function fetchWithTimeout(url, options = {}, timeout = 8000) {
+async function fetchWithTimeout(url, options = {}, timeout = 7000) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeout)
 
@@ -33,13 +33,18 @@ async function fetchWithTimeout(url, options = {}, timeout = 8000) {
 function parseCSV(text) {
   return text.trim().split('\n').map(row => {
     const result=[]; let current=''; let inQuotes=false
-    for(let i=0;i<row.length;i++){if(row[i]==='"'){inQuotes=!inQuotes;continue}if(row[i]===','&&!inQuotes){result.push(current.trim());current='';continue}current+=row[i]}
-    result.push(current.trim()); return result
+    for(let i=0;i<row.length;i++){
+      if(row[i]==='"'){inQuotes=!inQuotes;continue}
+      if(row[i]===','&&!inQuotes){result.push(current.trim());current='';continue}
+      current+=row[i]
+    }
+    result.push(current.trim())
+    return result
   })
 }
 
 async function fetchSheet(sheetId,name){
-  const res=await fetchWithTimeout(csvUrl(sheetId,name), {}, 9000)
+  const res=await fetchWithTimeout(csvUrl(sheetId,name), {}, 7000)
   const text=await res.text()
   return parseCSV(text)
 }
@@ -67,7 +72,7 @@ const isValidIsoDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))
 async function loadUserPhotoFromSheets(userName) {
   try {
     const url  = `${SCRIPT_URL}?action=getUserPhoto&userName=${encodeURIComponent(userName)}`
-    const res  = await fetchWithTimeout(url, {}, 7000)
+    const res  = await fetchWithTimeout(url, {}, 6000)
     const data = await res.json()
     if (data.photo && data.photo.length > 10) {
       localStorage.setItem('pulse_user_photo', data.photo)
@@ -77,7 +82,6 @@ async function loadUserPhotoFromSheets(userName) {
   return localStorage.getItem('pulse_user_photo') || null
 }
 
-// Load daily totals from Apps Script for share% calculation (with cache)
 async function loadDailyTotals() {
   const CACHE_KEY = 'pulse_daily_totals_cache'
   const CACHE_DURATION = 5 * 60 * 1000
@@ -92,7 +96,7 @@ async function loadDailyTotals() {
     }
 
     const url  = `${SCRIPT_URL}?action=getDailyTotals`
-    const res  = await fetchWithTimeout(url, {}, 8000)
+    const res  = await fetchWithTimeout(url, {}, 7000)
     const apiData = await res.json()
     if (!Array.isArray(apiData)) return {}
     
@@ -108,14 +112,23 @@ async function loadDailyTotals() {
 
     localStorage.setItem(CACHE_KEY, JSON.stringify({ data: map, timestamp: Date.now() }))
     return map
-  } catch(e) { return {} }
+  } catch(e) {
+    return {}
+  }
 }
 
 const E = {
-  medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp', medal3:'/emojis/web3.webp',
-  goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp', zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
+  medal1:'/emojis/medal1.webp',
+  medal2:'/emojis/medal2.webp',
+  medal3:'/emojis/web3.webp',
+  goal:'/emojis/goal.webp',
+  goal1:'/emojis/goal1.webp',
+  zero:'/emojis/zero.webp',
+  firework:'/emojis/firework.webp',
 }
+
 const Img=({src,size=20})=><img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
+
 const MedalImg=({rank})=>{
   if(rank===1)return<Img src={E.medal1} size={22}/>
   if(rank===2)return<Img src={E.medal2} size={22}/>
@@ -137,18 +150,23 @@ const getTeamFromExt = (ext) => {
 function calcRankFromRows(rows, ext, teamInfo) {
   const agents = []
   const isAsia = teamInfo.id === 'asia'
+
   for (const row of rows) {
     const cell0 = (row[0]||'').toString().trim()
     const cell0U = cell0.toUpperCase()
+
     if (cell0U.includes('AGENT') && (cell0U.includes('LOGGED')||cell0U.includes('LOG IN'))) break
     if (cell0U.includes('OT ') || cell0U.endsWith(' OT')) break
+
     const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
     const extNum = parseInt(rawExt)
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (cell0.length < 2) continue
+
     const en = isAsia ? safeInt(row[3]) : safeInt(row[teamInfo.colEn])
     agents.push({ ext: String(extNum), english: en })
   }
+
   agents.sort((a,b) => b.english - a.english)
   const idx = agents.findIndex(a => a.ext === String(ext))
   return idx >= 0 ? idx + 1 : null
@@ -156,6 +174,7 @@ function calcRankFromRows(rows, ext, teamInfo) {
 
 function findAgentInHistoryRows(rows, ext) {
   const agents=[]
+
   for(let i=0;i<rows.length;i++){
     const row=rows[i], cell0=(row[0]||'').trim(), cell0U=cell0.toUpperCase()
     if(cell0U.includes('AGENT')&&cell0U.includes('LOGGED'))break
@@ -163,16 +182,28 @@ function findAgentInHistoryRows(rows, ext) {
     const extNum=safeInt(row[1]); if(extNum<1000||extNum>9999)continue
     agents.push({ ext:String(extNum), english:safeInt(row[3]) })
   }
+
   agents.sort((a,b)=>b.english-a.english)
+
   for(let i=0;i<rows.length;i++){
     const row=rows[i],cell0=(row[0]||'').trim(),cell0U=cell0.toUpperCase()
     if(cell0U.includes('AGENT')&&cell0U.includes('LOGGED'))break
     if(safeInt(row[1])!==parseInt(ext))continue
     if(cell0.length<=1)continue
+
     const sp=safeInt(row[2]),en=safeInt(row[3])
     const rankIdx=agents.findIndex(a=>a.ext===String(ext))
-    return{name:cell0,ext:String(ext),english:en,spanish:sp,total:sp+en,rank:rankIdx>=0?rankIdx+1:null}
+
+    return {
+      name:cell0,
+      ext:String(ext),
+      english:en,
+      spanish:sp,
+      total:sp+en,
+      rank:rankIdx>=0?rankIdx+1:null
+    }
   }
+
   return null
 }
 
@@ -183,26 +214,34 @@ async function loadAgentData(ext) {
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i)
     if(!k?.startsWith('pulse_snap_'))continue
+
     try{
       const date=normalizeDate(k.replace('pulse_snap_',''))
       if(!date)continue
 
       const data=JSON.parse(localStorage.getItem(k))
       let sourceRows=[]
+
       if(teamInfo.id==='asia') sourceRows=Array.isArray(data.asiaData)?data.asiaData:[]
       else sourceRows=Array.isArray(data.teams?.[teamInfo.id])?data.teams[teamInfo.id]:[]
+
       if(sourceRows.length===0)continue
+
       for(const row of sourceRows){
         const rawExt=(row[1]||'').toString().replace(/,/g,'').trim()
         if(rawExt!==String(ext))continue
+
         const cell0=(row[0]||'').trim()
         if(cell0.length<=1)continue
+
         const nameU=cell0.toUpperCase()
         if(nameU.includes('AGENT')&&nameU.includes('LOGGED'))break
+
         let en, sp
         if(teamInfo.id==='asia'){sp=safeInt(row[2]);en=safeInt(row[3])}
         else if(teamInfo.colSp>=0){en=safeInt(row[teamInfo.colEn]);sp=safeInt(row[teamInfo.colSp])}
         else{en=safeInt(row[teamInfo.colEn]);sp=0}
+
         const rank = calcRankFromRows(sourceRows, ext, teamInfo)
         records.push({date,name:cell0,english:en,spanish:sp,total:en+sp,rank,source:'local'})
         break
@@ -212,49 +251,51 @@ async function loadAgentData(ext) {
 
   try {
     const url = `${SCRIPT_URL}?action=getAgentSnapshots&ext=${encodeURIComponent(ext)}`
-    const res  = await fetchWithTimeout(url, {}, 8000)
+    const res  = await fetchWithTimeout(url, {}, 7000)
     const data = await res.json()
+
     if (Array.isArray(data) && data.length > 0) {
       data.forEach(d => {
         const date = normalizeDate(d.date)
         if (!date) return
+
         if (!records.find(r => r.date === date)) {
           records.push({
-            date, name:d.name,
-            english:d.english||0, spanish:d.spanish||0,
-            total:d.total||0, rank:null, source:'sheets'
+            date,
+            name:d.name,
+            english:d.english||0,
+            spanish:d.spanish||0,
+            total:d.total||0,
+            rank:null,
+            source:'sheets'
           })
         }
       })
     }
   } catch(e) {}
 
-  if(teamInfo.id==='asia'){
-    const jobs = HISTORY_DATES
-      .filter(hd => !records.find(r=>r.date===hd.isoDate))
-      .map(async (hd) => {
-        try{
-          const rows=await fetchSheet(HISTORY_SHEET_ID,hd.tab)
-          const agent=findAgentInHistoryRows(rows,ext)
-          return agent ? {date:hd.isoDate,...agent,source:'history'} : null
-        }catch(e){
-          return null
-        }
-      })
-
-    const results = await Promise.allSettled(jobs)
-    results.forEach(result => {
-      if (result.status === 'fulfilled' && result.value && !records.find(r => r.date === result.value.date)) {
-        records.push(result.value)
-      }
-    })
-  }
-
   return records
     .map(r => ({ ...r, date: normalizeDate(r.date) }))
     .filter(r => r.date && isValidIsoDate(r.date))
     .filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i)
     .sort((a,b)=>a.date.localeCompare(b.date))
+}
+
+async function loadAsiaHistoryData(ext) {
+  const jobs = HISTORY_DATES.map(async (hd) => {
+    try{
+      const rows = await fetchSheet(HISTORY_SHEET_ID, hd.tab)
+      const agent = findAgentInHistoryRows(rows, ext)
+      return agent ? { date:hd.isoDate, ...agent, source:'history' } : null
+    }catch(e){
+      return null
+    }
+  })
+
+  const results = await Promise.allSettled(jobs)
+  return results
+    .filter(r => r.status === 'fulfilled' && r.value)
+    .map(r => r.value)
 }
 
 // Share% color coding
@@ -315,40 +356,59 @@ export default function Profile() {
     let cancelled = false
     setLoading(true)
 
-    loadUserPhotoFromSheets(user.name).then(p=>{ if(!cancelled && p) setUserPhoto(p) })
+    loadUserPhotoFromSheets(user.name).then(p=>{
+      if(!cancelled && p) setUserPhoto(p)
+    })
 
-    Promise.allSettled([
-      loadAgentData(ext),
-      loadDailyTotals()
-    ]).then(([recsResult, totalsResult]) => {
-      if (cancelled) return
+    loadAgentData(ext)
+      .then((recs) => {
+        if (cancelled) return
 
-      const recs =
-        recsResult.status === 'fulfilled' && Array.isArray(recsResult.value)
-          ? recsResult.value
-          : []
+        const finalRecs = Array.isArray(recs) ? recs : []
+        setRecords(finalRecs)
 
-      const totalsMap =
-        totalsResult.status === 'fulfilled' && totalsResult.value
-          ? totalsResult.value
-          : {}
+        const named = finalRecs.filter(r => r.name && r.name.length > 1)
+        if (named.length > 0) setAgentName(named[named.length - 1].name)
 
-      setRecords(recs)
-      const named=recs.filter(r=>r.name&&r.name.length>1)
-      if(named.length>0)setAgentName(named[named.length-1].name)
+        setLoading(false)
 
-      const teamMap = {}
-      Object.entries(totalsMap).forEach(([date, teams]) => {
-        const normalized = normalizeDate(date)
-        if (!normalized) return
-        if (teams[teamInfo.id] !== undefined) teamMap[normalized] = teams[teamInfo.id]
+        if (teamInfo.id === 'asia') {
+          loadAsiaHistoryData(ext).then(historyRows => {
+            if (cancelled || !Array.isArray(historyRows) || historyRows.length === 0) return
+
+            setRecords(prev => {
+              const merged = [...prev]
+              historyRows.forEach(r => {
+                const date = normalizeDate(r.date)
+                if (!date) return
+                if (!merged.find(x => x.date === date)) merged.push({ ...r, date })
+              })
+              return merged.sort((a,b)=>a.date.localeCompare(b.date))
+            })
+          }).catch(() => {})
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRecords([])
+          setLoading(false)
+        }
       })
 
-      setTeamTotals(teamMap)
-      setLoading(false)
-    }).catch(() => {
-      if (!cancelled) setLoading(false)
-    })
+    loadDailyTotals()
+      .then((totalsMap) => {
+        if (cancelled) return
+
+        const teamMap = {}
+        Object.entries(totalsMap || {}).forEach(([date, teams]) => {
+          const normalized = normalizeDate(date)
+          if (!normalized) return
+          if (teams?.[teamInfo.id] !== undefined) teamMap[normalized] = teams[teamInfo.id]
+        })
+
+        setTeamTotals(teamMap)
+      })
+      .catch(() => {})
 
     return () => {
       cancelled = true
