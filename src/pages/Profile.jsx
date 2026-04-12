@@ -31,6 +31,24 @@ async function fetchSheet(sheetId,name){
 }
 const safeInt=(val)=>parseInt((val||'').toString().replace(/,/g,''))||0
 
+const normalizeDate = (raw) => {
+  if (!raw) return null
+  const s = String(raw).trim()
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10)
+
+  const d = new Date(s)
+  if (isNaN(d.getTime())) return null
+
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const isValidIsoDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))
+
 async function loadUserPhotoFromSheets(userName) {
   try {
     const url  = `${SCRIPT_URL}?action=getUserPhoto&userName=${encodeURIComponent(userName)}`
@@ -50,7 +68,6 @@ async function loadDailyTotals() {
   const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
   
   try {
-    // Check cache first
     const cached = localStorage.getItem(CACHE_KEY)
     if (cached) {
       const { data, timestamp } = JSON.parse(cached)
@@ -59,23 +76,21 @@ async function loadDailyTotals() {
       }
     }
 
-    // Fetch fresh data
     const url  = `${SCRIPT_URL}?action=getDailyTotals`
     const res  = await fetch(url)
     const apiData = await res.json()
     if (!Array.isArray(apiData)) return {}
     
-    // Build map: date → { teamId: englishTotal }
     const map = {}
     apiData.forEach(entry => {
-      if (!entry.date || !Array.isArray(entry.teams)) return
-      map[entry.date] = {}
+      const date = normalizeDate(entry.date)
+      if (!date || !Array.isArray(entry.teams)) return
+      map[date] = {}
       entry.teams.forEach(t => {
-        if (t.id) map[entry.date][t.id] = t.english || 0
+        if (t.id) map[date][t.id] = t.english || 0
       })
     })
 
-    // Cache result
     localStorage.setItem(CACHE_KEY, JSON.stringify({ data: map, timestamp: Date.now() }))
     return map
   } catch(e) { return {} }
@@ -154,12 +169,15 @@ async function loadAgentData(ext) {
     const k=localStorage.key(i)
     if(!k?.startsWith('pulse_snap_'))continue
     try{
-      const date=k.replace('pulse_snap_','')
+      const date = normalizeDate(k.replace('pulse_snap_',''))
+      if(!date) continue
+
       const data=JSON.parse(localStorage.getItem(k))
       let sourceRows=[]
       if(teamInfo.id==='asia') sourceRows=Array.isArray(data.asiaData)?data.asiaData:[]
       else sourceRows=Array.isArray(data.teams?.[teamInfo.id])?data.teams[teamInfo.id]:[]
       if(sourceRows.length===0)continue
+
       for(const row of sourceRows){
         const rawExt=(row[1]||'').toString().replace(/,/g,'').trim()
         if(rawExt!==String(ext))continue
@@ -184,9 +202,12 @@ async function loadAgentData(ext) {
     const data = await res.json()
     if (Array.isArray(data) && data.length > 0) {
       data.forEach(d => {
-        if (!records.find(r => r.date === d.date)) {
+        const date = normalizeDate(d.date)
+        if (!date) return
+
+        if (!records.find(r => r.date === date)) {
           records.push({
-            date:d.date, name:d.name,
+            date, name:d.name,
             english:d.english||0, spanish:d.spanish||0,
             total:d.total||0, rank:null, source:'sheets'
           })
@@ -207,16 +228,18 @@ async function loadAgentData(ext) {
   }
 
   return records
+    .map(r => ({ ...r, date: normalizeDate(r.date) }))
+    .filter(r => r.date && isValidIsoDate(r.date))
     .filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i)
     .sort((a,b)=>a.date.localeCompare(b.date))
 }
 
 // Share% color coding
 const getShareColor = (pct) => {
-  if (pct >= 20) return '#f87171'   // red — high dependency risk
-  if (pct >= 12) return '#fb923c'   // orange — notable
-  if (pct >= 6)  return '#a78bfa'   // purple — normal
-  return '#6b7280'                   // gray — low
+  if (pct >= 20) return '#f87171'
+  if (pct >= 12) return '#fb923c'
+  if (pct >= 6)  return '#a78bfa'
+  return '#6b7280'
 }
 
 const getShareLabel = (pct) => {
@@ -227,9 +250,13 @@ const getShareLabel = (pct) => {
 }
 
 const formatDate=(d)=>{
-  const[y,m,dd]=d.split('-')
+  const iso = normalizeDate(d)
+  if(!iso) return '—'
+  const [y,m,dd]=iso.split('-')
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-  const dayName = days[new Date(`${d}T12:00:00`).getDay()]
+  const dateObj = new Date(`${iso}T12:00:00`)
+  if (isNaN(dateObj.getTime())) return '—'
+  const dayName = days[dateObj.getDay()]
   return`${dayName} ${dd}/${m}`
 }
 
@@ -245,7 +272,7 @@ export default function Profile() {
   const [loading,      setLoading]      = useState(true)
   const [agentName,    setAgentName]    = useState(`Agent #${ext}`)
   const [userPhoto,    setUserPhoto]    = useState(localStorage.getItem('pulse_user_photo')||'')
-  const [teamTotals,   setTeamTotals]   = useState({}) // date → team english total
+  const [teamTotals,   setTeamTotals]   = useState({})
 
   useEffect(()=>{
     const canvas=canvasRef.current;if(!canvas)return
@@ -263,27 +290,50 @@ export default function Profile() {
 
   useEffect(()=>{
     if(!user) return
-    loadUserPhotoFromSheets(user.name).then(p=>{ if(p) setUserPhoto(p) })
+
+    let cancelled = false
+    loadUserPhotoFromSheets(user.name).then(p=>{ if(!cancelled && p) setUserPhoto(p) })
     setLoading(true)
 
-    // Load agent data and team totals in parallel
-    Promise.all([
+    Promise.allSettled([
       loadAgentData(ext),
       loadDailyTotals()
-    ]).then(([recs, totalsMap]) => {
+    ]).then(([recordsResult, totalsResult]) => {
+      if (cancelled) return
+
+      const recs =
+        recordsResult.status === 'fulfilled' && Array.isArray(recordsResult.value)
+          ? recordsResult.value
+          : []
+
+      const totalsMap =
+        totalsResult.status === 'fulfilled' && totalsResult.value
+          ? totalsResult.value
+          : {}
+
       setRecords(recs)
       const named=recs.filter(r=>r.name&&r.name.length>1)
       if(named.length>0)setAgentName(named[named.length-1].name)
 
-      // Extract this team's english totals per day
       const teamMap = {}
       Object.entries(totalsMap).forEach(([date, teams]) => {
-        if (teams[teamInfo.id] !== undefined) teamMap[date] = teams[teamInfo.id]
+        const normalized = normalizeDate(date)
+        if (!normalized) return
+        if (teams?.[teamInfo.id] !== undefined) teamMap[normalized] = teams[teamInfo.id]
       })
+
       setTeamTotals(teamMap)
       setLoading(false)
+    }).catch(() => {
+      if (!cancelled) setLoading(false)
     })
-  },[ext])
+
+    return () => {
+      cancelled = true
+    }
+  },[ext, user, teamInfo.id])
+
+  const cleanRecords = records.filter(r => r.date && isValidIsoDate(r.date))
 
   if (!user) {
     return (
@@ -311,18 +361,17 @@ export default function Profile() {
   }
 
   const stats = (() => {
-    if(records.length===0)return null
-    const withData=records.filter(r=>r.total>0)
+    if(cleanRecords.length===0)return null
+    const withData=cleanRecords.filter(r=>r.total>0)
     if(withData.length===0)return null
-    const totalEn=records.reduce((s,r)=>s+r.english,0)
-    const totalSp=records.reduce((s,r)=>s+r.spanish,0)
-    const avgEn=Math.round(totalEn/records.length)
+    const totalEn=cleanRecords.reduce((s,r)=>s+r.english,0)
+    const totalSp=cleanRecords.reduce((s,r)=>s+r.spanish,0)
+    const avgEn=Math.round(totalEn/cleanRecords.length)
     const bestDay=[...withData].sort((a,b)=>b.english-a.english)[0]
     const worstDay=[...withData].sort((a,b)=>a.english-b.english)[0]
-    const top3Days=records.filter(r=>r.rank&&r.rank<=3)
-    const top1Days=records.filter(r=>r.rank===1)
+    const top3Days=cleanRecords.filter(r=>r.rank&&r.rank<=3)
+    const top1Days=cleanRecords.filter(r=>r.rank===1)
 
-    // Best share day
     const withShare = withData.filter(r => teamTotals[r.date] > 0)
     const bestShareDay = withShare.length > 0
       ? [...withShare].sort((a,b) => (b.english/(teamTotals[b.date]||1)) - (a.english/(teamTotals[a.date]||1)))[0]
@@ -331,18 +380,18 @@ export default function Profile() {
       ? ((bestShareDay.english / teamTotals[bestShareDay.date]) * 100).toFixed(1)
       : null
 
-    // Avg share across all days with team data
     const avgShare = withShare.length > 0
       ? (withShare.reduce((s,r) => s + (r.english / (teamTotals[r.date]||1)), 0) / withShare.length * 100).toFixed(1)
       : null
 
     return{totalEn,totalSp,avgEn,bestDay,worstDay,activeDays:withData.length,
-      zeroDays:records.length-withData.length,daysTracked:records.length,
+      zeroDays:cleanRecords.length-withData.length,daysTracked:cleanRecords.length,
       top3Days:top3Days.length,top1Days:top1Days.length,
       bestShareDay,bestSharePct,avgShare}
   })()
 
-  const maxEnglish=Math.max(...records.map(r=>r.english),1)
+  const maxEnglish=Math.max(...cleanRecords.map(r=>r.english),1)
+  const timelineMinWidth = Math.max(cleanRecords.length * 72, 900)
 
   return (
     <div className="profile-root">
@@ -377,7 +426,7 @@ export default function Profile() {
                   <span className="profile-ext-tag">#{ext}</span>
                   {isOwnProfile&&<span className="profile-own-tag">✓ You</span>}
                 </div>
-                {records.length===0&&<p style={{color:'#6b7280',marginTop:8,fontSize:12}}>No data yet.</p>}
+                {cleanRecords.length===0&&<p style={{color:'#6b7280',marginTop:8,fontSize:12}}>No data yet.</p>}
               </div>
             </div>
             <div className="profile-share">
@@ -397,7 +446,6 @@ export default function Profile() {
                 <div className="pstat teal"><div className="pstat-val" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}}><Img src={E.medal1} size={24}/>{stats.top1Days}</div><div className="pstat-lbl">#1 Days</div></div>
               </div>
 
-              {/* Share of Success section */}
               {stats.avgShare && (
                 <div className="profile-section" style={{marginTop:16}}>
                   <h2 className="profile-section-title">🎯 Share of Success</h2>
@@ -444,25 +492,37 @@ export default function Profile() {
 
               <div className="profile-section">
                 <h2 className="profile-section-title">📈 Performance Timeline</h2>
-                <div className="profile-chart">
-                  {records.map((r,i)=>{
-                    const teamTotal = teamTotals[r.date] || 0
-                    const sharePct = teamTotal > 0 ? ((r.english / teamTotal) * 100).toFixed(1) : null
-                    const tooltipText = `${formatDate(r.date)}: ${r.english} EN${r.rank?` · Rank #${r.rank}`:''}${sharePct?` · ${sharePct}% share`:''}`
-                    
-                    return(
-                      <div key={i} className="ptl-col" title={tooltipText}>
-                        <div className="ptl-bar-outer">
-                          <div className="ptl-bar" style={{height:`${(r.english/maxEnglish)*100}%`,
-                            background:r.rank===1?'#fbbf24':r.rank===2?'#9ca3af':r.rank===3?'#cd7f32':
-                            r.english>=teamInfo.goal?'#34d399':r.english>0?'#60a5fa':'#2a2d38'}}/>
+                <div style={{overflowX:'auto', overflowY:'hidden', paddingBottom:16, marginTop:8}}>
+                  <div
+                    className="profile-chart"
+                    style={{
+                      minWidth: `${timelineMinWidth}px`,
+                      display:'grid',
+                      gridAutoFlow:'column',
+                      gridAutoColumns:'60px',
+                      gap:'12px',
+                      alignItems:'end'
+                    }}
+                  >
+                    {cleanRecords.map((r,i)=>{
+                      const teamTotal = teamTotals[r.date] || 0
+                      const sharePct = teamTotal > 0 ? ((r.english / teamTotal) * 100).toFixed(1) : null
+                      const tooltipText = `${formatDate(r.date)}: ${r.english} EN${r.rank?` · Rank #${r.rank}`:''}${sharePct?` · ${sharePct}% share`:''}`
+                      
+                      return(
+                        <div key={i} className="ptl-col" title={tooltipText} style={{minWidth:60,cursor:'pointer'}}>
+                          <div className="ptl-bar-outer" style={{height:180}}>
+                            <div className="ptl-bar" style={{height:`${(r.english/maxEnglish)*100}%`,
+                              background:r.rank===1?'#fbbf24':r.rank===2?'#9ca3af':r.rank===3?'#cd7f32':
+                              r.english>=teamInfo.goal?'#34d399':r.english>0?'#60a5fa':'#2a2d38'}}/>
+                          </div>
+                          <div className="ptl-rank">{r.rank&&r.rank<=3?<MedalImg rank={r.rank}/>:null}</div>
+                          <div className="ptl-val" style={{color:r.english===stats.bestDay.english?'#34d399':r.english===0?'#4b5563':'#9ca3af'}}>{r.english>0?r.english:'—'}</div>
+                          <div className="ptl-date">{formatDate(r.date)}</div>
                         </div>
-                        <div className="ptl-rank">{r.rank&&r.rank<=3?<MedalImg rank={r.rank}/>:null}</div>
-                        <div className="ptl-val" style={{color:r.english===stats.bestDay.english?'#34d399':r.english===0?'#4b5563':'#9ca3af'}}>{r.english>0?r.english:'—'}</div>
-                        <div className="ptl-date">{formatDate(r.date)}</div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
                 <div className="ptl-legend">
                   <span><Img src={E.medal1} size={13}/> #1 day</span>
@@ -487,7 +547,7 @@ export default function Profile() {
                       </tr>
                     </thead>
                     <tbody>
-                      {[...records].reverse().map((r,i)=>{
+                      {[...cleanRecords].reverse().map((r,i)=>{
                         const teamTotal = teamTotals[r.date] || 0
                         const sharePct  = teamTotal > 0 ? ((r.english / teamTotal) * 100) : null
                         return (
@@ -510,7 +570,7 @@ export default function Profile() {
             </>
           )}
 
-          {records.length===0&&(
+          {cleanRecords.length===0&&(
             <div className="profile-empty">
               <Img src={E.zero} size={54}/>
               <p style={{fontSize:18,fontWeight:700,color:'#e5e7eb',marginTop:16}}>No data found for #{ext}</p>
