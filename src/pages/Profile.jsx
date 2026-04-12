@@ -326,7 +326,7 @@ export default function Profile() {
   const { ext }   = useParams()
   const navigate  = useNavigate()
   const canvasRef = useRef(null)
-  const user      = JSON.parse(localStorage.getItem('pulse_user')||'null')
+  const user      = useMemo(() => JSON.parse(localStorage.getItem('pulse_user')||'null'), [])
   const isOwnProfile = String(user?.agentExt) === String(ext)
   const teamInfo  = getTeamFromExt(ext)
 
