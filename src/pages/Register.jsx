@@ -134,6 +134,15 @@ export default function Register() {
           })
         )
 
+        localStorage.setItem(
+          'pulse_intro',
+          JSON.stringify({
+            mode: 'register',
+            name: cleanName,
+            at: Date.now(),
+          })
+        )
+
         window.location.href = '/dashboard'
       } catch (e) {
         console.error('Register failed:', e)

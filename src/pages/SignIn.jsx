@@ -88,6 +88,15 @@ export default function SignIn() {
         })
       )
 
+      localStorage.setItem(
+        'pulse_intro',
+        JSON.stringify({
+          mode: 'signin',
+          name: found.name,
+          at: Date.now(),
+        })
+      )
+
       window.location.href = '/dashboard'
     } catch (e) {
       console.error(e)

@@ -33,15 +33,6 @@ const TEAM_DISPLAY_NAMES = {
   mexico:'Mexico Baja', venezuela:'Venezuela',
 }
 
-const TEAM_TAB_META = {
-  asia: { label:'Asia', flag:'/flags/asia.png', fallback:'🌏' },
-  philippines: { label:'Philippines', flag:'/flags/philippines.png', fallback:'🇵🇭' },
-  colombia: { label:'Colombia', flag:'/flags/colombia.png', fallback:'🇨🇴' },
-  central: { label:'Central', flag:null, fallback:'🌎' },
-  mexico: { label:'Mexico', flag:'/flags/mexico.png', fallback:'🇲🇽' },
-  venezuela: { label:'Venezuela', flag:'/flags/venezuela.png', fallback:'🇻🇪' },
-}
-
 function normalizeDate(raw) {
   if (!raw) return null
   const s = String(raw).trim()
@@ -799,35 +790,10 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
   )
 }
 
-
-function TeamTabLabel({ teamId }) {
-  const meta = TEAM_TAB_META[teamId] || { label: teamId, flag:null, fallback:'•' }
-  return (
-    <span className="team-tab-label">
-      {meta.flag ? (
-        <>
-          <img
-            src={meta.flag}
-            alt=""
-            className="team-tab-flag"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-              const fallback = e.currentTarget.parentElement?.querySelector('.team-tab-fallback')
-              if (fallback) fallback.style.display = 'inline-flex'
-            }}
-          />
-          <span className="team-tab-fallback is-hidden" aria-hidden="true">{meta.fallback}</span>
-        </>
-      ) : (
-        <span className="team-tab-fallback" aria-hidden="true">{meta.fallback}</span>
-      )}
-      <span>{meta.label}</span>
-    </span>
-  )
-}
-
 export default function Dashboard() {
   const canvasRef = useRef(null)
+  const introHideRef = useRef(null)
+  const introClearRef = useRef(null)
   const navigate  = useNavigate()
   const user      = JSON.parse(localStorage.getItem('pulse_user')||'null')
   const [userPhoto,setUserPhoto] = useState(localStorage.getItem('pulse_user_photo')||'')
@@ -863,7 +829,8 @@ export default function Dashboard() {
   const [histCache,setHistCache]           = useState({})
   const [histLoading,setHistLoading]       = useState(false)
   const [academyOpen,setAcademyOpen]       = useState(false)
-  const [profileMenuOpen,setProfileMenuOpen] = useState(false)
+  const [introData,setIntroData]           = useState(null)
+  const [introLeaving,setIntroLeaving]     = useState(false)
 
   const isToday    = selectedDate === todayKey()
   const isHistDate = HISTORY_ISO_SET.has(selectedDate)
@@ -1002,18 +969,85 @@ export default function Dashboard() {
 
   useEffect(()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)},[selectedDate])
 
+  const playIntroChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if (!AudioCtx) return
+
+      const ctx = new AudioCtx()
+
+      const makeTone = (freq, start, duration, gainValue) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(freq, start)
+
+        gain.gain.setValueAtTime(0.0001, start)
+        gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
+
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+
+        osc.start(start)
+        osc.stop(start + duration + 0.02)
+      }
+
+      const now = ctx.currentTime
+      makeTone(392, now, 0.22, 0.07)
+      makeTone(523.25, now + 0.11, 0.28, 0.06)
+      makeTone(659.25, now + 0.24, 0.38, 0.05)
+
+      setTimeout(() => {
+        try { ctx.close() } catch {}
+      }, 1200)
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('pulse_intro')
+      if (!raw) return
+
+      const parsed = JSON.parse(raw)
+      if (!parsed?.name || !parsed?.mode) {
+        localStorage.removeItem('pulse_intro')
+        return
+      }
+
+      const age = Date.now() - (parsed.at || 0)
+      if (age > 15000) {
+        localStorage.removeItem('pulse_intro')
+        return
+      }
+
+      setIntroData({ name: parsed.name, mode: parsed.mode })
+      setIntroLeaving(false)
+      localStorage.removeItem('pulse_intro')
+      playIntroChime()
+
+      introHideRef.current = setTimeout(() => {
+        setIntroLeaving(true)
+      }, 1900)
+
+      introClearRef.current = setTimeout(() => {
+        setIntroData(null)
+        setIntroLeaving(false)
+      }, 2700)
+    } catch {
+      localStorage.removeItem('pulse_intro')
+    }
+
+    return () => {
+      if (introHideRef.current) clearTimeout(introHideRef.current)
+      if (introClearRef.current) clearTimeout(introClearRef.current)
+    }
+  }, [playIntroChime])
+
   const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
   const goDashboardHome=()=>{window.location.href='/dashboard'}
   const goPulseGo=()=>navigate('/go')
-  const openAccount=()=>{
-    if(user?.agentExt) navigate(`/profile/${user.agentExt}`)
-    else navigate('/settings')
-    setProfileMenuOpen(false)
-  }
-  const openSettings=()=>{
-    navigate('/settings')
-    setProfileMenuOpen(false)
-  }
 
   const { asiaAgents, asiaTotals } = (() => {
     if (isHistDate && histParsed) return { asiaAgents: histParsed.agents, asiaTotals: histParsed.totals }
@@ -1100,8 +1134,32 @@ export default function Dashboard() {
   const needsRemoteLoad=!isToday&&!isHistDate&&currentTeamConfig&&!(activeSnap?.teams?.[currentTeamConfig?.id]?.length>0)&&remoteTeamAgents[`${selectedDate}_${currentTeamConfig?.id}`]===undefined
 
   return(
-    <div className="dash-root" onClick={()=>{setEditMenuOpen(false);setProfileMenuOpen(false)}}>
+    <div className="dash-root" onClick={()=>setEditMenuOpen(false)}>
       <canvas ref={canvasRef} className="dash-trail-canvas"/>
+
+      {introData && (
+        <div className={`dash-intro-overlay ${introLeaving ? 'is-leaving' : ''}`}>
+          <div className="dash-intro-backdrop" />
+          <div className="dash-intro-content">
+            <div className="dash-intro-chip">
+              {introData.mode === 'register' ? 'New access granted' : 'Returning access'}
+            </div>
+
+            <h1 className="dash-intro-title">
+              {introData.mode === 'register' ? 'Bienvenido' : 'Bienvenido de nuevo'}
+            </h1>
+
+            <div className="dash-intro-name">{introData.name}</div>
+
+            <p className="dash-intro-sub">
+              {introData.mode === 'register'
+                ? 'Tu acceso a Pulse está listo.'
+                : 'Preparando tu dashboard.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       <header className="dash-nav">
         <div className="dash-nav-left">
           <button type="button" className="dash-brand" onClick={goDashboardHome}>
@@ -1121,46 +1179,29 @@ export default function Dashboard() {
         </nav>
 
         <div className="dash-nav-right">
-          {lastUpdate&&<span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
-
-          <div className="nav-user-wrap" onClick={e=>e.stopPropagation()}>
-            <button
-              type="button"
-              className="nav-user nav-user-trigger"
-              onClick={()=>setProfileMenuOpen(o=>!o)}
-            >
+          <div className="dash-nav-meta">
+            {lastUpdate&&<span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
+            <div className="nav-user" style={{cursor:'pointer'}} onClick={()=>navigate('/settings')}>
               <div className="nav-avatar">{userPhoto?<img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>:user?.name?.[0]?.toUpperCase()}</div>
               <div className="nav-info">
                 <span className="nav-name">{user?.name}</span>
                 <span className="nav-role">{team?.name} · {roleLabel}</span>
               </div>
-              <span className={`nav-user-chevron ${profileMenuOpen ? 'is-open' : ''}`}>▾</span>
-            </button>
+            </div>
+          </div>
 
-            {profileMenuOpen && (
-              <div className="nav-user-menu">
-                <button type="button" className="nav-user-menu-item" onClick={openAccount}>Account</button>
-                <button type="button" className="nav-user-menu-item" onClick={openSettings}>Settings</button>
-                <button type="button" className="nav-user-menu-item danger" onClick={logout}>Log out</button>
-              </div>
-            )}
+          <div className="dash-nav-actions">
+            {user?.agentExt&&<button className="nav-profile-btn" onClick={()=>navigate(`/profile/${user.agentExt}`)}>👤 #{user.agentExt}</button>}
+            <button className="nav-logout" onClick={logout}>Log out</button>
           </div>
         </div>
       </header>
 
       <div className="dash-topbar">
         <div className="dash-tabs-scroll">
-          <button className={`dash-tab ${activeTab==='general'?'active':''}`} onClick={()=>setActiveTab('general')}>
-            <span className="team-tab-label"><span>All Teams</span></span>
-          </button>
-          <button className={`dash-tab ${activeTab==='asia'?'active':''}`} onClick={()=>setActiveTab('asia')}>
-            <TeamTabLabel teamId="asia" />
-          </button>
-          {TEAM_SHEETS.map(t=>(
-            <button key={t.id} className={`dash-tab ${activeTab===t.id?'active':''}`} onClick={()=>setActiveTab(t.id)}>
-              <TeamTabLabel teamId={t.id} />
-            </button>
-          ))}
+          <button className={`dash-tab ${activeTab==='general'?'active':''}`}  onClick={()=>setActiveTab('general')}>All Teams</button>
+          <button className={`dash-tab ${activeTab==='asia'?'active':''}`}      onClick={()=>setActiveTab('asia')}>🌏 Asia</button>
+          {TEAM_SHEETS.map(t=><button key={t.id} className={`dash-tab ${activeTab===t.id?'active':''}`} onClick={()=>setActiveTab(t.id)}>{t.label}</button>)}
         </div>
         <div className="dash-topbar-right">
           {!isToday&&activeSnap?.savedAt&&<span className="date-snap-info">Snapshot {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}

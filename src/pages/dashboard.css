@@ -123,8 +123,7 @@
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-width: 0;
+  gap: 12px;
 }
 
 .dash-nav-meta {
@@ -139,12 +138,6 @@
   gap: 10px;
 }
 
-.nav-user-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
 .nav-user {
   display: flex;
   align-items: center;
@@ -154,18 +147,6 @@
   background: rgba(255,255,255,0.035);
   border: 1px solid rgba(255,255,255,0.07);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-}
-
-.nav-user-trigger {
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-
-.nav-user-trigger:hover {
-  transform: translateY(-1px);
-  border-color: rgba(249,115,22,0.28);
-  background: rgba(249,115,22,0.06);
 }
 
 .nav-avatar {
@@ -183,67 +164,10 @@
   box-shadow: 0 8px 20px rgba(249,115,22,0.2);
 }
 
-.nav-info   { display: flex; flex-direction: column; min-width: 0; }
-.nav-name   { font-size: 13px; font-weight: 600; color: #f5f5f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nav-role   { font-size: 11px; color: #8a94a7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-info   { display: flex; flex-direction: column; }
+.nav-name   { font-size: 13px; font-weight: 600; color: #f5f5f5; }
+.nav-role   { font-size: 11px; color: #8a94a7; }
 .nav-update { font-size: 11px; color: #8a94a7; white-space: nowrap; }
-
-.nav-user-chevron {
-  font-size: 11px;
-  color: #a8b0c0;
-  margin-left: 4px;
-  transition: transform 0.18s ease;
-  flex-shrink: 0;
-}
-
-.nav-user-chevron.is-open {
-  transform: rotate(180deg);
-}
-
-.nav-user-menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  min-width: 220px;
-  padding: 10px;
-  border-radius: 20px;
-  background: rgba(8, 12, 19, 0.96);
-  border: 1px solid rgba(255,255,255,0.08);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 24px 60px rgba(0,0,0,0.45);
-  z-index: 120;
-}
-
-.nav-user-menu-item {
-  width: 100%;
-  height: 42px;
-  border: 0;
-  background: transparent;
-  color: #e8edf8;
-  font-size: 14px;
-  font-weight: 600;
-  text-align: left;
-  border-radius: 12px;
-  padding: 0 12px;
-  cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
-}
-
-.nav-user-menu-item:hover {
-  background: rgba(255,255,255,0.05);
-  color: #fff;
-  transform: translateX(2px);
-}
-
-.nav-user-menu-item.danger {
-  color: #fca5a5;
-}
-
-.nav-user-menu-item.danger:hover {
-  background: rgba(239,68,68,0.1);
-  color: #fecaca;
-}
 
 .nav-logout,
 .nav-profile-btn {
@@ -269,18 +193,11 @@
 }
 
 .dash-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 30px 0;
+  background: transparent;
+  position: sticky; top: 82px; z-index: 90;
   gap: 16px;
-  padding: 12px 30px 10px;
-  background: linear-gradient(180deg, rgba(4,6,11,0.94), rgba(4,6,11,0.88));
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  position: sticky;
-  top: 82px;
-  z-index: 90;
 }
 .dash-tabs { display: flex; gap: 2px; }
 .dash-tab {
@@ -294,47 +211,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
-  flex-shrink: 0;
 }
 .dash-tab:hover  { color: #eef2fb; background: rgba(255,255,255,0.04); }
 .dash-tab.active { color: #fff; border-color: rgba(249,115,22,0.28); background: rgba(249,115,22,0.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
 
-.team-tab-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.team-tab-flag {
-  width: 16px;
-  height: 16px;
-  object-fit: cover;
-  border-radius: 999px;
-  display: inline-flex;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.12);
-}
-
-.team-tab-fallback {
-  width: 16px;
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.team-tab-fallback.is-hidden {
-  display: none;
-}
-
 .dash-tabs-scroll {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
+  display: flex; gap: 8px; overflow-x: auto;
   padding: 8px;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.07);
@@ -342,18 +224,10 @@
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   scrollbar-width: none;
-  flex: 1 1 auto;
-  min-width: 0;
 }
 .dash-tabs-scroll::-webkit-scrollbar { display: none; }
 
-.dash-topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 0 0 auto;
-  margin-left: auto;
-}
+.dash-topbar-right { display: flex; align-items: center; gap: 12px; }
 .date-snap-info { font-size: 11px; color: #7f8aa0; white-space: nowrap; }
 
 /* ── Date Picker ── */
@@ -843,26 +717,24 @@
   .dash-nav { grid-template-columns: 1fr; justify-items: stretch; gap: 14px; padding: 16px 20px 12px; }
   .dash-nav-left, .dash-main-nav, .dash-nav-right { justify-self: stretch; }
   .dash-main-nav { justify-content: center; }
-  .dash-nav-right { justify-content: space-between; }
-  .nav-update { display: none; }
-  .dash-topbar { top: 148px; padding: 10px 20px 10px; flex-direction: column; align-items: stretch; }
-  .dash-topbar-right { width: 100%; justify-content: flex-start; padding-left: 8px; margin-left: 0; }
+  .dash-nav-right { flex-direction: column; align-items: stretch; }
+  .dash-nav-meta, .dash-nav-actions { justify-content: space-between; }
+  .dash-topbar { top: 152px; padding: 10px 20px 0; flex-direction: column; align-items: stretch; }
   .dash-content { width: min(100%, calc(100% - 32px)); }
 }
 
 @media (max-width: 768px) {
   .dash-nav { padding: 14px 14px 10px; }
   .dash-main-nav { overflow-x: auto; justify-content: flex-start; }
-  .dash-nav-right { gap: 10px; }
+  .dash-nav-meta { gap: 10px; }
+  .nav-update { display: none; }
   .nav-name { font-size: 12px; }
   .nav-role { font-size: 10px; }
+  .nav-profile-btn { display: none; }
 
-  .dash-topbar { top: 144px; padding: 8px 10px 10px; gap: 8px; }
+  .dash-topbar { top: 148px; padding: 8px 10px 0; gap: 8px; }
   .dash-tabs-scroll { gap: 6px; }
   .dash-tab { padding: 0 12px; font-size: 12px; }
-  .dash-topbar-right { padding-left: 0; }
-  .team-tab-label { gap: 6px; }
-  .team-tab-flag, .team-tab-fallback { width: 15px; height: 15px; }
 
   .dash-content { width: min(100%, calc(100% - 20px)); padding: 18px 0 32px; }
 
@@ -914,7 +786,186 @@
   .agent-table { min-width: 380px; }
   .nav-avatar { width: 32px; height: 32px; font-size: 12px; }
   .nav-user { padding: 8px 10px; }
-  .nav-user-menu { right: 0; min-width: min(220px, calc(100vw - 24px)); }
-  .team-tab-flag, .team-tab-fallback { width: 14px; height: 14px; }
+  .nav-logout { flex: 1; }
   .academy-modal { padding: 22px; border-radius: 22px; }
+}
+
+
+/* ── Welcome intro overlay ─────────────────── */
+.dash-intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: dashIntroFadeIn 0.42s ease forwards;
+}
+
+.dash-intro-overlay.is-leaving {
+  animation: dashIntroFadeOut 0.62s ease forwards;
+}
+
+.dash-intro-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(249,115,22,0.18), transparent 30%),
+    rgba(2, 4, 9, 0.76);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.dash-intro-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 32px 24px;
+  max-width: 960px;
+}
+
+.dash-intro-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  margin-bottom: 18px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #d7ddeb;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  animation: dashIntroRise 0.6s ease both;
+}
+
+.dash-intro-title {
+  margin: 0;
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(34px, 5vw, 76px);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: rgba(255,255,255,0.94);
+  filter: blur(14px);
+  opacity: 0;
+  transform: translateY(18px) scale(0.985);
+  animation: dashIntroFocus 1.15s cubic-bezier(0.2, 0.8, 0.2, 1) 0.08s forwards;
+  text-shadow:
+    0 0 24px rgba(255,255,255,0.08),
+    0 0 42px rgba(249,115,22,0.12);
+}
+
+.dash-intro-name {
+  margin-top: 14px;
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(30px, 4.4vw, 64px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #f97316;
+  filter: blur(18px);
+  opacity: 0;
+  transform: translateY(22px) scale(0.985);
+  animation: dashIntroFocusStrong 1.25s cubic-bezier(0.2, 0.8, 0.2, 1) 0.24s forwards;
+  text-shadow:
+    0 0 30px rgba(249,115,22,0.18),
+    0 0 72px rgba(249,115,22,0.1);
+}
+
+.dash-intro-sub {
+  margin: 18px 0 0;
+  color: #98a2b3;
+  font-size: clamp(14px, 1.5vw, 18px);
+  opacity: 0;
+  transform: translateY(12px);
+  animation: dashIntroSubIn 0.8s ease 0.46s forwards;
+}
+
+@keyframes dashIntroFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dashIntroFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes dashIntroRise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dashIntroFocus {
+  0% {
+    opacity: 0;
+    filter: blur(14px);
+    transform: translateY(18px) scale(0.985);
+  }
+  55% {
+    opacity: 1;
+    filter: blur(3px);
+    transform: translateY(0) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dashIntroFocusStrong {
+  0% {
+    opacity: 0;
+    filter: blur(18px);
+    transform: translateY(22px) scale(0.985);
+  }
+  55% {
+    opacity: 1;
+    filter: blur(4px);
+    transform: translateY(0) scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dashIntroSubIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .dash-intro-content {
+    padding: 24px 18px;
+  }
+
+  .dash-intro-chip {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 11px;
+    margin-bottom: 14px;
+  }
+
+  .dash-intro-sub {
+    margin-top: 14px;
+    font-size: 14px;
+  }
 }
