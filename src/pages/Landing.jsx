@@ -7,7 +7,6 @@ export default function Landing() {
   const [visible, setVisible] = useState(false)
   const [orbStyle, setOrbStyle] = useState({})
   const canvasRef = useRef(null)
-  const heroRef = useRef(null)
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
@@ -80,12 +79,15 @@ export default function Landing() {
     createParticles()
     draw()
 
-    window.addEventListener('resize', () => {
+    const handleResize = () => {
       resize()
       createParticles()
-    })
+    }
+
+    window.addEventListener('resize', handleResize)
 
     return () => {
+      window.removeEventListener('resize', handleResize)
       cancelAnimationFrame(animationFrameId)
     }
   }, [])
@@ -98,10 +100,7 @@ export default function Landing() {
       <div className="landing-radial landing-radial-right" />
       <div className="landing-noise" />
 
-      <section
-        ref={heroRef}
-        className={`landing-shell ${visible ? 'is-visible' : ''}`}
-      >
+      <section className={`landing-shell ${visible ? 'is-visible' : ''}`}>
         <div className="landing-panel">
           <div className="landing-copy">
             <div className="landing-eyebrow">
@@ -114,23 +113,23 @@ export default function Landing() {
             </h1>
 
             <p className="landing-sub">
-              Real-time performance intelligence for supervisors, QA and team leaders.
+              Real-time performance intelligence, training access, and live operational visibility for supervisors, QA and team leaders.
             </p>
 
             <div className="landing-meta">
               <div className="landing-meta-item">
-                <strong>850+</strong>
-                <span>Active Agents</span>
+                <strong>Live</strong>
+                <span>Performance Tracking</span>
               </div>
               <div className="landing-meta-divider" />
               <div className="landing-meta-item">
-                <strong>8+</strong>
-                <span>Languages</span>
+                <strong>GO</strong>
+                <span>Training Hub</span>
               </div>
               <div className="landing-meta-divider" />
               <div className="landing-meta-item">
-                <strong>6</strong>
-                <span>Teams</span>
+                <strong>24/7</strong>
+                <span>Access</span>
               </div>
             </div>
 
@@ -147,6 +146,13 @@ export default function Landing() {
                 onClick={() => navigate('/signin')}
               >
                 Iniciar sesión
+              </button>
+
+              <button
+                className="landing-btn landing-btn-go"
+                onClick={() => navigate('/go')}
+              >
+                Ir a Pulse GO
               </button>
             </div>
 
@@ -166,6 +172,7 @@ export default function Landing() {
 
                 <div className="visual-topbar-actions">
                   <button type="button">Live</button>
+                  <button type="button">GO</button>
                   <button type="button" className="is-accent">Dashboard</button>
                 </div>
               </div>
@@ -175,6 +182,7 @@ export default function Landing() {
                 <div className="orb-ring orb-ring-1" />
                 <div className="orb-ring orb-ring-2" />
                 <div className="orb-ring orb-ring-3" />
+
                 <div className="pulse-orb" style={orbStyle}>
                   <div className="pulse-orb-core" />
                   <div className="pulse-orb-grid" />
@@ -184,32 +192,32 @@ export default function Landing() {
                 <div className="floating-card floating-card-main">
                   <div className="fc-chip">
                     <span className="fc-live-dot" />
-                    Live Overview
+                    Live Platform
                   </div>
-                  <div className="fc-title">Auto Warranty Garrett</div>
+                  <div className="fc-title">Unified Pulse Access</div>
                   <div className="fc-stats">
                     <div>
-                      <strong>1,231</strong>
-                      <span>Total Xfers</span>
+                      <strong>Live</strong>
+                      <span>Tracking</span>
                     </div>
                     <div>
-                      <strong>253</strong>
-                      <span>English</span>
+                      <strong>GO</strong>
+                      <span>Training</span>
                     </div>
                     <div>
-                      <strong>978</strong>
-                      <span>Spanish</span>
+                      <strong>Smart</strong>
+                      <span>Insights</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="floating-card floating-card-side">
-                  <div className="mini-label">Top Team</div>
+                  <div className="mini-label">Operational Focus</div>
                   <div className="mini-team">
-                    <span className="mini-team-flag">🇵🇭</span>
+                    <span className="mini-team-flag">⚡</span>
                     <div>
-                      <strong>Philippines</strong>
-                      <span>345 English xfers</span>
+                      <strong>Performance + Learning</strong>
+                      <span>One place for tracking and team development</span>
                     </div>
                   </div>
                 </div>
@@ -224,7 +232,7 @@ export default function Landing() {
                     <span />
                   </div>
                   <div className="mini-bottom-text">
-                    Team momentum updating in real time
+                    Real-time visibility with training tools built into the same ecosystem
                   </div>
                 </div>
               </div>

@@ -170,7 +170,7 @@
 }
 
 .landing-sub {
-  max-width: 560px;
+  max-width: 600px;
   margin: 0 0 30px;
   font-size: 18px;
   line-height: 1.7;
@@ -271,6 +271,19 @@
   border-color: rgba(249, 115, 22, 0.36);
   background: rgba(255,255,255,0.06);
   color: #ffffff;
+}
+
+.landing-btn-go {
+  border: 1px solid rgba(249,115,22,0.28);
+  color: #ffd3b4;
+  background: rgba(249,115,22,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.landing-btn-go:hover {
+  border-color: rgba(249,115,22,0.55);
+  background: rgba(249,115,22,0.12);
+  color: #fff;
 }
 
 .landing-note {
@@ -538,7 +551,7 @@
 .floating-card-side {
   left: 26px;
   top: 130px;
-  width: 220px;
+  width: 250px;
   padding: 16px;
   animation: floatCard 6.1s ease-in-out infinite;
 }
@@ -554,12 +567,13 @@
 
 .mini-team {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
 .mini-team-flag {
-  font-size: 26px;
+  font-size: 24px;
+  line-height: 1;
 }
 
 .mini-team strong {
@@ -570,15 +584,16 @@
 
 .mini-team span {
   display: block;
-  margin-top: 3px;
+  margin-top: 4px;
   font-size: 12px;
+  line-height: 1.5;
   color: #96a1b4;
 }
 
 .floating-card-bottom {
   left: 68px;
   bottom: 58px;
-  width: 280px;
+  width: 300px;
   padding: 16px 16px 14px;
   animation: floatCard 5.8s ease-in-out infinite;
 }
@@ -845,7 +860,7 @@
     top: auto;
     left: 12px;
     bottom: 22px;
-    width: 180px;
+    width: 190px;
     padding: 13px;
   }
 
@@ -921,7 +936,7 @@
   }
 
   .floating-card-side {
-    width: 162px;
+    width: 170px;
     bottom: 18px;
   }
 
