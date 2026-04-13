@@ -826,6 +826,7 @@ export default function Dashboard() {
   const [bulkTotalsEdit,setBulkTotalsEdit] = useState(null)
   const [histCache,setHistCache]           = useState({})
   const [histLoading,setHistLoading]       = useState(false)
+  const [academyOpen,setAcademyOpen]       = useState(false)
 
   const isToday    = selectedDate === todayKey()
   const isHistDate = HISTORY_ISO_SET.has(selectedDate)
@@ -965,6 +966,8 @@ export default function Dashboard() {
   useEffect(()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)},[selectedDate])
 
   const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
+  const goDashboardHome=()=>{window.location.href='/dashboard'}
+  const goPulseGo=()=>navigate('/go')
 
   const { asiaAgents, asiaTotals } = (() => {
     if (isHistDate && histParsed) return { asiaAgents: histParsed.agents, asiaTotals: histParsed.totals }
@@ -1053,21 +1056,42 @@ export default function Dashboard() {
   return(
     <div className="dash-root" onClick={()=>setEditMenuOpen(false)}>
       <canvas ref={canvasRef} className="dash-trail-canvas"/>
-      <nav className="dash-nav">
+      <header className="dash-nav">
         <div className="dash-nav-left">
-          <div className="nav-logo-wrap"><svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#f97316"/><polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-          <span className="nav-appname">Pulse</span>
+          <button type="button" className="dash-brand" onClick={goDashboardHome}>
+            <div className="nav-logo-wrap">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+                <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <span className="nav-appname">Pulse</span>
+          </button>
         </div>
+
+        <nav className="dash-main-nav" aria-label="Dashboard navigation">
+          <button type="button" className="dash-main-link dash-main-link-active" onClick={goDashboardHome}>Home</button>
+          <button type="button" className="dash-main-link" onClick={goPulseGo}>Pulse GO</button>
+          <button type="button" className="dash-main-link" onClick={()=>setAcademyOpen(true)}>Academy</button>
+        </nav>
+
         <div className="dash-nav-right">
-          <div className="nav-user" style={{cursor:'pointer'}} onClick={()=>navigate('/settings')}>
-            <div className="nav-avatar">{userPhoto?<img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>:user?.name?.[0]?.toUpperCase()}</div>
-            <div className="nav-info"><span className="nav-name">{user?.name}</span><span className="nav-role">{team?.name} · {roleLabel}</span></div>
+          <div className="dash-nav-meta">
+            {lastUpdate&&<span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
+            <div className="nav-user" style={{cursor:'pointer'}} onClick={()=>navigate('/settings')}>
+              <div className="nav-avatar">{userPhoto?<img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>:user?.name?.[0]?.toUpperCase()}</div>
+              <div className="nav-info">
+                <span className="nav-name">{user?.name}</span>
+                <span className="nav-role">{team?.name} · {roleLabel}</span>
+              </div>
+            </div>
           </div>
-          {user?.agentExt&&<button className="nav-profile-btn" onClick={()=>navigate(`/profile/${user.agentExt}`)}>👤 #{user.agentExt}</button>}
-          {lastUpdate&&<span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
-          <button className="nav-logout" onClick={logout}>Log out</button>
+
+          <div className="dash-nav-actions">
+            {user?.agentExt&&<button className="nav-profile-btn" onClick={()=>navigate(`/profile/${user.agentExt}`)}>👤 #{user.agentExt}</button>}
+            <button className="nav-logout" onClick={logout}>Log out</button>
+          </div>
         </div>
-      </nav>
+      </header>
 
       <div className="dash-topbar">
         <div className="dash-tabs-scroll">
@@ -1254,6 +1278,20 @@ export default function Dashboard() {
           />
         ):null}
       </div>
+
+      {academyOpen&&(
+        <div className="academy-modal-overlay" onClick={()=>setAcademyOpen(false)}>
+          <div className="academy-modal" onClick={e=>e.stopPropagation()}>
+            <div className="academy-modal-badge">Academy</div>
+            <h3 className="academy-modal-title">We’re working on it.</h3>
+            <p className="academy-modal-copy">Pulse Academy will be available very soon with learning, guidance and internal training content.</p>
+            <div className="academy-modal-actions">
+              <button className="btn-save" onClick={()=>setAcademyOpen(false)}>Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
