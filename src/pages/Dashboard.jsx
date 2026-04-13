@@ -33,6 +33,15 @@ const TEAM_DISPLAY_NAMES = {
   mexico:'Mexico Baja', venezuela:'Venezuela',
 }
 
+const TEAM_TAB_META = {
+  asia: { label:'Asia', flag:'/flags/asia.png', fallback:'🌏' },
+  philippines: { label:'Philippines', flag:'/flags/philippines.png', fallback:'🇵🇭' },
+  colombia: { label:'Colombia', flag:'/flags/colombia.png', fallback:'🇨🇴' },
+  central: { label:'Central', flag:null, fallback:'🌎' },
+  mexico: { label:'Mexico', flag:'/flags/mexico.png', fallback:'🇲🇽' },
+  venezuela: { label:'Venezuela', flag:'/flags/venezuela.png', fallback:'🇻🇪' },
+}
+
 function normalizeDate(raw) {
   if (!raw) return null
   const s = String(raw).trim()
@@ -577,36 +586,21 @@ function DatePicker({dateTabs,selectedDate,onSelect}) {
 
 const getFlag=(name)=>{const n=name.toUpperCase();if(n.includes('PHIL'))return'ph';if(n.includes('VENE'))return've';if(n.includes('COLOM'))return'co';if(n.includes('MEXICO'))return'mx';if(n.includes('CENTRAL'))return'hn';if(n.includes('ASIA'))return'cn';return'un'}
 const TEAM_ACCENT={PHILIPPINES:'#3b82f6',VENEZUELA:'#ef4444',COLOMBIA:'#f59e0b','MEXICO BAJA':'#10b981','CENTRAL AMERICA':'#8b5cf6',ASIA:'#f97316'}
-const hexToRgbString=(hex)=>{
-  const clean=(hex||'').replace('#','')
-  if(clean.length!==6)return '249,115,22'
-  const num=parseInt(clean,16)
-  return `${(num>>16)&255}, ${(num>>8)&255}, ${num&255}`
-}
 
 function TeamCard({row,rank,isMyTeam,isFirst}) {
   const [hovered,setHovered]=useState(false)
   const accent=TEAM_ACCENT[row.name.toUpperCase()]||'#f97316'
-  const accentRgb=hexToRgbString(accent)
   const rankEmojis=[E.goal1,E.goal3,E.goal4]
   return(
     <div className={`vteam-card ${isFirst?'vteam-first':''} ${isMyTeam?'vteam-mine':''} ${hovered?'vteam-hovered':''}`}
-      style={{'--accent':accent,'--accent-rgb':accentRgb}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
-      <div className="vteam-glow" style={{background:`radial-gradient(ellipse at 50% 0%, rgba(${accentRgb},0.26) 0%, transparent 72%)`}}/>
-      <div className="vteam-orb"/>
-      <div className="vteam-orb-lines"/>
+      style={{'--accent':accent}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
+      <div className="vteam-glow" style={{background:`radial-gradient(ellipse at 50% 0%, ${accent}40 0%, transparent 70%)`}}/>
       <div className="vteam-top">
         <div className="vteam-rank">{rank<3?<Img src={rankEmojis[rank]} size={28}/>:<span className="vteam-rank-num">#{rank+1}</span>}</div>
         <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="vteam-flag"/>
-        <div className="vteam-name-wrap">
-          <div className="vteam-name">{row.name}</div>
-          <div className="vteam-meta">
-            <span className="vteam-chip">{rank===0?'Top team':rank<3?'Leaderboard':'Live board'}</span>
-            <span className="vteam-agents">{row.agents} agents</span>
-          </div>
-        </div>
+        <div className="vteam-name-wrap"><div className="vteam-name">{row.name}</div><div className="vteam-agents">{row.agents} agents</div></div>
       </div>
-      <div className="vteam-divider" style={{background:`linear-gradient(90deg,transparent,rgba(${accentRgb},0.9),transparent)`}}/>
+      <div className="vteam-divider" style={{background:`linear-gradient(90deg,transparent,${accent}80,transparent)`}}/>
       <div className="vteam-stats">
         <div className="vteam-stat"><span className="vteam-val" style={{color:'#60a5fa'}}>{row.english.toLocaleString()}</span><span className="vteam-lbl">English</span></div>
         {!row.noSpanish&&<div className="vteam-stat"><span className="vteam-val" style={{color:'#34d399'}}>{row.spanish.toLocaleString()}</span><span className="vteam-lbl">Spanish</span></div>}
@@ -805,6 +799,33 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
   )
 }
 
+
+function TeamTabLabel({ teamId }) {
+  const meta = TEAM_TAB_META[teamId] || { label: teamId, flag:null, fallback:'•' }
+  return (
+    <span className="team-tab-label">
+      {meta.flag ? (
+        <>
+          <img
+            src={meta.flag}
+            alt=""
+            className="team-tab-flag"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+              const fallback = e.currentTarget.parentElement?.querySelector('.team-tab-fallback')
+              if (fallback) fallback.style.display = 'inline-flex'
+            }}
+          />
+          <span className="team-tab-fallback is-hidden" aria-hidden="true">{meta.fallback}</span>
+        </>
+      ) : (
+        <span className="team-tab-fallback" aria-hidden="true">{meta.fallback}</span>
+      )}
+      <span>{meta.label}</span>
+    </span>
+  )
+}
+
 export default function Dashboard() {
   const canvasRef = useRef(null)
   const navigate  = useNavigate()
@@ -984,12 +1005,15 @@ export default function Dashboard() {
   const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
   const goDashboardHome=()=>{window.location.href='/dashboard'}
   const goPulseGo=()=>navigate('/go')
-  const openOwnProfile=()=>{
-    setProfileMenuOpen(false)
+  const openAccount=()=>{
     if(user?.agentExt) navigate(`/profile/${user.agentExt}`)
     else navigate('/settings')
+    setProfileMenuOpen(false)
   }
-  const openSettings=()=>{setProfileMenuOpen(false);navigate('/settings')}
+  const openSettings=()=>{
+    navigate('/settings')
+    setProfileMenuOpen(false)
+  }
 
   const { asiaAgents, asiaTotals } = (() => {
     if (isHistDate && histParsed) return { asiaAgents: histParsed.agents, asiaTotals: histParsed.totals }
@@ -1078,86 +1102,87 @@ export default function Dashboard() {
   return(
     <div className="dash-root" onClick={()=>{setEditMenuOpen(false);setProfileMenuOpen(false)}}>
       <canvas ref={canvasRef} className="dash-trail-canvas"/>
-      <div className="dash-chrome">
-        <header className="dash-nav">
-          <div className="dash-nav-left">
-            <button type="button" className="dash-brand" onClick={goDashboardHome}>
-              <div className="nav-logo-wrap">
-                <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-                  <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <span className="nav-appname">Pulse</span>
-            </button>
-          </div>
-
-          <nav className="dash-main-nav" aria-label="Dashboard navigation">
-            <button type="button" className="dash-main-link dash-main-link-active" onClick={goDashboardHome}>Home</button>
-            <button type="button" className="dash-main-link" onClick={goPulseGo}>Pulse GO</button>
-            <button type="button" className="dash-main-link" onClick={()=>setAcademyOpen(true)}>Academy</button>
-          </nav>
-
-          <div className="dash-nav-right">
-            {lastUpdate&&<span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
-
-            <div className="nav-user-wrap" onClick={e=>e.stopPropagation()}>
-              <button type="button" className="nav-user" onClick={()=>setProfileMenuOpen(o=>!o)}>
-                <div className="nav-avatar">{userPhoto?<img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>:user?.name?.[0]?.toUpperCase()}</div>
-                <div className="nav-info">
-                  <span className="nav-name">{user?.name}</span>
-                  <span className="nav-role">{team?.name} · {roleLabel}</span>
-                </div>
-                <span className={`nav-user-caret ${profileMenuOpen?'open':''}`}>▾</span>
-              </button>
-
-              {profileMenuOpen&&(
-                <div className="nav-user-menu">
-                  <button type="button" className="nav-user-menu-item" onClick={openOwnProfile}>
-                    {user?.agentExt ? 'View profile' : 'Account'}
-                  </button>
-                  <button type="button" className="nav-user-menu-item" onClick={openSettings}>Settings</button>
-                  <button type="button" className="nav-user-menu-item danger" onClick={logout}>Log out</button>
-                </div>
-              )}
+      <header className="dash-nav">
+        <div className="dash-nav-left">
+          <button type="button" className="dash-brand" onClick={goDashboardHome}>
+            <div className="nav-logo-wrap">
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+                <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
-          </div>
-        </header>
+            <span className="nav-appname">Pulse</span>
+          </button>
+        </div>
 
-        <div className="dash-topbar">
-          <div className="dash-tabs-scroll">
-            <button className={`dash-tab ${activeTab==='general'?'active':''}`}  onClick={()=>setActiveTab('general')}>All Teams</button>
-            <button className={`dash-tab ${activeTab==='asia'?'active':''}`}      onClick={()=>setActiveTab('asia')}>🌏 Asia</button>
-            {TEAM_SHEETS.map(t=><button key={t.id} className={`dash-tab ${activeTab===t.id?'active':''}`} onClick={()=>setActiveTab(t.id)}>{t.label}</button>)}
+        <nav className="dash-main-nav" aria-label="Dashboard navigation">
+          <button type="button" className="dash-main-link dash-main-link-active" onClick={goDashboardHome}>Home</button>
+          <button type="button" className="dash-main-link" onClick={goPulseGo}>Pulse GO</button>
+          <button type="button" className="dash-main-link" onClick={()=>setAcademyOpen(true)}>Academy</button>
+        </nav>
+
+        <div className="dash-nav-right">
+          {lastUpdate&&<span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
+
+          <div className="nav-user-wrap" onClick={e=>e.stopPropagation()}>
+            <button
+              type="button"
+              className="nav-user nav-user-trigger"
+              onClick={()=>setProfileMenuOpen(o=>!o)}
+            >
+              <div className="nav-avatar">{userPhoto?<img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>:user?.name?.[0]?.toUpperCase()}</div>
+              <div className="nav-info">
+                <span className="nav-name">{user?.name}</span>
+                <span className="nav-role">{team?.name} · {roleLabel}</span>
+              </div>
+              <span className={`nav-user-chevron ${profileMenuOpen ? 'is-open' : ''}`}>▾</span>
+            </button>
+
+            {profileMenuOpen && (
+              <div className="nav-user-menu">
+                <button type="button" className="nav-user-menu-item" onClick={openAccount}>Account</button>
+                <button type="button" className="nav-user-menu-item" onClick={openSettings}>Settings</button>
+                <button type="button" className="nav-user-menu-item danger" onClick={logout}>Log out</button>
+              </div>
+            )}
           </div>
-          <div className="dash-topbar-right">
-            {!isToday&&activeSnap?.savedAt&&<span className="date-snap-info">Snapshot {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
-            {isHistDate&&<span className="date-snap-info">Historical</span>}
-            <DatePicker dateTabs={dateTabs} selectedDate={selectedDate} onSelect={setSelectedDate}/>
-          </div>
+        </div>
+      </header>
+
+      <div className="dash-topbar">
+        <div className="dash-tabs-scroll">
+          <button className={`dash-tab ${activeTab==='general'?'active':''}`} onClick={()=>setActiveTab('general')}>
+            <span className="team-tab-label"><span>All Teams</span></span>
+          </button>
+          <button className={`dash-tab ${activeTab==='asia'?'active':''}`} onClick={()=>setActiveTab('asia')}>
+            <TeamTabLabel teamId="asia" />
+          </button>
+          {TEAM_SHEETS.map(t=>(
+            <button key={t.id} className={`dash-tab ${activeTab===t.id?'active':''}`} onClick={()=>setActiveTab(t.id)}>
+              <TeamTabLabel teamId={t.id} />
+            </button>
+          ))}
+        </div>
+        <div className="dash-topbar-right">
+          {!isToday&&activeSnap?.savedAt&&<span className="date-snap-info">Snapshot {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
+          {isHistDate&&<span className="date-snap-info">Historical</span>}
+          <DatePicker dateTabs={dateTabs} selectedDate={selectedDate} onSelect={setSelectedDate}/>
         </div>
       </div>
 
       <div className="dash-content">
         {loading?(
           <div className="dash-loading"><div className="dash-spinner"/><p>Loading live data...</p></div>
-        ):(activeTab==='general')?(
+        ):activeTab==='general'?(
           <div className="fade-in">
-            <section className="vteams-showcase">
-              <div className="vteams-showcase-glow vteams-showcase-glow-left"/>
-              <div className="vteams-showcase-glow vteams-showcase-glow-right"/>
-              <div className="vteams-showcase-lines"/>
-
-              <div className="vteams-header">
-                <h2 className="section-title" style={{marginBottom:0}}>Auto Warranty Garrett {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}</h2>
-                <span className="vteams-sub">{teamsSorted.length} teams · ranked by English xfers</span>
+            <div className="vteams-header">
+              <h2 className="section-title" style={{marginBottom:0}}>Auto Warranty Garrett {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}</h2>
+              <span className="vteams-sub">{teamsSorted.length} teams · ranked by English xfers</span>
+            </div>
+            {teamsSorted.length===0?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No data for {formatDateLabel(selectedDate)}.</div>:(
+              <div className="vteams-grid">
+                {teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0}/>)}
               </div>
-
-              {teamsSorted.length===0?<div style={{background:'rgba(15,20,30,0.92)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:24,padding:'3rem',textAlign:'center',color:'#94a3b8'}}>No data for {formatDateLabel(selectedDate)}.</div>:(
-                <div className="vteams-grid">
-                  {teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0}/>)}
-                </div>
-              )}
-            </section>
+            )}
           </div>
         ):activeTab==='asia'?(
           <div className="fade-in">
