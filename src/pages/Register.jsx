@@ -130,6 +130,7 @@ export default function Register() {
             role,
             registeredAt: Date.now(),
             rowIndex: registerRes.rowIndex || null,
+            bookId: registerRes.bookId || null,
           })
         )
 

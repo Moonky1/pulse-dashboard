@@ -32,7 +32,6 @@ export default function Admin() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [fetchError, setFetchError] = useState('')
 
   const [filter, setFilter] = useState('all')
   const [menuOpen, setMenuOpen] = useState(null)
@@ -73,48 +72,17 @@ export default function Admin() {
     if (isRefresh) setRefreshing(true)
     else setLoading(true)
 
-    setFetchError('')
-
     try {
       const data = await callScript({ action: 'getUsers' })
 
-      if (data?.ok && Array.isArray(data.users)) {
-        setUsers(data.users)
-        return
+      if (!data?.ok || !Array.isArray(data.users)) {
+        throw new Error(data?.error || 'Could not load users')
       }
 
-      throw new Error(data?.error || 'Unexpected response')
+      setUsers(data.users)
     } catch (e) {
-      console.warn('Primary getUsers failed, trying fallback silently:', e)
-
-      try {
-        const SHEET_ID = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
-        const url2 = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1&t=${Date.now()}`
-        const res2 = await fetch(url2)
-        const text = await res2.text()
-
-        const rows = text
-          .trim()
-          .split('\n')
-          .slice(1)
-          .map((row) => {
-            const cols = row.split(',').map((c) => c.replace(/^"|"$/g, '').trim())
-            return {
-              rowIndex: null,
-              name: cols[0] || '',
-              team: cols[1] || '',
-              role: cols[2] || '',
-              date: cols[3] || '',
-              time: cols[4] || '',
-            }
-          })
-          .filter((r) => r.name && r.name !== 'Name')
-
-        setUsers([...rows].reverse())
-      } catch (e2) {
-        console.error('Fallback also failed:', e2)
-        setFetchError('Could not load users.')
-      }
+      console.error('Admin getUsers failed:', e)
+      setUsers([])
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -172,6 +140,7 @@ export default function Admin() {
     try {
       const data = await callScript({
         action: 'edit',
+        bookId: editUser.bookId || '',
         rowIndex: editUser.rowIndex || '',
         oldName: editUser.name,
         oldTeam: editUser.team,
@@ -208,6 +177,7 @@ export default function Admin() {
     try {
       const data = await callScript({
         action: 'removeUser',
+        bookId: user.bookId || '',
         rowIndex: user.rowIndex || '',
         name: user.name,
         team: user.team,
@@ -242,6 +212,7 @@ export default function Admin() {
     try {
       const data = await callScript({
         action: 'banUser',
+        bookId: user.bookId || '',
         rowIndex: user.rowIndex || '',
         name: user.name,
         team: user.team,
@@ -900,10 +871,6 @@ export default function Admin() {
               {refreshing && (
                 <span style={{ fontSize: 11, color: '#6b7280' }}>↻ syncing...</span>
               )}
-
-              {!!fetchError && (
-                <span style={{ fontSize: 11, color: '#f87171' }}>{fetchError}</span>
-              )}
             </div>
 
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -994,7 +961,7 @@ export default function Admin() {
 
                   return (
                     <tr
-                      key={`${u.name}-${u.date}-${u.time}-${i}`}
+                      key={`${u.bookId || 'legacy'}-${u.rowIndex || i}-${u.name}`}
                       style={{
                         borderBottom: '0.5px solid #1e2230',
                         background: isNew ? 'rgba(249,115,22,0.03)' : 'transparent',

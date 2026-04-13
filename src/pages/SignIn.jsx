@@ -84,6 +84,7 @@ export default function SignIn() {
           role: roleId,
           registeredAt: Date.now(),
           rowIndex: found.rowIndex || null,
+          bookId: found.bookId || null,
         })
       )
 
