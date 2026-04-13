@@ -21,7 +21,6 @@
   mask-image: radial-gradient(circle at 50% 28%, black 35%, rgba(0,0,0,0.72) 68%, transparent 100%);
 }
 
-/* NAVBAR */
 .landing-navbar {
   position: sticky;
   top: 0;
@@ -138,7 +137,6 @@
   transform: translateY(-1px);
 }
 
-/* MAIN */
 .landing-shell {
   position: relative;
   z-index: 1;
@@ -155,7 +153,6 @@
   transform: translateY(0);
 }
 
-/* HERO */
 .hero-section {
   min-height: calc(100vh - 82px);
   display: flex;
@@ -367,7 +364,6 @@
   z-index: 8;
 }
 
-/* SECTION HEAD */
 .section-head {
   width: 100%;
   max-width: 980px;
@@ -401,13 +397,11 @@
   text-align: center;
 }
 
-/* SECTIONS */
 .feature-section,
 .teams-section {
   padding: 96px 18px 0;
 }
 
-/* FEATURES */
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -455,106 +449,69 @@
   color: #98a3b5;
 }
 
-/* MAP */
-.world-map-stage {
-  position: relative;
-  width: min(1260px, 96vw);
-  aspect-ratio: 2.14 / 1;
-  margin: 22px auto 0;
-  overflow: hidden;
-  isolation: isolate;
+.teams-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 20px;
 }
 
-.world-map-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.62;
-  filter:
-    drop-shadow(0 0 24px rgba(255,255,255,0.02))
-    drop-shadow(0 0 30px rgba(249,115,22,0.02));
-  mask-image: radial-gradient(circle at center, black 58%, rgba(0,0,0,0.74) 78%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle at center, black 58%, rgba(0,0,0,0.74) 78%, transparent 100%);
-}
-
-.world-map-land path {
-  fill: rgba(255,255,255,0.055);
-  stroke: rgba(255,255,255,0.06);
-  stroke-width: 2;
-}
-
-.world-map-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+.team-card {
+  padding: 24px;
+  border-radius: 22px;
   background:
-    radial-gradient(circle at center, rgba(255,255,255,0.018), transparent 44%),
-    linear-gradient(180deg, rgba(3,5,10,0.08), rgba(3,5,10,0.18));
-  mask-image: radial-gradient(circle at center, black 60%, rgba(0,0,0,0.75) 80%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle at center, black 60%, rgba(0,0,0,0.75) 80%, transparent 100%);
+    linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.018));
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.03),
+    0 14px 34px rgba(0,0,0,0.16);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
-.map-markers {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
+.team-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(249,115,22,0.22);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.024));
 }
 
-.map-marker {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  z-index: 2;
+.team-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
-.map-marker-dot {
-  display: block;
-  width: 14px;
-  height: 14px;
+.team-dot {
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #ff9a50 0%, #f97316 100%);
-  box-shadow:
-    0 0 0 7px rgba(249,115,22,0.08),
-    0 0 24px rgba(249,115,22,0.52);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: linear-gradient(180deg, #ff9b54 0%, #f97316 100%);
+  box-shadow: 0 0 18px rgba(249,115,22,0.42);
 }
 
-.map-marker-label {
-  position: absolute;
-  left: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  white-space: nowrap;
-  padding: 9px 12px;
-  border-radius: 12px;
-  background: rgba(8,11,17,0.88);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+.team-region {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b4bdca;
 }
 
-.map-marker:hover .map-marker-dot,
-.map-marker.is-active .map-marker-dot {
-  transform: scale(1.15);
-  box-shadow:
-    0 0 0 9px rgba(249,115,22,0.12),
-    0 0 34px rgba(249,115,22,0.64);
+.team-card h3 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.05;
+  color: #f8f9fd;
+  font-weight: 700;
 }
 
-.map-marker:hover .map-marker-label,
-.map-marker.is-active .map-marker-label {
-  opacity: 1;
-  transform: translateY(-50%) translateX(2px);
+.team-card p {
+  margin: 14px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #9ea8b9;
 }
 
-/* ANIMATIONS */
 @keyframes solarFloat {
   0%, 100% {
     opacity: 0.86;
@@ -630,13 +587,16 @@
   }
 }
 
-/* RESPONSIVE */
 @media (max-width: 1180px) {
   .landing-shell {
     width: calc(100% - 28px);
   }
 
   .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .teams-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -689,6 +649,10 @@
     grid-template-columns: 1fr;
   }
 
+  .teams-grid {
+    grid-template-columns: 1fr;
+  }
+
   .feature-card {
     min-height: 180px;
   }
@@ -700,19 +664,20 @@
   .section-sub {
     font-size: 18px;
   }
-
-  .world-map-stage {
-    width: min(96vw, 920px);
-  }
 }
 
 @media (max-width: 560px) {
   .landing-shell {
-    width: calc(100% - 16px);
+    width: 100%;
+    padding-bottom: 90px;
   }
 
   .landing-nav-pill {
     display: none;
+  }
+
+  .landing-navbar {
+    padding: 14px 14px 10px;
   }
 
   .hero-title {
@@ -749,34 +714,32 @@
 
   .feature-section,
   .teams-section {
-    padding: 72px 10px 0;
+    padding: 72px 12px 0;
+  }
+
+  .feature-grid {
+    border-left: none;
+    width: 100%;
   }
 
   .feature-card {
     padding: 24px 20px;
+    border-left: 1px solid rgba(255,255,255,0.06);
   }
 
-  .feature-card h3 {
+  .feature-card h3,
+  .team-card h3 {
     font-size: 22px;
   }
 
-  .feature-card p {
+  .feature-card p,
+  .team-card p {
     font-size: 15px;
   }
 
-  .world-map-stage {
-    width: 100%;
-    aspect-ratio: 1.85 / 1;
-  }
-
-  .map-marker-dot {
-    width: 12px;
-    height: 12px;
-  }
-
-  .map-marker-label {
-    font-size: 12px;
-    padding: 8px 10px;
+  .team-card {
+    padding: 20px;
+    border-radius: 18px;
   }
 
   .section-head {
