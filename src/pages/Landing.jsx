@@ -1,15 +1,6 @@
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useEffect, useMemo, useRef, useState } from 'react'
 import './Landing.css'
-
-const TEAM_POINTS = [
-  { id: 'philippines', name: 'Philippines', short: 'PH', left: '76%', top: '34%' },
-  { id: 'asia', name: 'Asia', short: 'AS', left: '68%', top: '27%' },
-  { id: 'central', name: 'Central America', short: 'CA', left: '32%', top: '44%' },
-  { id: 'mexico', name: 'Mexico Baja', short: 'MX', left: '27%', top: '38%' },
-  { id: 'colombia', name: 'Colombia', short: 'CO', left: '38%', top: '50%' },
-  { id: 'venezuela', name: 'Venezuela', short: 'VE', left: '43%', top: '47%' },
-]
 
 const FEATURES = [
   {
@@ -30,25 +21,33 @@ const FEATURES = [
   },
 ]
 
-const SOLAR_SPARKS = Array.from({ length: 34 }, (_, i) => ({
-  id: i,
-  delay: `${(i * 0.12).toFixed(2)}s`,
-  duration: `${(2.8 + (i % 7) * 0.2).toFixed(2)}s`,
-  left: `${8 + (i * 2.6) % 84}%`,
-  top: `${10 + (i * 2.4) % 18}%`,
-  size: `${1.2 + (i % 3) * 0.7}px`,
-}))
+const TEAM_MARKERS = [
+  { id: 'ph', name: 'Philippines', left: '79.5%', top: '53%' },
+  { id: 'asia', name: 'Asia', left: '71.5%', top: '42%' },
+  { id: 'mx', name: 'Mexico Baja', left: '20.8%', top: '44%' },
+  { id: 'central', name: 'Central America', left: '24.4%', top: '49.5%' },
+  { id: 'co', name: 'Colombia', left: '28.8%', top: '57.5%' },
+  { id: 've', name: 'Venezuela', left: '31.8%', top: '55.2%' },
+]
+
+function scrollToRef(ref) {
+  ref.current?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
+}
 
 export default function Landing() {
   const navigate = useNavigate()
+
   const [visible, setVisible] = useState(false)
   const [hoveredTeam, setHoveredTeam] = useState(null)
-  const [sunHover, setSunHover] = useState(false)
-  const canvasRef = useRef(null)
 
   const heroRef = useRef(null)
   const featuresRef = useRef(null)
   const teamsRef = useRef(null)
+  const solarCanvasRef = useRef(null)
+  const solarZoneRef = useRef(null)
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 70)
@@ -56,104 +55,116 @@ export default function Landing() {
   }, [])
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const canvas = solarCanvasRef.current
+    const zone = solarZoneRef.current
+    if (!canvas || !zone) return
+
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     let raf = 0
     let particles = []
 
-    const resize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = Math.max(document.body.scrollHeight, window.innerHeight * 2)
+    const getTarget = () => {
+      const rect = zone.getBoundingClientRect()
+      return {
+        width: rect.width,
+        height: rect.height,
+        x: rect.width / 2,
+        y: rect.height * 0.62,
+      }
     }
 
-    const createParticles = () => {
-      const amount = Math.min(26, Math.floor(window.innerWidth / 78))
-      particles = Array.from({ length: amount }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        r: Math.random() * 1.3 + 0.4,
-        vx: (Math.random() - 0.5) * 0.04,
-        vy: (Math.random() - 0.5) * 0.04,
-        a: Math.random() * 0.14 + 0.02,
-      }))
+    const spawnParticle = (width, height) => {
+      const side = Math.floor(Math.random() * 3)
+
+      if (side === 0) {
+        return {
+          x: Math.random() * width,
+          y: Math.random() * height * 0.18,
+          size: Math.random() * 1.8 + 0.8,
+          speed: Math.random() * 0.012 + 0.006,
+          alpha: Math.random() * 0.7 + 0.2,
+        }
+      }
+
+      if (side === 1) {
+        return {
+          x: Math.random() < 0.5 ? -20 : width + 20,
+          y: Math.random() * height * 0.32 + 10,
+          size: Math.random() * 1.8 + 0.8,
+          speed: Math.random() * 0.012 + 0.006,
+          alpha: Math.random() * 0.7 + 0.2,
+        }
+      }
+
+      return {
+        x: Math.random() * width,
+        y: Math.random() * height * 0.28 + 10,
+        size: Math.random() * 1.8 + 0.8,
+        speed: Math.random() * 0.012 + 0.006,
+        alpha: Math.random() * 0.7 + 0.2,
+      }
+    }
+
+    const setup = () => {
+      const rect = zone.getBoundingClientRect()
+      const ratio = window.devicePixelRatio || 1
+
+      canvas.width = Math.floor(rect.width * ratio)
+      canvas.height = Math.floor(rect.height * ratio)
+      canvas.style.width = `${rect.width}px`
+      canvas.style.height = `${rect.height}px`
+
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+
+      const count = Math.min(46, Math.max(22, Math.floor(rect.width / 28)))
+      particles = Array.from({ length: count }, () => spawnParticle(rect.width, rect.height))
     }
 
     const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const { width, height, x: tx, y: ty } = getTarget()
 
-      for (const p of particles) {
-        p.x += p.vx
-        p.y += p.vy
+      ctx.clearRect(0, 0, width, height)
 
-        if (p.x < -8) p.x = canvas.width + 8
-        if (p.x > canvas.width + 8) p.x = -8
-        if (p.y < -8) p.y = canvas.height + 8
-        if (p.y > canvas.height + 8) p.y = -8
+      particles.forEach((p, i) => {
+        const dx = tx - p.x
+        const dy = ty - p.y
+        const dist = Math.hypot(dx, dy) || 1
+
+        p.x += dx * p.speed
+        p.y += dy * p.speed
+
+        const life = Math.max(0, Math.min(1, dist / 340))
+        const alpha = p.alpha * life
 
         ctx.beginPath()
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255,255,255,${p.a})`
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`
         ctx.fill()
-      }
+
+        if (dist < 10) {
+          particles[i] = spawnParticle(width, height)
+        }
+      })
 
       raf = requestAnimationFrame(draw)
     }
 
-    resize()
-    createParticles()
+    setup()
     draw()
 
-    const onResize = () => {
-      resize()
-      createParticles()
-    }
-
+    const onResize = () => setup()
     window.addEventListener('resize', onResize)
+
     return () => {
       window.removeEventListener('resize', onResize)
       cancelAnimationFrame(raf)
     }
   }, [])
 
-  const scrollToRef = (ref) => {
-    ref.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
-  }
-
-  const globeMarkers = useMemo(
-    () =>
-      TEAM_POINTS.map((team) => (
-        <button
-          key={team.id}
-          className={`team-marker ${hoveredTeam === team.id ? 'is-active' : ''}`}
-          style={{ left: team.left, top: team.top }}
-          onMouseEnter={() => setHoveredTeam(team.id)}
-          onMouseLeave={() => setHoveredTeam(null)}
-          onFocus={() => setHoveredTeam(team.id)}
-          onBlur={() => setHoveredTeam(null)}
-          type="button"
-        >
-          <span className="team-marker-dot" />
-          <span className="team-marker-label">
-            <strong>{team.name}</strong>
-            <small>{team.short}</small>
-          </span>
-        </button>
-      )),
-    [hoveredTeam]
-  )
-
   return (
     <div className="landing">
-      <canvas ref={canvasRef} className="landing-canvas" />
-      <div className="landing-grid" />
-      <div className="landing-noise" />
-
       <header className="landing-navbar">
         <div className="landing-brand">
           <div className="landing-brand-icon">
@@ -189,42 +200,28 @@ export default function Landing() {
 
           <p className="hero-sub">Performance intelligence for leaders.</p>
 
-          <div
-            className={`hero-solar-zone ${sunHover ? 'is-hovered' : ''}`}
-            onMouseEnter={() => setSunHover(true)}
-            onMouseLeave={() => setSunHover(false)}
-          >
-            <div className="hero-solar-particles">
-              {SOLAR_SPARKS.map((spark) => (
-                <span
-                  key={spark.id}
-                  className="solar-spark"
-                  style={{
-                    '--spark-left': spark.left,
-                    '--spark-top': spark.top,
-                    '--spark-delay': spark.delay,
-                    '--spark-duration': spark.duration,
-                    '--spark-size': spark.size,
-                  }}
-                />
-              ))}
+          <div ref={solarZoneRef} className="hero-solar-zone">
+            <canvas ref={solarCanvasRef} className="solar-particle-canvas" />
+
+            <div className="solar-space-glow solar-space-glow-a" />
+            <div className="solar-space-glow solar-space-glow-b" />
+
+            <div className="solar-ring solar-ring-a" />
+            <div className="solar-ring solar-ring-b" />
+
+            <div className="solar-blackhole-mass solar-blackhole-mass-a" />
+            <div className="solar-blackhole-mass solar-blackhole-mass-b" />
+            <div className="solar-blackhole-mass solar-blackhole-mass-c" />
+
+            <div className="solar-line" />
+
+            <div className="solar-sun">
+              <div className="solar-sun-haze" />
+              <div className="solar-sun-core" />
+              <div className="solar-sun-ring" />
             </div>
 
-            <div className="hero-solar-halo hero-solar-halo-1" />
-            <div className="hero-solar-halo hero-solar-halo-2" />
-            <div className="hero-solar-flow hero-solar-flow-1" />
-            <div className="hero-solar-flow hero-solar-flow-2" />
-
-            <div className="hero-horizon" />
-
-            <div className="hero-sun-wrap">
-              <div className="hero-sun-glow" />
-              <div className="hero-sun-shell" />
-              <div className="hero-sun-core" />
-              <div className="hero-sun-inner-ring" />
-            </div>
-
-            <div className="hero-sun-below-mask" />
+            <div className="solar-bottom-mask" />
           </div>
         </section>
 
@@ -242,31 +239,46 @@ export default function Landing() {
           </div>
         </section>
 
-        <section ref={teamsRef} className="globe-section">
+        <section ref={teamsRef} className="teams-section">
           <h2 className="section-title center-title">Teams across the globe.</h2>
           <p className="section-sub center-sub">
             Explore where each Pulse team operates inside the network.
           </p>
 
-          <div className="globe-stage">
-            <div className="globe-stars" />
+          <div className="world-map-panel">
+            <div className="map-grid" />
 
-            <div className="globe-hemisphere">
-              <div className="globe-hemisphere-outline" />
+            <svg
+              className="world-map-svg"
+              viewBox="0 0 1000 520"
+              aria-hidden="true"
+            >
+              <g className="world-land">
+                <path d="M123 144l26-18 45-12 33 8 20 18 17 4 15 20-13 15-31 10-13 16-28-6-20 5-10 18-18 3-14-21-21-6-5-17 10-13 7-24z" />
+                <path d="M254 250l23 7 20 28 15 40 4 41-13 29-12 30-18 17-20-8-4-23 9-20-8-28-19-41 5-38z" />
+                <path d="M446 125l23-13 29-2 16 14 18-2 16 10-2 14-20 10-8 12-17 3-17-10-19 6-18-14z" />
+                <path d="M470 183l24 9 24 26 18 49-6 33-22 41-28 25-30-13-9-32 6-31-17-34 6-44z" />
+                <path d="M556 130l36-13 56 1 48 11 35 20 41 7 36 19 22 19-4 19-27 6-22 20-31 12-15 19-30 8-22-5-12-20-27-14-20-21-38-3-31-11-20-29-20-11 2-25z" />
+                <path d="M801 344l25-6 19 8 11 19-5 18-24 10-24-8-8-18z" />
+              </g>
+            </svg>
 
-              <div className="globe-rotate-layer globe-rotate-layer-a">
-                <div className="globe-dot-shell globe-dot-shell-a" />
-              </div>
-
-              <div className="globe-rotate-layer globe-rotate-layer-b">
-                <div className="globe-dot-shell globe-dot-shell-b" />
-              </div>
-
-              <div className="globe-rotate-layer globe-rotate-layer-c">
-                <div className="globe-dot-shell globe-dot-shell-c" />
-              </div>
-
-              {globeMarkers}
+            <div className="map-markers">
+              {TEAM_MARKERS.map((team) => (
+                <button
+                  key={team.id}
+                  type="button"
+                  className={`map-marker ${hoveredTeam === team.id ? 'is-active' : ''}`}
+                  style={{ left: team.left, top: team.top }}
+                  onMouseEnter={() => setHoveredTeam(team.id)}
+                  onMouseLeave={() => setHoveredTeam(null)}
+                  onFocus={() => setHoveredTeam(team.id)}
+                  onBlur={() => setHoveredTeam(null)}
+                >
+                  <span className="map-marker-dot" />
+                  <span className="map-marker-label">{team.name}</span>
+                </button>
+              ))}
             </div>
           </div>
         </section>

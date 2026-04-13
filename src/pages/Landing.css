@@ -1,61 +1,40 @@
 .landing {
-  position: relative;
   min-height: 100vh;
-  overflow-x: hidden;
   background:
-    radial-gradient(circle at 50% 28%, rgba(249, 115, 22, 0.025), transparent 18%),
+    radial-gradient(circle at 50% 12%, rgba(249, 115, 22, 0.04), transparent 18%),
     linear-gradient(180deg, #03050a 0%, #04060b 45%, #03050a 100%);
   color: #f5f7fb;
-  user-select: none;
-  -webkit-user-select: none;
+  overflow-x: hidden;
 }
 
-.landing-canvas {
-  position: absolute;
+.landing::before {
+  content: '';
+  position: fixed;
   inset: 0;
-  width: 100%;
-  height: 100%;
   pointer-events: none;
   z-index: 0;
-}
-
-.landing-grid {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
-  background-size: 68px 68px;
-  opacity: 0.45;
-  mask-image: radial-gradient(circle at 50% 30%, rgba(0,0,0,1) 38%, rgba(0,0,0,0.62) 72%, transparent 100%);
-}
-
-.landing-noise {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0.018;
-  pointer-events: none;
-  background-image:
-    radial-gradient(circle at 20% 20%, #fff 0.6px, transparent 0.7px),
-    radial-gradient(circle at 80% 30%, #fff 0.6px, transparent 0.7px),
-    radial-gradient(circle at 50% 80%, #fff 0.6px, transparent 0.7px);
-  background-size: 130px 130px, 170px 170px, 240px 240px;
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 64px 64px;
+  opacity: 0.24;
+  mask-image: radial-gradient(circle at 50% 28%, black 35%, rgba(0,0,0,0.72) 68%, transparent 100%);
 }
 
 /* NAVBAR */
 .landing-navbar {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 50;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 18px;
-  padding: 22px 30px 12px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  padding: 18px 30px 12px;
+  background: linear-gradient(180deg, rgba(4,6,11,0.72), rgba(4,6,11,0.18));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 
 .landing-brand {
@@ -70,11 +49,11 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: linear-gradient(180deg, #1d1d3a 0%, #0e1022 100%);
+  background: linear-gradient(180deg, rgba(36,36,70,0.95), rgba(14,16,34,0.95));
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.06),
-    0 0 18px rgba(255,255,255,0.08);
+    0 0 24px rgba(255,255,255,0.04);
   overflow: hidden;
 }
 
@@ -84,52 +63,44 @@
   border: 1px solid rgba(255,255,255,0.42);
 }
 
-.brand-orb-1 {
-  inset: 8px;
-}
-
-.brand-orb-2 {
-  inset: 12px 7px;
-  transform: rotate(62deg);
-}
-
-.brand-orb-3 {
-  inset: 7px 12px;
-  transform: rotate(-58deg);
-}
+.brand-orb-1 { inset: 8px; }
+.brand-orb-2 { inset: 12px 7px; transform: rotate(62deg); }
+.brand-orb-3 { inset: 7px 12px; transform: rotate(-58deg); }
 
 .landing-brand-text {
   font-size: 19px;
   font-weight: 700;
-  color: #f6f7fb;
+  color: #f7f8fc;
 }
 
 .landing-nav-pill {
+  justify-self: center;
   display: inline-flex;
   align-items: center;
-  gap: 28px;
-  justify-self: center;
+  gap: 26px;
   padding: 12px 24px;
-  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 999px;
-  background: rgba(255,255,255,0.02);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.03),
+    0 0 40px rgba(255,255,255,0.02);
 }
 
 .landing-nav-pill button {
-  color: #eceff7;
   background: transparent;
   border: 0;
+  color: #eceff7;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
-  opacity: 0.92;
   transition: opacity 0.2s ease, color 0.2s ease;
+  opacity: 0.92;
 }
 
 .landing-nav-pill button:hover {
-  opacity: 1;
   color: #fff;
+  opacity: 1;
 }
 
 .landing-nav-actions {
@@ -147,28 +118,27 @@
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
 .nav-login-btn {
-  color: #eef2fa;
-  border: 1px solid transparent;
   background: transparent;
+  border: 1px solid transparent;
+  color: #f2f4fb;
 }
 
 .nav-register-btn {
   color: #fff;
-  border: 1px solid rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.16);
   background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
-.nav-register-btn:hover,
-.nav-login-btn:hover {
+.nav-login-btn:hover,
+.nav-register-btn:hover {
   transform: translateY(-1px);
 }
 
-/* SHELL */
+/* MAIN */
 .landing-shell {
   position: relative;
   z-index: 1;
@@ -187,227 +157,226 @@
 
 /* HERO */
 .hero-section {
-  min-height: calc(100vh - 84px);
+  min-height: calc(100vh - 82px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 78px 16px 40px;
+  padding: 78px 16px 24px;
   text-align: center;
 }
 
 .hero-chip {
   display: inline-flex;
   align-items: center;
-  height: 36px;
-  padding: 0 16px;
+  height: 38px;
+  padding: 0 18px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.025);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-  color: #d6dced;
+  color: #d7ddec;
   font-size: 14px;
   font-weight: 500;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 .hero-title {
   margin: 18px 0 0;
   font-family: 'Sora', sans-serif;
-  font-size: clamp(96px, 12vw, 176px);
+  font-size: clamp(94px, 12vw, 176px);
   line-height: 0.92;
   font-weight: 800;
   letter-spacing: -0.06em;
   color: #f4f0eb;
+  text-align: center;
 }
 
 .hero-sub {
-  margin: 18px 0 0;
-  max-width: 820px;
+  margin: 18px auto 0;
+  max-width: 860px;
   font-size: 24px;
   line-height: 1.45;
   color: #adb5c4;
+  text-align: center;
 }
 
 .hero-solar-zone {
   position: relative;
   width: 100%;
-  max-width: 1480px;
-  height: 470px;
+  max-width: 1500px;
+  height: 480px;
   margin-top: 18px;
   overflow: hidden;
 }
 
-.hero-solar-particles {
+.solar-particle-canvas {
   position: absolute;
   inset: 0;
+  z-index: 2;
   pointer-events: none;
 }
 
-.solar-spark {
-  position: absolute;
-  left: var(--spark-left);
-  top: var(--spark-top);
-  width: var(--spark-size);
-  height: var(--spark-size);
-  border-radius: 50%;
-  background: rgba(255,255,255,0.96);
-  box-shadow: 0 0 10px rgba(255,255,255,0.4);
-  animation: sparkFlow var(--spark-duration) linear infinite;
-  animation-delay: var(--spark-delay);
-  opacity: 0;
-}
-
-.hero-solar-halo {
+.solar-space-glow {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   border-radius: 50%;
   pointer-events: none;
+  filter: blur(18px);
 }
 
-.hero-solar-halo-1 {
-  bottom: 138px;
-  width: 620px;
-  height: 230px;
-  border: 1px solid rgba(255, 222, 198, 0.08);
+.solar-space-glow-a {
+  bottom: 188px;
+  width: 520px;
+  height: 180px;
+  background: radial-gradient(ellipse at center, rgba(255,245,235,0.18), rgba(249,115,22,0.06) 52%, transparent 74%);
+  animation: solarFloat 5s ease-in-out infinite;
 }
 
-.hero-solar-halo-2 {
-  bottom: 122px;
-  width: 930px;
-  height: 300px;
-  border: 1px solid rgba(255, 222, 198, 0.05);
+.solar-space-glow-b {
+  bottom: 164px;
+  width: 860px;
+  height: 250px;
+  background: radial-gradient(ellipse at center, rgba(249,115,22,0.16), transparent 72%);
+  animation: solarFloatWide 6.5s ease-in-out infinite;
 }
 
-.hero-solar-flow {
+.solar-ring {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   border-radius: 50%;
   pointer-events: none;
-  filter: blur(10px);
+  border: 1px solid rgba(255,227,205,0.08);
+  z-index: 1;
 }
 
-.hero-solar-flow-1 {
+.solar-ring-a {
+  bottom: 176px;
+  width: 560px;
+  height: 180px;
+}
+
+.solar-ring-b {
+  bottom: 154px;
+  width: 1000px;
+  height: 250px;
+  opacity: 0.45;
+}
+
+.solar-blackhole-mass {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(16px);
+}
+
+.solar-blackhole-mass-a {
   bottom: 136px;
-  width: 540px;
-  height: 150px;
-  background: radial-gradient(ellipse at center, rgba(255,238,224,0.45), rgba(249,115,22,0.12) 50%, transparent 74%);
-  animation: solarFlow 4.8s ease-in-out infinite;
+  width: 860px;
+  height: 170px;
+  background: radial-gradient(ellipse at center, rgba(255,244,231,0.42) 0%, rgba(249,115,22,0.34) 30%, rgba(128,51,0,0.24) 58%, transparent 78%);
+  animation: accretionPulse 4.5s ease-in-out infinite;
 }
 
-.hero-solar-flow-2 {
-  bottom: 134px;
-  width: 820px;
-  height: 200px;
-  background: radial-gradient(ellipse at center, rgba(249,115,22,0.18), transparent 72%);
-  animation: solarFlowWide 5.8s ease-in-out infinite;
+.solar-blackhole-mass-b {
+  bottom: 128px;
+  width: 1120px;
+  height: 210px;
+  background: radial-gradient(ellipse at center, rgba(249,115,22,0.18) 0%, rgba(249,115,22,0.11) 46%, transparent 74%);
+  animation: accretionPulseWide 5.8s ease-in-out infinite;
 }
 
-.hero-horizon {
+.solar-blackhole-mass-c {
+  bottom: 154px;
+  width: 680px;
+  height: 110px;
+  background: radial-gradient(ellipse at center, rgba(255,236,216,0.28), rgba(249,115,22,0.14) 54%, transparent 78%);
+  filter: blur(10px);
+  animation: accretionShimmer 4s ease-in-out infinite;
+}
+
+.solar-line {
   position: absolute;
-  left: 7%;
-  right: 7%;
-  bottom: 144px;
+  left: 6%;
+  right: 6%;
+  bottom: 150px;
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(255,233,212,0.96), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,231,210,0.98), transparent);
   box-shadow:
-    0 0 18px rgba(255,220,194,0.35),
-    0 0 60px rgba(249,115,22,0.18);
-  z-index: 7;
+    0 0 18px rgba(255,220,194,0.28),
+    0 0 60px rgba(249,115,22,0.16);
+  z-index: 6;
 }
 
-.hero-sun-wrap {
+.solar-sun {
   position: absolute;
   left: 50%;
-  bottom: 88px;
+  bottom: 90px;
   width: 300px;
   height: 300px;
   transform: translateX(-50%);
-  z-index: 5;
+  z-index: 4;
 }
 
-.hero-sun-glow {
+.solar-sun-haze {
   position: absolute;
   left: 50%;
-  bottom: -4px;
-  width: 820px;
+  bottom: 0;
+  width: 760px;
   height: 240px;
   transform: translateX(-50%);
   border-radius: 50%;
   background:
-    radial-gradient(ellipse at center, rgba(255,248,241,0.95) 0%, rgba(255,226,200,0.76) 18%, rgba(249,115,22,0.42) 40%, rgba(249,115,22,0.12) 62%, transparent 76%);
-  filter: blur(18px);
-  opacity: 0.96;
-  animation: pulseGlow 4.6s ease-in-out infinite;
-  transition: filter 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
+    radial-gradient(ellipse at center, rgba(255,248,241,0.94) 0%, rgba(255,226,200,0.72) 20%, rgba(249,115,22,0.42) 42%, rgba(249,115,22,0.08) 64%, transparent 78%);
+  filter: blur(20px);
+  animation: sunHaze 4.6s ease-in-out infinite;
 }
 
-.hero-solar-zone.is-hovered .hero-sun-glow {
-  filter: blur(12px);
-  opacity: 1;
-  transform: translateX(-50%) scale(1.04);
-}
-
-.hero-sun-shell {
-  position: absolute;
-  inset: -16px;
-  border-radius: 50%;
-  border: 12px solid rgba(255, 214, 183, 0.1);
-  filter: blur(1px);
-}
-
-.hero-sun-core {
+.solar-sun-core {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.995) 0%, rgba(255,246,236,0.92) 28%, rgba(255,197,149,0.58) 42%, rgba(249,115,22,0.14) 64%, transparent 78%);
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.995) 0%, rgba(255,247,238,0.95) 34%, rgba(255,204,162,0.55) 54%, rgba(249,115,22,0.14) 72%, transparent 84%);
   filter: blur(7px);
   box-shadow:
-    0 0 44px rgba(255,218,186,0.62),
-    0 0 130px rgba(249,115,22,0.28);
-  animation: solarBreath 4.8s ease-in-out infinite;
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
+    0 0 52px rgba(255,220,194,0.58),
+    0 0 140px rgba(249,115,22,0.22);
+  animation: sunBreath 4.8s ease-in-out infinite;
 }
 
-.hero-solar-zone.is-hovered .hero-sun-core {
-  box-shadow:
-    0 0 58px rgba(255,218,186,0.82),
-    0 0 170px rgba(249,115,22,0.42);
-  transform: scale(1.03);
-}
-
-.hero-sun-inner-ring {
+.solar-sun-ring {
   position: absolute;
-  inset: 50px;
+  inset: -18px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255,228,206,0.22);
+  border: 12px solid rgba(255,216,186,0.1);
+  filter: blur(1px);
 }
 
-.hero-sun-below-mask {
+.solar-bottom-mask {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 142px;
-  background: linear-gradient(180deg, rgba(3,5,10,0) 0%, #03050a 10%, #03050a 100%);
+  height: 152px;
+  background: #03050a;
   z-index: 8;
-  pointer-events: none;
 }
 
-/* TITLES */
+/* SECTIONS */
 .feature-section,
-.globe-section {
-  position: relative;
-  padding: 90px 18px 0;
+.teams-section {
+  padding: 96px 18px 0;
 }
 
 .section-title {
   margin: 0;
   font-family: 'Sora', sans-serif;
-  font-size: clamp(46px, 6vw, 88px);
+  font-size: clamp(48px, 6vw, 88px);
   line-height: 1.04;
   font-weight: 700;
   letter-spacing: -0.05em;
@@ -416,10 +385,11 @@
 
 .center-title {
   text-align: center;
+  width: 100%;
 }
 
 .section-sub {
-  margin: 18px 0 0;
+  margin: 18px auto 0;
   max-width: 860px;
   font-size: 20px;
   line-height: 1.6;
@@ -428,8 +398,6 @@
 
 .center-sub {
   text-align: center;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 /* FEATURES */
@@ -479,195 +447,110 @@
   color: #98a3b5;
 }
 
-/* GLOBE */
-.globe-stage {
+/* MAP */
+.world-map-panel {
   position: relative;
-  margin-top: 42px;
-  min-height: 820px;
-  overflow: hidden;
-}
-
-.globe-stars {
-  position: absolute;
-  inset: 0;
-  opacity: 0.22;
-  background-image:
-    radial-gradient(circle at 20% 30%, #fff 1px, transparent 1.8px),
-    radial-gradient(circle at 72% 20%, #fff 1px, transparent 1.8px),
-    radial-gradient(circle at 40% 60%, #fff 1px, transparent 1.8px),
-    radial-gradient(circle at 80% 58%, #fff 1px, transparent 1.8px),
-    radial-gradient(circle at 12% 72%, #fff 1px, transparent 1.8px);
-  background-size: 280px 280px, 320px 320px, 260px 260px, 300px 300px, 360px 360px;
-}
-
-.globe-hemisphere {
-  position: absolute;
-  left: 50%;
-  bottom: -290px;
+  margin: 40px auto 0;
   width: min(1180px, 92vw);
-  height: min(1180px, 92vw);
-  transform: translateX(-50%);
-  border-radius: 50%;
+  height: 620px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.02), transparent 44%),
+    rgba(255,255,255,0.01);
+  border: 1px solid rgba(255,255,255,0.06);
   overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.02),
+    0 30px 80px rgba(0,0,0,0.18);
 }
 
-.globe-hemisphere-outline {
+.map-grid {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: inset 0 0 90px rgba(255,255,255,0.02);
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 54px 54px;
+  opacity: 0.2;
 }
 
-.globe-rotate-layer {
+.world-map-svg {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  overflow: hidden;
-  mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 76%, rgba(0,0,0,0.5) 90%, transparent 100%);
+  width: 100%;
+  height: 100%;
+  animation: mapFloat 9s ease-in-out infinite;
 }
 
-.globe-dot-shell {
+.world-land path {
+  fill: rgba(255,255,255,0.055);
+  stroke: rgba(255,255,255,0.08);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 12px rgba(255,255,255,0.025));
+}
+
+.map-markers {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
 }
 
-.globe-dot-shell::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background-repeat: no-repeat;
-}
-
-.globe-dot-shell-a::before {
-  background:
-    radial-gradient(ellipse at 50% 66%, transparent 0 47%, rgba(255,255,255,0.78) 47.2% 47.45%, transparent 47.7%),
-    radial-gradient(ellipse at 50% 61%, transparent 0 43%, rgba(255,255,255,0.72) 43.2% 43.45%, transparent 43.7%),
-    radial-gradient(ellipse at 50% 56%, transparent 0 39%, rgba(255,255,255,0.66) 39.2% 39.45%, transparent 39.7%),
-    radial-gradient(ellipse at 50% 51%, transparent 0 34%, rgba(255,255,255,0.58) 34.2% 34.45%, transparent 34.7%),
-    radial-gradient(ellipse at 50% 46%, transparent 0 28%, rgba(255,255,255,0.5) 28.2% 28.45%, transparent 28.7%);
-  opacity: 0.26;
-  transform: perspective(1200px) rotateX(76deg) rotateZ(0deg);
-  animation: globeRotateA 26s linear infinite;
-}
-
-.globe-dot-shell-b::before {
-  background:
-    radial-gradient(ellipse at 50% 64%, transparent 0 45%, rgba(255,255,255,0.34) 45.2% 45.4%, transparent 45.65%),
-    radial-gradient(ellipse at 50% 58%, transparent 0 38%, rgba(255,255,255,0.3) 38.2% 38.4%, transparent 38.65%),
-    radial-gradient(ellipse at 50% 52%, transparent 0 31%, rgba(255,255,255,0.26) 31.2% 31.4%, transparent 31.65%);
-  opacity: 0.18;
-  transform: perspective(1200px) rotateX(73deg) rotateZ(24deg);
-  animation: globeRotateB 34s linear infinite;
-}
-
-.globe-dot-shell-c::before {
-  background:
-    radial-gradient(ellipse at 50% 65%, transparent 0 46%, rgba(255,255,255,0.14) 46.15% 46.3%, transparent 46.5%),
-    radial-gradient(ellipse at 50% 57%, transparent 0 36%, rgba(255,255,255,0.12) 36.15% 36.3%, transparent 36.5%);
-  opacity: 0.12;
-  transform: perspective(1200px) rotateX(70deg) rotateZ(-20deg);
-  animation: globeRotateC 20s linear infinite;
-}
-
-.team-marker {
+.map-marker {
   position: absolute;
   transform: translate(-50%, -50%);
   background: transparent;
   border: 0;
   cursor: pointer;
-  padding: 0;
-  z-index: 3;
+  z-index: 2;
 }
 
-.team-marker-dot {
+.map-marker-dot {
   display: block;
   width: 14px;
   height: 14px;
   border-radius: 999px;
   background: linear-gradient(180deg, #ff9a50 0%, #f97316 100%);
   box-shadow:
-    0 0 0 6px rgba(249,115,22,0.08),
-    0 0 22px rgba(249,115,22,0.45);
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
+    0 0 0 7px rgba(249,115,22,0.08),
+    0 0 24px rgba(249,115,22,0.52);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.team-marker-label {
+.map-marker-label {
   position: absolute;
   left: 18px;
   top: 50%;
   transform: translateY(-50%);
-  min-width: 116px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(10, 13, 20, 0.82);
-  box-shadow:
-    0 10px 26px rgba(0,0,0,0.3),
-    inset 0 1px 0 rgba(255,255,255,0.03);
+  white-space: nowrap;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(8,11,17,0.88);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.team-marker-label strong {
-  display: block;
-  font-size: 14px;
-  line-height: 1.2;
-  color: #fff;
-}
-
-.team-marker-label small {
-  display: block;
-  margin-top: 4px;
-  font-size: 11px;
-  color: #ffb98f;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.team-marker:hover .team-marker-dot,
-.team-marker.is-active .team-marker-dot {
+.map-marker:hover .map-marker-dot,
+.map-marker.is-active .map-marker-dot {
   transform: scale(1.15);
   box-shadow:
-    0 0 0 8px rgba(249,115,22,0.11),
-    0 0 30px rgba(249,115,22,0.6);
+    0 0 0 9px rgba(249,115,22,0.12),
+    0 0 34px rgba(249,115,22,0.64);
 }
 
-.team-marker:hover .team-marker-label,
-.team-marker.is-active .team-marker-label {
+.map-marker:hover .map-marker-label,
+.map-marker.is-active .map-marker-label {
   opacity: 1;
   transform: translateY(-50%) translateX(2px);
 }
 
 /* ANIMATIONS */
-@keyframes pulseGlow {
+@keyframes solarFloat {
   0%, 100% {
-    opacity: 0.94;
-    transform: translateX(-50%) scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1.03);
-  }
-}
-
-@keyframes solarBreath {
-  0%, 100% {
-    transform: scale(1);
-    filter: blur(7px);
-  }
-  50% {
-    transform: scale(1.04);
-    filter: blur(5px);
-  }
-}
-
-@keyframes solarFlow {
-  0%, 100% {
-    opacity: 0.82;
+    opacity: 0.86;
     transform: translateX(-50%) scaleX(1);
   }
   50% {
@@ -676,55 +559,76 @@
   }
 }
 
-@keyframes solarFlowWide {
+@keyframes solarFloatWide {
   0%, 100% {
     opacity: 0.54;
     transform: translateX(-50%) scaleX(1);
   }
   50% {
     opacity: 0.82;
+    transform: translateX(-50%) scaleX(1.12);
+  }
+}
+
+@keyframes accretionPulse {
+  0%, 100% {
+    opacity: 0.92;
+    transform: translateX(-50%) scaleX(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1.06);
+  }
+}
+
+@keyframes accretionPulseWide {
+  0%, 100% {
+    opacity: 0.66;
+    transform: translateX(-50%) scaleX(1);
+  }
+  50% {
+    opacity: 0.9;
     transform: translateX(-50%) scaleX(1.1);
   }
 }
 
-@keyframes sparkFlow {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, 0, 0) scale(0.6);
+@keyframes accretionShimmer {
+  0%, 100% {
+    opacity: 0.72;
   }
-  10% {
-    opacity: 0.95;
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(calc(50vw - 50%), 300px, 0) scale(0.08);
+  50% {
+    opacity: 1;
   }
 }
 
-@keyframes globeRotateA {
-  from {
-    transform: perspective(1200px) rotateX(76deg) rotateZ(0deg);
+@keyframes sunHaze {
+  0%, 100% {
+    opacity: 0.94;
+    transform: translateX(-50%) scale(1);
   }
-  to {
-    transform: perspective(1200px) rotateX(76deg) rotateZ(360deg);
-  }
-}
-
-@keyframes globeRotateB {
-  from {
-    transform: perspective(1200px) rotateX(73deg) rotateZ(24deg);
-  }
-  to {
-    transform: perspective(1200px) rotateX(73deg) rotateZ(-336deg);
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.035);
   }
 }
 
-@keyframes globeRotateC {
-  from {
-    transform: perspective(1200px) rotateX(70deg) rotateZ(-20deg);
+@keyframes sunBreath {
+  0%, 100% {
+    transform: scale(1);
+    filter: blur(7px);
   }
-  to {
-    transform: perspective(1200px) rotateX(70deg) rotateZ(340deg);
+  50% {
+    transform: scale(1.03);
+    filter: blur(5px);
+  }
+}
+
+@keyframes mapFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
   }
 }
 
@@ -761,55 +665,34 @@
   }
 
   .hero-solar-zone {
-    height: 340px;
+    height: 350px;
   }
 
-  .hero-solar-halo-1 {
-    width: 360px;
-    height: 126px;
-    bottom: 102px;
+  .solar-line {
+    bottom: 112px;
   }
 
-  .hero-solar-halo-2 {
-    width: 520px;
-    height: 170px;
-    bottom: 94px;
-  }
-
-  .hero-horizon {
-    bottom: 106px;
-  }
-
-  .hero-sun-wrap {
+  .solar-sun {
     width: 180px;
     height: 180px;
-    bottom: 60px;
+    bottom: 66px;
   }
 
-  .hero-sun-glow {
-    width: 420px;
+  .solar-sun-haze {
+    width: 440px;
     height: 140px;
-    bottom: 6px;
   }
 
-  .hero-sun-below-mask {
-    height: 104px;
+  .solar-bottom-mask {
+    height: 112px;
   }
 
   .feature-grid {
     grid-template-columns: 1fr;
   }
 
-  .feature-card h3 {
-    font-size: 28px;
-  }
-
-  .feature-card p {
-    font-size: 16px;
-  }
-
-  .globe-stage {
-    min-height: 620px;
+  .world-map-panel {
+    height: 520px;
   }
 }
 
@@ -832,51 +715,34 @@
   }
 
   .hero-solar-zone {
-    height: 270px;
+    height: 280px;
   }
 
-  .hero-solar-halo-1 {
-    width: 250px;
-    height: 88px;
-    bottom: 84px;
+  .solar-line {
+    bottom: 94px;
   }
 
-  .hero-solar-halo-2 {
-    width: 340px;
-    height: 116px;
-    bottom: 78px;
-  }
-
-  .hero-horizon {
-    bottom: 90px;
-  }
-
-  .hero-sun-wrap {
+  .solar-sun {
     width: 128px;
     height: 128px;
-    bottom: 48px;
+    bottom: 54px;
   }
 
-  .hero-sun-glow {
-    width: 280px;
+  .solar-sun-haze {
+    width: 300px;
     height: 100px;
-    bottom: 2px;
   }
 
-  .hero-sun-below-mask {
-    height: 86px;
+  .solar-bottom-mask {
+    height: 92px;
   }
 
-  .globe-stage {
-    min-height: 460px;
+  .world-map-panel {
+    height: 420px;
   }
 
-  .team-marker-label {
-    min-width: 92px;
-    padding: 8px 10px;
-  }
-
-  .team-marker-label strong {
+  .map-marker-label {
     font-size: 12px;
+    padding: 8px 10px;
   }
 }
