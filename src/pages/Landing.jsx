@@ -3,12 +3,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import './Landing.css'
 
 const TEAM_POINTS = [
-  { id: 'philippines', name: 'Philippines', short: 'PH', left: '77%', top: '36%' },
-  { id: 'asia', name: 'Asia', short: 'AS', left: '69%', top: '28%' },
-  { id: 'central', name: 'Central America', short: 'CA', left: '31%', top: '43%' },
-  { id: 'mexico', name: 'Mexico Baja', short: 'MX', left: '25%', top: '37%' },
-  { id: 'colombia', name: 'Colombia', short: 'CO', left: '36%', top: '50%' },
-  { id: 'venezuela', name: 'Venezuela', short: 'VE', left: '41%', top: '47%' },
+  { id: 'philippines', name: 'Philippines', short: 'PH', left: '76%', top: '34%' },
+  { id: 'asia', name: 'Asia', short: 'AS', left: '68%', top: '26%' },
+  { id: 'central', name: 'Central America', short: 'CA', left: '32%', top: '43%' },
+  { id: 'mexico', name: 'Mexico Baja', short: 'MX', left: '27%', top: '37%' },
+  { id: 'colombia', name: 'Colombia', short: 'CO', left: '38%', top: '49%' },
+  { id: 'venezuela', name: 'Venezuela', short: 'VE', left: '43%', top: '46%' },
 ]
 
 const FEATURES = [
@@ -30,13 +30,13 @@ const FEATURES = [
   },
 ]
 
-const SOLAR_SPARKS = Array.from({ length: 28 }, (_, i) => ({
+const SOLAR_SPARKS = Array.from({ length: 30 }, (_, i) => ({
   id: i,
-  delay: `${(i * 0.18).toFixed(2)}s`,
-  duration: `${(3.8 + (i % 6) * 0.3).toFixed(2)}s`,
-  left: `${10 + (i * 3.1) % 80}%`,
-  top: `${16 + (i * 4.4) % 36}%`,
-  size: `${1.4 + (i % 3) * 0.8}px`,
+  delay: `${(i * 0.16).toFixed(2)}s`,
+  duration: `${(3.2 + (i % 7) * 0.22).toFixed(2)}s`,
+  left: `${12 + (i * 2.7) % 76}%`,
+  top: `${12 + (i * 3.1) % 24}%`,
+  size: `${1.4 + (i % 3) * 0.7}px`,
 }))
 
 export default function Landing() {
@@ -45,6 +45,10 @@ export default function Landing() {
   const [hoveredTeam, setHoveredTeam] = useState(null)
   const [sunHover, setSunHover] = useState(false)
   const canvasRef = useRef(null)
+
+  const heroRef = useRef(null)
+  const featuresRef = useRef(null)
+  const teamsRef = useRef(null)
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 70)
@@ -67,14 +71,14 @@ export default function Landing() {
     }
 
     const createParticles = () => {
-      const amount = Math.min(30, Math.floor(window.innerWidth / 68))
+      const amount = Math.min(28, Math.floor(window.innerWidth / 72))
       particles = Array.from({ length: amount }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        r: Math.random() * 1.6 + 0.4,
-        vx: (Math.random() - 0.5) * 0.06,
-        vy: (Math.random() - 0.5) * 0.06,
-        a: Math.random() * 0.18 + 0.025,
+        r: Math.random() * 1.4 + 0.45,
+        vx: (Math.random() - 0.5) * 0.05,
+        vy: (Math.random() - 0.5) * 0.05,
+        a: Math.random() * 0.16 + 0.02,
       }))
     }
 
@@ -116,6 +120,13 @@ export default function Landing() {
     }
   }, [])
 
+  const scrollToRef = (ref) => {
+    ref.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+
   const globeMarkers = useMemo(
     () =>
       TEAM_POINTS.map((team) => (
@@ -156,10 +167,10 @@ export default function Landing() {
         </div>
 
         <nav className="landing-nav-pill">
-          <a href="#hero">Home</a>
-          <a href="#features">Features</a>
-          <a href="#teams">Teams</a>
-          <a href="/go">Pulse GO</a>
+          <button type="button" onClick={() => scrollToRef(heroRef)}>Home</button>
+          <button type="button" onClick={() => scrollToRef(featuresRef)}>Features</button>
+          <button type="button" onClick={() => scrollToRef(teamsRef)}>Teams</button>
+          <button type="button" onClick={() => navigate('/go')}>Pulse GO</button>
         </nav>
 
         <div className="landing-nav-actions">
@@ -173,7 +184,7 @@ export default function Landing() {
       </header>
 
       <main className={`landing-shell ${visible ? 'is-visible' : ''}`}>
-        <section id="hero" className="hero-section">
+        <section ref={heroRef} className="hero-section">
           <div className="hero-chip">Kampaign Kings platform</div>
 
           <h1 className="hero-title">PULSE</h1>
@@ -185,9 +196,6 @@ export default function Landing() {
             onMouseEnter={() => setSunHover(true)}
             onMouseLeave={() => setSunHover(false)}
           >
-            <div className="hero-solar-bg-arc hero-solar-bg-arc-1" />
-            <div className="hero-solar-bg-arc hero-solar-bg-arc-2" />
-
             <div className="hero-solar-particles">
               {SOLAR_SPARKS.map((spark) => (
                 <span
@@ -204,10 +212,15 @@ export default function Landing() {
               ))}
             </div>
 
-            <div className="hero-sun-glow" />
+            <div className="hero-solar-halo hero-solar-halo-1" />
+            <div className="hero-solar-halo hero-solar-halo-2" />
+            <div className="hero-solar-flow hero-solar-flow-1" />
+            <div className="hero-solar-flow hero-solar-flow-2" />
+
             <div className="hero-horizon" />
 
             <div className="hero-sun-wrap">
+              <div className="hero-sun-glow" />
               <div className="hero-sun-shell" />
               <div className="hero-sun-core" />
               <div className="hero-sun-inner-ring" />
@@ -216,7 +229,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="features" className="feature-section">
+        <section ref={featuresRef} className="feature-section">
           <h2 className="section-title center-title">Built to feel smooth and natural.</h2>
 
           <div className="feature-grid">
@@ -230,7 +243,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="teams" className="globe-section">
+        <section ref={teamsRef} className="globe-section">
           <h2 className="section-title center-title">Teams across the globe.</h2>
           <p className="section-sub center-sub">
             Explore where each Pulse team operates inside the network.
@@ -239,17 +252,17 @@ export default function Landing() {
           <div className="globe-stage">
             <div className="globe-stars" />
 
-            <div className="globe-sphere">
-              <div className="globe-outline" />
-              <div className="globe-lat lat-1" />
-              <div className="globe-lat lat-2" />
-              <div className="globe-lat lat-3" />
-              <div className="globe-lat lat-4" />
-              <div className="globe-lat lat-5" />
-
-              <div className="globe-dots globe-dots-a" />
-              <div className="globe-dots globe-dots-b" />
-              <div className="globe-dots globe-dots-c" />
+            <div className="globe-hemisphere">
+              <div className="globe-hemisphere-outline" />
+              <div className="globe-rotate-layer globe-rotate-layer-a">
+                <div className="globe-dot-shell" />
+              </div>
+              <div className="globe-rotate-layer globe-rotate-layer-b">
+                <div className="globe-dot-shell" />
+              </div>
+              <div className="globe-rotate-layer globe-rotate-layer-c">
+                <div className="globe-dot-shell" />
+              </div>
 
               {globeMarkers}
             </div>
