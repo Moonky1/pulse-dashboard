@@ -1,26 +1,31 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { APP_CONFIG } from '../config'
 import { validateToken } from '../utils/token'
 import './Register.css'
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
+const SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
+
 const ROLES = [
-  { id: 'supervisor', label: 'Supervisor',  icon: '🧑‍💼' },
-  { id: 'qa',         label: 'QA',          icon: '🔍' },
-  { id: 'leader',     label: 'Team Leader', icon: '🏆' },
+  { id: 'supervisor', label: 'Supervisor', icon: '🧑‍💼' },
+  { id: 'qa', label: 'QA', icon: '🔍' },
+  { id: 'leader', label: 'Team Leader', icon: '🏆' },
 ]
+
 const STEPS = ['name', 'role', 'team', 'token']
 
 export default function Register() {
-  const [step, setStep]     = useState(0)
-  const [name, setName]     = useState('')
-  const [role, setRole]     = useState(null)
-  const [team, setTeam]     = useState(null)
-  const [token, setToken]   = useState('')
-  const [error, setError]   = useState('')
+  const navigate = useNavigate()
+
+  const [step, setStep] = useState(0)
+  const [name, setName] = useState('')
+  const [role, setRole] = useState(null)
+  const [team, setTeam] = useState(null)
+  const [token, setToken] = useState('')
+  const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // If already registered, redirect to dashboard
   useEffect(() => {
     const existing = localStorage.getItem('pulse_user')
     if (existing) window.location.href = '/dashboard'
@@ -28,40 +33,59 @@ export default function Register() {
 
   const saveToSheets = async (data) => {
     try {
-      // Use no-cors GET — Apps Script saves name/team/role to Sheet1
       const url = `${SCRIPT_URL}?name=${encodeURIComponent(data.name)}&team=${encodeURIComponent(data.team)}&role=${encodeURIComponent(data.role)}`
       await fetch(url, { mode: 'no-cors' })
       console.log('Saved to Sheets:', data)
-    } catch(e) {
+    } catch (e) {
       console.error('Sheet save error:', e)
-      // Still allow login even if sheet save fails
     }
   }
 
   const next = async () => {
     setError('')
+
     if (step === 0) {
       if (!name.trim()) return setError('Enter your name')
       return setStep(1)
     }
+
     if (step === 1) {
       if (!role) return setError('Select your role')
       return setStep(2)
     }
+
     if (step === 2) {
       if (!team) return setError('Select your team')
       return setStep(3)
     }
+
     if (step === 3) {
       if (!token.trim()) return setError('Enter the access token')
-      if (!validateToken(token)) return setError('Invalid token — ask your admin for the current code')
+      if (!validateToken(token)) {
+        return setError('Invalid token — ask your admin for the current code')
+      }
+
       setSaving(true)
-      const roleLabel = ROLES.find(r => r.id === role)?.label || role
-      const teamLabel = APP_CONFIG.teams.find(t => t.id === team)?.name || team
-      await saveToSheets({ name: name.trim(), team: teamLabel, role: roleLabel })
-      localStorage.setItem('pulse_user', JSON.stringify({
-        name: name.trim(), team, role, registeredAt: Date.now(),
-      }))
+
+      const roleLabel = ROLES.find((r) => r.id === role)?.label || role
+      const teamLabel = APP_CONFIG.teams.find((t) => t.id === team)?.name || team
+
+      await saveToSheets({
+        name: name.trim(),
+        team: teamLabel,
+        role: roleLabel,
+      })
+
+      localStorage.setItem(
+        'pulse_user',
+        JSON.stringify({
+          name: name.trim(),
+          team,
+          role,
+          registeredAt: Date.now(),
+        })
+      )
+
       window.location.href = '/dashboard'
     }
   }
@@ -69,96 +93,155 @@ export default function Register() {
   const progress = (step / (STEPS.length - 1)) * 100
 
   return (
-    <div className="reg-wrap">
-      <div className="reg-card">
-        <div className="reg-header">
-          <div className="reg-logo">P</div>
-          <div className="prog-bar"><div className="prog-fill" style={{ width: `${progress}%` }} /></div>
-          <div className="reg-step">{step + 1} / {STEPS.length}</div>
-        </div>
+    <div className="auth-overlay-page">
+      <div className="auth-overlay-blur" onClick={() => navigate('/')} />
 
-        {step === 0 && (
-          <div className="reg-body">
-            <h2>What's your name?</h2>
-            <p>This is how you'll appear in the dashboard</p>
-            <input className="reg-input" placeholder="Your name" value={name}
-              onChange={e => { setName(e.target.value); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && next()} autoFocus/>
-            <div className="role-warning" style={{ marginTop: 12 }}>
-              📝 <strong>Remember this name exactly.</strong> You'll use it to sign in later.
+      <div className="reg-wrap auth-modal-wrap">
+        <button className="auth-close" onClick={() => navigate('/')}>
+          ✕
+        </button>
+
+        <div className="reg-card auth-modal-card">
+          <div className="reg-header">
+            <div className="reg-logo">P</div>
+            <div className="prog-bar">
+              <div className="prog-fill" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="reg-step">
+              {step + 1} / {STEPS.length}
             </div>
           </div>
-        )}
 
-        {step === 1 && (
-          <div className="reg-body">
-            <h2>Select your role</h2>
-            <p>Choose your position in the team</p>
-            <div className="role-warning">
-              ⚠️ Your role <strong>cannot be changed</strong> later. Only an admin can modify it.
+          {step === 0 && (
+            <div className="reg-body">
+              <h2>What's your name?</h2>
+              <p>This is how you'll appear in the dashboard</p>
+
+              <input
+                className="reg-input"
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value)
+                  setError('')
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && next()}
+                autoFocus
+              />
+
+              <div className="role-warning" style={{ marginTop: 12 }}>
+                📝 <strong>Remember this name exactly.</strong> You'll use it to sign in later.
+              </div>
             </div>
-            <div className="role-grid">
-              {ROLES.map(r => (
-                <div key={r.id} className={`role-card${role === r.id ? ' selected' : ''}`}
-                  onClick={() => { setRole(r.id); setError('') }}>
-                  <span className="role-icon">{r.icon}</span>
-                  <span className="role-label">{r.label}</span>
-                  {role === r.id && <span className="role-check">✓</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="reg-body">
-            <h2>Select your team</h2>
-            <p>Your team will be highlighted in the dashboard</p>
-            <div className="team-grid">
-              {APP_CONFIG.teams.map(t => (
-                <div key={t.id} className={`team-card${team === t.id ? ' selected' : ''}`}
-                  onClick={() => { setTeam(t.id); setError('') }}>
-                  <img className="t-flag" src={`https://flagcdn.com/w40/${t.code}.png`} alt={t.name} />
-                  <div className="t-name">{t.name}</div>
-                  <div className="t-count">{t.agents} agents</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="reg-body">
-            <h2>Access token</h2>
-            <p>Enter the 6-digit code from your admin</p>
-            <input className="reg-input token-input" placeholder="000000" value={token}
-              onChange={e => { setToken(e.target.value.replace(/\D/g,'').slice(0,6)); setError('') }}
-              onKeyDown={e => e.key === 'Enter' && next()} maxLength={6} autoFocus/>
-            <div className="sheet-note">
-              This code changes every 5 minutes. Contact your Team Leader if you don't have it.
-            </div>
-          </div>
-        )}
-
-        {error && <div className="reg-error">{error}</div>}
-
-        <div className="reg-actions">
-          {step > 0 && (
-            <button className="btn-back" onClick={() => { setStep(s => s - 1); setError('') }}>← Back</button>
           )}
-          <button className="btn-next" onClick={next} disabled={saving}>
-            {saving ? 'Entering...' : step === STEPS.length - 1 ? 'Enter Pulse →' : 'Continue →'}
-          </button>
-        </div>
 
-        {step === 0 && (
-          <p style={{ textAlign:'center', marginTop:'1rem', fontSize:12, color:'#6b7280' }}>
-            Already registered?{' '}
-            <span onClick={()=>window.location.href='/signin'} style={{ color:'#f97316', cursor:'pointer', textDecoration:'underline' }}>
-              Sign in instead
-            </span>
-          </p>
-        )}
+          {step === 1 && (
+            <div className="reg-body">
+              <h2>Select your role</h2>
+              <p>Choose your position in the team</p>
+
+              <div className="role-warning">
+                ⚠️ Your role <strong>cannot be changed</strong> later. Only an admin can modify it.
+              </div>
+
+              <div className="role-grid">
+                {ROLES.map((r) => (
+                  <div
+                    key={r.id}
+                    className={`role-card${role === r.id ? ' selected' : ''}`}
+                    onClick={() => {
+                      setRole(r.id)
+                      setError('')
+                    }}
+                  >
+                    <span className="role-icon">{r.icon}</span>
+                    <span className="role-label">{r.label}</span>
+                    {role === r.id && <span className="role-check">✓</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="reg-body">
+              <h2>Select your team</h2>
+              <p>Your team will be highlighted in the dashboard</p>
+
+              <div className="team-grid">
+                {APP_CONFIG.teams.map((t) => (
+                  <div
+                    key={t.id}
+                    className={`team-card${team === t.id ? ' selected' : ''}`}
+                    onClick={() => {
+                      setTeam(t.id)
+                      setError('')
+                    }}
+                  >
+                    <img
+                      className="t-flag"
+                      src={`https://flagcdn.com/w40/${t.code}.png`}
+                      alt={t.name}
+                    />
+                    <div className="t-name">{t.name}</div>
+                    <div className="t-count">{t.agents} agents</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="reg-body">
+              <h2>Access token</h2>
+              <p>Enter the 6-digit code from your admin</p>
+
+              <input
+                className="reg-input token-input"
+                placeholder="000000"
+                value={token}
+                onChange={(e) => {
+                  setToken(e.target.value.replace(/\D/g, '').slice(0, 6))
+                  setError('')
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && next()}
+                maxLength={6}
+                autoFocus
+              />
+
+              <div className="sheet-note">
+                This code changes every 5 minutes. Contact your Team Leader if you don't have it.
+              </div>
+            </div>
+          )}
+
+          {error && <div className="reg-error">{error}</div>}
+
+          <div className="reg-actions">
+            {step > 0 && (
+              <button
+                className="btn-back"
+                onClick={() => {
+                  setStep((s) => s - 1)
+                  setError('')
+                }}
+              >
+                ← Back
+              </button>
+            )}
+
+            <button className="btn-next" onClick={next} disabled={saving}>
+              {saving ? 'Entering...' : step === STEPS.length - 1 ? 'Enter Pulse →' : 'Continue →'}
+            </button>
+          </div>
+
+          {step === 0 && (
+            <p className="auth-switch-text">
+              Already registered?{' '}
+              <span onClick={() => navigate('/signin')}>Sign in instead</span>
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
