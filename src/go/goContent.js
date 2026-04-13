@@ -1,256 +1,1427 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { quizQuestions } from './goContent'
-import './GoQuizPlay.css'
+export const scripts = {
+  en: {
+    id: 'script-en',
+    title: 'English Script',
+    flag: '🇺🇸',
+    steps: [
+      {
+        id: 1,
+        type: 'line',
+        label: 'Introduction',
+        text: "Hi, [client's name] this is [your name] with the Vehicle Services Group. We're calling about the vehicle you financed on [month, year].",
+        tip: 'Say the client name clearly. State month and year from the form.',
+      },
+      {
+        id: 2,
+        type: 'line',
+        label: 'Purpose',
+        text: "Our records indicate you haven't activated your vehicle's extended warranty yet.",
+        tip: 'Say this with confidence. It creates urgency.',
+      },
+      {
+        id: 3,
+        type: 'line',
+        label: 'Vehicle Check',
+        text: 'I just need to verify — is your vehicle still in good running condition?',
+        tip: 'Wait for the answer. This confirms eligibility.',
+      },
+      {
+        id: 4,
+        type: 'bridge',
+        label: 'Positive Response',
+        text: 'Perfect!',
+        tip: 'Respond positively and move immediately into the transfer line.',
+      },
+      {
+        id: 5,
+        type: 'line',
+        label: 'Transfer Setup',
+        text: 'I would just need to get you on with a Service Advisor to explain the details of your qualifications and review what it will cover — give me one second and I will introduce you. Okay?',
+        tip: 'Ask for approval clearly before transferring.',
+      },
+      {
+        id: 6,
+        type: 'action',
+        label: '⚠️ Wait for Approval',
+        text: 'Wait for customer approval before transferring.',
+        tip: 'Never transfer without a clear okay or sure from the customer.',
+      },
+      {
+        id: 7,
+        type: 'action',
+        label: '⚠️ On Transfer',
+        text: 'When transferring, wait for Service Advisor to pick up the call and speak first.',
+        tip: 'Do not jump in before the Service Advisor.',
+      },
+      {
+        id: 8,
+        type: 'line',
+        label: 'SA Introduction',
+        text: 'Hello Service Advisor, I have [client name] on the line — can you please assist?',
+        tip: 'Stay on the line until the SA confirms they have the customer.',
+      },
+      {
+        id: 9,
+        type: 'action',
+        label: '⏱️ 15-Second Rule',
+        text: 'After the SA joins, stay on the call for at least 15 seconds before disconnecting. Make sure the SA and customer are actively talking before you leave.',
+        tip: 'Never hang up the moment the SA joins.',
+      },
+    ],
+  },
 
-const QUESTION_COUNT = 10
-const TIME_PER_Q = 20
-
-const TOPIC_TAGS = {
-  all: null,
-  script:     [1, 2, 13, 15],
-  objections: [5, 9, 11, 12],
-  product:    [3, 6, 7, 11, 14],
-  callflow:   [2, 8, 10, 12],
-  'dosdонts': [4, 7, 8, 13, 15],
+  es: {
+    id: 'script-es',
+    title: 'Script en Español',
+    flag: '🇪🇸',
+    steps: [
+      {
+        id: 1,
+        type: 'line',
+        label: 'Introducción',
+        text: 'Hola, [nombre del cliente], le habla [tu nombre] de Grupo de Servicios Vehiculares. Le llamamos con respecto al vehículo que usted financió en [mes, año].',
+        tip: 'Di el nombre del cliente claramente. Menciona mes y año del formulario.',
+      },
+      {
+        id: 2,
+        type: 'line',
+        label: 'Propósito',
+        text: 'Nuestros registros indican que aún no ha activado la garantía extendida de su vehículo.',
+        tip: 'Di esto con confianza. Crea urgencia.',
+      },
+      {
+        id: 3,
+        type: 'line',
+        label: 'Verificación del vehículo',
+        text: 'Solo necesito verificar: ¿Su vehículo se encuentra actualmente en buenas condiciones de funcionamiento?',
+        tip: 'Espera la respuesta. Esto confirma elegibilidad.',
+      },
+      {
+        id: 4,
+        type: 'bridge',
+        label: 'Respuesta positiva',
+        text: '¡Perfecto!',
+        tip: 'Responde positivamente y pasa inmediatamente a la transferencia.',
+      },
+      {
+        id: 5,
+        type: 'line',
+        label: 'Preparación de transferencia',
+        text: 'Lo voy a comunicar con un Asesor de Servicio para que le explique los detalles de su calificación y revise qué es lo que cubriría. Deme un segundo y se lo presento. ¿Okay?',
+        tip: 'Pide aprobación con claridad antes de transferir.',
+      },
+      {
+        id: 6,
+        type: 'action',
+        label: '⚠️ Espera aprobación',
+        text: 'Espera primero por aprobación del cliente para transferir.',
+        tip: 'Nunca transfieras sin un sí o okay claro.',
+      },
+      {
+        id: 7,
+        type: 'action',
+        label: '⚠️ Al transferir',
+        text: 'Al transferir, espera a que el Asesor de Servicio conteste y hable primero.',
+        tip: 'No te adelantes al SA.',
+      },
+      {
+        id: 8,
+        type: 'line',
+        label: 'Introducción al Asesor',
+        text: 'Hola, Asesor de Servicio, tengo a [nombre del cliente] en la línea. ¿Podría asistir, por favor?',
+        tip: 'Quédate en la línea hasta que el SA confirme que tiene al cliente.',
+      },
+      {
+        id: 9,
+        type: 'action',
+        label: '⏱️ Regla de 15 segundos',
+        text: 'Después de que el Asesor se une, permanece en la llamada al menos 15 segundos antes de desconectarte. Asegúrate de que el SA y el cliente estén hablando activamente antes de salir.',
+        tip: 'Nunca cuelgues apenas entra el SA.',
+      },
+    ],
+  },
 }
 
-const OPTION_STYLES = [
-  { color: '#ef4444', shape: '▲' },
-  { color: '#3b82f6', shape: '◆' },
-  { color: '#f59e0b', shape: '●' },
-  { color: '#22c55e', shape: '■' },
+export const objections = [
+  {
+    id: 'not-interested',
+    emoji: '🚫',
+    title: 'Not Interested',
+    titleEs: 'No me interesa',
+    goal: 'Keep them on the line and create curiosity',
+    rebuttalEn:
+      'I completely understand. A lot of people felt the same way at first until they saw how much a single repair could cost without coverage. That is exactly why we do not charge for the quote with the Service Advisor. Fair enough?',
+    rebuttalEs:
+      'Entiendo perfectamente. Mucha gente pensaba lo mismo al principio hasta que vio cuánto puede costar una sola reparación sin cobertura. Por eso no cobramos nada por la consulta con el Asesor de Servicio. ¿Le parece bien?',
+  },
+  {
+    id: 'no-service',
+    emoji: '❓',
+    title: "I don't have any service with you",
+    titleEs: 'No tengo ningún servicio con ustedes',
+    goal: 'Clarify purpose and shift into value mode',
+    rebuttalEn:
+      'Exactly, and that is why we are reaching out today. This is your opportunity to activate a protection plan for your vehicle.',
+    rebuttalEs:
+      'Exactamente, y por eso le estamos llamando hoy. Esta es su oportunidad de activar un plan de protección para su vehículo.',
+  },
+  {
+    id: 'where-info',
+    emoji: '📋',
+    title: 'Where did you get my information?',
+    titleEs: '¿Cómo obtuvieron mi información?',
+    goal: 'Normalize the contact and build trust',
+    rebuttalEn:
+      'We partner with dealerships and vehicle registries nationwide, and your vehicle information is part of our outreach for protection eligibility.',
+    rebuttalEs:
+      'Trabajamos con concesionarios y registros vehiculares a nivel nacional, y la información de su vehículo forma parte de nuestro alcance para elegibilidad de protección.',
+  },
+  {
+    id: 'what-vehicle',
+    emoji: '🚗',
+    title: 'What kind of vehicle?',
+    titleEs: '¿Qué tipo de vehículo?',
+    goal: 'Show limitations and move toward the Service Advisor',
+    rebuttalEn:
+      'I only see the finance information here, not the exact make or model. That is why I need to get you over to the Service Advisor.',
+    rebuttalEs:
+      'Solo tengo la información financiera aquí, no la marca o modelo exacto. Por eso necesito comunicarle con el Asesor de Servicio.',
+  },
+  {
+    id: 'where-located',
+    emoji: '🌎',
+    title: 'Where are you located?',
+    titleEs: '¿Dónde están ubicados?',
+    goal: 'Build credibility',
+    rebuttalEn:
+      'Our headquarters are based in Dallas, Texas, but our protection plans are accepted at authorized repair facilities across the U.S.',
+    rebuttalEs:
+      'Nuestra sede está en Dallas, Texas, pero nuestros planes de protección son aceptados en talleres autorizados en todo EE.UU.',
+  },
+  {
+    id: 'who-is-this',
+    emoji: '📞',
+    title: 'Who is this?',
+    titleEs: '¿Quién habla?',
+    goal: 'Clarify and validate',
+    rebuttalEn:
+      'This is [your name] from the Vehicle Services Group.',
+    rebuttalEs:
+      'Le habla [tu nombre] del Grupo de Servicios Vehiculares.',
+  },
+  {
+    id: 'how-much',
+    emoji: '💲',
+    title: 'How much does it cost?',
+    titleEs: '¿Cuánto cuesta?',
+    goal: 'Tease the value and move toward transfer',
+    rebuttalEn:
+      'That is the great part. Cost depends on mileage and driving habits, and the Service Advisor can break that down for you.',
+    rebuttalEs:
+      'Esa es la mejor parte. El costo depende del millaje y hábitos de manejo, y el Asesor de Servicio puede explicárselo.',
+  },
+  {
+    id: 'already-insurance',
+    emoji: '🛡️',
+    title: 'I already have insurance',
+    titleEs: 'Ya tengo seguro',
+    goal: 'Differentiate coverage clearly',
+    rebuttalEn:
+      'Totally understand. Insurance covers accidents. What we offer is mechanical breakdown coverage.',
+    rebuttalEs:
+      'Totalmente entendido. El seguro cubre accidentes. Lo que ofrecemos es cobertura por fallas mecánicas.',
+  },
+  {
+    id: 'busy',
+    emoji: '🕒',
+    title: "I'm busy",
+    titleEs: 'Estoy ocupado/a',
+    goal: 'Keep control and offer a callback',
+    rebuttalEn:
+      'Totally respect that. If this is not a good time, I can schedule a callback that works better for you.',
+    rebuttalEs:
+      'Lo respeto totalmente. Si este no es un buen momento, puedo agendar una llamada de regreso.',
+  },
+  {
+    id: 'already-activated',
+    emoji: '✅',
+    title: 'I already activated it',
+    titleEs: 'Ya la activé',
+    goal: 'Differentiate factory warranty and extended coverage',
+    rebuttalEn:
+      'If that was activated when you first purchased the vehicle, it is likely just the Factory Warranty. We are looking at Extended Warranty coverage, which is wider.',
+    rebuttalEs:
+      'Si eso se activó cuando compró el vehículo, probablemente sea solo la Garantía de Fábrica. Nosotros hablamos de Garantía Extendida, que es más amplia.',
+  },
+  {
+    id: 'another-company',
+    emoji: '🏢',
+    title: 'I have it with another company',
+    titleEs: 'La tengo con otra compañía',
+    goal: 'Highlight comparison opportunity',
+    rebuttalEn:
+      'That is great because it gives you a baseline. Many clients switch after a quick side by side comparison.',
+    rebuttalEs:
+      'Eso es excelente porque le da un punto de comparación. Muchos clientes cambian después de una comparación rápida.',
+  },
+  {
+    id: 'purpose-of-call',
+    emoji: '📣',
+    title: 'Purpose of the call?',
+    titleEs: '¿Cuál es el propósito de la llamada?',
+    goal: 'Clarify purpose and move toward transfer',
+    rebuttalEn:
+      'This call is simply an opportunity to extend protection on your vehicle before any issues come up.',
+    rebuttalEs:
+      'Esta llamada es simplemente una oportunidad para extender la protección de su vehículo antes de que surja algún problema.',
+  },
 ]
 
-const LETTERS = ['A', 'B', 'C', 'D']
+export const productKnowledge = {
+  comparison: {
+    title: 'Know the Difference',
+    items: [
+      {
+        name: 'Factory Warranty',
+        color: '#b45309',
+        points: [
+          'Comes with new vehicles',
+          'Lasts about 3 years or 36,000 miles',
+          'Covers manufacturer defects',
+          'Expires and cannot be renewed as factory coverage',
+        ],
+      },
+      {
+        name: 'Extended Coverage',
+        color: '#f97316',
+        points: [
+          'Not mandatory',
+          'Covers mechanical repairs after factory coverage ends',
+          'Optional product',
+          'That is what we offer',
+        ],
+      },
+      {
+        name: 'Insurance',
+        color: '#92400e',
+        points: [
+          'Mandatory in the U.S. to drive legally',
+          'Covers accidents, theft, damage, liability',
+          'Does not cover mechanical breakdowns',
+          'Completely different product',
+        ],
+      },
+    ],
+  },
 
-function shuffle(arr) {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
+  canCover: {
+    title: 'What We Cover',
+    items: [
+      'Engine and transmission',
+      'Vehicles manufactured 2011 or later',
+      'Vehicles with up to 175,000 miles',
+      'Vehicles that still run',
+      'Coverage up to 100,000 or more additional miles',
+      'Repairs at any authorized repair shop nationwide',
+      'Unmodified parts on vehicles with modifications',
+    ],
+  },
+
+  cannotCover: {
+    title: 'What We Cannot Cover',
+    items: [
+      'Electric vehicles',
+      'Vehicles before 2011',
+      'Vehicles with over 175,000 miles',
+      'Bodywork or cosmetic repairs',
+      'Collision or accident damage',
+      'Light bulbs and normal wear items',
+      'Modified parts themselves',
+      'Motorcycles, trailers, exotic exceptions',
+    ],
+  },
+
+  duration: {
+    title: 'Duration and Service Process',
+    points: [
+      'Kicks in after factory coverage ends',
+      'Can cover up to 100,000 or more additional miles',
+      'Service can be done at authorized repair facilities across the U.S.',
+    ],
+  },
 }
 
-// ── Web Audio sounds ──
-function useSound() {
-  const ctx = useRef(null)
-  const getCtx = () => {
-    if (!ctx.current) ctx.current = new (window.AudioContext || window.webkitAudioContext)()
-    return ctx.current
-  }
-  const beep = (freq, dur, type = 'sine', vol = 0.3) => {
-    try {
-      const ac = getCtx()
-      const o = ac.createOscillator()
-      const g = ac.createGain()
-      o.connect(g); g.connect(ac.destination)
-      o.frequency.value = freq
-      o.type = type
-      g.gain.setValueAtTime(vol, ac.currentTime)
-      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur)
-      o.start(); o.stop(ac.currentTime + dur)
-    } catch {}
-  }
-  return {
-    correct: () => { beep(600, 0.1); setTimeout(() => beep(900, 0.15), 100) },
-    wrong:   () => beep(180, 0.4, 'sawtooth', 0.2),
-    tick:    () => beep(440, 0.05, 'square', 0.15),
-    timeout: () => beep(220, 0.5, 'triangle', 0.2),
-    start:   () => { beep(400, 0.08); setTimeout(() => beep(500, 0.08), 100); setTimeout(() => beep(700, 0.15), 200) },
-  }
+export const callFlow = {
+  steps: [
+    {
+      id: 1,
+      title: 'Introduction and Financing Info',
+      icon: '👋',
+      description: 'Greet the client by name, identify yourself and the company, and mention the financing month and year.',
+      keyPoints: ['Use the client name', 'Use month and year from form', 'Sound confident'],
+    },
+    {
+      id: 2,
+      title: 'Vehicle Condition Verification',
+      icon: '🚗',
+      description: 'Ask whether the vehicle is still in good running condition. This confirms eligibility.',
+      keyPoints: ['Wait for the answer', 'Vehicle must be running', 'Do not skip this step'],
+    },
+    {
+      id: 3,
+      title: 'Transfer Setup',
+      icon: '📋',
+      description: 'Explain that you need to connect the customer with a Service Advisor and get approval first.',
+      keyPoints: ['Get clear approval', 'Never transfer without consent', 'Be direct and smooth'],
+    },
+    {
+      id: 4,
+      title: 'Professional Transfer',
+      icon: '🔄',
+      description: 'Wait for the Service Advisor to pick up first, then introduce the client by name and stay on the line.',
+      keyPoints: ['SA speaks first', 'Introduce client properly', 'Confirm handoff before leaving'],
+    },
+  ],
+
+  transferProtocol: [
+    'Confirm vehicle qualification first',
+    'Get customer approval to transfer',
+    'Initiate the transfer and stay on the line',
+    'Wait for the Service Advisor to pick up and speak first',
+    'Introduce the client by name',
+    'Stay at least 15 seconds and confirm both are talking',
+  ],
+
+  waitingQuestions: [
+    'Has your vehicle received maintenance recently?',
+    'Have you noticed any unusual noises from the engine or transmission?',
+    'Have you had any breakdowns or repairs recently?',
+    'Does the vehicle start without problems?',
+    'Have you seen any warning lights on the dashboard?',
+    'Do the brakes respond properly?',
+    'Are you satisfied with your vehicle performance so far?',
+    'Has the vehicle had any modifications or upgrades?',
+  ],
 }
 
-export default function GoQuizPlay() {
-  const navigate = useNavigate()
-  const [params] = useSearchParams()
-  const topicId = params.get('topic') || 'all'
-  const sound = useSound()
+export const dosAndDonts = {
+  donts: [
+    {
+      rule: "Don't say we work for car brands",
+      detail: 'We are Vehicle Services Group, independent.',
+    },
+    {
+      rule: "Don't say we are extending factory warranty",
+      detail: 'We offer extended coverage, which is a separate product.',
+    },
+    {
+      rule: 'Never say FREE',
+      detail: 'This is misleading and non-compliant.',
+    },
+    {
+      rule: "Don't say the bank gave us the information",
+      detail: 'Say we partner with dealerships and vehicle registries.',
+    },
+  ],
 
-  const [questions] = useState(() => {
-    const ids = TOPIC_TAGS[topicId]
-    const pool = ids
-      ? quizQuestions.filter(q => ids.includes(q.id))
-      : quizQuestions
-    const base = pool.length >= QUESTION_COUNT ? pool : quizQuestions
-    return shuffle(base).slice(0, QUESTION_COUNT)
-  })
+  formFields: {
+    use: [
+      'Customer first and last name',
+      'Origination date or date of loan',
+      'Loan balance or total amount of loan',
+    ],
+    ignore: [
+      'Address',
+      'Maintenance dates',
+      'Finance company',
+      'Terms of loan',
+      'Plan cost',
+    ],
+  },
 
-  const [idx, setIdx] = useState(0)
-  const [selected, setSelected] = useState(null)
-  const [answered, setAnswered] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(TIME_PER_Q)
-  const [results, setResults] = useState([])
-  const [done, setDone] = useState(false)
-  const [showExplanation, setShowExplanation] = useState(false)
-  const timerRef = useRef(null)
-  const started = useRef(false)
+  deliveryStandards: [
+    'State financing info with confidence',
+    'Confirm the vehicle runs before continuing',
+    'Use proper SA introduction',
+    'Do not shorten the script',
+    'Do not improvise the wording',
+  ],
 
-  const q = questions[idx]
-  const score = results.filter(r => r.correct).length
-
-  useEffect(() => {
-    if (!started.current) { sound.start(); started.current = true }
-  }, [])
-
-  const doTimeout = useCallback(() => {
-    if (answered) return
-    sound.timeout()
-    setAnswered(true)
-    setShowExplanation(true)
-    setResults(p => [...p, { correct: false, timedOut: true }])
-  }, [answered])
-
-  useEffect(() => {
-    if (done || answered) { clearInterval(timerRef.current); return }
-    setTimeLeft(TIME_PER_Q)
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 6 && t > 1) sound.tick()
-        if (t <= 1) { clearInterval(timerRef.current); doTimeout(); return 0 }
-        return t - 1
-      })
-    }, 1000)
-    return () => clearInterval(timerRef.current)
-  }, [idx, done, answered, doTimeout])
-
-  const handleSelect = (i) => {
-    if (answered) return
-    clearInterval(timerRef.current)
-    setSelected(i)
-    setAnswered(true)
-    setShowExplanation(true)
-    const correct = i === q.correct
-    if (correct) sound.correct(); else sound.wrong()
-    setResults(p => [...p, { correct }])
-  }
-
-  const handleNext = () => {
-    if (idx + 1 >= QUESTION_COUNT) { setDone(true); return }
-    setIdx(i => i + 1)
-    setSelected(null)
-    setAnswered(false)
-    setShowExplanation(false)
-  }
-
-  const timerPct = (timeLeft / TIME_PER_Q) * 100
-  const timerColor = timeLeft <= 5 ? '#ef4444' : timeLeft <= 10 ? '#f59e0b' : '#f97316'
-
-  // ── RESULTS ──
-  if (done) {
-    const pct = Math.round((score / QUESTION_COUNT) * 100)
-    const grade = pct >= 80 ? { label: '🎉 Excellent!', color: '#22c55e' }
-                : pct >= 60 ? { label: '👍 Good Job',   color: '#f97316' }
-                :             { label: '📚 Keep Studying', color: '#ef4444' }
-    return (
-      <div className="gqp-page">
-        <nav className="gqp-nav">
-          <div className="gqp-nav-brand" onClick={() => navigate('/go')} style={{ cursor: 'pointer' }}>
-            <span className="gqp-nav-text">Pulse</span>
-            <span className="gqp-nav-badge">GO</span>
-          </div>
-        </nav>
-        <div className="gqp-results">
-          <div className="gqp-results-score" style={{ color: grade.color }}>{pct}%</div>
-          <div className="gqp-results-grade" style={{ color: grade.color }}>{grade.label}</div>
-          <div className="gqp-results-row">
-            <div className="gqp-results-stat">
-              <span className="gqp-results-num" style={{ color: '#22c55e' }}>{score}</span>
-              <span className="gqp-results-lbl">Correct</span>
-            </div>
-            <div className="gqp-results-stat">
-              <span className="gqp-results-num" style={{ color: '#ef4444' }}>{QUESTION_COUNT - score}</span>
-              <span className="gqp-results-lbl">Missed</span>
-            </div>
-            <div className="gqp-results-stat">
-              <span className="gqp-results-num" style={{ color: '#6b7280' }}>{QUESTION_COUNT}</span>
-              <span className="gqp-results-lbl">Total</span>
-            </div>
-          </div>
-          <div className="gqp-results-actions">
-            <button className="gqp-btn-primary" onClick={() => window.location.reload()}>🔄 Try Again</button>
-            <button className="gqp-btn-outline" onClick={() => navigate('/go/quiz')}>Change Topic</button>
-            <button className="gqp-btn-outline" onClick={() => navigate('/go/learn')}>📚 Review</button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── QUIZ ──
-  return (
-    <div className="gqp-page">
-      <nav className="gqp-nav">
-        <div className="gqp-nav-brand" onClick={() => navigate('/go')} style={{ cursor: 'pointer' }}>
-          <span className="gqp-nav-text">Pulse</span>
-          <span className="gqp-nav-badge">GO</span>
-        </div>
-        <div className="gqp-nav-meta">
-          <span className="gqp-nav-counter">{idx + 1} / {QUESTION_COUNT}</span>
-          <span className="gqp-nav-timer" style={{ color: timerColor }}>{timeLeft}s</span>
-        </div>
-        <button className="gqp-nav-exit" onClick={() => navigate('/go/quiz')}>✕ Exit</button>
-      </nav>
-
-      {/* Timer bar */}
-      <div className="gqp-timer-bar">
-        <div className="gqp-timer-fill" style={{ width: `${timerPct}%`, background: timerColor }} />
-      </div>
-
-      {/* Progress dots */}
-      <div className="gqp-dots">
-        {questions.map((_, i) => (
-          <div key={i} className={`gqp-dot ${i < idx ? 'done' : i === idx ? 'active' : ''}`} />
-        ))}
-      </div>
-
-      {/* Question */}
-      <div className="gqp-question-wrap">
-        <div className="gqp-question">{q.question}</div>
-      </div>
-
-      {/* Options — Kahoot 2x2 grid */}
-      <div className="gqp-options">
-        {q.options.map((opt, i) => {
-          const st = OPTION_STYLES[i]
-          let state = ''
-          if (answered) {
-            if (i === q.correct) state = 'correct'
-            else if (i === selected) state = 'wrong'
-            else state = 'dim'
-          }
-          return (
-            <button
-              key={i}
-              className={`gqp-option ${state}`}
-              style={{ '--opt-color': st.color }}
-              onClick={() => handleSelect(i)}
-              disabled={answered}
-            >
-              <span className="gqp-opt-shape">{st.shape}</span>
-              <span className="gqp-opt-letter">{LETTERS[i]}</span>
-              <span className="gqp-opt-text">{opt}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Explanation */}
-      {showExplanation && (
-        <div className="gqp-explanation">
-          <span className="gqp-exp-icon">{selected === q.correct ? '✅' : '❌'}</span>
-          <span>{q.explanation}</span>
-        </div>
-      )}
-
-      {answered && (
-        <div className="gqp-next-row">
-          <button className="gqp-btn-primary" onClick={handleNext}>
-            {idx + 1 >= QUESTION_COUNT ? 'See Results →' : 'Next →'}
-          </button>
-        </div>
-      )}
-    </div>
-  )
+  practiceStructure: [
+    {
+      title: 'Line by Line Repetition',
+      desc: 'Repeat the script exactly as written until delivery becomes natural.',
+    },
+    {
+      title: 'Tone and Pronunciation',
+      desc: 'Focus on clear pronunciation, controlled energy, and confident inflection.',
+    },
+    {
+      title: 'Authority',
+      desc: 'Speak with control, clarity, and purpose.',
+    },
+    {
+      title: 'Speed Control',
+      desc: 'Do not rush. Do not drag. Keep a balanced pace.',
+    },
+  ],
 }
+
+export const dialer = {
+  dispositions: [
+    { code: 'A', label: 'Answering Machine', description: 'Voicemail or automated system' },
+    { code: 'BLANK', label: 'No Info on File', description: 'No usable customer info' },
+    { code: 'CALLBK', label: 'Call Back', description: 'Customer requested callback' },
+    { code: 'DAIR', label: 'Dead Air', description: 'Call connected but nobody responded' },
+    { code: 'DC', label: 'Disconnected Number', description: 'Number no longer in service' },
+    { code: 'DNC', label: 'Do Not Call', description: 'Customer asked to be removed' },
+    { code: 'LANG', label: 'Language Barrier', description: 'Could not communicate due to language' },
+    { code: 'NI', label: 'Not Interested', description: 'Customer declined' },
+    { code: 'SPANIS', label: 'Spanish Speaker', description: 'Spanish speaker routing' },
+    { code: 'SPXFER', label: 'Spanish Xfer', description: 'Transferred to Spanish Service Advisor' },
+    { code: 'WRGNUM', label: 'Wrong Number', description: 'Number does not match file' },
+    { code: 'WRGVEH', label: 'Wrong Vehicle Info', description: 'Vehicle info on file is incorrect' },
+    { code: 'XFER', label: 'Call Transferred', description: 'Successful transfer to Service Advisor' },
+  ],
+
+  pauseCodes: [
+    { code: 'Break - Break', label: 'BREAK', time: '10 minutes max', desc: 'Scheduled break only' },
+    { code: 'CB - Callbacks', label: 'CALLBACKS', time: 'As needed', desc: 'For callbacks' },
+    { code: 'Lunch - Lunch', label: 'LUNCH', time: '1 hour', desc: 'Lunch only' },
+    { code: 'Manage', label: 'MANAGE', time: 'As needed', desc: 'When supervisor asks you to call them' },
+    { code: 'RR - Restroom', label: 'RESTROOM', time: '5 minutes max', desc: 'Restroom only' },
+    { code: 'Tech - Tech or System Issues', label: 'TECH ISSUES', time: 'As needed', desc: 'System problems' },
+  ],
+}
+
+export const quizQuestions = [
+  // SCRIPT
+  {
+    id: 1,
+    topic: 'script',
+    question: 'What company name should you use when greeting the customer?',
+    options: [
+      'Vehicle Services Group',
+      'Auto Warranty Garrett',
+      'National Protection Center',
+      'Coverage Activation Unit',
+    ],
+    correct: 0,
+    explanation: 'Always identify yourself as Vehicle Services Group.',
+  },
+  {
+    id: 2,
+    topic: 'script',
+    question: 'When should you transfer the customer to the Service Advisor?',
+    options: [
+      'After clear approval',
+      'Right after hello',
+      'Before checking eligibility',
+      'After getting the address',
+    ],
+    correct: 0,
+    explanation: 'You must get clear approval before transferring.',
+  },
+  {
+    id: 3,
+    topic: 'script',
+    question: 'Which approved field from the form can be used in the opening?',
+    options: [
+      'Origination date',
+      'Customer address',
+      'Finance company',
+      'APR details',
+    ],
+    correct: 0,
+    explanation: 'The origination date is an approved field you can use.',
+  },
+  {
+    id: 4,
+    topic: 'script',
+    question: 'Which purpose line is correct?',
+    options: [
+      "Our records indicate you haven't activated your vehicle's extended warranty yet",
+      'Your bank asked us to reach out',
+      'We are renewing your factory warranty today',
+      'Your dealership sent us to finish enrollment',
+    ],
+    correct: 0,
+    explanation: 'Use the approved purpose line only.',
+  },
+  {
+    id: 5,
+    topic: 'script',
+    question: '¿Cuál es la introducción correcta en español?',
+    options: [
+      'Hola, [nombre], le habla [tu nombre] de Grupo de Servicios Vehiculares',
+      'Buenos días, habla el banco de garantías',
+      'Le hablo del concesionario que lo financió',
+      'Buenas, traigo una oferta para su carro',
+    ],
+    correct: 0,
+    explanation: 'La introducción debe incluir tu nombre y la compañía correcta.',
+  },
+  {
+    id: 6,
+    topic: 'script',
+    question: 'What is the correct line when introducing the customer to the SA?',
+    options: [
+      'Hello Service Advisor, I have [client name] on the line — can you please assist?',
+      'I have a coverage customer for you',
+      'Please take over this call now',
+      'This caller wants pricing details',
+    ],
+    correct: 0,
+    explanation: 'Use the professional handoff line with the client name.',
+  },
+  {
+    id: 7,
+    topic: 'script',
+    question: '¿Qué frase pide aprobación antes de transferir?',
+    options: [
+      'Deme un segundo y se lo presento. ¿Okay?',
+      'Lo voy a transferir ya mismo',
+      'Espere en la línea por favor',
+      'Ahora se lo paso sin demora',
+    ],
+    correct: 0,
+    explanation: 'Siempre debes pedir aprobación clara.',
+  },
+  {
+    id: 8,
+    topic: 'script',
+    question: 'After the introduction, what must you verify first?',
+    options: [
+      'Vehicle running condition',
+      'Customer address',
+      'Financing company',
+      'Driver license status',
+    ],
+    correct: 0,
+    explanation: 'The first key check is whether the vehicle is in good running condition.',
+  },
+  {
+    id: 9,
+    topic: 'script',
+    question: '¿Cuál es la pregunta correcta para verificar el vehículo?',
+    options: [
+      '¿Su vehículo se encuentra actualmente en buenas condiciones de funcionamiento?',
+      '¿El carro le prende más o menos?',
+      '¿Todavía usa ese auto o no?',
+      '¿Le falla mucho ese vehículo?',
+    ],
+    correct: 0,
+    explanation: 'Usa la frase formal y aprobada del script.',
+  },
+  {
+    id: 10,
+    topic: 'script',
+    question: 'What do you say right after the customer confirms the vehicle runs?',
+    options: [
+      'Perfect!',
+      'Thanks for confirming',
+      'Good to know',
+      'That sounds okay',
+    ],
+    correct: 0,
+    explanation: 'The script moves from confirmation into “Perfect!” immediately.',
+  },
+  {
+    id: 11,
+    topic: 'script',
+    question: 'What detail from the form should sound clear in the opening?',
+    options: [
+      'Month and year financed',
+      'Home zip code',
+      'APR percentage',
+      'Dealership address',
+    ],
+    correct: 0,
+    explanation: 'The month and year financed should be stated clearly.',
+  },
+  {
+    id: 12,
+    topic: 'script',
+    question: 'How should the purpose line sound?',
+    options: [
+      'Confident and direct',
+      'Soft and unsure',
+      'Fast and rushed',
+      'Casual and playful',
+    ],
+    correct: 0,
+    explanation: 'The line should sound confident and controlled.',
+  },
+
+  // OBJECTIONS
+  {
+    id: 13,
+    topic: 'objections',
+    question: 'Customer asks, “Where did you get my information?” What is the best response?',
+    options: [
+      'We partner with dealerships and vehicle registries nationwide',
+      'Your bank forwarded your file',
+      'The dealership sold us your data',
+      'I do not know, it was assigned',
+    ],
+    correct: 0,
+    explanation: 'Never mention the bank. Use the approved source language.',
+  },
+  {
+    id: 14,
+    topic: 'objections',
+    question: 'Customer says, “I already have insurance.” What is the correct reply?',
+    options: [
+      'Insurance covers accidents, we cover breakdowns',
+      'Insurance and warranty are basically the same',
+      'Then you do not need us',
+      'Our plan replaces your insurance',
+    ],
+    correct: 0,
+    explanation: 'Differentiate insurance from mechanical breakdown coverage.',
+  },
+  {
+    id: 15,
+    topic: 'objections',
+    question: 'Customer says, “I am not interested.” What is the best rebuttal?',
+    options: [
+      'Many people felt that way until they saw repair costs',
+      'You really should not pass this up',
+      'That would be a mistake',
+      'Okay then, goodbye',
+    ],
+    correct: 0,
+    explanation: 'Acknowledge, relate, and create curiosity.',
+  },
+  {
+    id: 16,
+    topic: 'objections',
+    question: 'Cliente dice, “No tengo dinero ahora.” ¿Qué respuesta funciona mejor?',
+    options: [
+      'Entiendo, el Asesor puede mostrarle opciones que se ajusten',
+      'Entonces no hay nada que hacer',
+      'Pídale dinero a alguien',
+      'Debe resolver eso primero',
+    ],
+    correct: 0,
+    explanation: 'Empatiza y abre la puerta a opciones.',
+  },
+  {
+    id: 17,
+    topic: 'objections',
+    question: 'Customer asks, “How much does it cost?” What should you say?',
+    options: [
+      'It depends on mileage and the Service Advisor can explain it',
+      'It is exactly $199 a month',
+      'I have no idea what it costs',
+      'It is free at the beginning',
+    ],
+    correct: 0,
+    explanation: 'Do not quote exact pricing. Bridge to the SA.',
+  },
+  {
+    id: 18,
+    topic: 'objections',
+    question: 'Cliente dice, “Ya la activé cuando compré el auto.” ¿Qué respondes?',
+    options: [
+      'Probablemente sea Factory Warranty, la Extendida es más amplia',
+      'No, eso no existe',
+      'Entonces ya no necesita nada',
+      'Eso cubre todo de por vida',
+    ],
+    correct: 0,
+    explanation: 'Debes diferenciar Factory Warranty y Extended Coverage.',
+  },
+  {
+    id: 19,
+    topic: 'objections',
+    question: 'Customer says, “I am busy right now.” What is the best reply?',
+    options: [
+      'Would later today or tomorrow work better?',
+      'This only takes ten seconds',
+      'Everyone is busy',
+      'I will just keep talking quickly',
+    ],
+    correct: 0,
+    explanation: 'Respect their time and offer a callback choice.',
+  },
+  {
+    id: 20,
+    topic: 'objections',
+    question: 'Cliente dice, “¿Dónde están ubicados?” ¿Qué dices?',
+    options: [
+      'Nuestra sede está en Dallas, Texas',
+      'Estamos por todo el país',
+      'Estamos cerca de su concesionario',
+      'No importa realmente dónde estamos',
+    ],
+    correct: 0,
+    explanation: 'Dallas, Texas is the approved location answer.',
+  },
+  {
+    id: 21,
+    topic: 'objections',
+    question: 'Customer asks, “Who is this?” What should you answer first?',
+    options: [
+      'This is [your name] from the Vehicle Services Group',
+      'This is the warranty department',
+      'This is an important vehicle call',
+      'This is the activation office',
+    ],
+    correct: 0,
+    explanation: 'Always state your name and company clearly first.',
+  },
+  {
+    id: 22,
+    topic: 'objections',
+    question: 'Cliente dice, “La tengo con otra compañía.” ¿Qué enfoque sirve mejor?',
+    options: [
+      'Perfecto, muchos comparan y cambian por mejores tarifas',
+      'Entonces cancele esa de inmediato',
+      'La nuestra siempre es mejor',
+      'No tiene sentido tener otra',
+    ],
+    correct: 0,
+    explanation: 'Use comparison as an opportunity, not confrontation.',
+  },
+  {
+    id: 23,
+    topic: 'objections',
+    question: 'Customer asks, “What kind of vehicle?” How should you respond?',
+    options: [
+      'I only see finance information here, the SA has full details',
+      'I can see every exact detail already',
+      'It is exactly the one on your registration',
+      'That question is not important',
+    ],
+    correct: 0,
+    explanation: 'Be honest and transition toward the SA.',
+  },
+  {
+    id: 24,
+    topic: 'objections',
+    question: 'Customer says, “I do not have any service with you.” What is the best move?',
+    options: [
+      'Exactly, today is your chance to activate protection',
+      'Then this file is probably fake',
+      'Then I guess we are done here',
+      'You already do have a plan with us',
+    ],
+    correct: 0,
+    explanation: 'Clarify the purpose and move toward value.',
+  },
+
+  // PRODUCT
+  {
+    id: 25,
+    topic: 'product',
+    question: 'Which vehicle qualifies for extended coverage?',
+    options: [
+      '2018 Toyota Camry with 150k miles',
+      '2009 Honda Civic with 90k miles',
+      '2020 Tesla with 60k miles',
+      '2019 motorcycle with 15k miles',
+    ],
+    correct: 0,
+    explanation: 'It must be 2011 or newer, not electric, under 175k, and not a motorcycle.',
+  },
+  {
+    id: 26,
+    topic: 'product',
+    question: 'What is the maximum mileage a vehicle can have and still qualify?',
+    options: [
+      '175,000 miles',
+      '150,000 miles',
+      '125,000 miles',
+      '200,000 miles',
+    ],
+    correct: 0,
+    explanation: 'Over 175,000 miles does not qualify.',
+  },
+  {
+    id: 27,
+    topic: 'product',
+    question: 'What makes extended coverage different from factory warranty?',
+    options: [
+      'It starts after factory coverage ends',
+      'It comes standard on every financed vehicle',
+      'It never expires',
+      'It covers cosmetic damage only',
+    ],
+    correct: 0,
+    explanation: 'Extended coverage is separate and begins after factory coverage ends.',
+  },
+  {
+    id: 28,
+    topic: 'product',
+    question: 'How long does factory warranty usually last?',
+    options: [
+      '3 years or 36,000 miles',
+      '5 years or 50,000 miles',
+      '7 years or 70,000 miles',
+      '10 years or 100,000 miles',
+    ],
+    correct: 0,
+    explanation: 'Factory warranty is generally 3 years or 36,000 miles.',
+  },
+  {
+    id: 29,
+    topic: 'product',
+    question: 'What does extended coverage include that insurance does not?',
+    options: [
+      'Mechanical breakdown repairs',
+      'Collision body repair',
+      'Liability claims',
+      'Stolen vehicle reimbursement',
+    ],
+    correct: 0,
+    explanation: 'Insurance covers accidents and related losses, not mechanical breakdown protection.',
+  },
+  {
+    id: 30,
+    topic: 'product',
+    question: 'Can we cover a 2020 Ford F-150 with 180,000 miles?',
+    options: [
+      'No, mileage is too high',
+      'Yes, still fully covered',
+      'Yes, but engine only',
+      'No, trucks are never covered',
+    ],
+    correct: 0,
+    explanation: 'Anything above 175,000 miles is disqualified.',
+  },
+  {
+    id: 31,
+    topic: 'product',
+    question: '¿Podemos cubrir un Tesla o vehículo eléctrico?',
+    options: [
+      'No, los EVs están excluidos',
+      'Sí, si tiene pocas millas',
+      'Sí, pero solo batería',
+      'Solo si es modelo nuevo',
+    ],
+    correct: 0,
+    explanation: 'Los vehículos eléctricos están excluidos.',
+  },
+  {
+    id: 32,
+    topic: 'product',
+    question: 'Where can approved repairs be completed?',
+    options: [
+      'At any authorized repair shop nationwide',
+      'Only at the original dealership',
+      'Only at company-selected garages',
+      'Only in Texas',
+    ],
+    correct: 0,
+    explanation: 'Repairs can be done at authorized shops across the country.',
+  },
+  {
+    id: 33,
+    topic: 'product',
+    question: 'Which item is not covered by extended warranty?',
+    options: [
+      'Bodywork and cosmetic damage',
+      'Engine repair',
+      'Transmission repair',
+      'Mechanical breakdown components',
+    ],
+    correct: 0,
+    explanation: 'Bodywork and cosmetic repairs are excluded.',
+  },
+  {
+    id: 34,
+    topic: 'product',
+    question: 'Can a vehicle with modified parts still qualify?',
+    options: [
+      'Yes, unmodified parts can still be covered',
+      'No, any modification removes all coverage',
+      'Yes, every modified part is covered too',
+      'Only if mods were installed by a dealer',
+    ],
+    correct: 0,
+    explanation: 'Modified parts are excluded, but unmodified parts may still qualify.',
+  },
+  {
+    id: 35,
+    topic: 'product',
+    question: '¿Cuál es el año más antiguo que todavía puede calificar?',
+    options: [
+      '2011',
+      '2008',
+      '2009',
+      '2010',
+    ],
+    correct: 0,
+    explanation: 'Vehículos anteriores a 2011 no califican.',
+  },
+  {
+    id: 36,
+    topic: 'product',
+    question: 'Why is insurance mandatory in the U.S.?',
+    options: [
+      'To drive legally on the road',
+      'To activate extended coverage',
+      'To renew factory warranty',
+      'To qualify for repairs',
+    ],
+    correct: 0,
+    explanation: 'Insurance is legally required to drive, but extended coverage is optional.',
+  },
+
+  // CALL FLOW
+  {
+    id: 37,
+    topic: 'callflow',
+    question: 'What is the first step of the transfer protocol?',
+    options: [
+      'Confirm vehicle qualification',
+      'Introduce the Service Advisor',
+      'Disconnect the call',
+      'Document the disposition',
+    ],
+    correct: 0,
+    explanation: 'You confirm qualification first.',
+  },
+  {
+    id: 38,
+    topic: 'callflow',
+    question: 'While waiting for the Service Advisor, what should you do?',
+    options: [
+      'Ask light vehicle questions',
+      'Stay completely silent',
+      'Hang up and redial',
+      'Mute the customer',
+    ],
+    correct: 0,
+    explanation: 'Use waiting questions to keep the customer engaged.',
+  },
+  {
+    id: 39,
+    topic: 'callflow',
+    question: 'How long must you stay on the 3-way call after the SA joins?',
+    options: [
+      'At least 15 seconds',
+      'At least 5 seconds',
+      'At least 10 seconds',
+      'Until the SA hangs up',
+    ],
+    correct: 0,
+    explanation: 'You stay at least 15 seconds and confirm both are talking.',
+  },
+  {
+    id: 40,
+    topic: 'callflow',
+    question: 'What is the risk of hanging up immediately after the SA joins?',
+    options: [
+      'The handoff can fail',
+      'Nothing happens',
+      'The score improves faster',
+      'The SA handles it the same way',
+    ],
+    correct: 0,
+    explanation: 'Hanging up too early can break the transfer.',
+  },
+  {
+    id: 41,
+    topic: 'callflow',
+    question: '¿Qué haces mientras esperas que el SA conteste?',
+    options: [
+      'Haces preguntas sobre el vehículo',
+      'Te quedas callado',
+      'Cuelgas y vuelves a marcar',
+      'Pones al cliente en espera',
+    ],
+    correct: 0,
+    explanation: 'Usa waiting questions para mantener al cliente engaged.',
+  },
+  {
+    id: 42,
+    topic: 'callflow',
+    question: 'Who should speak first when the Service Advisor picks up?',
+    options: [
+      'The Service Advisor',
+      'The customer',
+      'You as the opener',
+      'No one',
+    ],
+    correct: 0,
+    explanation: 'The Service Advisor should speak first.',
+  },
+  {
+    id: 43,
+    topic: 'callflow',
+    question: 'What is the best introduction once the SA answers?',
+    options: [
+      'Hello Service Advisor, I have [client name] on the line — can you please assist?',
+      'Take this customer, please',
+      'This one wants pricing',
+      'Here is your next transfer',
+    ],
+    correct: 0,
+    explanation: 'Use the approved and professional handoff line.',
+  },
+  {
+    id: 44,
+    topic: 'callflow',
+    question: '¿Cuándo puedes salir de la llamada de 3 vías?',
+    options: [
+      'Después de 15 segundos y confirmación',
+      'Apenas entra el SA',
+      'Cuando el cliente diga okay',
+      'Después de tu introducción',
+    ],
+    correct: 0,
+    explanation: 'No salgas hasta confirmar que ambos estén hablando.',
+  },
+
+  // DOSDONTS + DIALER
+  {
+    id: 45,
+    topic: 'dosdonts',
+    question: 'Which word is never allowed during the call?',
+    options: [
+      'FREE',
+      'Coverage',
+      'Advisor',
+      'Vehicle',
+    ],
+    correct: 0,
+    explanation: 'FREE is misleading and non-compliant.',
+  },
+  {
+    id: 46,
+    topic: 'dosdonts',
+    question: 'Can you say “We are extending your factory warranty”?',
+    options: [
+      'No, that is non-compliant',
+      'Yes, if the car is newer',
+      'Yes, if the customer agrees',
+      'Only if financed recently',
+    ],
+    correct: 0,
+    explanation: 'You offer extended coverage, not a factory warranty extension.',
+  },
+  {
+    id: 47,
+    topic: 'dosdonts',
+    question: 'Can you tell the customer the bank gave you the information?',
+    options: [
+      'No, never mention the bank',
+      'Yes, if they ask',
+      'Yes, if financing was recent',
+      'Only if a supervisor says so',
+    ],
+    correct: 0,
+    explanation: 'Use the approved dealership and registry language instead.',
+  },
+  {
+    id: 48,
+    topic: 'dosdonts',
+    question: '¿Puedes decir “esto es gratis” en una llamada?',
+    options: [
+      'No, nunca digas gratis',
+      'Sí, si es poco tiempo',
+      'Sí, solo en español',
+      'Solo si el cliente pregunta',
+    ],
+    correct: 0,
+    explanation: 'Nunca uses gratis o free.',
+  },
+  {
+    id: 49,
+    topic: 'dosdonts',
+    question: 'Can you improvise the script wording if the meaning stays close?',
+    options: [
+      'No, follow it word for word',
+      'Yes, as long as the idea is similar',
+      'Yes, if the customer is friendly',
+      'Only on callbacks',
+    ],
+    correct: 0,
+    explanation: 'The script should be followed as trained.',
+  },
+  {
+    id: 50,
+    topic: 'dosdonts',
+    question: 'Which form details should never be read to the customer?',
+    options: [
+      'Address and finance company',
+      'Name and loan date',
+      'Loan date and balance',
+      'Name and month financed',
+    ],
+    correct: 0,
+    explanation: 'Do not read address or finance company details.',
+  },
+  {
+    id: 51,
+    topic: 'dosdonts',
+    question: 'Which disposition is correct for a successful transfer?',
+    options: [
+      'XFER',
+      'CALLBK',
+      'DAIR',
+      'WRGNUM',
+    ],
+    correct: 0,
+    explanation: 'XFER is the correct successful transfer disposition.',
+  },
+  {
+    id: 52,
+    topic: 'dosdonts',
+    question: 'What pause code should be used for the restroom?',
+    options: [
+      'RR - Restroom',
+      'Break - Break',
+      'Lunch - Lunch',
+      'Tech - Tech Issues',
+    ],
+    correct: 0,
+    explanation: 'RR is the restroom code.',
+  },
+  {
+    id: 53,
+    topic: 'dosdonts',
+    question: 'Customer asks for a callback later today. Which disposition fits?',
+    options: [
+      'CALLBK',
+      'NI',
+      'A',
+      'DC',
+    ],
+    correct: 0,
+    explanation: 'CALLBK is the correct callback disposition.',
+  },
+  {
+    id: 54,
+    topic: 'dosdonts',
+    question: 'Call goes straight to voicemail. Which disposition do you use?',
+    options: [
+      'A',
+      'DAIR',
+      'WRGNUM',
+      'CALLBK',
+    ],
+    correct: 0,
+    explanation: 'A stands for Answering Machine or voicemail.',
+  },
+  {
+    id: 55,
+    topic: 'dosdonts',
+    question: 'Customer only speaks Spanish. Which disposition should be used?',
+    options: [
+      'SPANIS',
+      'LANG',
+      'XFER',
+      'NI',
+    ],
+    correct: 0,
+    explanation: 'SPANIS is the routing disposition for Spanish speaker.',
+  },
+  {
+    id: 56,
+    topic: 'dosdonts',
+    question: 'Phone number is no longer in service. Which disposition applies?',
+    options: [
+      'DC',
+      'WRGNUM',
+      'DAIR',
+      'BLANK',
+    ],
+    correct: 0,
+    explanation: 'DC means disconnected number.',
+  },
+  {
+    id: 57,
+    topic: 'dosdonts',
+    question: 'Customer says, “Take me off your list.” Which disposition fits?',
+    options: [
+      'DNC',
+      'NI',
+      'WRGVEH',
+      'CALLBK',
+    ],
+    correct: 0,
+    explanation: 'DNC is the correct disposition for removal requests.',
+  },
+  {
+    id: 58,
+    topic: 'dosdonts',
+    question: '¿Qué código de pausa corresponde al almuerzo?',
+    options: [
+      'Lunch - Lunch',
+      'Break - Break',
+      'RR - Restroom',
+      'Manage',
+    ],
+    correct: 0,
+    explanation: 'Lunch - Lunch es el código correcto.',
+  },
+  {
+    id: 59,
+    topic: 'dosdonts',
+    question: 'Your dialer freezes and stops loading leads. Which pause code should be used?',
+    options: [
+      'Tech - Tech or System Issues',
+      'Manage',
+      'Break - Break',
+      'CB - Callbacks',
+    ],
+    correct: 0,
+    explanation: 'Use the tech pause code for system issues.',
+  },
+  {
+    id: 60,
+    topic: 'dosdonts',
+    question: 'Call connected but nobody responds. Which disposition is correct?',
+    options: [
+      'DAIR',
+      'A',
+      'NI',
+      'DC',
+    ],
+    correct: 0,
+    explanation: 'DAIR means dead air.',
+  },
+  {
+    id: 61,
+    topic: 'dosdonts',
+    question: 'What is the maximum time allowed for RR - Restroom?',
+    options: [
+      '5 minutes',
+      '10 minutes',
+      '15 minutes',
+      '20 minutes',
+    ],
+    correct: 0,
+    explanation: 'RR has a maximum of 5 minutes.',
+  },
+  {
+    id: 62,
+    topic: 'dosdonts',
+    question: 'Customer says the vehicle on file is wrong. Which disposition fits best?',
+    options: [
+      'WRGVEH',
+      'WRGNUM',
+      'BLANK',
+      'NI',
+    ],
+    correct: 0,
+    explanation: 'WRGVEH is for wrong vehicle information.',
+  },
+  {
+    id: 63,
+    topic: 'dosdonts',
+    question: 'You transferred the customer to a Spanish Service Advisor. Which disposition?',
+    options: [
+      'SPXFER',
+      'SPANIS',
+      'XFER',
+      'LANG',
+    ],
+    correct: 0,
+    explanation: 'SPXFER is specifically for Spanish Service Advisor transfers.',
+  },
+  {
+    id: 64,
+    topic: 'dosdonts',
+    question: 'Lead has no usable customer details at all. Which disposition is correct?',
+    options: [
+      'BLANK',
+      'DAIR',
+      'WRGVEH',
+      'WRGNUM',
+    ],
+    correct: 0,
+    explanation: 'BLANK is for files with no usable information.',
+  },
+  {
+    id: 65,
+    topic: 'dosdonts',
+    question: 'A supervisor tells you to call them right away. Which pause code applies?',
+    options: [
+      'Manage',
+      'CB - Callbacks',
+      'Break - Break',
+      'Tech - Tech or System Issues',
+    ],
+    correct: 0,
+    explanation: 'Manage is for supervisor-requested calls.',
+  },
+]
+
+export const learnCategories = [
+  {
+    id: 'script-en',
+    icon: '📋',
+    title: 'Script (English)',
+    description: 'Official word for word script with transfer protocol',
+    color: '#f97316',
+    type: 'script',
+    ref: 'en',
+  },
+  {
+    id: 'script-es',
+    icon: '📋',
+    title: 'Script (Español)',
+    description: 'Script oficial en español con protocolo de transferencia',
+    color: '#fb923c',
+    type: 'script',
+    ref: 'es',
+  },
+  {
+    id: 'objections-en',
+    icon: '🛡️',
+    title: 'Objections and Rebuttals',
+    description: 'Approved English rebuttals for common objections',
+    color: '#ea580c',
+    type: 'objections',
+    ref: 'en',
+  },
+  {
+    id: 'objections-es',
+    icon: '🛡️',
+    title: 'Objeciones y Rebuttals',
+    description: 'Objeciones comunes con respuestas aprobadas',
+    color: '#c2410c',
+    type: 'objections',
+    ref: 'es',
+  },
+  {
+    id: 'call-flow',
+    icon: '📞',
+    title: 'Call Flow',
+    description: 'Call process plus transfer protocol',
+    color: '#9a3412',
+    type: 'callflow',
+    ref: null,
+  },
+  {
+    id: 'product-knowledge',
+    icon: '📦',
+    title: 'Product Knowledge',
+    description: 'Coverage, exclusions, and how the product works',
+    color: '#7c2d12',
+    type: 'product',
+    ref: null,
+  },
+  {
+    id: 'dos-donts',
+    icon: '⚠️',
+    title: "Do's and Don'ts",
+    description: 'Compliance rules, delivery standards, and dialer basics',
+    color: '#431407',
+    type: 'dosdonts',
+    ref: null,
+  },
+  {
+    id: 'dialer-guide',
+    icon: '🖥️',
+    title: 'Dialer Guide',
+    description: 'Dispositions, pause codes, and dialer handling',
+    color: '#1e40af',
+    type: 'dosdonts',
+    ref: null,
+  },
+]
