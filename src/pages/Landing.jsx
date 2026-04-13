@@ -15,11 +15,10 @@ export default function Landing() {
 
   useEffect(() => {
     const handleMove = (e) => {
-      const x = (e.clientX / window.innerWidth - 0.5) * 18
-      const y = (e.clientY / window.innerHeight - 0.5) * 18
-
+      const x = (e.clientX / window.innerWidth - 0.5) * 14
+      const y = (e.clientY / window.innerHeight - 0.5) * 10
       setOrbStyle({
-        transform: `translate(${x}px, ${y * 0.8}px) scale(1.02)`,
+        transform: `translate(${x}px, ${y}px)`,
       })
     }
 
@@ -43,14 +42,14 @@ export default function Landing() {
     }
 
     const createParticles = () => {
-      const amount = Math.min(36, Math.floor(window.innerWidth / 55))
+      const amount = Math.min(32, Math.floor(window.innerWidth / 70))
       particles = Array.from({ length: amount }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        r: Math.random() * 1.8 + 0.8,
-        vx: (Math.random() - 0.5) * 0.18,
-        vy: (Math.random() - 0.5) * 0.18,
-        a: Math.random() * 0.45 + 0.08,
+        r: Math.random() * 1.7 + 0.6,
+        vx: (Math.random() - 0.5) * 0.14,
+        vy: (Math.random() - 0.5) * 0.14,
+        a: Math.random() * 0.35 + 0.05,
       }))
     }
 
@@ -96,145 +95,72 @@ export default function Landing() {
     <div className="landing">
       <canvas ref={canvasRef} className="landing-canvas" />
       <div className="landing-grid" />
-      <div className="landing-radial landing-radial-left" />
-      <div className="landing-radial landing-radial-right" />
       <div className="landing-noise" />
+      <div className="landing-side-glow landing-side-glow-left" />
+      <div className="landing-side-glow landing-side-glow-right" />
 
       <section className={`landing-shell ${visible ? 'is-visible' : ''}`}>
         <div className="landing-panel">
-          <div className="landing-copy">
-            <div className="landing-eyebrow">
-              <img src="/kk-logo.png" alt="Kampaign Kings" className="landing-eyebrow-logo" />
+          <div className="landing-topbar">
+            <div className="landing-brand">
+              <img src="/kk-logo.png" alt="Kampaign Kings" className="landing-brand-logo" />
               <span>Kampaign Kings</span>
             </div>
 
-            <h1 className="landing-title">
-              <span className="landing-title-line">PULSE</span>
-            </h1>
-
-            <p className="landing-sub">
-              Real-time performance intelligence, training access, and live operational visibility for supervisors, QA and team leaders.
-            </p>
-
-            <div className="landing-meta">
-              <div className="landing-meta-item">
-                <strong>Live</strong>
-                <span>Performance Tracking</span>
-              </div>
-              <div className="landing-meta-divider" />
-              <div className="landing-meta-item">
-                <strong>GO</strong>
-                <span>Training Hub</span>
-              </div>
-              <div className="landing-meta-divider" />
-              <div className="landing-meta-item">
-                <strong>24/7</strong>
-                <span>Access</span>
-              </div>
-            </div>
-
-            <div className="landing-actions">
-              <button
-                className="landing-btn landing-btn-primary"
-                onClick={() => navigate('/register')}
-              >
-                Registrarse
-              </button>
-
-              <button
-                className="landing-btn landing-btn-secondary"
-                onClick={() => navigate('/signin')}
-              >
-                Iniciar sesión
-              </button>
-
-              <button
-                className="landing-btn landing-btn-go"
-                onClick={() => navigate('/go')}
-              >
-                Ir a Pulse GO
+            <div className="landing-top-actions">
+              <button type="button" onClick={() => navigate('/go')}>GO</button>
+              <button type="button" className="is-accent" onClick={() => navigate('/signin')}>
+                Dashboard
               </button>
             </div>
-
-            <p className="landing-note">
-              For Supervisors, QA & Team Leaders only
-            </p>
           </div>
 
-          <div className="landing-visual">
-            <div className="visual-wrap">
-              <div className="visual-topbar">
-                <div className="visual-topbar-dots">
-                  <span />
-                  <span />
-                  <span />
-                </div>
+          <div className="landing-hero">
+            <div className="landing-copy">
+              <h1 className="landing-title">PULSE</h1>
 
-                <div className="visual-topbar-actions">
-                  <button type="button">Live</button>
-                  <button type="button">GO</button>
-                  <button type="button" className="is-accent">Dashboard</button>
-                </div>
+              <p className="landing-sub">
+                Performance intelligence for leaders.
+              </p>
+
+              <div className="landing-actions">
+                <button
+                  className="landing-btn landing-btn-primary"
+                  onClick={() => navigate('/register')}
+                >
+                  Registrarse
+                </button>
+
+                <button
+                  className="landing-btn landing-btn-secondary"
+                  onClick={() => navigate('/signin')}
+                >
+                  Iniciar sesión
+                </button>
+
+                <button
+                  className="landing-btn landing-btn-go"
+                  onClick={() => navigate('/go')}
+                >
+                  Pulse GO
+                </button>
               </div>
 
-              <div className="visual-stage">
-                <div className="orb-glow" />
-                <div className="orb-ring orb-ring-1" />
-                <div className="orb-ring orb-ring-2" />
-                <div className="orb-ring orb-ring-3" />
+              <p className="landing-note">
+                Supervisors, QA & Team Leaders
+              </p>
+            </div>
 
-                <div className="pulse-orb" style={orbStyle}>
-                  <div className="pulse-orb-core" />
-                  <div className="pulse-orb-grid" />
-                  <div className="pulse-orb-shine" />
+            <div className="landing-visual" aria-hidden="true">
+              <div className="visual-card">
+                <div className="visual-frame" />
+                <div className="visual-glow-floor" />
+                <div className="visual-horizon" />
+                <div className="visual-core-wrap" style={orbStyle}>
+                  <div className="visual-core" />
+                  <div className="visual-core-inner" />
                 </div>
-
-                <div className="floating-card floating-card-main">
-                  <div className="fc-chip">
-                    <span className="fc-live-dot" />
-                    Live Platform
-                  </div>
-                  <div className="fc-title">Unified Pulse Access</div>
-                  <div className="fc-stats">
-                    <div>
-                      <strong>Live</strong>
-                      <span>Tracking</span>
-                    </div>
-                    <div>
-                      <strong>GO</strong>
-                      <span>Training</span>
-                    </div>
-                    <div>
-                      <strong>Smart</strong>
-                      <span>Insights</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="floating-card floating-card-side">
-                  <div className="mini-label">Operational Focus</div>
-                  <div className="mini-team">
-                    <span className="mini-team-flag">⚡</span>
-                    <div>
-                      <strong>Performance + Learning</strong>
-                      <span>One place for tracking and team development</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="floating-card floating-card-bottom">
-                  <div className="mini-bars">
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <div className="mini-bottom-text">
-                    Real-time visibility with training tools built into the same ecosystem
-                  </div>
-                </div>
+                <div className="visual-reflection" />
               </div>
             </div>
           </div>
