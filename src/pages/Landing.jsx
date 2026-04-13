@@ -5,116 +5,233 @@ import './Landing.css'
 export default function Landing() {
   const navigate = useNavigate()
   const [visible, setVisible] = useState(false)
-  const titleRef = useRef(null)
+  const [orbStyle, setOrbStyle] = useState({})
   const canvasRef = useRef(null)
-
-  useEffect(() => { setTimeout(() => setVisible(true), 100) }, [])
+  const heroRef = useRef(null)
 
   useEffect(() => {
-    const title = titleRef.current
-    if (!title) return
+    const t = setTimeout(() => setVisible(true), 80)
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
     const handleMove = (e) => {
-      const rect = title.getBoundingClientRect()
-      const cx = rect.left + rect.width / 2
-      const cy = rect.top + rect.height / 2
-      const dx = (e.clientX - cx) / (rect.width / 2)
-      const dy = (e.clientY - cy) / (rect.height / 2)
-      title.style.transform = `perspective(600px) rotateX(${-dy * 8}deg) rotateY(${dx * 8}deg) scale(1.04)`
+      const x = (e.clientX / window.innerWidth - 0.5) * 18
+      const y = (e.clientY / window.innerHeight - 0.5) * 18
+
+      setOrbStyle({
+        transform: `translate(${x}px, ${y * 0.8}px) scale(1.02)`,
+      })
     }
-    const handleLeave = () => {
-      title.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)'
-    }
-    title.addEventListener('mousemove', handleMove)
-    title.addEventListener('mouseleave', handleLeave)
-    return () => {
-      title.removeEventListener('mousemove', handleMove)
-      title.removeEventListener('mouseleave', handleLeave)
-    }
-  }, [visible])
+
+    window.addEventListener('mousemove', handleMove)
+    return () => window.removeEventListener('mousemove', handleMove)
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+
     const ctx = canvas.getContext('2d')
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-    const particles = []
-    const onMove = (e) => {
-      for (let i = 0; i < 3; i++) {
-        particles.push({
-          x: e.clientX + (Math.random() - 0.5) * 20,
-          y: e.clientY + (Math.random() - 0.5) * 20,
-          size: Math.random() * 3 + 1, life: 1,
-          vx: (Math.random() - 0.5) * 1.5,
-          vy: (Math.random() - 0.5) * 1.5 - 0.5,
-        })
-      }
+    if (!ctx) return
+
+    let animationFrameId
+    let particles = []
+
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
     }
-    window.addEventListener('mousemove', onMove)
-    let raf
+
+    const createParticles = () => {
+      const amount = Math.min(36, Math.floor(window.innerWidth / 55))
+      particles = Array.from({ length: amount }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.8 + 0.8,
+        vx: (Math.random() - 0.5) * 0.18,
+        vy: (Math.random() - 0.5) * 0.18,
+        a: Math.random() * 0.45 + 0.08,
+      }))
+    }
+
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i]
-        p.life -= 0.03; p.x += p.vx; p.y += p.vy
-        if (p.life <= 0) { particles.splice(i, 1); continue }
+
+      for (const p of particles) {
+        p.x += p.vx
+        p.y += p.vy
+
+        if (p.x < -20) p.x = canvas.width + 20
+        if (p.x > canvas.width + 20) p.x = -20
+        if (p.y < -20) p.y = canvas.height + 20
+        if (p.y > canvas.height + 20) p.y = -20
+
         ctx.beginPath()
-        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(249, 115, 22, ${p.life * 0.6})`
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(249, 115, 22, ${p.a})`
         ctx.fill()
       }
-      raf = requestAnimationFrame(draw)
+
+      animationFrameId = requestAnimationFrame(draw)
     }
+
+    resize()
+    createParticles()
     draw()
-    const onResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
-    window.addEventListener('resize', onResize)
+
+    window.addEventListener('resize', () => {
+      resize()
+      createParticles()
+    })
+
     return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('resize', onResize)
-      cancelAnimationFrame(raf)
+      cancelAnimationFrame(animationFrameId)
     }
   }, [])
 
   return (
     <div className="landing">
-      <canvas ref={canvasRef} className="trail-canvas" />
-      <div className="grid-bg" />
-      <div className="particles">
-        {[...Array(20)].map((_, i) => (
-          <div key={i} className="particle" style={{ '--i': i }} />
-        ))}
-      </div>
+      <canvas ref={canvasRef} className="landing-canvas" />
+      <div className="landing-grid" />
+      <div className="landing-radial landing-radial-left" />
+      <div className="landing-radial landing-radial-right" />
+      <div className="landing-noise" />
 
-      <div className={`landing-content ${visible ? 'visible' : ''}`}>
-        <img src="/kk-logo.png" alt="Kampaign Kings" className="kk-logo-img" />
+      <section
+        ref={heroRef}
+        className={`landing-shell ${visible ? 'is-visible' : ''}`}
+      >
+        <div className="landing-panel">
+          <div className="landing-copy">
+            <div className="landing-eyebrow">
+              <img src="/kk-logo.png" alt="Kampaign Kings" className="landing-eyebrow-logo" />
+              <span>Kampaign Kings</span>
+            </div>
 
-        <h1 className="landing-title" ref={titleRef}>
-          {'PULSE'.split('').map((l, i) => (
-            <span key={i} className="letter" style={{ '--d': `${i * 0.08}s` }}>{l}</span>
-          ))}
-        </h1>
+            <h1 className="landing-title">
+              <span className="landing-title-line">PULSE</span>
+            </h1>
 
-        <p className="landing-sub">Real-time agent performance tracking</p>
+            <p className="landing-sub">
+              Real-time performance intelligence for supervisors, QA and team leaders.
+            </p>
 
-        <div className="landing-stats">
-          <div className="stat"><strong>850+</strong><span>Active Agents</span></div>
-          <div className="stat-div" />
-          <div className="stat"><strong>8+</strong><span>Languages</span></div>
-          <div className="stat-div" />
-          <div className="stat"><strong>6</strong><span>Teams</span></div>
+            <div className="landing-meta">
+              <div className="landing-meta-item">
+                <strong>850+</strong>
+                <span>Active Agents</span>
+              </div>
+              <div className="landing-meta-divider" />
+              <div className="landing-meta-item">
+                <strong>8+</strong>
+                <span>Languages</span>
+              </div>
+              <div className="landing-meta-divider" />
+              <div className="landing-meta-item">
+                <strong>6</strong>
+                <span>Teams</span>
+              </div>
+            </div>
+
+            <div className="landing-actions">
+              <button
+                className="landing-btn landing-btn-primary"
+                onClick={() => navigate('/register')}
+              >
+                Registrarse
+              </button>
+
+              <button
+                className="landing-btn landing-btn-secondary"
+                onClick={() => navigate('/signin')}
+              >
+                Iniciar sesión
+              </button>
+            </div>
+
+            <p className="landing-note">
+              For Supervisors, QA & Team Leaders only
+            </p>
+          </div>
+
+          <div className="landing-visual">
+            <div className="visual-wrap">
+              <div className="visual-topbar">
+                <div className="visual-topbar-dots">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+                <div className="visual-topbar-actions">
+                  <button type="button">Live</button>
+                  <button type="button" className="is-accent">Dashboard</button>
+                </div>
+              </div>
+
+              <div className="visual-stage">
+                <div className="orb-glow" />
+                <div className="orb-ring orb-ring-1" />
+                <div className="orb-ring orb-ring-2" />
+                <div className="orb-ring orb-ring-3" />
+                <div className="pulse-orb" style={orbStyle}>
+                  <div className="pulse-orb-core" />
+                  <div className="pulse-orb-grid" />
+                  <div className="pulse-orb-shine" />
+                </div>
+
+                <div className="floating-card floating-card-main">
+                  <div className="fc-chip">
+                    <span className="fc-live-dot" />
+                    Live Overview
+                  </div>
+                  <div className="fc-title">Auto Warranty Garrett</div>
+                  <div className="fc-stats">
+                    <div>
+                      <strong>1,231</strong>
+                      <span>Total Xfers</span>
+                    </div>
+                    <div>
+                      <strong>253</strong>
+                      <span>English</span>
+                    </div>
+                    <div>
+                      <strong>978</strong>
+                      <span>Spanish</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="floating-card floating-card-side">
+                  <div className="mini-label">Top Team</div>
+                  <div className="mini-team">
+                    <span className="mini-team-flag">🇵🇭</span>
+                    <div>
+                      <strong>Philippines</strong>
+                      <span>345 English xfers</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="floating-card floating-card-bottom">
+                  <div className="mini-bars">
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="mini-bottom-text">
+                    Team momentum updating in real time
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="landing-buttons">
-          <button className="btn-register" onClick={() => navigate('/register')}>
-            Registrarse
-          </button>
-          <button className="btn-signin" onClick={() => navigate('/signin')}>
-            Iniciar sesión
-          </button>
-        </div>
-
-        <p className="landing-note">For Supervisors, QA & Team Leaders only</p>
-      </div>
+      </section>
     </div>
   )
 }
