@@ -6,6 +6,14 @@ import './GoQuizPlay.css'
 const QUESTION_COUNT = 10
 const TIME_PER_Q = 20
 
+const LEGACY_TOPIC_IDS = {
+  script: [1, 2, 13, 15, 16, 17, 18, 19, 20, 21, 22],
+  objections: [5, 9, 11, 12, 23, 24, 25, 26, 27, 28, 29, 30],
+  product: [3, 6, 14, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
+  callflow: [10, 41, 42, 43, 44, 45, 46, 47],
+  dosdonts: [4, 7, 8, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65],
+}
+
 const OPTION_STYLES = [
   { color: '#ef4444', shape: '▲' },
   { color: '#3b82f6', shape: '◆' },
@@ -33,9 +41,10 @@ function normalizeTopic(raw) {
   if (value === 'product') return 'product'
   if (value === 'product-knowledge') return 'product'
   if (value === 'callflow') return 'callflow'
+  if (value === 'call-flow') return 'callflow'
   if (value === 'dosdonts') return 'dosdonts'
+  if (value === 'dos-donts') return 'dosdonts'
   if (value === 'dosdонts') return 'dosdonts'
-  if (value === "do's-don'ts") return 'dosdonts'
 
   return 'all'
 }
@@ -43,14 +52,28 @@ function normalizeTopic(raw) {
 function buildQuestionSet(topicId) {
   const normalizedTopic = normalizeTopic(topicId)
 
-  const pool =
-    normalizedTopic === 'all'
-      ? quizQuestions
-      : quizQuestions.filter((q) => q.topic === normalizedTopic)
+  let pool = []
 
-  const basePool = pool.length >= QUESTION_COUNT ? pool : quizQuestions
+  if (normalizedTopic === 'all') {
+    pool = quizQuestions
+  } else {
+    pool = quizQuestions.filter((q) => q.topic === normalizedTopic)
 
-  return shuffle(basePool)
+    if (pool.length === 0 && LEGACY_TOPIC_IDS[normalizedTopic]) {
+      pool = quizQuestions.filter((q) => LEGACY_TOPIC_IDS[normalizedTopic].includes(q.id))
+    }
+  }
+
+  let finalPool = [...pool]
+
+  if (finalPool.length < QUESTION_COUNT) {
+    const remaining = quizQuestions.filter(
+      (q) => !finalPool.some((picked) => picked.id === q.id)
+    )
+    finalPool = [...finalPool, ...shuffle(remaining)]
+  }
+
+  return shuffle(finalPool)
     .slice(0, QUESTION_COUNT)
     .map((question) => {
       const mappedOptions = question.options.map((text, originalIndex) => ({
@@ -144,7 +167,7 @@ export default function GoQuizPlay() {
       sound.start()
       started.current = true
     }
-  }, [sound])
+  }, [])
 
   const doTimeout = useCallback(() => {
     if (answered) return
@@ -153,7 +176,7 @@ export default function GoQuizPlay() {
     setAnswered(true)
     setShowExplanation(true)
     setResults((prev) => [...prev, { correct: false, timedOut: true }])
-  }, [answered, sound])
+  }, [answered])
 
   useEffect(() => {
     if (done || answered) {
@@ -178,7 +201,7 @@ export default function GoQuizPlay() {
     }, 1000)
 
     return () => clearInterval(timerRef.current)
-  }, [idx, done, answered, doTimeout, sound])
+  }, [idx, done, answered, doTimeout])
 
   const handleSelect = (i) => {
     if (answered) return
