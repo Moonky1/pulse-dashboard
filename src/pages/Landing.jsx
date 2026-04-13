@@ -3,62 +3,26 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import './Landing.css'
 
 const TEAM_POINTS = [
-  {
-    id: 'philippines',
-    name: 'Philippines',
-    short: 'PH',
-    left: '79%',
-    top: '38%',
-  },
-  {
-    id: 'asia',
-    name: 'Asia',
-    short: 'AS',
-    left: '72%',
-    top: '30%',
-  },
-  {
-    id: 'central',
-    name: 'Central America',
-    short: 'CA',
-    left: '28%',
-    top: '42%',
-  },
-  {
-    id: 'mexico',
-    name: 'Mexico Baja',
-    short: 'MX',
-    left: '22%',
-    top: '36%',
-  },
-  {
-    id: 'colombia',
-    name: 'Colombia',
-    short: 'CO',
-    left: '33%',
-    top: '50%',
-  },
-  {
-    id: 'venezuela',
-    name: 'Venezuela',
-    short: 'VE',
-    left: '39%',
-    top: '47%',
-  },
+  { id: 'philippines', name: 'Philippines', short: 'PH', left: '79%', top: '38%' },
+  { id: 'asia', name: 'Asia', short: 'AS', left: '72%', top: '30%' },
+  { id: 'central', name: 'Central America', short: 'CA', left: '28%', top: '42%' },
+  { id: 'mexico', name: 'Mexico Baja', short: 'MX', left: '22%', top: '36%' },
+  { id: 'colombia', name: 'Colombia', short: 'CO', left: '33%', top: '50%' },
+  { id: 'venezuela', name: 'Venezuela', short: 'VE', left: '39%', top: '47%' },
 ]
 
 const FEATURES = [
   {
     title: 'Live tracking',
-    desc: 'Monitor performance, visibility and operational movement in real time.',
+    desc: 'Monitor performance and operational movement in real time.',
   },
   {
     title: 'Pulse GO',
     desc: 'Training, quizzes and internal learning inside the same ecosystem.',
   },
   {
-    title: 'Team overview',
-    desc: 'See regions, team presence and structure from one clean interface.',
+    title: 'Team presence',
+    desc: 'Visualize teams and regions from one clean interface.',
   },
   {
     title: 'Built for leaders',
@@ -72,6 +36,7 @@ export default function Landing() {
   const [mouse, setMouse] = useState({ x: 0, y: 0 })
   const [scrollY, setScrollY] = useState(0)
   const [hoveredTeam, setHoveredTeam] = useState(null)
+  const [sunHover, setSunHover] = useState(false)
   const canvasRef = useRef(null)
 
   useEffect(() => {
@@ -81,14 +46,12 @@ export default function Landing() {
 
   useEffect(() => {
     const onMove = (e) => {
-      const x = (e.clientX / window.innerWidth - 0.5) * 24
-      const y = (e.clientY / window.innerHeight - 0.5) * 18
+      const x = (e.clientX / window.innerWidth - 0.5) * 18
+      const y = (e.clientY / window.innerHeight - 0.5) * 14
       setMouse({ x, y })
     }
 
-    const onScroll = () => {
-      setScrollY(window.scrollY || 0)
-    }
+    const onScroll = () => setScrollY(window.scrollY || 0)
 
     window.addEventListener('mousemove', onMove)
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -115,7 +78,7 @@ export default function Landing() {
     }
 
     const createParticles = () => {
-      const amount = Math.min(42, Math.floor(window.innerWidth / 50))
+      const amount = Math.min(40, Math.floor(window.innerWidth / 52))
       particles = Array.from({ length: amount }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
@@ -157,21 +120,25 @@ export default function Landing() {
     }
 
     window.addEventListener('resize', onResize)
+
     return () => {
       window.removeEventListener('resize', onResize)
       cancelAnimationFrame(raf)
     }
   }, [])
 
-  const heroShift = useMemo(() => {
-    const moveY = Math.min(scrollY * 0.12, 46)
+  const heroMotion = useMemo(() => {
+    const scrollLift = Math.min(scrollY * 0.08, 30)
+    const hoverBoost = sunHover ? 1.1 : 1
+
     return {
-      title: `translate3d(${mouse.x * 0.2}px, ${moveY * 0.16}px, 0)`,
-      sub: `translate3d(${mouse.x * 0.12}px, ${moveY * 0.08}px, 0)`,
-      glow: `translate3d(${mouse.x * 0.55}px, ${mouse.y * 0.45 + moveY * 0.22}px, 0)`,
-      orb: `translate3d(${mouse.x * 0.38}px, ${mouse.y * 0.28 + moveY * 0.12}px, 0)`,
+      title: `translate3d(${mouse.x * 0.08}px, ${scrollLift * 0.08}px, 0)`,
+      sub: `translate3d(${mouse.x * 0.05}px, ${scrollLift * 0.05}px, 0)`,
+      chip: `translate3d(${mouse.x * 0.04}px, 0, 0)`,
+      glow: `translate3d(${mouse.x * 0.42}px, ${mouse.y * 0.18}px, 0) scale(${hoverBoost})`,
+      core: `translate3d(${mouse.x * 0.24}px, ${mouse.y * 0.12}px, 0) scale(${hoverBoost})`,
     }
-  }, [mouse.x, mouse.y, scrollY])
+  }, [mouse.x, mouse.y, scrollY, sunHover])
 
   return (
     <div className="landing">
@@ -181,14 +148,14 @@ export default function Landing() {
 
       <header className="landing-navbar">
         <button className="landing-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <img src="/kk-logo.png" alt="Kampaign Kings" className="landing-brand-logo" />
+          <img src="/kk-logo.png" alt="Pulse" className="landing-brand-logo" />
           <span className="landing-brand-text">Pulse</span>
         </button>
 
         <nav className="landing-nav-pill">
           <a href="#hero">Home</a>
           <a href="#features">Features</a>
-          <a href="#globe">Teams</a>
+          <a href="#teams">Teams</a>
           <a href="#access">Access</a>
         </nav>
 
@@ -204,49 +171,53 @@ export default function Landing() {
 
       <main className={`landing-shell ${visible ? 'is-visible' : ''}`}>
         <section id="hero" className="hero-section">
-          <div className="hero-copy">
-            <div className="hero-chip">Kampaign Kings platform</div>
-
-            <h1 className="hero-title" style={{ transform: heroShift.title }}>
-              PULSE
-            </h1>
-
-            <p className="hero-sub" style={{ transform: heroShift.sub }}>
-              Performance intelligence for leaders.
-            </p>
-
-            <div className="hero-actions">
-              <button className="hero-btn hero-btn-primary" onClick={() => navigate('/register')}>
-                Registrarse
-              </button>
-              <button className="hero-btn hero-btn-secondary" onClick={() => navigate('/signin')}>
-                Iniciar sesión
-              </button>
-              <button className="hero-btn hero-btn-go" onClick={() => navigate('/go')}>
-                Pulse GO
-              </button>
-            </div>
-
-            <p className="hero-note">Supervisors, QA &amp; Team Leaders</p>
+          <div className="hero-chip hero-chip-top" style={{ transform: heroMotion.chip }}>
+            Kampaign Kings platform
           </div>
 
-          <div className="hero-visual">
-            <div className="hero-visual-frame" />
-            <div className="hero-horizon" />
+          <h1 className="hero-title hero-title-center" style={{ transform: heroMotion.title }}>
+            PULSE
+          </h1>
 
-            <div className="hero-sun-glow" style={{ transform: heroShift.glow }} />
-            <div className="hero-sun-wrap" style={{ transform: heroShift.orb }}>
+          <p className="hero-sub hero-sub-center" style={{ transform: heroMotion.sub }}>
+            Performance intelligence for leaders.
+          </p>
+
+          <div
+            className="hero-solar-zone"
+            onMouseEnter={() => setSunHover(true)}
+            onMouseLeave={() => setSunHover(false)}
+          >
+            <div className="hero-sun-glow" style={{ transform: heroMotion.glow }} />
+            <div className="hero-sun-aura hero-sun-aura-1" />
+            <div className="hero-sun-aura hero-sun-aura-2" />
+            <div className="hero-horizon" />
+            <div className="hero-sun-wrap" style={{ transform: heroMotion.core }}>
               <div className="hero-sun-core" />
               <div className="hero-sun-ring hero-sun-ring-1" />
               <div className="hero-sun-ring hero-sun-ring-2" />
               <div className="hero-sun-reflection" />
             </div>
           </div>
+
+          <div className="hero-actions hero-actions-center">
+            <button className="hero-btn hero-btn-primary" onClick={() => navigate('/register')}>
+              Registrarse
+            </button>
+            <button className="hero-btn hero-btn-secondary" onClick={() => navigate('/signin')}>
+              Iniciar sesión
+            </button>
+            <button className="hero-btn hero-btn-go" onClick={() => navigate('/go')}>
+              Pulse GO
+            </button>
+          </div>
+
+          <p className="hero-note hero-note-center">Supervisors, QA &amp; Team Leaders</p>
         </section>
 
         <section id="features" className="feature-section">
           <div className="section-chip">Platform</div>
-          <h2 className="section-title">Clean, fast, and built to feel natural.</h2>
+          <h2 className="section-title">Built to feel smooth and natural.</h2>
 
           <div className="feature-grid">
             {FEATURES.map((item) => (
@@ -259,11 +230,11 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="globe" className="globe-section">
+        <section id="teams" className="globe-section">
           <div className="section-chip">Presence</div>
-          <h2 className="section-title">Teams dotted across the globe.</h2>
+          <h2 className="section-title">Teams across the globe.</h2>
           <p className="section-sub">
-            Scroll through the platform and reveal where each team sits inside the Pulse ecosystem.
+            Explore where each Pulse team operates inside the network.
           </p>
 
           <div className="globe-stage">
@@ -296,13 +267,13 @@ export default function Landing() {
 
         <section id="access" className="access-section">
           <div className="section-chip">Access</div>
-          <h2 className="section-title">One ecosystem. Two clear paths.</h2>
+          <h2 className="section-title">One ecosystem. Two paths.</h2>
 
           <div className="access-cards">
             <article className="access-card">
               <div className="access-card-tag">Dashboard</div>
               <h3>Track live performance</h3>
-              <p>Open the main Pulse dashboard for visibility, rankings, movement and team follow-up.</p>
+              <p>Open the main Pulse dashboard for visibility, movement and daily follow-up.</p>
               <button className="hero-btn hero-btn-secondary access-btn" onClick={() => navigate('/signin')}>
                 Open dashboard
               </button>
@@ -311,7 +282,7 @@ export default function Landing() {
             <article className="access-card">
               <div className="access-card-tag">GO</div>
               <h3>Train inside Pulse GO</h3>
-              <p>Use quizzes, learning flows and internal training experiences in one dedicated space.</p>
+              <p>Use quizzes, learning flows and internal training in one dedicated space.</p>
               <button className="hero-btn hero-btn-primary access-btn" onClick={() => navigate('/go')}>
                 Open Pulse GO
               </button>
