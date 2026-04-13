@@ -28,13 +28,16 @@ export default function Admin() {
   const [token, setToken] = useState(generateToken())
   const [seconds, setSeconds] = useState(secondsUntilNext())
   const [copied, setCopied] = useState(false)
+
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [fetchError, setFetchError] = useState('')
+
   const [filter, setFilter] = useState('all')
   const [menuOpen, setMenuOpen] = useState(null)
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
+
   const [editUser, setEditUser] = useState(null)
   const [editForm, setEditForm] = useState({ name: '', team: '', role: '' })
   const [saving, setSaving] = useState(false)
@@ -77,12 +80,12 @@ export default function Admin() {
 
       if (data?.ok && Array.isArray(data.users)) {
         setUsers(data.users)
-      } else {
-        throw new Error(data?.error || 'Unexpected response')
+        return
       }
+
+      throw new Error(data?.error || 'Unexpected response')
     } catch (e) {
-      console.warn('getUsers failed, falling back to CSV:', e)
-      setFetchError('Using fallback — data may be slightly delayed')
+      console.warn('Primary getUsers failed, trying fallback silently:', e)
 
       try {
         const SHEET_ID = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
@@ -110,7 +113,7 @@ export default function Admin() {
         setUsers([...rows].reverse())
       } catch (e2) {
         console.error('Fallback also failed:', e2)
-        setFetchError('Could not load users. Check connection.')
+        setFetchError('Could not load users.')
       }
     } finally {
       setLoading(false)
@@ -197,7 +200,7 @@ export default function Admin() {
   const expelUser = async (user) => {
     setMenuOpen(null)
 
-    const ok = window.confirm(`Expel ${user.name}? This will remove the user from the register list.`)
+    const ok = window.confirm(`¿Expulsar a ${user.name}?`)
     if (!ok) return
 
     setActionBusy(true)
@@ -229,10 +232,10 @@ export default function Admin() {
   const banUser = async (user) => {
     setMenuOpen(null)
 
-    const ok = window.confirm(`Ban ${user.name}? This will remove them from the register and block this name from registering again.`)
+    const ok = window.confirm(`¿Banear a ${user.name}? Esto lo sacará y bloqueará futuros registros con ese nombre.`)
     if (!ok) return
 
-    const reason = window.prompt('Optional ban reason:', 'Banned from admin panel') || ''
+    const reason = window.prompt('Motivo del baneo:', 'Blocked from admin panel') || ''
 
     setActionBusy(true)
 
@@ -266,7 +269,8 @@ export default function Admin() {
       <div
         style={{
           minHeight: '100vh',
-          background: '#080a0f',
+          background:
+            'radial-gradient(circle at top, rgba(249,115,22,0.10), transparent 30%), #080a0f',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -275,25 +279,28 @@ export default function Admin() {
       >
         <div
           style={{
-            background: '#181b23',
+            background: 'rgba(24,27,35,0.92)',
+            backdropFilter: 'blur(14px)',
             border: '0.5px solid #2a2d38',
-            borderRadius: 16,
-            padding: '2.5rem 2rem',
+            borderRadius: 18,
+            padding: '2.4rem 2rem',
             width: '100%',
-            maxWidth: 340,
+            maxWidth: 360,
             textAlign: 'center',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
           }}
         >
           <div
             style={{
-              width: 52,
-              height: 52,
-              background: '#f97316',
-              borderRadius: 14,
+              width: 56,
+              height: 56,
+              background: 'linear-gradient(180deg, #fb923c, #f97316)',
+              borderRadius: 15,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 1.5rem',
+              margin: '0 auto 1.4rem',
+              boxShadow: '0 10px 30px rgba(249,115,22,0.28)',
             }}
           >
             <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
@@ -312,9 +319,9 @@ export default function Admin() {
             style={{
               fontFamily: "'Sora', sans-serif",
               fontWeight: 700,
-              fontSize: 18,
+              fontSize: 20,
               color: '#f5f5f5',
-              marginBottom: 4,
+              marginBottom: 6,
             }}
           >
             Pulse Admin
@@ -338,7 +345,7 @@ export default function Admin() {
               padding: '12px 16px',
               background: '#0d0f14',
               border: `0.5px solid ${pwError ? '#f87171' : '#2a2d38'}`,
-              borderRadius: 10,
+              borderRadius: 12,
               color: '#f5f5f5',
               fontSize: 14,
               outline: 'none',
@@ -362,19 +369,16 @@ export default function Admin() {
               padding: 12,
               background: '#f97316',
               border: 'none',
-              borderRadius: 10,
+              borderRadius: 12,
               color: '#fff',
               fontSize: 14,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
+              boxShadow: '0 10px 26px rgba(249,115,22,0.22)',
             }}
           >
             Enter →
           </button>
-
-          <p style={{ marginTop: '1.5rem', fontSize: 11, color: '#374151' }}>
-            /admin — keep this URL private
-          </p>
         </div>
       </div>
     )
@@ -384,7 +388,8 @@ export default function Admin() {
     <div
       style={{
         minHeight: '100vh',
-        background: '#080a0f',
+        background:
+          'radial-gradient(circle at top, rgba(249,115,22,0.08), transparent 28%), #080a0f',
         fontFamily: "'DM Sans', sans-serif",
         color: '#f5f5f5',
       }}
@@ -404,12 +409,13 @@ export default function Admin() {
         >
           <div
             style={{
-              background: '#181b23',
+              background: 'rgba(24,27,35,0.96)',
+              backdropFilter: 'blur(12px)',
               border: '0.5px solid #2a2d38',
-              borderRadius: 16,
+              borderRadius: 18,
               padding: '2rem',
               width: '100%',
-              maxWidth: 380,
+              maxWidth: 400,
               boxShadow: '0 24px 48px rgba(0,0,0,0.8)',
             }}
             onClick={(e) => e.stopPropagation()}
@@ -422,19 +428,12 @@ export default function Admin() {
                 color: '#f5f5f5',
               }}
             >
-              Edit User
+              Editar usuario
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label
-                  style={{
-                    fontSize: 11,
-                    color: '#6b7280',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
+                <label style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Name
                 </label>
                 <input
@@ -446,7 +445,7 @@ export default function Admin() {
                     padding: '10px 14px',
                     background: '#0d0f14',
                     border: '0.5px solid #2a2d38',
-                    borderRadius: 8,
+                    borderRadius: 10,
                     color: '#f5f5f5',
                     fontSize: 14,
                     outline: 'none',
@@ -456,14 +455,7 @@ export default function Admin() {
               </div>
 
               <div>
-                <label
-                  style={{
-                    fontSize: 11,
-                    color: '#6b7280',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
+                <label style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Team
                 </label>
                 <select
@@ -475,7 +467,7 @@ export default function Admin() {
                     padding: '10px 14px',
                     background: '#0d0f14',
                     border: '0.5px solid #2a2d38',
-                    borderRadius: 8,
+                    borderRadius: 10,
                     color: '#f5f5f5',
                     fontSize: 14,
                     outline: 'none',
@@ -491,14 +483,7 @@ export default function Admin() {
               </div>
 
               <div>
-                <label
-                  style={{
-                    fontSize: 11,
-                    color: '#6b7280',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
+                <label style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Role
                 </label>
                 <select
@@ -510,7 +495,7 @@ export default function Admin() {
                     padding: '10px 14px',
                     background: '#0d0f14',
                     border: '0.5px solid #2a2d38',
-                    borderRadius: 8,
+                    borderRadius: 10,
                     color: '#f5f5f5',
                     fontSize: 14,
                     outline: 'none',
@@ -531,16 +516,16 @@ export default function Admin() {
                 onClick={() => setEditUser(null)}
                 style={{
                   flex: 1,
-                  padding: 10,
+                  padding: 11,
                   background: 'transparent',
                   border: '0.5px solid #2a2d38',
-                  borderRadius: 8,
+                  borderRadius: 10,
                   color: '#6b7280',
                   fontSize: 13,
                   cursor: 'pointer',
                 }}
               >
-                Cancel
+                Cancelar
               </button>
 
               <button
@@ -548,18 +533,18 @@ export default function Admin() {
                 disabled={saving}
                 style={{
                   flex: 1,
-                  padding: 10,
+                  padding: 11,
                   background: '#f97316',
                   border: 'none',
-                  borderRadius: 8,
+                  borderRadius: 10,
                   color: '#fff',
                   fontSize: 13,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer',
                   opacity: saving ? 0.7 : 1,
                 }}
               >
-                {saving ? 'Saving...' : 'Save changes'}
+                {saving ? 'Saving...' : 'Guardar'}
               </button>
             </div>
           </div>
@@ -572,12 +557,12 @@ export default function Admin() {
           style={{
             position: 'fixed',
             top: menuPos.y + 4,
-            left: menuPos.x - 170,
+            left: menuPos.x - 180,
             background: '#1e2230',
             border: '0.5px solid #2a2d38',
-            borderRadius: 8,
+            borderRadius: 12,
             zIndex: 500,
-            minWidth: 170,
+            minWidth: 180,
             overflow: 'hidden',
             boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
           }}
@@ -586,7 +571,7 @@ export default function Admin() {
             onClick={() => openEdit(filtered[menuOpen])}
             style={{
               width: '100%',
-              padding: '10px 16px',
+              padding: '12px 16px',
               background: 'transparent',
               border: 'none',
               color: '#f5f5f5',
@@ -595,7 +580,7 @@ export default function Admin() {
               textAlign: 'left',
             }}
           >
-            ✏️ Edit
+            ✏️ Editar
           </button>
 
           <button
@@ -603,7 +588,7 @@ export default function Admin() {
             disabled={actionBusy}
             style={{
               width: '100%',
-              padding: '10px 16px',
+              padding: '12px 16px',
               background: 'transparent',
               border: 'none',
               color: '#fbbf24',
@@ -612,7 +597,7 @@ export default function Admin() {
               textAlign: 'left',
             }}
           >
-            ⛔ Expel
+            ⛔ Expulsar
           </button>
 
           <button
@@ -620,7 +605,7 @@ export default function Admin() {
             disabled={actionBusy}
             style={{
               width: '100%',
-              padding: '10px 16px',
+              padding: '12px 16px',
               background: 'transparent',
               border: 'none',
               color: '#f87171',
@@ -629,14 +614,15 @@ export default function Admin() {
               textAlign: 'left',
             }}
           >
-            🚫 Ban
+            🚫 Banear
           </button>
         </div>
       )}
 
       <div
         style={{
-          background: '#181b23',
+          background: 'rgba(24,27,35,0.92)',
+          backdropFilter: 'blur(12px)',
           borderBottom: '0.5px solid #2a2d38',
           padding: '0 2rem',
           height: 60,
@@ -647,10 +633,10 @@ export default function Admin() {
       >
         <div
           style={{
-            width: 32,
-            height: 32,
-            background: '#f97316',
-            borderRadius: 9,
+            width: 34,
+            height: 34,
+            background: 'linear-gradient(180deg, #fb923c, #f97316)',
+            borderRadius: 10,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -685,22 +671,22 @@ export default function Admin() {
             color: '#6b7280',
             background: '#1e2230',
             padding: '2px 10px',
-            borderRadius: 4,
+            borderRadius: 6,
             border: '0.5px solid #2a2d38',
           }}
         >
           Admin
         </span>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
           <button
             onClick={() => (window.location.href = '/dashboard')}
             style={{
-              padding: '6px 14px',
+              padding: '8px 16px',
               background: 'transparent',
               border: '0.5px solid #2a2d38',
-              borderRadius: 6,
-              color: '#6b7280',
+              borderRadius: 10,
+              color: '#9ca3af',
               fontSize: 12,
               cursor: 'pointer',
             }}
@@ -711,11 +697,11 @@ export default function Admin() {
           <button
             onClick={handleLock}
             style={{
-              padding: '6px 14px',
+              padding: '8px 16px',
               background: 'transparent',
               border: '0.5px solid #2a2d38',
-              borderRadius: 6,
-              color: '#6b7280',
+              borderRadius: 10,
+              color: '#9ca3af',
               fontSize: 12,
               cursor: 'pointer',
             }}
@@ -725,18 +711,20 @@ export default function Admin() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem' }}>
         <div
           style={{
-            background: '#181b23',
+            background: 'rgba(24,27,35,0.9)',
+            backdropFilter: 'blur(14px)',
             border: '0.5px solid #2a2d38',
-            borderRadius: 16,
-            padding: '1.5rem 2rem',
+            borderRadius: 20,
+            padding: '1.6rem 2rem',
             marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'center',
             gap: '2rem',
             flexWrap: 'wrap',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.35)',
           }}
         >
           <div style={{ flex: 1, minWidth: 200 }}>
@@ -754,7 +742,7 @@ export default function Admin() {
 
             <div
               style={{
-                fontSize: 44,
+                fontSize: 46,
                 fontFamily: "'Sora', sans-serif",
                 fontWeight: 800,
                 letterSpacing: '0.2em',
@@ -767,8 +755,8 @@ export default function Admin() {
             <div
               style={{
                 background: '#2a2d38',
-                borderRadius: 4,
-                height: 4,
+                borderRadius: 999,
+                height: 5,
                 marginTop: 12,
                 overflow: 'hidden',
               }}
@@ -778,7 +766,7 @@ export default function Admin() {
                   height: '100%',
                   width: `${pct}%`,
                   background: seconds < 30 ? '#f87171' : '#f97316',
-                  borderRadius: 4,
+                  borderRadius: 999,
                   transition: 'width 1s linear, background 0.3s',
                 }}
               />
@@ -788,7 +776,7 @@ export default function Admin() {
               style={{
                 fontSize: 12,
                 color: seconds < 30 ? '#f87171' : '#6b7280',
-                marginTop: 6,
+                marginTop: 8,
               }}
             >
               Changes in {seconds}s
@@ -798,10 +786,10 @@ export default function Admin() {
           <button
             onClick={copy}
             style={{
-              padding: '10px 24px',
+              padding: '11px 24px',
               background: copied ? '#0d2018' : 'transparent',
               border: `0.5px solid ${copied ? '#1a4a2e' : '#2a2d38'}`,
-              borderRadius: 10,
+              borderRadius: 12,
               color: copied ? '#34d399' : '#9ca3af',
               fontSize: 14,
               cursor: 'pointer',
@@ -816,7 +804,7 @@ export default function Admin() {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(4,1fr)',
-            gap: 12,
+            gap: 14,
             marginBottom: '1.5rem',
           }}
         >
@@ -855,15 +843,15 @@ export default function Admin() {
               style={{
                 background: s.bg,
                 border: `0.5px solid ${s.border}`,
-                borderRadius: 10,
-                padding: '1rem',
+                borderRadius: 16,
+                padding: '1.1rem',
                 textAlign: 'center',
               }}
             >
               <div
                 style={{
                   fontFamily: "'Sora', sans-serif",
-                  fontSize: 28,
+                  fontSize: 30,
                   fontWeight: 800,
                   color: s.color,
                 }}
@@ -879,10 +867,12 @@ export default function Admin() {
 
         <div
           style={{
-            background: '#181b23',
+            background: 'rgba(24,27,35,0.92)',
+            backdropFilter: 'blur(14px)',
             border: '0.5px solid #2a2d38',
-            borderRadius: 12,
+            borderRadius: 18,
             overflow: 'hidden',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.28)',
           }}
         >
           <div
@@ -908,12 +898,12 @@ export default function Admin() {
               </span>
 
               {refreshing && (
-                <span style={{ fontSize: 11, color: '#6b7280', animation: 'pulse 1s infinite' }}>
-                  ↻ syncing...
-                </span>
+                <span style={{ fontSize: 11, color: '#6b7280' }}>↻ syncing...</span>
               )}
 
-              {fetchError && <span style={{ fontSize: 11, color: '#f87171' }}>{fetchError}</span>}
+              {!!fetchError && (
+                <span style={{ fontSize: 11, color: '#f87171' }}>{fetchError}</span>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -927,10 +917,10 @@ export default function Admin() {
                   key={f.key}
                   onClick={() => setFilter(f.key)}
                   style={{
-                    padding: '4px 12px',
+                    padding: '6px 13px',
                     background: filter === f.key ? '#1a1310' : 'transparent',
                     border: `0.5px solid ${filter === f.key ? '#f97316' : '#2a2d38'}`,
-                    borderRadius: 6,
+                    borderRadius: 10,
                     color: filter === f.key ? '#f97316' : '#6b7280',
                     fontSize: 11,
                     cursor: 'pointer',
@@ -944,10 +934,10 @@ export default function Admin() {
                 onClick={() => fetchUsers(true)}
                 disabled={refreshing}
                 style={{
-                  padding: '4px 12px',
+                  padding: '6px 13px',
                   background: 'transparent',
                   border: '0.5px solid #2a2d38',
-                  borderRadius: 6,
+                  borderRadius: 10,
                   color: '#6b7280',
                   fontSize: 11,
                   cursor: 'pointer',
@@ -976,7 +966,7 @@ export default function Admin() {
                     <th
                       key={i}
                       style={{
-                        padding: '10px 16px',
+                        padding: '12px 16px',
                         textAlign: 'left',
                         fontSize: 11,
                         fontWeight: 600,
@@ -1010,9 +1000,9 @@ export default function Admin() {
                         background: isNew ? 'rgba(249,115,22,0.03)' : 'transparent',
                       }}
                     >
-                      <td style={{ padding: '10px 16px', color: '#6b7280' }}>{i + 1}</td>
+                      <td style={{ padding: '12px 16px', color: '#6b7280' }}>{i + 1}</td>
 
-                      <td style={{ padding: '10px 16px', fontWeight: 500, color: '#f5f5f5' }}>
+                      <td style={{ padding: '12px 16px', fontWeight: 500, color: '#f5f5f5' }}>
                         {u.name}
                         {isNew && (
                           <span
@@ -1022,7 +1012,7 @@ export default function Admin() {
                               background: '#1a1310',
                               color: '#f97316',
                               border: '0.5px solid #f97316',
-                              borderRadius: 3,
+                              borderRadius: 4,
                               padding: '1px 6px',
                             }}
                           >
@@ -1031,16 +1021,16 @@ export default function Admin() {
                         )}
                       </td>
 
-                      <td style={{ padding: '10px 16px', color: '#9ca3af' }}>{u.team}</td>
+                      <td style={{ padding: '12px 16px', color: '#9ca3af' }}>{u.team}</td>
 
-                      <td style={{ padding: '10px 16px' }}>
+                      <td style={{ padding: '12px 16px' }}>
                         <span
                           style={{
                             background: rc.bg,
                             border: `0.5px solid ${rc.border}`,
                             color: rc.color,
                             padding: '2px 10px',
-                            borderRadius: 4,
+                            borderRadius: 6,
                             fontSize: 11,
                             fontWeight: 600,
                           }}
@@ -1049,11 +1039,11 @@ export default function Admin() {
                         </span>
                       </td>
 
-                      <td style={{ padding: '10px 16px', color: '#6b7280', fontSize: 12 }}>
+                      <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: 12 }}>
                         {u.date} {u.time && <span style={{ color: '#374151' }}>{u.time}</span>}
                       </td>
 
-                      <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <button
                           onClick={(e) => openMenu(e, i)}
                           style={{
@@ -1077,10 +1067,6 @@ export default function Admin() {
             </table>
           )}
         </div>
-
-        <p style={{ marginTop: '1.5rem', fontSize: 11, color: '#374151', textAlign: 'center' }}>
-          /admin — keep this URL private
-        </p>
       </div>
     </div>
   )
