@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Register.css'
 
-const SHEET_ID = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
+const SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 
 const TEAM_MAP = {
   Philippines: 'philippines',
   Venezuela: 'venezuela',
   Colombia: 'colombia',
   'Mexico Baja': 'mexico',
+  'Mexico BJ': 'mexico',
   'Central America': 'central',
   Asia: 'asia',
 }
@@ -17,6 +19,15 @@ const ROLE_MAP = {
   Supervisor: 'supervisor',
   QA: 'qa',
   'Team Leader': 'leader',
+}
+
+async function callScript(params) {
+  const url = `${SCRIPT_URL}?${new URLSearchParams(params).toString()}&t=${Date.now()}`
+  const res = await fetch(url, {
+    method: 'GET',
+    cache: 'no-store',
+  })
+  return res.json()
 }
 
 export default function SignIn() {
@@ -36,33 +47,24 @@ export default function SignIn() {
     setError('')
 
     try {
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1&t=${Date.now()}`
-      const res = await fetch(url)
-      const text = await res.text()
+      const data = await callScript({
+        action: 'findUser',
+        name: name.trim(),
+      })
 
-      const rows = text
-        .trim()
-        .split('\n')
-        .slice(1)
-        .map((row) => {
-          const cols = row.split(',').map((c) => c.replace(/"/g, '').trim())
-          return {
-            name: cols[0],
-            team: cols[1],
-            role: cols[2],
-          }
-        })
-        .filter((r) => r.name && r.name !== 'Name')
+      if (data?.banned) {
+        setError('This user is blocked. Contact your admin.')
+        setLoading(false)
+        return
+      }
 
-      const found = rows.find(
-        (r) => r.name.toLowerCase() === name.trim().toLowerCase()
-      )
-
-      if (!found) {
+      if (!data?.ok || !data?.found || !data?.user) {
         setError('Name not found. Check spelling or register first.')
         setLoading(false)
         return
       }
+
+      const found = data.user
 
       const teamId =
         Object.entries(TEAM_MAP).find(
@@ -81,6 +83,7 @@ export default function SignIn() {
           team: teamId,
           role: roleId,
           registeredAt: Date.now(),
+          rowIndex: found.rowIndex || null,
         })
       )
 

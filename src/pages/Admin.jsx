@@ -2,84 +2,113 @@ import { useEffect, useState } from 'react'
 import { generateToken, secondsUntilNext } from '../utils/token'
 
 const ADMIN_PASSWORD = 'pulse2026kk'
-const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
+const SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 const ADMIN_AUTH_KEY = 'pulse_admin_auth'
 
 const ROLE_COLORS = {
-  'Supervisor':  { bg:'#0d1a2a', border:'#1a3a5a', color:'#60a5fa' },
-  'QA':          { bg:'#1a1a0d', border:'#4a4a1a', color:'#fbbf24' },
-  'Team Leader': { bg:'#0d2018', border:'#1a4a2e', color:'#34d399' },
+  Supervisor: { bg: '#0d1a2a', border: '#1a3a5a', color: '#60a5fa' },
+  QA: { bg: '#1a1a0d', border: '#4a4a1a', color: '#fbbf24' },
+  'Team Leader': { bg: '#0d2018', border: '#1a4a2e', color: '#34d399' },
 }
 
-const TEAMS = ['Philippines','Venezuela','Colombia','Mexico Baja','Central America','Asia']
-const ROLES = ['Supervisor','QA','Team Leader']
+const TEAMS = ['Philippines', 'Venezuela', 'Colombia', 'Mexico BJ', 'Central America', 'Asia']
+const ROLES = ['Supervisor', 'QA', 'Team Leader']
+
+async function callScript(params) {
+  const url = `${SCRIPT_URL}?${new URLSearchParams(params).toString()}&t=${Date.now()}`
+  const res = await fetch(url, { cache: 'no-store' })
+  return res.json()
+}
 
 export default function Admin() {
-  const [auth,setAuth]         = useState(() => sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true')
-  const [pw,setPw]             = useState('')
-  const [pwError,setPwError]   = useState('')
-  const [token,setToken]       = useState(generateToken())
-  const [seconds,setSeconds]   = useState(secondsUntilNext())
-  const [copied,setCopied]     = useState(false)
-  const [users,setUsers]       = useState([])
-  const [loading,setLoading]   = useState(true)   // true only on first load
-  const [refreshing,setRefreshing] = useState(false)  // true on subsequent refreshes
-  const [fetchError,setFetchError] = useState('')
-  const [filter,setFilter]     = useState('all')
-  const [menuOpen,setMenuOpen] = useState(null)
-  const [menuPos,setMenuPos]   = useState({x:0,y:0})
-  const [editUser,setEditUser] = useState(null)
-  const [editForm,setEditForm] = useState({name:'',team:'',role:''})
-  const [saving,setSaving]     = useState(false)
+  const [auth, setAuth] = useState(() => sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true')
+  const [pw, setPw] = useState('')
+  const [pwError, setPwError] = useState('')
+  const [token, setToken] = useState(generateToken())
+  const [seconds, setSeconds] = useState(secondsUntilNext())
+  const [copied, setCopied] = useState(false)
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [fetchError, setFetchError] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [menuOpen, setMenuOpen] = useState(null)
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
+  const [editUser, setEditUser] = useState(null)
+  const [editForm, setEditForm] = useState({ name: '', team: '', role: '' })
+  const [saving, setSaving] = useState(false)
+  const [actionBusy, setActionBusy] = useState(false)
 
   const handleLogin = () => {
     if (pw === ADMIN_PASSWORD) {
-      setAuth(true); sessionStorage.setItem(ADMIN_AUTH_KEY,'true'); setPwError('')
-    } else { setPwError('Wrong password'); setPw('') }
+      setAuth(true)
+      sessionStorage.setItem(ADMIN_AUTH_KEY, 'true')
+      setPwError('')
+    } else {
+      setPwError('Wrong password')
+      setPw('')
+    }
   }
 
   const handleLock = () => {
-    setAuth(false); sessionStorage.removeItem(ADMIN_AUTH_KEY); setPw('')
+    setAuth(false)
+    sessionStorage.removeItem(ADMIN_AUTH_KEY)
+    setPw('')
   }
 
   useEffect(() => {
     if (!auth) return
-    const iv = setInterval(() => { setToken(generateToken()); setSeconds(secondsUntilNext()) }, 1000)
+    const iv = setInterval(() => {
+      setToken(generateToken())
+      setSeconds(secondsUntilNext())
+    }, 1000)
     return () => clearInterval(iv)
   }, [auth])
 
-  // ── Fetch users via getUsers action — fast dedicated endpoint ──
   const fetchUsers = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
     else setLoading(true)
+
     setFetchError('')
+
     try {
-      const url  = `${SCRIPT_URL}?action=getUsers&t=${Date.now()}`
-      const res  = await fetch(url)
-      const data = await res.json()
+      const data = await callScript({ action: 'getUsers' })
 
       if (data?.ok && Array.isArray(data.users)) {
-        setUsers(data.users)  // already newest-first from Apps Script
-        return
+        setUsers(data.users)
+      } else {
+        throw new Error(data?.error || 'Unexpected response')
       }
-      throw new Error(data?.error || 'Unexpected response')
-    } catch(e) {
+    } catch (e) {
       console.warn('getUsers failed, falling back to CSV:', e)
       setFetchError('Using fallback — data may be slightly delayed')
-      // Fallback: read Sheet1 directly via CSV
+
       try {
         const SHEET_ID = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
         const url2 = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1&t=${Date.now()}`
         const res2 = await fetch(url2)
         const text = await res2.text()
-        const rows = text.trim().split('\n').slice(1)
-          .map(row => {
-            const cols = row.split(',').map(c => c.replace(/^"|"$/g,'').trim())
-            return { name:cols[0]||'', team:cols[1]||'', role:cols[2]||'', date:cols[3]||'', time:cols[4]||'' }
+
+        const rows = text
+          .trim()
+          .split('\n')
+          .slice(1)
+          .map((row) => {
+            const cols = row.split(',').map((c) => c.replace(/^"|"$/g, '').trim())
+            return {
+              rowIndex: null,
+              name: cols[0] || '',
+              team: cols[1] || '',
+              role: cols[2] || '',
+              date: cols[3] || '',
+              time: cols[4] || '',
+            }
           })
-          .filter(r => r.name && r.name !== 'Name' && r.name !== '')
+          .filter((r) => r.name && r.name !== 'Name')
+
         setUsers([...rows].reverse())
-      } catch(e2) {
+      } catch (e2) {
         console.error('Fallback also failed:', e2)
         setFetchError('Could not load users. Check connection.')
       }
@@ -92,224 +121,954 @@ export default function Admin() {
   useEffect(() => {
     if (!auth) return
     fetchUsers(false)
-    const iv = setInterval(() => fetchUsers(true), 30_000)
+    const iv = setInterval(() => fetchUsers(true), 30000)
     return () => clearInterval(iv)
   }, [auth])
 
-  const copy = () => { navigator.clipboard.writeText(token); setCopied(true); setTimeout(()=>setCopied(false),2000) }
-  const pct  = ((300 - seconds) / 300) * 100
+  const copy = () => {
+    navigator.clipboard.writeText(token)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
-  const filtered = filter === 'all' ? users : users.filter(u => u.role?.toLowerCase().includes(filter))
-  const roleCount = (role) => users.filter(u => u.role === role).length
+  const pct = ((300 - seconds) / 300) * 100
+
+  const filtered =
+    filter === 'all'
+      ? users
+      : users.filter((u) => u.role?.toLowerCase().includes(filter))
+
+  const roleCount = (role) => users.filter((u) => u.role === role).length
 
   const openMenu = (e, i) => {
     e.stopPropagation()
-    if (menuOpen === i) { setMenuOpen(null); return }
+    if (menuOpen === i) {
+      setMenuOpen(null)
+      return
+    }
     const rect = e.currentTarget.getBoundingClientRect()
     setMenuPos({ x: rect.right, y: rect.bottom })
     setMenuOpen(i)
   }
 
   const openEdit = (user) => {
-    setEditUser(user); setEditForm({ name:user.name, team:user.team, role:user.role }); setMenuOpen(null)
+    setEditUser(user)
+    setEditForm({
+      name: user.name,
+      team: user.team,
+      role: user.role,
+    })
+    setMenuOpen(null)
   }
 
   const saveEdit = async () => {
+    if (!editUser) return
+
     setSaving(true)
+
     try {
-      const url = `${SCRIPT_URL}?action=edit&oldName=${encodeURIComponent(editUser.name)}&name=${encodeURIComponent(editForm.name)}&team=${encodeURIComponent(editForm.team)}&role=${encodeURIComponent(editForm.role)}`
-      await fetch(url, { mode:'no-cors' })
+      const data = await callScript({
+        action: 'edit',
+        rowIndex: editUser.rowIndex || '',
+        oldName: editUser.name,
+        oldTeam: editUser.team,
+        oldRole: editUser.role,
+        oldDate: editUser.date,
+        oldTime: editUser.time,
+        name: editForm.name,
+        team: editForm.team,
+        role: editForm.role,
+      })
+
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Could not edit user')
+      }
+
       await fetchUsers(true)
       setEditUser(null)
-    } catch(e) { console.error(e) }
-    finally { setSaving(false) }
+    } catch (e) {
+      console.error(e)
+      alert('Could not save changes.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  // ── Login screen ──
+  const expelUser = async (user) => {
+    setMenuOpen(null)
+
+    const ok = window.confirm(`Expel ${user.name}? This will remove the user from the register list.`)
+    if (!ok) return
+
+    setActionBusy(true)
+
+    try {
+      const data = await callScript({
+        action: 'removeUser',
+        rowIndex: user.rowIndex || '',
+        name: user.name,
+        team: user.team,
+        role: user.role,
+        date: user.date,
+        time: user.time,
+      })
+
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Could not expel user')
+      }
+
+      await fetchUsers(true)
+    } catch (e) {
+      console.error(e)
+      alert('Could not expel user.')
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  const banUser = async (user) => {
+    setMenuOpen(null)
+
+    const ok = window.confirm(`Ban ${user.name}? This will remove them from the register and block this name from registering again.`)
+    if (!ok) return
+
+    const reason = window.prompt('Optional ban reason:', 'Banned from admin panel') || ''
+
+    setActionBusy(true)
+
+    try {
+      const data = await callScript({
+        action: 'banUser',
+        rowIndex: user.rowIndex || '',
+        name: user.name,
+        team: user.team,
+        role: user.role,
+        date: user.date,
+        time: user.time,
+        reason,
+      })
+
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Could not ban user')
+      }
+
+      await fetchUsers(true)
+    } catch (e) {
+      console.error(e)
+      alert('Could not ban user.')
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
   if (!auth) {
     return (
-      <div style={{minHeight:'100vh',background:'#080a0f',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'DM Sans',sans-serif"}}>
-        <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:16,padding:'2.5rem 2rem',width:'100%',maxWidth:340,textAlign:'center'}}>
-          <div style={{width:52,height:52,background:'#f97316',borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 1.5rem'}}>
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#080a0f',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        <div
+          style={{
+            background: '#181b23',
+            border: '0.5px solid #2a2d38',
+            borderRadius: 16,
+            padding: '2.5rem 2rem',
+            width: '100%',
+            maxWidth: 340,
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              background: '#f97316',
+              borderRadius: 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+            }}
+          >
             <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-              <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+              <polyline
+                points="4,16 9,16 11,9 14,23 17,12 20,16 28,16"
+                stroke="white"
+                strokeWidth="2.5"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </div>
-          <div style={{fontFamily:"'Sora',sans-serif",fontWeight:700,fontSize:18,color:'#f5f5f5',marginBottom:4}}>Pulse Admin</div>
-          <p style={{fontSize:12,color:'#6b7280',marginBottom:24}}>Enter your password to continue</p>
-          <input type="password" placeholder="Password" value={pw}
-            onChange={e=>{setPw(e.target.value);setPwError('')}}
-            onKeyDown={e=>e.key==='Enter'&&handleLogin()}
-            style={{width:'100%',padding:'12px 16px',background:'#0d0f14',border:`0.5px solid ${pwError?'#f87171':'#2a2d38'}`,borderRadius:10,color:'#f5f5f5',fontSize:14,outline:'none',boxSizing:'border-box',marginBottom:8,fontFamily:"'DM Sans',sans-serif"}}
-            autoFocus/>
-          {pwError&&<p style={{color:'#f87171',fontSize:12,marginBottom:12}}>{pwError}</p>}
-          <button onClick={handleLogin} style={{width:'100%',padding:12,background:'#f97316',border:'none',borderRadius:10,color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer'}}>Enter →</button>
-          <p style={{marginTop:'1.5rem',fontSize:11,color:'#374151'}}>/admin — keep this URL private</p>
+
+          <div
+            style={{
+              fontFamily: "'Sora', sans-serif",
+              fontWeight: 700,
+              fontSize: 18,
+              color: '#f5f5f5',
+              marginBottom: 4,
+            }}
+          >
+            Pulse Admin
+          </div>
+
+          <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 24 }}>
+            Enter your password to continue
+          </p>
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={pw}
+            onChange={(e) => {
+              setPw(e.target.value)
+              setPwError('')
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#0d0f14',
+              border: `0.5px solid ${pwError ? '#f87171' : '#2a2d38'}`,
+              borderRadius: 10,
+              color: '#f5f5f5',
+              fontSize: 14,
+              outline: 'none',
+              boxSizing: 'border-box',
+              marginBottom: 8,
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+            autoFocus
+          />
+
+          {pwError && (
+            <p style={{ color: '#f87171', fontSize: 12, marginBottom: 12 }}>
+              {pwError}
+            </p>
+          )}
+
+          <button
+            onClick={handleLogin}
+            style={{
+              width: '100%',
+              padding: 12,
+              background: '#f97316',
+              border: 'none',
+              borderRadius: 10,
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Enter →
+          </button>
+
+          <p style={{ marginTop: '1.5rem', fontSize: 11, color: '#374151' }}>
+            /admin — keep this URL private
+          </p>
         </div>
       </div>
     )
   }
 
-  // ── Main admin panel ──
   return (
-    <div style={{minHeight:'100vh',background:'#080a0f',fontFamily:"'DM Sans',sans-serif",color:'#f5f5f5'}}
-      onClick={()=>setMenuOpen(null)}>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#080a0f',
+        fontFamily: "'DM Sans', sans-serif",
+        color: '#f5f5f5',
+      }}
+      onClick={() => setMenuOpen(null)}
+    >
+      {editUser && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+          }}
+        >
+          <div
+            style={{
+              background: '#181b23',
+              border: '0.5px solid #2a2d38',
+              borderRadius: 16,
+              padding: '2rem',
+              width: '100%',
+              maxWidth: 380,
+              boxShadow: '0 24px 48px rgba(0,0,0,0.8)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              style={{
+                fontFamily: "'Sora', sans-serif",
+                marginBottom: '1.5rem',
+                fontSize: 16,
+                color: '#f5f5f5',
+              }}
+            >
+              Edit User
+            </h3>
 
-      {/* Edit modal */}
-      {editUser&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1001}}>
-          <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:16,padding:'2rem',width:'100%',maxWidth:380,boxShadow:'0 24px 48px rgba(0,0,0,0.8)'}}
-            onClick={e=>e.stopPropagation()}>
-            <h3 style={{fontFamily:"'Sora',sans-serif",marginBottom:'1.5rem',fontSize:16,color:'#f5f5f5'}}>Edit User</h3>
-            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label style={{fontSize:11,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.05em'}}>Name</label>
-                <input value={editForm.name} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))}
-                  style={{width:'100%',marginTop:6,padding:'10px 14px',background:'#0d0f14',border:'0.5px solid #2a2d38',borderRadius:8,color:'#f5f5f5',fontSize:14,outline:'none',boxSizing:'border-box'}}/>
+                <label
+                  style={{
+                    fontSize: 11,
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Name
+                </label>
+                <input
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    marginTop: 6,
+                    padding: '10px 14px',
+                    background: '#0d0f14',
+                    border: '0.5px solid #2a2d38',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 14,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
               </div>
+
               <div>
-                <label style={{fontSize:11,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.05em'}}>Team</label>
-                <select value={editForm.team} onChange={e=>setEditForm(f=>({...f,team:e.target.value}))}
-                  style={{width:'100%',marginTop:6,padding:'10px 14px',background:'#0d0f14',border:'0.5px solid #2a2d38',borderRadius:8,color:'#f5f5f5',fontSize:14,outline:'none',boxSizing:'border-box'}}>
-                  {TEAMS.map(t=><option key={t} value={t}>{t}</option>)}
+                <label
+                  style={{
+                    fontSize: 11,
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Team
+                </label>
+                <select
+                  value={editForm.team}
+                  onChange={(e) => setEditForm((f) => ({ ...f, team: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    marginTop: 6,
+                    padding: '10px 14px',
+                    background: '#0d0f14',
+                    border: '0.5px solid #2a2d38',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 14,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {TEAMS.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <div>
-                <label style={{fontSize:11,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.05em'}}>Role</label>
-                <select value={editForm.role} onChange={e=>setEditForm(f=>({...f,role:e.target.value}))}
-                  style={{width:'100%',marginTop:6,padding:'10px 14px',background:'#0d0f14',border:'0.5px solid #2a2d38',borderRadius:8,color:'#f5f5f5',fontSize:14,outline:'none',boxSizing:'border-box'}}>
-                  {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
+                <label
+                  style={{
+                    fontSize: 11,
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Role
+                </label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    marginTop: 6,
+                    padding: '10px 14px',
+                    background: '#0d0f14',
+                    border: '0.5px solid #2a2d38',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 14,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
-            <div style={{display:'flex',gap:10,marginTop:'1.5rem'}}>
-              <button onClick={()=>setEditUser(null)}
-                style={{flex:1,padding:10,background:'transparent',border:'0.5px solid #2a2d38',borderRadius:8,color:'#6b7280',fontSize:13,cursor:'pointer'}}>Cancel</button>
-              <button onClick={saveEdit} disabled={saving}
-                style={{flex:1,padding:10,background:'#f97316',border:'none',borderRadius:8,color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer',opacity:saving?0.7:1}}>
-                {saving?'Saving...':'Save changes'}</button>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: '1.5rem' }}>
+              <button
+                onClick={() => setEditUser(null)}
+                style={{
+                  flex: 1,
+                  padding: 10,
+                  background: 'transparent',
+                  border: '0.5px solid #2a2d38',
+                  borderRadius: 8,
+                  color: '#6b7280',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  padding: 10,
+                  background: '#f97316',
+                  border: 'none',
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? 'Saving...' : 'Save changes'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Context menu */}
-      {menuOpen!==null&&(
-        <div onClick={e=>e.stopPropagation()}
-          style={{position:'fixed',top:menuPos.y+4,left:menuPos.x-130,background:'#1e2230',border:'0.5px solid #2a2d38',borderRadius:8,zIndex:500,minWidth:130,overflow:'hidden',boxShadow:'0 8px 24px rgba(0,0,0,0.7)'}}>
-          <button onClick={()=>openEdit(filtered[menuOpen])}
-            style={{width:'100%',padding:'10px 16px',background:'transparent',border:'none',color:'#f5f5f5',fontSize:13,cursor:'pointer',textAlign:'left'}}>✏️ Edit</button>
+      {menuOpen !== null && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: menuPos.y + 4,
+            left: menuPos.x - 170,
+            background: '#1e2230',
+            border: '0.5px solid #2a2d38',
+            borderRadius: 8,
+            zIndex: 500,
+            minWidth: 170,
+            overflow: 'hidden',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+          }}
+        >
+          <button
+            onClick={() => openEdit(filtered[menuOpen])}
+            style={{
+              width: '100%',
+              padding: '10px 16px',
+              background: 'transparent',
+              border: 'none',
+              color: '#f5f5f5',
+              fontSize: 13,
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            ✏️ Edit
+          </button>
+
+          <button
+            onClick={() => expelUser(filtered[menuOpen])}
+            disabled={actionBusy}
+            style={{
+              width: '100%',
+              padding: '10px 16px',
+              background: 'transparent',
+              border: 'none',
+              color: '#fbbf24',
+              fontSize: 13,
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            ⛔ Expel
+          </button>
+
+          <button
+            onClick={() => banUser(filtered[menuOpen])}
+            disabled={actionBusy}
+            style={{
+              width: '100%',
+              padding: '10px 16px',
+              background: 'transparent',
+              border: 'none',
+              color: '#f87171',
+              fontSize: 13,
+              cursor: 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            🚫 Ban
+          </button>
         </div>
       )}
 
-      {/* Nav */}
-      <div style={{background:'#181b23',borderBottom:'0.5px solid #2a2d38',padding:'0 2rem',height:60,display:'flex',alignItems:'center',gap:12}}>
-        <div style={{width:32,height:32,background:'#f97316',borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div
+        style={{
+          background: '#181b23',
+          borderBottom: '0.5px solid #2a2d38',
+          padding: '0 2rem',
+          height: 60,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            background: '#f97316',
+            borderRadius: 9,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-            <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            <polyline
+              points="4,16 9,16 11,9 14,23 17,12 20,16 28,16"
+              stroke="white"
+              strokeWidth="2.5"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </div>
-        <span style={{fontFamily:"'Sora',sans-serif",fontWeight:700,fontSize:16,color:'#f97316'}}>Pulse</span>
-        <span style={{fontSize:12,color:'#6b7280',background:'#1e2230',padding:'2px 10px',borderRadius:4,border:'0.5px solid #2a2d38'}}>Admin</span>
-        <div style={{marginLeft:'auto',display:'flex',gap:8}}>
-          <button onClick={()=>window.location.href='/dashboard'}
-            style={{padding:'6px 14px',background:'transparent',border:'0.5px solid #2a2d38',borderRadius:6,color:'#6b7280',fontSize:12,cursor:'pointer'}}>Dashboard</button>
-          <button onClick={handleLock}
-            style={{padding:'6px 14px',background:'transparent',border:'0.5px solid #2a2d38',borderRadius:6,color:'#6b7280',fontSize:12,cursor:'pointer'}}>🔒 Lock</button>
+
+        <span
+          style={{
+            fontFamily: "'Sora', sans-serif",
+            fontWeight: 700,
+            fontSize: 16,
+            color: '#f97316',
+          }}
+        >
+          Pulse
+        </span>
+
+        <span
+          style={{
+            fontSize: 12,
+            color: '#6b7280',
+            background: '#1e2230',
+            padding: '2px 10px',
+            borderRadius: 4,
+            border: '0.5px solid #2a2d38',
+          }}
+        >
+          Admin
+        </span>
+
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => (window.location.href = '/dashboard')}
+            style={{
+              padding: '6px 14px',
+              background: 'transparent',
+              border: '0.5px solid #2a2d38',
+              borderRadius: 6,
+              color: '#6b7280',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Dashboard
+          </button>
+
+          <button
+            onClick={handleLock}
+            style={{
+              padding: '6px 14px',
+              background: 'transparent',
+              border: '0.5px solid #2a2d38',
+              borderRadius: 6,
+              color: '#6b7280',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            🔒 Lock
+          </button>
         </div>
       </div>
 
-      <div style={{maxWidth:960,margin:'0 auto',padding:'2rem'}}>
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem' }}>
+        <div
+          style={{
+            background: '#181b23',
+            border: '0.5px solid #2a2d38',
+            borderRadius: 16,
+            padding: '1.5rem 2rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <p
+              style={{
+                fontSize: 11,
+                color: '#6b7280',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: 6,
+              }}
+            >
+              Current Access Token
+            </p>
 
-        {/* Token card */}
-        <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:16,padding:'1.5rem 2rem',marginBottom:'1.5rem',display:'flex',alignItems:'center',gap:'2rem',flexWrap:'wrap'}}>
-          <div style={{flex:1,minWidth:200}}>
-            <p style={{fontSize:11,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6}}>Current Access Token</p>
-            <div style={{fontSize:44,fontFamily:"'Sora',sans-serif",fontWeight:800,letterSpacing:'0.2em',color:'#f97316'}}>{token}</div>
-            <div style={{background:'#2a2d38',borderRadius:4,height:4,marginTop:12,overflow:'hidden'}}>
-              <div style={{height:'100%',width:`${pct}%`,background:seconds<30?'#f87171':'#f97316',borderRadius:4,transition:'width 1s linear, background 0.3s'}}/>
+            <div
+              style={{
+                fontSize: 44,
+                fontFamily: "'Sora', sans-serif",
+                fontWeight: 800,
+                letterSpacing: '0.2em',
+                color: '#f97316',
+              }}
+            >
+              {token}
             </div>
-            <p style={{fontSize:12,color:seconds<30?'#f87171':'#6b7280',marginTop:6}}>Changes in {seconds}s</p>
+
+            <div
+              style={{
+                background: '#2a2d38',
+                borderRadius: 4,
+                height: 4,
+                marginTop: 12,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${pct}%`,
+                  background: seconds < 30 ? '#f87171' : '#f97316',
+                  borderRadius: 4,
+                  transition: 'width 1s linear, background 0.3s',
+                }}
+              />
+            </div>
+
+            <p
+              style={{
+                fontSize: 12,
+                color: seconds < 30 ? '#f87171' : '#6b7280',
+                marginTop: 6,
+              }}
+            >
+              Changes in {seconds}s
+            </p>
           </div>
-          <button onClick={copy}
-            style={{padding:'10px 24px',background:copied?'#0d2018':'transparent',border:`0.5px solid ${copied?'#1a4a2e':'#2a2d38'}`,borderRadius:10,color:copied?'#34d399':'#9ca3af',fontSize:14,cursor:'pointer',transition:'all 0.2s'}}>
-            {copied?'✓ Copied!':'Copy token'}</button>
+
+          <button
+            onClick={copy}
+            style={{
+              padding: '10px 24px',
+              background: copied ? '#0d2018' : 'transparent',
+              border: `0.5px solid ${copied ? '#1a4a2e' : '#2a2d38'}`,
+              borderRadius: 10,
+              color: copied ? '#34d399' : '#9ca3af',
+              fontSize: 14,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            {copied ? '✓ Copied!' : 'Copy token'}
+          </button>
         </div>
 
-        {/* Stats grid */}
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:'1.5rem'}}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4,1fr)',
+            gap: 12,
+            marginBottom: '1.5rem',
+          }}
+        >
           {[
-            {label:'Total',        value:users.length,            color:'#f97316',bg:'#1a1310',border:'#4a2e1a'},
-            {label:'Supervisors',  value:roleCount('Supervisor'),  color:'#60a5fa',bg:'#0d1a2a',border:'#1a3a5a'},
-            {label:'QA',           value:roleCount('QA'),          color:'#fbbf24',bg:'#1a1a0d',border:'#4a4a1a'},
-            {label:'Team Leaders', value:roleCount('Team Leader'), color:'#34d399',bg:'#0d2018',border:'#1a4a2e'},
-          ].map((s,i)=>(
-            <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:10,padding:'1rem',textAlign:'center'}}>
-              <div style={{fontFamily:"'Sora',sans-serif",fontSize:28,fontWeight:800,color:s.color}}>{s.value}</div>
-              <div style={{fontSize:11,color:'#6b7280',marginTop:4}}>{s.label}</div>
+            {
+              label: 'Total',
+              value: users.length,
+              color: '#f97316',
+              bg: '#1a1310',
+              border: '#4a2e1a',
+            },
+            {
+              label: 'Supervisors',
+              value: roleCount('Supervisor'),
+              color: '#60a5fa',
+              bg: '#0d1a2a',
+              border: '#1a3a5a',
+            },
+            {
+              label: 'QA',
+              value: roleCount('QA'),
+              color: '#fbbf24',
+              bg: '#1a1a0d',
+              border: '#4a4a1a',
+            },
+            {
+              label: 'Team Leaders',
+              value: roleCount('Team Leader'),
+              color: '#34d399',
+              bg: '#0d2018',
+              border: '#1a4a2e',
+            },
+          ].map((s, i) => (
+            <div
+              key={i}
+              style={{
+                background: s.bg,
+                border: `0.5px solid ${s.border}`,
+                borderRadius: 10,
+                padding: '1rem',
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "'Sora', sans-serif",
+                  fontSize: 28,
+                  fontWeight: 800,
+                  color: s.color,
+                }}
+              >
+                {s.value}
+              </div>
+              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+                {s.label}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Users table */}
-        <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,overflow:'hidden'}}>
-          <div style={{padding:'1rem 1.5rem',borderBottom:'0.5px solid #2a2d38',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
-            <div style={{display:'flex',alignItems:'center',gap:10}}>
-              <span style={{fontFamily:"'Sora',sans-serif",fontSize:14,fontWeight:600}}>
-                Registered Users <span style={{color:'#f97316',fontSize:12}}>({users.length})</span>
+        <div
+          style={{
+            background: '#181b23',
+            border: '0.5px solid #2a2d38',
+            borderRadius: 12,
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '1rem 1.5rem',
+              borderBottom: '0.5px solid #2a2d38',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span
+                style={{
+                  fontFamily: "'Sora', sans-serif",
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}
+              >
+                Registered Users <span style={{ color: '#f97316', fontSize: 12 }}>({users.length})</span>
               </span>
-              {refreshing&&<span style={{fontSize:11,color:'#6b7280',animation:'pulse 1s infinite'}}>↻ syncing...</span>}
-              {fetchError&&<span style={{fontSize:11,color:'#f87171'}}>{fetchError}</span>}
+
+              {refreshing && (
+                <span style={{ fontSize: 11, color: '#6b7280', animation: 'pulse 1s infinite' }}>
+                  ↻ syncing...
+                </span>
+              )}
+
+              {fetchError && <span style={{ fontSize: 11, color: '#f87171' }}>{fetchError}</span>}
             </div>
-            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-              {[{key:'all',label:'All'},{key:'supervisor',label:'Supervisor'},{key:'qa',label:'QA'},{key:'leader',label:'Team Leader'}].map(f=>(
-                <button key={f.key} onClick={()=>setFilter(f.key)}
-                  style={{padding:'4px 12px',background:filter===f.key?'#1a1310':'transparent',border:`0.5px solid ${filter===f.key?'#f97316':'#2a2d38'}`,borderRadius:6,color:filter===f.key?'#f97316':'#6b7280',fontSize:11,cursor:'pointer'}}>
+
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'supervisor', label: 'Supervisor' },
+                { key: 'qa', label: 'QA' },
+                { key: 'leader', label: 'Team Leader' },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  style={{
+                    padding: '4px 12px',
+                    background: filter === f.key ? '#1a1310' : 'transparent',
+                    border: `0.5px solid ${filter === f.key ? '#f97316' : '#2a2d38'}`,
+                    borderRadius: 6,
+                    color: filter === f.key ? '#f97316' : '#6b7280',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                  }}
+                >
                   {f.label}
                 </button>
               ))}
-              <button onClick={()=>fetchUsers(true)} disabled={refreshing}
-                style={{padding:'4px 12px',background:'transparent',border:'0.5px solid #2a2d38',borderRadius:6,color:'#6b7280',fontSize:11,cursor:'pointer',opacity:refreshing?0.5:1}}>
-                ↺ Refresh</button>
+
+              <button
+                onClick={() => fetchUsers(true)}
+                disabled={refreshing}
+                style={{
+                  padding: '4px 12px',
+                  background: 'transparent',
+                  border: '0.5px solid #2a2d38',
+                  borderRadius: 6,
+                  color: '#6b7280',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                  opacity: refreshing ? 0.5 : 1,
+                }}
+              >
+                ↺ Refresh
+              </button>
             </div>
           </div>
 
-          {/* Show spinner only on very first load (users empty) */}
-          {loading&&users.length===0?(
-            <div style={{padding:'3rem',textAlign:'center',color:'#6b7280'}}>
-              <div style={{fontSize:24,marginBottom:8}}>⏳</div>
+          {loading && users.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
               Loading users...
             </div>
-          ):filtered.length===0?(
-            <div style={{padding:'3rem',textAlign:'center',color:'#6b7280'}}>No users found.</div>
-          ):(
-            <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+          ) : filtered.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: '#6b7280' }}>
+              No users found.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{background:'#0d0f14'}}>
-                  {['#','Name','Team','Role','Registered',''].map((h,i)=>(
-                    <th key={i} style={{padding:'10px 16px',textAlign:'left',fontSize:11,fontWeight:600,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.05em',borderBottom:'0.5px solid #2a2d38'}}>{h}</th>
+                <tr style={{ background: '#0d0f14' }}>
+                  {['#', 'Name', 'Team', 'Role', 'Registered', ''].map((h, i) => (
+                    <th
+                      key={i}
+                      style={{
+                        padding: '10px 16px',
+                        textAlign: 'left',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: '#6b7280',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        borderBottom: '0.5px solid #2a2d38',
+                      }}
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
+
               <tbody>
-                {filtered.map((u,i)=>{
-                  const rc=ROLE_COLORS[u.role]||{bg:'transparent',border:'#2a2d38',color:'#9ca3af'}
+                {filtered.map((u, i) => {
+                  const rc = ROLE_COLORS[u.role] || {
+                    bg: 'transparent',
+                    border: '#2a2d38',
+                    color: '#9ca3af',
+                  }
+
                   const isNew = i === 0
-                  return(
-                    <tr key={i} style={{borderBottom:'0.5px solid #1e2230',background:isNew?'rgba(249,115,22,0.03)':'transparent'}}>
-                      <td style={{padding:'10px 16px',color:'#6b7280'}}>{i+1}</td>
-                      <td style={{padding:'10px 16px',fontWeight:500,color:'#f5f5f5'}}>
+
+                  return (
+                    <tr
+                      key={`${u.name}-${u.date}-${u.time}-${i}`}
+                      style={{
+                        borderBottom: '0.5px solid #1e2230',
+                        background: isNew ? 'rgba(249,115,22,0.03)' : 'transparent',
+                      }}
+                    >
+                      <td style={{ padding: '10px 16px', color: '#6b7280' }}>{i + 1}</td>
+
+                      <td style={{ padding: '10px 16px', fontWeight: 500, color: '#f5f5f5' }}>
                         {u.name}
-                        {isNew&&<span style={{marginLeft:8,fontSize:10,background:'#1a1310',color:'#f97316',border:'0.5px solid #f97316',borderRadius:3,padding:'1px 6px'}}>NEW</span>}
+                        {isNew && (
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              fontSize: 10,
+                              background: '#1a1310',
+                              color: '#f97316',
+                              border: '0.5px solid #f97316',
+                              borderRadius: 3,
+                              padding: '1px 6px',
+                            }}
+                          >
+                            NEW
+                          </span>
+                        )}
                       </td>
-                      <td style={{padding:'10px 16px',color:'#9ca3af'}}>{u.team}</td>
-                      <td style={{padding:'10px 16px'}}>
-                        <span style={{background:rc.bg,border:`0.5px solid ${rc.border}`,color:rc.color,padding:'2px 10px',borderRadius:4,fontSize:11,fontWeight:600}}>{u.role}</span>
+
+                      <td style={{ padding: '10px 16px', color: '#9ca3af' }}>{u.team}</td>
+
+                      <td style={{ padding: '10px 16px' }}>
+                        <span
+                          style={{
+                            background: rc.bg,
+                            border: `0.5px solid ${rc.border}`,
+                            color: rc.color,
+                            padding: '2px 10px',
+                            borderRadius: 4,
+                            fontSize: 11,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {u.role}
+                        </span>
                       </td>
-                      <td style={{padding:'10px 16px',color:'#6b7280',fontSize:12}}>{u.date} {u.time&&<span style={{color:'#374151'}}>{u.time}</span>}</td>
-                      <td style={{padding:'10px 16px',textAlign:'right'}}>
-                        <button onClick={(e)=>openMenu(e,i)}
-                          style={{background:'transparent',border:'none',color:'#6b7280',fontSize:18,cursor:'pointer',padding:'0 4px',letterSpacing:2,lineHeight:1}}>···</button>
+
+                      <td style={{ padding: '10px 16px', color: '#6b7280', fontSize: 12 }}>
+                        {u.date} {u.time && <span style={{ color: '#374151' }}>{u.time}</span>}
+                      </td>
+
+                      <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                        <button
+                          onClick={(e) => openMenu(e, i)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#6b7280',
+                            fontSize: 18,
+                            cursor: 'pointer',
+                            padding: '0 4px',
+                            letterSpacing: 2,
+                            lineHeight: 1,
+                          }}
+                        >
+                          ···
+                        </button>
                       </td>
                     </tr>
                   )
@@ -318,7 +1077,10 @@ export default function Admin() {
             </table>
           )}
         </div>
-        <p style={{marginTop:'1.5rem',fontSize:11,color:'#374151',textAlign:'center'}}>/admin — keep this URL private</p>
+
+        <p style={{ marginTop: '1.5rem', fontSize: 11, color: '#374151', textAlign: 'center' }}>
+          /admin — keep this URL private
+        </p>
       </div>
     </div>
   )

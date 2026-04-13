@@ -15,6 +15,25 @@ const ROLES = [
 
 const STEPS = ['name', 'role', 'team', 'token']
 
+async function callScript(params, retries = 2) {
+  const url = `${SCRIPT_URL}?${new URLSearchParams(params).toString()}&t=${Date.now()}`
+
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+    })
+
+    const data = await res.json()
+    return data
+  } catch (err) {
+    if (retries > 0) {
+      return callScript(params, retries - 1)
+    }
+    throw err
+  }
+}
+
 export default function Register() {
   const navigate = useNavigate()
 
@@ -28,65 +47,98 @@ export default function Register() {
 
   useEffect(() => {
     const existing = localStorage.getItem('pulse_user')
-    if (existing) window.location.href = '/dashboard'
-  }, [])
-
-  const saveToSheets = async (data) => {
-    try {
-      const url = `${SCRIPT_URL}?name=${encodeURIComponent(data.name)}&team=${encodeURIComponent(data.team)}&role=${encodeURIComponent(data.role)}`
-      await fetch(url, { mode: 'no-cors' })
-      console.log('Saved to Sheets:', data)
-    } catch (e) {
-      console.error('Sheet save error:', e)
+    if (existing) {
+      window.location.href = '/dashboard'
     }
-  }
+  }, [])
 
   const next = async () => {
     setError('')
 
     if (step === 0) {
-      if (!name.trim()) return setError('Enter your name')
-      return setStep(1)
+      if (!name.trim()) {
+        setError('Enter your name')
+        return
+      }
+      setStep(1)
+      return
     }
 
     if (step === 1) {
-      if (!role) return setError('Select your role')
-      return setStep(2)
+      if (!role) {
+        setError('Select your role')
+        return
+      }
+      setStep(2)
+      return
     }
 
     if (step === 2) {
-      if (!team) return setError('Select your team')
-      return setStep(3)
+      if (!team) {
+        setError('Select your team')
+        return
+      }
+      setStep(3)
+      return
     }
 
     if (step === 3) {
-      if (!token.trim()) return setError('Enter the access token')
+      if (!token.trim()) {
+        setError('Enter the access token')
+        return
+      }
+
       if (!validateToken(token)) {
-        return setError('Invalid token — ask your admin for the current code')
+        setError('Invalid token — ask your admin for the current code')
+        return
       }
 
       setSaving(true)
 
-      const roleLabel = ROLES.find((r) => r.id === role)?.label || role
-      const teamLabel = APP_CONFIG.teams.find((t) => t.id === team)?.name || team
+      try {
+        const cleanName = name.trim()
+        const roleLabel = ROLES.find((r) => r.id === role)?.label || role
+        const teamLabel = APP_CONFIG.teams.find((t) => t.id === team)?.name || team
 
-      await saveToSheets({
-        name: name.trim(),
-        team: teamLabel,
-        role: roleLabel,
-      })
-
-      localStorage.setItem(
-        'pulse_user',
-        JSON.stringify({
-          name: name.trim(),
-          team,
-          role,
-          registeredAt: Date.now(),
+        const bannedCheck = await callScript({
+          action: 'isBanned',
+          name: cleanName,
         })
-      )
 
-      window.location.href = '/dashboard'
+        if (bannedCheck?.banned) {
+          setError('This user is blocked. Contact your admin.')
+          setSaving(false)
+          return
+        }
+
+        const registerRes = await callScript({
+          action: 'register',
+          name: cleanName,
+          team: teamLabel,
+          role: roleLabel,
+        })
+
+        if (!registerRes?.ok) {
+          throw new Error(registerRes?.error || 'Could not save registration')
+        }
+
+        localStorage.setItem(
+          'pulse_user',
+          JSON.stringify({
+            name: cleanName,
+            team,
+            role,
+            registeredAt: Date.now(),
+            rowIndex: registerRes.rowIndex || null,
+          })
+        )
+
+        window.location.href = '/dashboard'
+      } catch (e) {
+        console.error('Register failed:', e)
+        setError('Could not complete registration. Please try again.')
+        setSaving(false)
+      }
     }
   }
 
@@ -210,7 +262,7 @@ export default function Register() {
               />
 
               <div className="sheet-note">
-                This code changes every 5 minutes. Contact your Team Leader if you don't have it.
+                This code changes every 5 minutes. Contact your Team Leader if you do not have it.
               </div>
             </div>
           )}
