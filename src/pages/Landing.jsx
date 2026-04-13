@@ -22,12 +22,12 @@ const FEATURES = [
 ]
 
 const TEAM_MARKERS = [
-  { id: 'ph', name: 'Philippines', left: '79.5%', top: '53%' },
-  { id: 'asia', name: 'Asia', left: '71.5%', top: '42%' },
-  { id: 'mx', name: 'Mexico Baja', left: '20.8%', top: '44%' },
-  { id: 'central', name: 'Central America', left: '24.4%', top: '49.5%' },
-  { id: 'co', name: 'Colombia', left: '28.8%', top: '57.5%' },
-  { id: 've', name: 'Venezuela', left: '31.8%', top: '55.2%' },
+  { id: 'ph', name: 'Philippines', left: '81.4%', top: '58.5%' },
+  { id: 'asia', name: 'Asia', left: '70.8%', top: '43.8%' },
+  { id: 'mx', name: 'Mexico Baja', left: '19.6%', top: '42.2%' },
+  { id: 'central', name: 'Central America', left: '23.6%', top: '48.6%' },
+  { id: 'co', name: 'Colombia', left: '28.1%', top: '57.2%' },
+  { id: 've', name: 'Venezuela', left: '31.4%', top: '54.6%' },
 ]
 
 function scrollToRef(ref) {
@@ -76,33 +76,33 @@ export default function Landing() {
     }
 
     const spawnParticle = (width, height) => {
-      const side = Math.floor(Math.random() * 3)
+      const edge = Math.floor(Math.random() * 3)
 
-      if (side === 0) {
+      if (edge === 0) {
         return {
           x: Math.random() * width,
-          y: Math.random() * height * 0.18,
+          y: Math.random() * height * 0.16,
           size: Math.random() * 1.8 + 0.8,
-          speed: Math.random() * 0.012 + 0.006,
+          speed: Math.random() * 0.011 + 0.006,
           alpha: Math.random() * 0.7 + 0.2,
         }
       }
 
-      if (side === 1) {
+      if (edge === 1) {
         return {
           x: Math.random() < 0.5 ? -20 : width + 20,
-          y: Math.random() * height * 0.32 + 10,
+          y: Math.random() * height * 0.28 + 10,
           size: Math.random() * 1.8 + 0.8,
-          speed: Math.random() * 0.012 + 0.006,
+          speed: Math.random() * 0.011 + 0.006,
           alpha: Math.random() * 0.7 + 0.2,
         }
       }
 
       return {
         x: Math.random() * width,
-        y: Math.random() * height * 0.28 + 10,
+        y: Math.random() * height * 0.22 + 12,
         size: Math.random() * 1.8 + 0.8,
-        speed: Math.random() * 0.012 + 0.006,
+        speed: Math.random() * 0.011 + 0.006,
         alpha: Math.random() * 0.7 + 0.2,
       }
     }
@@ -118,7 +118,7 @@ export default function Landing() {
 
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
 
-      const count = Math.min(46, Math.max(22, Math.floor(rect.width / 28)))
+      const count = Math.min(48, Math.max(22, Math.floor(rect.width / 26)))
       particles = Array.from({ length: count }, () => spawnParticle(rect.width, rect.height))
     }
 
@@ -135,15 +135,15 @@ export default function Landing() {
         p.x += dx * p.speed
         p.y += dy * p.speed
 
-        const life = Math.max(0, Math.min(1, dist / 340))
-        const alpha = p.alpha * life
+        const fade = Math.max(0, Math.min(1, dist / 360))
+        const alpha = p.alpha * fade
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(255,255,255,${alpha})`
         ctx.fill()
 
-        if (dist < 10) {
+        if (dist < 9) {
           particles[i] = spawnParticle(width, height)
         }
       })
@@ -246,22 +246,14 @@ export default function Landing() {
           </p>
 
           <div className="world-map-panel">
-            <div className="map-grid" />
+            <img
+              src="/world-night-map.jpg"
+              alt="World map"
+              className="world-map-image"
+              draggable="false"
+            />
 
-            <svg
-              className="world-map-svg"
-              viewBox="0 0 1000 520"
-              aria-hidden="true"
-            >
-              <g className="world-land">
-                <path d="M123 144l26-18 45-12 33 8 20 18 17 4 15 20-13 15-31 10-13 16-28-6-20 5-10 18-18 3-14-21-21-6-5-17 10-13 7-24z" />
-                <path d="M254 250l23 7 20 28 15 40 4 41-13 29-12 30-18 17-20-8-4-23 9-20-8-28-19-41 5-38z" />
-                <path d="M446 125l23-13 29-2 16 14 18-2 16 10-2 14-20 10-8 12-17 3-17-10-19 6-18-14z" />
-                <path d="M470 183l24 9 24 26 18 49-6 33-22 41-28 25-30-13-9-32 6-31-17-34 6-44z" />
-                <path d="M556 130l36-13 56 1 48 11 35 20 41 7 36 19 22 19-4 19-27 6-22 20-31 12-15 19-30 8-22-5-12-20-27-14-20-21-38-3-31-11-20-29-20-11 2-25z" />
-                <path d="M801 344l25-6 19 8 11 19-5 18-24 10-24-8-8-18z" />
-              </g>
-            </svg>
+            <div className="world-map-overlay" />
 
             <div className="map-markers">
               {TEAM_MARKERS.map((team) => (
