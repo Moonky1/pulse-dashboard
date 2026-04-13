@@ -4,11 +4,11 @@ import './Landing.css'
 
 const TEAM_POINTS = [
   { id: 'philippines', name: 'Philippines', short: 'PH', left: '76%', top: '34%' },
-  { id: 'asia', name: 'Asia', short: 'AS', left: '68%', top: '26%' },
-  { id: 'central', name: 'Central America', short: 'CA', left: '32%', top: '43%' },
-  { id: 'mexico', name: 'Mexico Baja', short: 'MX', left: '27%', top: '37%' },
-  { id: 'colombia', name: 'Colombia', short: 'CO', left: '38%', top: '49%' },
-  { id: 'venezuela', name: 'Venezuela', short: 'VE', left: '43%', top: '46%' },
+  { id: 'asia', name: 'Asia', short: 'AS', left: '68%', top: '27%' },
+  { id: 'central', name: 'Central America', short: 'CA', left: '32%', top: '44%' },
+  { id: 'mexico', name: 'Mexico Baja', short: 'MX', left: '27%', top: '38%' },
+  { id: 'colombia', name: 'Colombia', short: 'CO', left: '38%', top: '50%' },
+  { id: 'venezuela', name: 'Venezuela', short: 'VE', left: '43%', top: '47%' },
 ]
 
 const FEATURES = [
@@ -30,13 +30,13 @@ const FEATURES = [
   },
 ]
 
-const SOLAR_SPARKS = Array.from({ length: 30 }, (_, i) => ({
+const SOLAR_SPARKS = Array.from({ length: 34 }, (_, i) => ({
   id: i,
-  delay: `${(i * 0.16).toFixed(2)}s`,
-  duration: `${(3.2 + (i % 7) * 0.22).toFixed(2)}s`,
-  left: `${12 + (i * 2.7) % 76}%`,
-  top: `${12 + (i * 3.1) % 24}%`,
-  size: `${1.4 + (i % 3) * 0.7}px`,
+  delay: `${(i * 0.12).toFixed(2)}s`,
+  duration: `${(2.8 + (i % 7) * 0.2).toFixed(2)}s`,
+  left: `${8 + (i * 2.6) % 84}%`,
+  top: `${10 + (i * 2.4) % 18}%`,
+  size: `${1.2 + (i % 3) * 0.7}px`,
 }))
 
 export default function Landing() {
@@ -58,7 +58,6 @@ export default function Landing() {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
@@ -71,34 +70,34 @@ export default function Landing() {
     }
 
     const createParticles = () => {
-      const amount = Math.min(28, Math.floor(window.innerWidth / 72))
+      const amount = Math.min(26, Math.floor(window.innerWidth / 78))
       particles = Array.from({ length: amount }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        r: Math.random() * 1.4 + 0.45,
-        vx: (Math.random() - 0.5) * 0.05,
-        vy: (Math.random() - 0.5) * 0.05,
-        a: Math.random() * 0.16 + 0.02,
+        r: Math.random() * 1.3 + 0.4,
+        vx: (Math.random() - 0.5) * 0.04,
+        vy: (Math.random() - 0.5) * 0.04,
+        a: Math.random() * 0.14 + 0.02,
       }))
     }
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      particles.forEach((p) => {
+      for (const p of particles) {
         p.x += p.vx
         p.y += p.vy
 
-        if (p.x < -10) p.x = canvas.width + 10
-        if (p.x > canvas.width + 10) p.x = -10
-        if (p.y < -10) p.y = canvas.height + 10
-        if (p.y > canvas.height + 10) p.y = -10
+        if (p.x < -8) p.x = canvas.width + 8
+        if (p.x > canvas.width + 8) p.x = -8
+        if (p.y < -8) p.y = canvas.height + 8
+        if (p.y > canvas.height + 8) p.y = -8
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(255,255,255,${p.a})`
         ctx.fill()
-      })
+      }
 
       raf = requestAnimationFrame(draw)
     }
@@ -113,7 +112,6 @@ export default function Landing() {
     }
 
     window.addEventListener('resize', onResize)
-
     return () => {
       window.removeEventListener('resize', onResize)
       cancelAnimationFrame(raf)
@@ -224,8 +222,9 @@ export default function Landing() {
               <div className="hero-sun-shell" />
               <div className="hero-sun-core" />
               <div className="hero-sun-inner-ring" />
-              <div className="hero-sun-reflection" />
             </div>
+
+            <div className="hero-sun-below-mask" />
           </div>
         </section>
 
@@ -254,14 +253,17 @@ export default function Landing() {
 
             <div className="globe-hemisphere">
               <div className="globe-hemisphere-outline" />
+
               <div className="globe-rotate-layer globe-rotate-layer-a">
-                <div className="globe-dot-shell" />
+                <div className="globe-dot-shell globe-dot-shell-a" />
               </div>
+
               <div className="globe-rotate-layer globe-rotate-layer-b">
-                <div className="globe-dot-shell" />
+                <div className="globe-dot-shell globe-dot-shell-b" />
               </div>
+
               <div className="globe-rotate-layer globe-rotate-layer-c">
-                <div className="globe-dot-shell" />
+                <div className="globe-dot-shell globe-dot-shell-c" />
               </div>
 
               {globeMarkers}
