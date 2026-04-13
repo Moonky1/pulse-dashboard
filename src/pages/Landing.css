@@ -455,34 +455,32 @@
   color: #98a3b5;
 }
 
-/* MAP NO RECUADRO */
-.world-map-wrap {
+/* MAP */
+.world-map-stage {
   position: relative;
-  margin: 26px auto 0;
-  width: min(1280px, 96vw);
-  min-height: 520px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: min(1260px, 96vw);
+  aspect-ratio: 2.14 / 1;
+  margin: 22px auto 0;
   overflow: hidden;
   isolation: isolate;
 }
 
 .world-map-svg {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
-  display: block;
+  height: 100%;
   opacity: 0.62;
   filter:
-    drop-shadow(0 0 28px rgba(255,255,255,0.02))
-    drop-shadow(0 0 30px rgba(249,115,22,0.03));
-  mask-image: radial-gradient(circle at center, black 54%, rgba(0,0,0,0.72) 74%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle at center, black 54%, rgba(0,0,0,0.72) 74%, transparent 100%);
+    drop-shadow(0 0 24px rgba(255,255,255,0.02))
+    drop-shadow(0 0 30px rgba(249,115,22,0.02));
+  mask-image: radial-gradient(circle at center, black 58%, rgba(0,0,0,0.74) 78%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 58%, rgba(0,0,0,0.74) 78%, transparent 100%);
 }
 
 .world-map-land path {
   fill: rgba(255,255,255,0.055);
-  stroke: rgba(255,255,255,0.065);
+  stroke: rgba(255,255,255,0.06);
   stroke-width: 2;
 }
 
@@ -491,15 +489,16 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at center, rgba(255,255,255,0.02), transparent 44%),
-    linear-gradient(180deg, rgba(3,5,10,0.08), rgba(3,5,10,0.2));
-  mask-image: radial-gradient(circle at center, black 56%, rgba(0,0,0,0.72) 76%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle at center, black 56%, rgba(0,0,0,0.72) 76%, transparent 100%);
+    radial-gradient(circle at center, rgba(255,255,255,0.018), transparent 44%),
+    linear-gradient(180deg, rgba(3,5,10,0.08), rgba(3,5,10,0.18));
+  mask-image: radial-gradient(circle at center, black 60%, rgba(0,0,0,0.75) 80%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 60%, rgba(0,0,0,0.75) 80%, transparent 100%);
 }
 
 .map-markers {
   position: absolute;
   inset: 0;
+  overflow: hidden;
 }
 
 .map-marker {
@@ -640,10 +639,6 @@
   .feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .world-map-wrap {
-    min-height: 430px;
-  }
 }
 
 @media (max-width: 900px) {
@@ -698,16 +693,16 @@
     min-height: 180px;
   }
 
-  .world-map-wrap {
-    min-height: 330px;
-  }
-
   .section-title {
     font-size: clamp(40px, 7vw, 66px);
   }
 
   .section-sub {
     font-size: 18px;
+  }
+
+  .world-map-stage {
+    width: min(96vw, 920px);
   }
 }
 
@@ -769,8 +764,9 @@
     font-size: 15px;
   }
 
-  .world-map-wrap {
-    min-height: 250px;
+  .world-map-stage {
+    width: 100%;
+    aspect-ratio: 1.85 / 1;
   }
 
   .map-marker-dot {

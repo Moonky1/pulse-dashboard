@@ -22,12 +22,12 @@ const FEATURES = [
 ]
 
 const TEAM_MARKERS = [
-  { id: 'ph', name: 'Philippines', left: '81.2%', top: '57.8%' },
-  { id: 'asia', name: 'Asia', left: '70.5%', top: '43.2%' },
-  { id: 'mx', name: 'Mexico Baja', left: '19.8%', top: '42.4%' },
-  { id: 'central', name: 'Central America', left: '23.8%', top: '48.4%' },
-  { id: 'co', name: 'Colombia', left: '28.2%', top: '57%' },
-  { id: 've', name: 'Venezuela', left: '31.5%', top: '54.6%' },
+  { id: 'mx', name: 'Mexico Baja', left: '18.7%', top: '42.6%' },
+  { id: 'central', name: 'Central America', left: '22.3%', top: '48.5%' },
+  { id: 'co', name: 'Colombia', left: '27.0%', top: '56.8%' },
+  { id: 've', name: 'Venezuela', left: '30.4%', top: '54.5%' },
+  { id: 'asia', name: 'Asia', left: '69.8%', top: '42%' },
+  { id: 'ph', name: 'Philippines', left: '80.5%', top: '57.4%' },
 ]
 
 function scrollToRef(ref) {
@@ -35,6 +35,31 @@ function scrollToRef(ref) {
     behavior: 'smooth',
     block: 'start',
   })
+}
+
+function WorldMapSvg() {
+  return (
+    <svg
+      className="world-map-svg"
+      viewBox="0 0 1200 560"
+      aria-hidden="true"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <g className="world-map-land">
+        <path d="M116 163l23-31 54-24 63-9 55 14 28 27 26 7 18 24-19 27-31 15-30 7-20 19-31-5-26 10-11 24-30 5-18-30-27-10-10-23 15-18 11-29z" />
+        <path d="M295 239l31 7 34 18 26 39 8 49-16 35-18 43-28 28-31-9-7-41 15-31-9-34-24-52 5-52z" />
+        <path d="M347 64l20-20 29-8 18 8 8 19-8 24-20 11-29-1-18-16z" />
+        <path d="M353 286l38 16 27 42 16 76-4 67-29 86-39 46-36-14-8-44 14-36-10-49-27-66-8-61 10-43z" />
+        <path d="M530 130l24-17 35-3 21 17 27-4 22 14-2 21-23 12-15 10-23 3-26-14-23 7-19-10-1-17z" />
+        <path d="M564 206l38 14 35 47 24 72-11 76-41 72-49 45-40-16-17-64 11-74-22-55 7-67z" />
+        <path d="M639 155l43-11 56-20 74 2 75 16 50 30 53 10 47 28 38 34-5 34-43 10-35 28-53 16-28 30-58 17-40-8-32-37-44-14-31-36-47-2-39-10-25-33-25-41-16-10z" />
+        <path d="M839 292l30 18 20 31-9 27 19 17 25 7 18 26-11 21-29 7-24-11-15-24-20-9-18-25 4-27-13-27z" />
+        <path d="M1029 226l15 6 5 15-11 14-15-6-3-15z" />
+        <path d="M1068 269l12 5 3 12-8 10-12-4-4-11z" />
+        <path d="M959 398l34-12 42 13 21 29-6 32-39 18-51-8-26-25 8-31z" />
+      </g>
+    </svg>
+  )
 }
 
 export default function Landing() {
@@ -249,14 +274,8 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="world-map-panel">
-            <img
-              src="/world-night-map.jpg"
-              alt="World map"
-              className="world-map-image"
-              draggable="false"
-            />
-
+          <div className="world-map-stage">
+            <WorldMapSvg />
             <div className="world-map-overlay" />
 
             <div className="map-markers">
