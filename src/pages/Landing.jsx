@@ -22,12 +22,12 @@ const FEATURES = [
 ]
 
 const TEAM_MARKERS = [
-  { id: 'ph', name: 'Philippines', left: '81.4%', top: '58.5%' },
-  { id: 'asia', name: 'Asia', left: '70.8%', top: '43.8%' },
-  { id: 'mx', name: 'Mexico Baja', left: '19.6%', top: '42.2%' },
-  { id: 'central', name: 'Central America', left: '23.6%', top: '48.6%' },
-  { id: 'co', name: 'Colombia', left: '28.1%', top: '57.2%' },
-  { id: 've', name: 'Venezuela', left: '31.4%', top: '54.6%' },
+  { id: 'ph', name: 'Philippines', left: '81.2%', top: '57.8%' },
+  { id: 'asia', name: 'Asia', left: '70.5%', top: '43.2%' },
+  { id: 'mx', name: 'Mexico Baja', left: '19.8%', top: '42.4%' },
+  { id: 'central', name: 'Central America', left: '23.8%', top: '48.4%' },
+  { id: 'co', name: 'Colombia', left: '28.2%', top: '57%' },
+  { id: 've', name: 'Venezuela', left: '31.5%', top: '54.6%' },
 ]
 
 function scrollToRef(ref) {
@@ -226,7 +226,9 @@ export default function Landing() {
         </section>
 
         <section ref={featuresRef} className="feature-section">
-          <h2 className="section-title center-title">Built to feel smooth and natural.</h2>
+          <div className="section-head">
+            <h2 className="section-title">Built to feel smooth and natural.</h2>
+          </div>
 
           <div className="feature-grid">
             {FEATURES.map((item) => (
@@ -240,10 +242,12 @@ export default function Landing() {
         </section>
 
         <section ref={teamsRef} className="teams-section">
-          <h2 className="section-title center-title">Teams across the globe.</h2>
-          <p className="section-sub center-sub">
-            Explore where each Pulse team operates inside the network.
-          </p>
+          <div className="section-head">
+            <h2 className="section-title">Teams across the globe.</h2>
+            <p className="section-sub">
+              Explore where each Pulse team operates inside the network.
+            </p>
+          </div>
 
           <div className="world-map-panel">
             <img
