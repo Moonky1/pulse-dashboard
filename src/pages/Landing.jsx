@@ -3,12 +3,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import './Landing.css'
 
 const TEAM_POINTS = [
-  { id: 'philippines', name: 'Philippines', short: 'PH', left: '78%', top: '36%' },
-  { id: 'asia', name: 'Asia', short: 'AS', left: '70%', top: '28%' },
-  { id: 'central', name: 'Central America', short: 'CA', left: '31%', top: '42%' },
-  { id: 'mexico', name: 'Mexico Baja', short: 'MX', left: '25%', top: '36%' },
-  { id: 'colombia', name: 'Colombia', short: 'CO', left: '36%', top: '49%' },
-  { id: 'venezuela', name: 'Venezuela', short: 'VE', left: '41%', top: '46%' },
+  { id: 'philippines', name: 'Philippines', short: 'PH', left: '77%', top: '36%' },
+  { id: 'asia', name: 'Asia', short: 'AS', left: '69%', top: '28%' },
+  { id: 'central', name: 'Central America', short: 'CA', left: '31%', top: '43%' },
+  { id: 'mexico', name: 'Mexico Baja', short: 'MX', left: '25%', top: '37%' },
+  { id: 'colombia', name: 'Colombia', short: 'CO', left: '36%', top: '50%' },
+  { id: 'venezuela', name: 'Venezuela', short: 'VE', left: '41%', top: '47%' },
 ]
 
 const FEATURES = [
@@ -30,13 +30,13 @@ const FEATURES = [
   },
 ]
 
-const SOLAR_SPARKS = Array.from({ length: 24 }, (_, i) => ({
+const SOLAR_SPARKS = Array.from({ length: 28 }, (_, i) => ({
   id: i,
-  delay: `${(i * 0.22).toFixed(2)}s`,
-  duration: `${(4.8 + (i % 6) * 0.35).toFixed(2)}s`,
-  left: `${8 + (i * 3.6) % 84}%`,
-  top: `${18 + (i * 5.2) % 42}%`,
-  size: `${1.6 + (i % 3) * 0.7}px`,
+  delay: `${(i * 0.18).toFixed(2)}s`,
+  duration: `${(3.8 + (i % 6) * 0.3).toFixed(2)}s`,
+  left: `${10 + (i * 3.1) % 80}%`,
+  top: `${16 + (i * 4.4) % 36}%`,
+  size: `${1.4 + (i % 3) * 0.8}px`,
 }))
 
 export default function Landing() {
@@ -67,14 +67,14 @@ export default function Landing() {
     }
 
     const createParticles = () => {
-      const amount = Math.min(34, Math.floor(window.innerWidth / 60))
+      const amount = Math.min(30, Math.floor(window.innerWidth / 68))
       particles = Array.from({ length: amount }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        r: Math.random() * 1.7 + 0.5,
-        vx: (Math.random() - 0.5) * 0.08,
-        vy: (Math.random() - 0.5) * 0.08,
-        a: Math.random() * 0.22 + 0.03,
+        r: Math.random() * 1.6 + 0.4,
+        vx: (Math.random() - 0.5) * 0.06,
+        vy: (Math.random() - 0.5) * 0.06,
+        a: Math.random() * 0.18 + 0.025,
       }))
     }
 
@@ -159,7 +159,7 @@ export default function Landing() {
           <a href="#hero">Home</a>
           <a href="#features">Features</a>
           <a href="#teams">Teams</a>
-          <a href="#access">Access</a>
+          <a href="/go">Pulse GO</a>
         </nav>
 
         <div className="landing-nav-actions">
@@ -214,25 +214,10 @@ export default function Landing() {
               <div className="hero-sun-reflection" />
             </div>
           </div>
-
-          <div className="hero-actions">
-            <button className="hero-btn hero-btn-primary" onClick={() => navigate('/register')}>
-              Registrarse
-            </button>
-            <button className="hero-btn hero-btn-secondary" onClick={() => navigate('/signin')}>
-              Iniciar sesión
-            </button>
-            <button className="hero-btn hero-btn-go" onClick={() => navigate('/go')}>
-              Pulse GO
-            </button>
-          </div>
-
-          <p className="hero-note">Supervisors, QA &amp; Team Leaders</p>
         </section>
 
         <section id="features" className="feature-section">
-          <div className="section-chip">Platform</div>
-          <h2 className="section-title">Built to feel smooth and natural.</h2>
+          <h2 className="section-title center-title">Built to feel smooth and natural.</h2>
 
           <div className="feature-grid">
             {FEATURES.map((item) => (
@@ -246,9 +231,8 @@ export default function Landing() {
         </section>
 
         <section id="teams" className="globe-section">
-          <div className="section-chip">Presence</div>
-          <h2 className="section-title">Teams across the globe.</h2>
-          <p className="section-sub">
+          <h2 className="section-title center-title">Teams across the globe.</h2>
+          <p className="section-sub center-sub">
             Explore where each Pulse team operates inside the network.
           </p>
 
@@ -257,36 +241,18 @@ export default function Landing() {
 
             <div className="globe-sphere">
               <div className="globe-outline" />
+              <div className="globe-lat lat-1" />
+              <div className="globe-lat lat-2" />
+              <div className="globe-lat lat-3" />
+              <div className="globe-lat lat-4" />
+              <div className="globe-lat lat-5" />
+
               <div className="globe-dots globe-dots-a" />
               <div className="globe-dots globe-dots-b" />
               <div className="globe-dots globe-dots-c" />
+
               {globeMarkers}
             </div>
-          </div>
-        </section>
-
-        <section id="access" className="access-section">
-          <div className="section-chip">Access</div>
-          <h2 className="section-title">One ecosystem. Two paths.</h2>
-
-          <div className="access-cards">
-            <article className="access-card">
-              <div className="access-card-tag">Dashboard</div>
-              <h3>Track live performance</h3>
-              <p>Open the main Pulse dashboard for visibility, movement and follow-up.</p>
-              <button className="hero-btn hero-btn-secondary access-btn" onClick={() => navigate('/signin')}>
-                Open dashboard
-              </button>
-            </article>
-
-            <article className="access-card">
-              <div className="access-card-tag">GO</div>
-              <h3>Train inside Pulse GO</h3>
-              <p>Use quizzes, learning flows and internal training in one dedicated space.</p>
-              <button className="hero-btn hero-btn-primary access-btn" onClick={() => navigate('/go')}>
-                Open Pulse GO
-              </button>
-            </article>
           </div>
         </section>
       </main>
