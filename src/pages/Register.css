@@ -5,47 +5,69 @@
   justify-content: center;
   padding: 2rem;
   position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 14%, rgba(249, 115, 22, 0.07), transparent 18%),
-    linear-gradient(180deg, #020409 0%, #03050a 45%, #020409 100%);
 }
 
-.reg-wrap::before {
+.auth-overlay-page {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(249, 115, 22, 0.08), transparent 18%),
+    linear-gradient(180deg, rgba(2, 4, 9, 0.72) 0%, rgba(3, 5, 10, 0.78) 45%, rgba(2, 4, 9, 0.86) 100%);
+}
+
+.auth-overlay-page::before {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
   background-size: 64px 64px;
-  opacity: 0.22;
-  mask-image: radial-gradient(circle at 50% 35%, black 32%, rgba(0,0,0,0.72) 70%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle at 50% 35%, black 32%, rgba(0,0,0,0.72) 70%, transparent 100%);
+  opacity: 0.18;
+  mask-image: radial-gradient(circle at 50% 35%, black 34%, rgba(0,0,0,0.72) 70%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at 50% 35%, black 34%, rgba(0,0,0,0.72) 70%, transparent 100%);
 }
 
-.reg-wrap::after {
-  content: '';
+.auth-overlay-blur {
   position: absolute;
-  left: 50%;
-  bottom: -120px;
-  transform: translateX(-50%);
-  width: 680px;
-  height: 220px;
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(circle, rgba(249, 115, 22, 0.12), transparent 70%);
-  filter: blur(42px);
-  opacity: 0.8;
+  inset: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.auth-modal-wrap {
+  z-index: 2;
+}
+
+.auth-close {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: #d6dbea;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  z-index: 5;
+}
+
+.auth-close:hover {
+  transform: translateY(-1px);
+  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(249, 115, 22, 0.08);
 }
 
 .reg-card {
-  position: relative;
-  z-index: 1;
   background:
     linear-gradient(180deg, rgba(24, 27, 35, 0.96), rgba(17, 20, 28, 0.96));
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 22px;
   padding: 2rem;
   width: 100%;
@@ -54,10 +76,13 @@
     0 24px 80px rgba(0, 0, 0, 0.34),
     inset 0 1px 0 rgba(255,255,255,0.04),
     0 0 0 1px rgba(249, 115, 22, 0.03);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  position: relative;
+  overflow: hidden;
 }
 
+.auth-modal-card::before,
 .reg-card::before {
   content: '';
   position: absolute;
@@ -67,11 +92,29 @@
   background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent 28%);
 }
 
+.auth-modal-card::after,
+.reg-card::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -72px;
+  transform: translateX(-50%);
+  width: 420px;
+  height: 120px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.14), transparent 72%);
+  filter: blur(34px);
+  opacity: 0.85;
+}
+
 .reg-header {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 2rem;
+  position: relative;
+  z-index: 1;
 }
 
 .reg-logo {
@@ -112,6 +155,11 @@
   font-size: 12px;
   color: #788295;
   flex-shrink: 0;
+}
+
+.reg-body {
+  position: relative;
+  z-index: 1;
 }
 
 .reg-body h2 {
@@ -165,7 +213,6 @@
   color: #f97316;
 }
 
-/* ── ROLE WARNING ── */
 .role-warning {
   font-size: 12px;
   color: #fbbf24;
@@ -181,7 +228,6 @@
   color: #f97316;
 }
 
-/* ── ROLE GRID ── */
 .role-grid {
   display: flex;
   flex-direction: column;
@@ -244,7 +290,6 @@
   box-shadow: 0 0 14px rgba(249, 115, 22, 0.28);
 }
 
-/* ── TEAM GRID ── */
 .team-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -312,12 +357,16 @@
   font-size: 13px;
   color: #ff8f4a;
   text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
 .reg-actions {
   display: flex;
   gap: 10px;
   margin-top: 1.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .btn-back {
@@ -366,9 +415,28 @@
   box-shadow: none;
 }
 
+.auth-switch-text {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 12px;
+  color: #7c8798;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-switch-text span {
+  color: #f97316;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 @media (max-width: 640px) {
   .reg-wrap {
     padding: 1rem;
+  }
+
+  .auth-modal-wrap {
+    align-items: center;
   }
 
   .reg-card {
@@ -387,5 +455,10 @@
 
   .team-grid {
     grid-template-columns: 1fr;
+  }
+
+  .auth-close {
+    top: 14px;
+    right: 14px;
   }
 }

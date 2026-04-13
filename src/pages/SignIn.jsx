@@ -1,9 +1,9 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './Register.css'
 
 const SHEET_ID = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 
-// Team name → team id mapping
 const TEAM_MAP = {
   Philippines: 'philippines',
   Venezuela: 'venezuela',
@@ -20,15 +20,14 @@ const ROLE_MAP = {
 }
 
 export default function SignIn() {
+  const navigate = useNavigate()
+
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSignIn = async () => {
-    if (!name.trim()) {
-      setError('Enter your name')
-      return
-    }
+    if (!name.trim()) return setError('Enter your name')
 
     setLoading(true)
     setError('')
@@ -87,19 +86,15 @@ export default function SignIn() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-grid" />
-      <div className="auth-glow auth-glow-top" />
-      <div className="auth-glow auth-glow-bottom" />
+    <div className="auth-overlay-page">
+      <div className="auth-overlay-blur" onClick={() => navigate('/')} />
 
-      <div className="auth-shell">
-        <button className="auth-back" onClick={() => (window.location.href = '/')}>
-          ← Back to Pulse
+      <div className="reg-wrap auth-modal-wrap">
+        <button className="auth-close" onClick={() => navigate('/')}>
+          ✕
         </button>
 
-        <div className="auth-card">
-          <div className="auth-card-glow" />
-
+        <div className="reg-card auth-modal-card">
           <div className="reg-header">
             <div className="reg-logo">P</div>
             <div className="prog-bar">
@@ -109,8 +104,7 @@ export default function SignIn() {
           </div>
 
           <div className="reg-body">
-            <div className="auth-kicker">Welcome back</div>
-            <h2>Enter Pulse</h2>
+            <h2>Welcome back</h2>
             <p>Use the same name you registered with to continue.</p>
 
             <input
@@ -138,11 +132,9 @@ export default function SignIn() {
             </button>
           </div>
 
-          <p className="auth-switch">
+          <p className="auth-switch-text">
             New here?{' '}
-            <span onClick={() => (window.location.href = '/register')}>
-              Register instead
-            </span>
+            <span onClick={() => navigate('/register')}>Register instead</span>
           </p>
         </div>
       </div>
