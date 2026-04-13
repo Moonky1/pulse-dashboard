@@ -94,39 +94,39 @@ export default function Landing() {
         width: rect.width,
         height: rect.height,
         x: rect.width / 2,
-        y: rect.height * 0.62,
+        y: rect.height * 0.67,
       }
     }
 
     const spawnParticle = (width, height) => {
-      const edge = Math.floor(Math.random() * 3)
+      const side = Math.floor(Math.random() * 3)
 
-      if (edge === 0) {
+      if (side === 0) {
         return {
           x: Math.random() * width,
-          y: Math.random() * height * 0.16,
-          size: Math.random() * 1.8 + 0.8,
-          speed: Math.random() * 0.011 + 0.006,
-          alpha: Math.random() * 0.7 + 0.2,
+          y: Math.random() * height * 0.28,
+          size: Math.random() * 1.6 + 0.6,
+          speed: Math.random() * 0.010 + 0.004,
+          alpha: Math.random() * 0.55 + 0.18,
         }
       }
 
-      if (edge === 1) {
+      if (side === 1) {
         return {
-          x: Math.random() < 0.5 ? -20 : width + 20,
-          y: Math.random() * height * 0.28 + 10,
-          size: Math.random() * 1.8 + 0.8,
-          speed: Math.random() * 0.011 + 0.006,
-          alpha: Math.random() * 0.7 + 0.2,
+          x: Math.random() < 0.5 ? -10 : width + 10,
+          y: Math.random() * height * 0.34,
+          size: Math.random() * 1.6 + 0.6,
+          speed: Math.random() * 0.010 + 0.004,
+          alpha: Math.random() * 0.55 + 0.18,
         }
       }
 
       return {
         x: Math.random() * width,
-        y: Math.random() * height * 0.22 + 12,
-        size: Math.random() * 1.8 + 0.8,
-        speed: Math.random() * 0.011 + 0.006,
-        alpha: Math.random() * 0.7 + 0.2,
+        y: Math.random() * height * 0.22,
+        size: Math.random() * 1.6 + 0.6,
+        speed: Math.random() * 0.010 + 0.004,
+        alpha: Math.random() * 0.55 + 0.18,
       }
     }
 
@@ -141,7 +141,7 @@ export default function Landing() {
 
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
 
-      const count = Math.min(48, Math.max(22, Math.floor(rect.width / 26)))
+      const count = Math.min(42, Math.max(16, Math.floor(rect.width / 38)))
       particles = Array.from({ length: count }, () => spawnParticle(rect.width, rect.height))
     }
 
@@ -158,15 +158,14 @@ export default function Landing() {
         p.x += dx * p.speed
         p.y += dy * p.speed
 
-        const fade = Math.max(0, Math.min(1, dist / 360))
-        const alpha = p.alpha * fade
+        const alpha = p.alpha * Math.max(0, Math.min(1, dist / 340))
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(255,255,255,${alpha})`
         ctx.fill()
 
-        if (dist < 9) {
+        if (dist < 8) {
           particles[i] = spawnParticle(width, height)
         }
       })
@@ -226,22 +225,16 @@ export default function Landing() {
           <div ref={solarZoneRef} className="hero-solar-zone">
             <canvas ref={solarCanvasRef} className="solar-particle-canvas" />
 
-            <div className="solar-space-glow solar-space-glow-a" />
-            <div className="solar-space-glow solar-space-glow-b" />
-
-            <div className="solar-ring solar-ring-a" />
-            <div className="solar-ring solar-ring-b" />
-
-            <div className="solar-blackhole-mass solar-blackhole-mass-a" />
-            <div className="solar-blackhole-mass solar-blackhole-mass-b" />
-            <div className="solar-blackhole-mass solar-blackhole-mass-c" />
+            <div className="solar-main-glow" />
+            <div className="solar-wave solar-wave-1" />
+            <div className="solar-wave solar-wave-2" />
+            <div className="solar-wave solar-wave-3" />
 
             <div className="solar-line" />
 
-            <div className="solar-sun">
-              <div className="solar-sun-haze" />
-              <div className="solar-sun-core" />
-              <div className="solar-sun-ring" />
+            <div className="solar-core-wrap">
+              <div className="solar-core-ring" />
+              <div className="solar-core" />
             </div>
 
             <div className="solar-bottom-mask" />
@@ -250,7 +243,7 @@ export default function Landing() {
 
         <section ref={featuresRef} className="feature-section">
           <div className="section-head">
-            <h2 className="section-title">Built to feel smooth and natural.</h2>
+            <h2 className="section-title section-title-xl">Built to feel smooth and natural.</h2>
           </div>
 
           <div className="feature-grid">
@@ -266,7 +259,7 @@ export default function Landing() {
 
         <section ref={teamsRef} className="teams-section">
           <div className="section-head">
-            <h2 className="section-title">Teams across the globe.</h2>
+            <h2 className="section-title section-title-xl">Teams across the globe.</h2>
             <p className="section-sub">
               Explore where each Pulse team operates inside the network.
             </p>
