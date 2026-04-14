@@ -33,6 +33,12 @@ const TEAM_DISPLAY_NAMES = {
   mexico:'Mexico Baja', venezuela:'Venezuela',
 }
 
+// Map display name → team id (for TeamCard click)
+const DISPLAY_NAME_TO_ID = {
+  'Philippines':'philippines', 'Colombia':'colombia', 'Central America':'central',
+  'Mexico Baja':'mexico', 'Venezuela':'venezuela', 'Asia':'asia',
+}
+
 function normalizeDate(raw) {
   if (!raw) return null
   const s = String(raw).trim()
@@ -201,7 +207,6 @@ function parseTeamSheet(rows, config) {
     return false
   }
 
-  // Only check cols 0-2 for end markers — data columns (English/Spanish) should never trigger end
   const isEndRow = (row) => {
     for (let c = 0; c < Math.min(row.length, 3); c++) {
       const v = cellUpper(row[c]); if (v.length < 3) continue
@@ -235,8 +240,6 @@ function parseTeamSheet(rows, config) {
     }
 
     if (!inOT && isEndRow(row)) {
-      // Read official totals from this summary row (e.g. "77 Agents Logged in | | | 112 | 116 | 228")
-      // These are more reliable than summing individual agents (some rows lack ext/name)
       const summaryEn = safeInt(row[colEn])
       const summarySp = colSp != null ? safeInt(row[colSp]) : 0
       if (summaryEn > 0 || summarySp > 0) {
@@ -247,7 +250,6 @@ function parseTeamSheet(rows, config) {
           total: 0, _synthetic: true
         }
         agentMap['__MAIN_TOTAL__'].total = agentMap['__MAIN_TOTAL__'].english + agentMap['__MAIN_TOTAL__'].spanish
-        // Clean up if diff is zero or negative (means individual agents already covered it)
         if (agentMap['__MAIN_TOTAL__'].english <= 0 && agentMap['__MAIN_TOTAL__'].spanish <= 0) {
           delete agentMap['__MAIN_TOTAL__']
         }
@@ -283,14 +285,11 @@ function parseTeamSheet(rows, config) {
     }
 
     if (inOT && isEndRow(row)) {
-      // OT section ended — if no individual OT agents were found, read totals from this summary row
-      // e.g. "21 Agents Logged in | | | 33 | 15 | 48" (Colombia OT pattern)
       const otAgentCount = Object.values(agentMap).filter(a => a._fromOT).length
       if (otColEn >= 0 && otAgentCount === 0) {
         const en = safeInt(row[otColEn])
         const sp = otColSp >= 0 ? safeInt(row[otColSp]) : 0
         if (en > 0 || sp > 0) {
-          // Add OT totals to a special key so they get summed into team totals
           agentMap['__OT__'] = { name:'__OT__', ext:'__OT__', english:en, spanish:sp, total:en+sp, _fromOT:true }
         }
       }
@@ -320,28 +319,17 @@ function parseTeamSheet(rows, config) {
     }
   }
 
-  // Filter out synthetic OT total entry from agents list but keep in totals
   const allEntries = Object.values(agentMap)
   const agents = allEntries.filter(a => a.ext !== '__OT__' && a.ext !== '__MAIN_TOTAL__').map(a => {
     const { _fromOT, ...rest } = a
     return rest
   })
-  // Include synthetic OT entry in totals
   const en = allEntries.reduce((s,a) => s+a.english, 0)
   const sp = allEntries.reduce((s,a) => s+a.spanish, 0)
   return { agents, totals:{ english:en, spanish:sp, total:en+sp, activeAgents:agents.length } }
 }
 
 function parseAsiaSheet(rows) {
-  // Asia sheet layout (confirmed from screenshot):
-  // Row 1: ASIA header
-  // Row 2: MANAGEMENT | USER | TRANSFERS | TRANSFERS | TRANSFERS
-  // Row 3: LEXNER | GENERAL MANAGER | SPANISH | ENGLISH | TOTAL
-  // Row 4+: agent name | ext(3xxx) | spanish | english | total
-  // col index:          0           1          2          3        4
-  // End marker: row with "X AGENTS LOGGED IN" or "TOTAL TRANSFERS" in col A/B
-  // OT section: after end marker if colombiaHour >= 18
-
   if (!rows || !Array.isArray(rows) || rows.length === 0)
     return { agents:[], totals:{ spanish:0, english:0, total:0, activeAgents:0 } }
 
@@ -350,7 +338,6 @@ function parseAsiaSheet(rows) {
   let inOT = false
   let otDetected = false
 
-  // Fixed columns for Asia main section
   const COL_EXT = 1
   const COL_SP  = 2
   const COL_EN  = 3
@@ -386,7 +373,6 @@ function parseAsiaSheet(rows) {
     const cell0  = (row[0] || '').toString().trim()
     const cell0U = cellUpper(cell0)
 
-    // Detect OT section header
     if (!inOT && isOTHeader(row)) {
       if (!includeOT()) break
       inOT = true
@@ -395,26 +381,17 @@ function parseAsiaSheet(rows) {
       continue
     }
 
-    // Detect end of main section
     if (!inOT && isEndMarker(row)) {
       if (!includeOT()) break
       afterMainEnd = true
       continue
     }
 
-    // Skip rows between main end and OT section
     if (afterMainEnd && !inOT) continue
-
-    // Skip OT header row that has column labels
     if (inOT && !otDetected) { otDetected = true; continue }
-
-    // End of OT section
     if (inOT && isEndMarker(row)) break
-
-    // Skip non-agent rows
     if (SKIP_NAMES.has(cell0U) || cell0.length < 2) continue
 
-    // Get extension
     const extRaw = (row[COL_EXT] || '').toString().replace(/,/g,'').trim()
     const ext = parseInt(extRaw)
     if (isNaN(ext) || ext < 1000 || ext > 9999) continue
@@ -532,12 +509,21 @@ function BarChart({agents,metric}) {
   )
 }
 
+// ── isSunday helper ──────────────────────────────────────
+const isSunday = (dateStr) => {
+  try { return new Date(dateStr + 'T12:00:00').getDay() === 0 } catch { return false }
+}
+
 function DatePicker({dateTabs,selectedDate,onSelect}) {
   const [open,setOpen]=useState(false); const ref=useRef(null)
   const today=todayKey(); const yest=new Date(); yest.setDate(yest.getDate()-1); const yKey=yest.toISOString().slice(0,10)
   useEffect(()=>{const h=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false)};document.addEventListener('mousedown',h);return()=>document.removeEventListener('mousedown',h)},[])
+
+  // Filter out Sundays before grouping
+  const workingTabs = dateTabs.filter(date => !isSunday(date))
+
   const groups={}
-  dateTabs.forEach(date=>{
+  workingTabs.forEach(date=>{
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return
     const[y,m]=date.split('-');const mk=`${y}-${m}`;const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const label=`${mn[parseInt(m)-1]} ${y}`;if(!groups[mk])groups[mk]={label,dates:[]};groups[mk].dates.push(date)
   })
@@ -578,18 +564,28 @@ function DatePicker({dateTabs,selectedDate,onSelect}) {
 const getFlag=(name)=>{const n=name.toUpperCase();if(n.includes('PHIL'))return'ph';if(n.includes('VENE'))return've';if(n.includes('COLOM'))return'co';if(n.includes('MEXICO'))return'mx';if(n.includes('CENTRAL'))return'hn';if(n.includes('ASIA'))return'cn';return'un'}
 const TEAM_ACCENT={PHILIPPINES:'#3b82f6',VENEZUELA:'#ef4444',COLOMBIA:'#f59e0b','MEXICO BAJA':'#10b981','CENTRAL AMERICA':'#8b5cf6',ASIA:'#f97316'}
 
-function TeamCard({row,rank,isMyTeam,isFirst}) {
+// ── TeamCard — now clickable to navigate to team ────────
+function TeamCard({row,rank,isMyTeam,isFirst,onSelect}) {
   const [hovered,setHovered]=useState(false)
   const accent=TEAM_ACCENT[row.name.toUpperCase()]||'#f97316'
   const rankEmojis=[E.goal1,E.goal3,E.goal4]
+  const teamId = DISPLAY_NAME_TO_ID[row.name] || null
+
   return(
-    <div className={`vteam-card ${isFirst?'vteam-first':''} ${isMyTeam?'vteam-mine':''} ${hovered?'vteam-hovered':''}`}
-      style={{'--accent':accent}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
+    <div
+      className={`vteam-card ${isFirst?'vteam-first':''} ${isMyTeam?'vteam-mine':''} ${hovered?'vteam-hovered':''} ${teamId?'vteam-clickable':''}`}
+      style={{'--accent':accent}}
+      onMouseEnter={()=>setHovered(true)}
+      onMouseLeave={()=>setHovered(false)}
+      onClick={()=>{ if(teamId && onSelect) onSelect(teamId) }}
+      title={teamId ? `View ${row.name} details` : undefined}
+    >
       <div className="vteam-glow" style={{background:`radial-gradient(ellipse at 50% 0%, ${accent}40 0%, transparent 70%)`}}/>
       <div className="vteam-top">
         <div className="vteam-rank">{rank<3?<Img src={rankEmojis[rank]} size={28}/>:<span className="vteam-rank-num">#{rank+1}</span>}</div>
         <img src={`https://flagcdn.com/w40/${getFlag(row.name)}.png`} alt="" className="vteam-flag"/>
         <div className="vteam-name-wrap"><div className="vteam-name">{row.name}</div><div className="vteam-agents">{row.agents} agents</div></div>
+        {teamId && <div className="vteam-goto-hint">View →</div>}
       </div>
       <div className="vteam-divider" style={{background:`linear-gradient(90deg,transparent,${accent}80,transparent)`}}/>
       <div className="vteam-stats">
@@ -791,12 +787,15 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
 }
 
 export default function Dashboard() {
-  const canvasRef = useRef(null)
+  const canvasRef    = useRef(null)
   const introHideRef = useRef(null)
-  const introClearRef = useRef(null)
-  const navigate  = useNavigate()
-  const user      = JSON.parse(localStorage.getItem('pulse_user')||'null')
-  const [userPhoto,setUserPhoto] = useState(localStorage.getItem('pulse_user_photo')||'')
+  const introClearRef= useRef(null)
+  const profileRef   = useRef(null)   // ← for profile dropdown click-outside
+  const navigate     = useNavigate()
+  const user         = JSON.parse(localStorage.getItem('pulse_user')||'null')
+  const [userPhoto,setUserPhoto]   = useState(localStorage.getItem('pulse_user_photo')||'')
+  const [profileOpen,setProfileOpen] = useState(false)   // ← profile dropdown
+  const [navScrolled,setNavScrolled] = useState(false)   // ← scroll blur
   const team      = APP_CONFIG.teams.find(t=>t.id===user?.team)
   const roleLabel = user?.role==='supervisor'?'Supervisor':user?.role==='qa'?'QA':user?.role==='leader'?'Team Leader':'Member'
   const canEdit   = ['supervisor','qa','leader'].includes(user?.role)
@@ -855,6 +854,20 @@ export default function Dashboard() {
     const key = `${selectedDate}_${teamId}`
     return remoteTeamAgents[key] || []
   }, [isToday, liveTeams, activeSnap, remoteTeamAgents, selectedDate])
+
+  // ── Scroll listener for nav blur effect ──
+  useEffect(()=>{
+    const onScroll = () => setNavScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  },[])
+
+  // ── Profile dropdown click-outside ──
+  useEffect(()=>{
+    const h=(e)=>{if(profileRef.current&&!profileRef.current.contains(e.target))setProfileOpen(false)}
+    document.addEventListener('mousedown',h)
+    return()=>document.removeEventListener('mousedown',h)
+  },[])
 
   useEffect(()=>{
     const canvas=canvasRef.current;if(!canvas)return
@@ -938,7 +951,6 @@ export default function Dashboard() {
     finally{setLoading(false)}
   }
 
-  // ── KEY FIX: loadTeamsOnly now also refreshes Asia every 5s ──
   const loadTeamsOnly = async () => {
     try {
       const [asiaResult, ...teamResults] = await Promise.allSettled([
@@ -973,35 +985,25 @@ export default function Dashboard() {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext
       if (!AudioCtx) return
-
       const ctx = new AudioCtx()
-
       const makeTone = (freq, start, duration, gainValue) => {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
-
         osc.type = 'sine'
         osc.frequency.setValueAtTime(freq, start)
-
         gain.gain.setValueAtTime(0.0001, start)
         gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.02)
         gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
-
         osc.connect(gain)
         gain.connect(ctx.destination)
-
         osc.start(start)
         osc.stop(start + duration + 0.02)
       }
-
       const now = ctx.currentTime
       makeTone(392, now, 0.22, 0.07)
       makeTone(523.25, now + 0.11, 0.28, 0.06)
       makeTone(659.25, now + 0.24, 0.38, 0.05)
-
-      setTimeout(() => {
-        try { ctx.close() } catch {}
-      }, 1200)
+      setTimeout(() => { try { ctx.close() } catch {} }, 1200)
     } catch {}
   }, [])
 
@@ -1009,45 +1011,26 @@ export default function Dashboard() {
     try {
       const raw = localStorage.getItem('pulse_intro')
       if (!raw) return
-
       const parsed = JSON.parse(raw)
-      if (!parsed?.name || !parsed?.mode) {
-        localStorage.removeItem('pulse_intro')
-        return
-      }
-
+      if (!parsed?.name || !parsed?.mode) { localStorage.removeItem('pulse_intro'); return }
       const age = Date.now() - (parsed.at || 0)
-      if (age > 15000) {
-        localStorage.removeItem('pulse_intro')
-        return
-      }
-
+      if (age > 15000) { localStorage.removeItem('pulse_intro'); return }
       setIntroData({ name: parsed.name, mode: parsed.mode })
       setIntroLeaving(false)
       localStorage.removeItem('pulse_intro')
       playIntroChime()
-
-      introHideRef.current = setTimeout(() => {
-        setIntroLeaving(true)
-      }, 1900)
-
-      introClearRef.current = setTimeout(() => {
-        setIntroData(null)
-        setIntroLeaving(false)
-      }, 2700)
-    } catch {
-      localStorage.removeItem('pulse_intro')
-    }
-
+      introHideRef.current  = setTimeout(() => setIntroLeaving(true), 1900)
+      introClearRef.current = setTimeout(() => { setIntroData(null); setIntroLeaving(false) }, 2700)
+    } catch { localStorage.removeItem('pulse_intro') }
     return () => {
       if (introHideRef.current) clearTimeout(introHideRef.current)
       if (introClearRef.current) clearTimeout(introClearRef.current)
     }
   }, [playIntroChime])
 
-  const logout=()=>{localStorage.removeItem('pulse_user');window.location.href='/'}
-  const goDashboardHome=()=>{window.location.href='/dashboard'}
-  const goPulseGo=()=>navigate('/go')
+  const logout = () => { localStorage.removeItem('pulse_user'); window.location.href='/' }
+  const goDashboardHome = () => { window.location.href='/dashboard' }
+  const goPulseGo = () => navigate('/go')
 
   const { asiaAgents, asiaTotals } = (() => {
     if (isHistDate && histParsed) return { asiaAgents: histParsed.agents, asiaTotals: histParsed.totals }
@@ -1103,7 +1086,6 @@ export default function Dashboard() {
         const{agents,totals}=parseTeamSheet(rawRows,t)
         return{name:TEAM_DISPLAY_NAMES[t.id]||t.id,agents:agents.length,english:totals.english,spanish:totals.spanish,total:totals.total,noSpanish:!t.hasSp}
       }).filter(Boolean)
-      // Always include Asia regardless of xfer count
       rows.push({name:'Asia',agents:asiaAgents.length,english:totalEnglish,spanish:totalSpanish,total:totalXfers,noSpanish:false})
       return rows
     }
@@ -1133,8 +1115,14 @@ export default function Dashboard() {
   const currentTeamConfig=TEAM_SHEETS.find(t=>t.id===activeTab)
   const needsRemoteLoad=!isToday&&!isHistDate&&currentTeamConfig&&!(activeSnap?.teams?.[currentTeamConfig?.id]?.length>0)&&remoteTeamAgents[`${selectedDate}_${currentTeamConfig?.id}`]===undefined
 
+  // ── Handler: team card clicked → switch to that tab ──
+  const handleTeamCardSelect = useCallback((teamId) => {
+    setActiveTab(teamId)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
   return(
-    <div className="dash-root" onClick={()=>setEditMenuOpen(false)}>
+    <div className="dash-root" onClick={()=>{setEditMenuOpen(false);setProfileOpen(false)}}>
       <canvas ref={canvasRef} className="dash-trail-canvas"/>
 
       {introData && (
@@ -1144,23 +1132,19 @@ export default function Dashboard() {
             <div className="dash-intro-chip">
               {introData.mode === 'register' ? 'New access granted' : 'Returning access'}
             </div>
-
             <h1 className="dash-intro-title">
               {introData.mode === 'register' ? 'Bienvenido' : 'Bienvenido de nuevo'}
             </h1>
-
             <div className="dash-intro-name">{introData.name}</div>
-
             <p className="dash-intro-sub">
-              {introData.mode === 'register'
-                ? 'Tu acceso a Pulse está listo.'
-                : 'Preparando tu dashboard.'}
+              {introData.mode === 'register' ? 'Tu acceso a Pulse está listo.' : 'Preparando tu dashboard.'}
             </p>
           </div>
         </div>
       )}
 
-      <header className="dash-nav">
+      {/* ── NAV ── */}
+      <header className={`dash-nav ${navScrolled ? 'dash-nav-scrolled' : ''}`}>
         <div className="dash-nav-left">
           <button type="button" className="dash-brand" onClick={goDashboardHome}>
             <div className="nav-logo-wrap">
@@ -1179,25 +1163,73 @@ export default function Dashboard() {
         </nav>
 
         <div className="dash-nav-right">
-          <div className="dash-nav-meta">
-            {lastUpdate&&<span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
-            <div className="nav-user" style={{cursor:'pointer'}} onClick={()=>navigate('/settings')}>
-              <div className="nav-avatar">{userPhoto?<img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>:user?.name?.[0]?.toUpperCase()}</div>
+          {lastUpdate && (
+            <span className="nav-update">Updated {lastUpdate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+          )}
+
+          {/* ── Profile button + dropdown ── */}
+          <div className="nav-profile-wrap" ref={profileRef} onClick={e=>e.stopPropagation()}>
+            <button
+              type="button"
+              className={`nav-user ${profileOpen ? 'nav-user-open' : ''}`}
+              onClick={()=>setProfileOpen(o=>!o)}
+              aria-expanded={profileOpen}
+              aria-label="Account menu"
+            >
+              <div className="nav-avatar">
+                {userPhoto
+                  ? <img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>
+                  : user?.name?.[0]?.toUpperCase()
+                }
+              </div>
               <div className="nav-info">
                 <span className="nav-name">{user?.name}</span>
                 <span className="nav-role">{team?.name} · {roleLabel}</span>
               </div>
-            </div>
-          </div>
+              <svg className="nav-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
 
-          <div className="dash-nav-actions">
-            {user?.agentExt&&<button className="nav-profile-btn" onClick={()=>navigate(`/profile/${user.agentExt}`)}>👤 #{user.agentExt}</button>}
-            <button className="nav-logout" onClick={logout}>Log out</button>
+            {profileOpen && (
+              <div className="nav-profile-dropdown">
+                <div className="npd-header">
+                  <div className="npd-avatar">
+                    {userPhoto
+                      ? <img src={userPhoto} alt="" style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}/>
+                      : user?.name?.[0]?.toUpperCase()
+                    }
+                  </div>
+                  <div>
+                    <div className="npd-name">{user?.name}</div>
+                    <div className="npd-meta">{team?.name} · {roleLabel}</div>
+                  </div>
+                </div>
+                <div className="npd-divider"/>
+                {user?.agentExt && (
+                  <button className="npd-item" onClick={()=>{setProfileOpen(false);navigate(`/profile/${user.agentExt}`)}}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                    My Profile
+                    <span className="npd-ext">#{user.agentExt}</span>
+                  </button>
+                )}
+                <button className="npd-item" onClick={()=>{setProfileOpen(false);navigate('/settings')}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                  Settings
+                </button>
+                <div className="npd-divider"/>
+                <button className="npd-item npd-logout" onClick={()=>{setProfileOpen(false);logout()}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Log out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <div className="dash-topbar">
+      {/* ── TOPBAR (tabs + date) ── */}
+      <div className={`dash-topbar ${navScrolled ? 'dash-topbar-scrolled' : ''}`}>
         <div className="dash-tabs-scroll">
           <button className={`dash-tab ${activeTab==='general'?'active':''}`}  onClick={()=>setActiveTab('general')}>All Teams</button>
           <button className={`dash-tab ${activeTab==='asia'?'active':''}`}      onClick={()=>setActiveTab('asia')}>🌏 Asia</button>
@@ -1210,6 +1242,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── CONTENT ── */}
       <div className="dash-content">
         {loading?(
           <div className="dash-loading"><div className="dash-spinner"/><p>Loading live data...</p></div>
@@ -1219,11 +1252,23 @@ export default function Dashboard() {
               <h2 className="section-title" style={{marginBottom:0}}>Auto Warranty Garrett {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}</h2>
               <span className="vteams-sub">{teamsSorted.length} teams · ranked by English xfers</span>
             </div>
-            {teamsSorted.length===0?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No data for {formatDateLabel(selectedDate)}.</div>:(
-              <div className="vteams-grid">
-                {teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0}/>)}
-              </div>
-            )}
+            {teamsSorted.length===0
+              ? <div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No data for {formatDateLabel(selectedDate)}.</div>
+              : (
+                <div className="vteams-grid">
+                  {teamsSorted.map((row,rank)=>(
+                    <TeamCard
+                      key={rank}
+                      row={row}
+                      rank={rank}
+                      isMyTeam={isMyTeam(row.name)}
+                      isFirst={rank===0}
+                      onSelect={handleTeamCardSelect}
+                    />
+                  ))}
+                </div>
+              )
+            }
           </div>
         ):activeTab==='asia'?(
           <div className="fade-in">
@@ -1387,7 +1432,7 @@ export default function Dashboard() {
         <div className="academy-modal-overlay" onClick={()=>setAcademyOpen(false)}>
           <div className="academy-modal" onClick={e=>e.stopPropagation()}>
             <div className="academy-modal-badge">Academy</div>
-            <h3 className="academy-modal-title">We’re working on it.</h3>
+            <h3 className="academy-modal-title">We're working on it.</h3>
             <p className="academy-modal-copy">Pulse Academy will be available very soon with learning, guidance and internal training content.</p>
             <div className="academy-modal-actions">
               <button className="btn-save" onClick={()=>setAcademyOpen(false)}>Got it</button>
@@ -1395,7 +1440,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-
     </div>
   )
 }
