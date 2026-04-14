@@ -357,14 +357,18 @@ export default function Admin() {
         {/* Stats row */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:14, marginBottom:'1.5rem' }}>
           {[
-            { label:'Total',        value:users.length,             color:'#f97316', bg:'rgba(249,115,22,0.08)',    border:'rgba(249,115,22,0.2)' },
-            { label:'Supervisors',  value:roleCount('Supervisor'),   color:'#60a5fa', bg:'rgba(96,165,250,0.06)',   border:'rgba(96,165,250,0.18)' },
-            { label:'QA',           value:roleCount('QA'),           color:'#fbbf24', bg:'rgba(251,191,36,0.06)',   border:'rgba(251,191,36,0.18)' },
-            { label:'Team Leaders', value:roleCount('Team Leader'),  color:'#34d399', bg:'rgba(52,211,153,0.06)',   border:'rgba(52,211,153,0.18)' },
-            { label:'Global',       value:roleCount('Global'),       color:'#e879f9', bg:'rgba(232,121,249,0.06)',  border:'rgba(147,51,234,0.3)',  glow:'0 0 20px rgba(232,121,249,0.12)' },
+            { label:'Global',       value:roleCount('Global'),       color:'#e879f9', bg:'rgba(147,51,234,0.08)',  border:'rgba(147,51,234,0.35)', glow:'0 0 24px rgba(232,121,249,0.15)', icon:'✦' },
+            { label:'Supervisors',  value:roleCount('Supervisor'),   color:'#60a5fa', bg:'rgba(96,165,250,0.06)',  border:'rgba(96,165,250,0.18)' },
+            { label:'QA',           value:roleCount('QA'),           color:'#fbbf24', bg:'rgba(251,191,36,0.06)',  border:'rgba(251,191,36,0.18)' },
+            { label:'Team Leaders', value:roleCount('Team Leader'),  color:'#34d399', bg:'rgba(52,211,153,0.06)',  border:'rgba(52,211,153,0.18)' },
+            { label:'Total',        value:users.length,              color:'#f97316', bg:'rgba(249,115,22,0.08)',  border:'rgba(249,115,22,0.2)' },
           ].map((s,i)=>(
-            <div key={i} style={{ background:s.bg, border:`1px solid ${s.border}`, borderRadius:18, padding:'1.1rem', textAlign:'center', boxShadow:s.glow||'none' }}>
-              <div style={{ fontFamily:"'Sora',sans-serif", fontSize:30, fontWeight:800, color:s.color }}>{s.value}</div>
+            <div key={i} style={{ background:s.bg, border:`1px solid ${s.border}`, borderRadius:18, padding:'1.1rem', textAlign:'center', boxShadow:s.glow||'none', position:'relative', overflow:'hidden' }}>
+              {s.icon && <div style={{ position:'absolute', top:8, right:10, fontSize:10, color:s.color, opacity:0.5 }}>{s.icon}</div>}
+              <div style={{ fontFamily:"'Sora',sans-serif", fontSize:30, fontWeight:800, color:s.color, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                {s.icon && <span style={{ fontSize:14, opacity:0.8 }}>{s.icon}</span>}
+                {s.value}
+              </div>
               <div style={{ fontSize:11, color:'#6b7280', marginTop:4, fontWeight:500 }}>{s.label}</div>
             </div>
           ))}
