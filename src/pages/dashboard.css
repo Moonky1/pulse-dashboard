@@ -455,3 +455,44 @@
   .sum-val { font-size: 20px; }
   .agent-table { min-width: 380px; }
 }
+
+/* ── Share% column tooltip ── */
+.share-th-wrap { display: inline-flex; align-items: center; gap: 3px; }
+.share-tip-icon {
+  position: relative;
+  font-size: 10px;
+  color: #6b7280;
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+}
+.share-tip-box {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  background: rgba(14,17,26,0.97);
+  border: 1px solid rgba(167,139,250,0.3);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #d1d5db;
+  line-height: 1.5;
+  white-space: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  z-index: 500;
+  pointer-events: none;
+}
+.share-tip-box::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 10px;
+  border: 5px solid transparent;
+  border-top-color: rgba(167,139,250,0.3);
+}
+.share-tip-icon:hover .share-tip-box { display: block; }
