@@ -108,7 +108,6 @@ function CustomSelect({ value, onChange, options }) {
       <button ref={btnRef} type="button" onClick={handleToggle}
         style={{ width:'100%', padding:'10px 14px', background:'#0d0f14', border:'1px solid rgba(255,255,255,0.09)', borderRadius:10, color: cfg ? cfg.color : '#f5f5f5', fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', fontFamily:"'DM Sans',sans-serif", textAlign:'left', boxSizing:'border-box' }}>
         <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-          {value === 'Global' && <span style={{ color:'#e879f9', fontSize:10 }}>✦</span>}
           {label}
         </span>
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ transform:open?'rotate(180deg)':'none', transition:'transform .2s', flexShrink:0 }}>
@@ -131,7 +130,6 @@ function CustomSelect({ value, onChange, options }) {
                 style={{ width:'100%', padding:'11px 16px', background:sel?'rgba(249,115,22,0.1)':'transparent', border:'none', color: isGlob ? '#e879f9' : (c ? c.color : '#e5e7eb'), fontSize:13, cursor:'pointer', textAlign:'left', fontFamily:"'DM Sans',sans-serif", display:'flex', alignItems:'center', gap:8, transition:'background .1s' }}
                 onMouseEnter={e=>{ if(!sel) e.currentTarget.style.background='rgba(255,255,255,0.05)' }}
                 onMouseLeave={e=>{ if(!sel) e.currentTarget.style.background='transparent' }}>
-                {isGlob && <span style={{ fontSize:10, opacity:.8 }}>✦</span>}
                 {lbl}
                 {sel && <span style={{ marginLeft:'auto', color:'#f97316', fontSize:12 }}>✓</span>}
               </button>
@@ -148,7 +146,6 @@ function RoleBadge({ role }) {
   const c = ROLE_CFG[role] || { bg:'transparent', border:'rgba(255,255,255,0.08)', color:'#9ca3af' }
   return (
     <span style={{ background:c.bg, border:`1px solid ${c.border}`, color:c.color, padding:'3px 11px', borderRadius:7, fontSize:11, fontWeight:700, whiteSpace:'nowrap', boxShadow:c.glow||'none', fontFamily:"'DM Sans',sans-serif" }}>
-      {role === 'Global' && <span style={{ marginRight:4, fontSize:9 }}>✦</span>}
       {role}
     </span>
   )
@@ -217,14 +214,7 @@ export default function Admin() {
       const ms = !search || u.name?.toLowerCase().includes(search.toLowerCase()) || u.team?.toLowerCase().includes(search.toLowerCase())
       return mf && ms
     })
-    .sort((a, b) => {
-      // Pure registration date sort (newest first)
-      // Global role users still float to top
-      const aGlob = a.role === 'Global' ? 1 : 0
-      const bGlob = b.role === 'Global' ? 1 : 0
-      if (aGlob !== bGlob) return bGlob - aGlob
-      return parseSortKey(b) - parseSortKey(a)
-    })
+    .sort((a, b) => parseSortKey(b) - parseSortKey(a))  // newest registration first
 
   const cnt = (role) => users.filter(u => u.role===role).length
 
@@ -321,7 +311,7 @@ export default function Admin() {
               </div>
               {editForm.role==='Global' && (
                 <div style={{ background:'rgba(147,51,234,0.08)',border:'1px solid rgba(147,51,234,0.25)',borderRadius:10,padding:'10px 14px',fontSize:12,color:'#c084fc',display:'flex',gap:8,alignItems:'center' }}>
-                  <span>✦</span> Global solo puede asignarse desde aquí.
+                  Global solo puede asignarse desde aquí.
                 </div>
               )}
             </div>
@@ -387,7 +377,7 @@ export default function Admin() {
         {/* Stats */}
         <div style={{ display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:14,marginBottom:'1.5rem' }}>
           {[
-            { label:'✦ Global',     value:cnt('Global'),       color:'#e879f9', bg:'rgba(147,51,234,0.08)',  border:'rgba(147,51,234,0.35)', glow:'0 0 24px rgba(232,121,249,0.15)' },
+            { label:'Global',     value:cnt('Global'),       color:'#e879f9', bg:'rgba(147,51,234,0.08)',  border:'rgba(147,51,234,0.35)', glow:'0 0 24px rgba(232,121,249,0.15)' },
             { label:'Supervisors',  value:cnt('Supervisor'),   color:'#60a5fa', bg:'rgba(96,165,250,0.06)',  border:'rgba(96,165,250,0.18)' },
             { label:'QA',           value:cnt('QA'),           color:'#fbbf24', bg:'rgba(251,191,36,0.06)',  border:'rgba(251,191,36,0.18)' },
             { label:'Team Leaders', value:cnt('Team Leader'),  color:'#34d399', bg:'rgba(52,211,153,0.06)',  border:'rgba(52,211,153,0.18)' },
@@ -412,7 +402,7 @@ export default function Admin() {
             <div style={{ display:'flex',gap:8,flexWrap:'wrap',alignItems:'center' }}>
               <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)}
                 style={{ padding:'6px 12px',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:10,color:'#e5e7eb',fontSize:12,outline:'none',width:140 }}/>
-              {[{k:'all',l:'All'},{k:'global',l:'✦ Global'},{k:'supervisor',l:'Supervisor'},{k:'qa',l:'QA'},{k:'leader',l:'Leader'}].map(f=>(
+              {[{k:'all',l:'All'},{k:'global',l:'Global'},{k:'supervisor',l:'Supervisor'},{k:'qa',l:'QA'},{k:'leader',l:'Leader'}].map(f=>(
                 <button key={f.k} onClick={()=>setFilter(f.k)}
                   style={{ padding:'6px 13px',background:filter===f.k?'rgba(249,115,22,0.1)':'transparent',border:`1px solid ${filter===f.k?'rgba(249,115,22,0.4)':'rgba(255,255,255,0.07)'}`,borderRadius:10,color:filter===f.k?'#f97316':'#6b7280',fontSize:11,cursor:'pointer',fontWeight:filter===f.k?700:400 }}>
                   {f.l}
@@ -457,7 +447,7 @@ export default function Admin() {
                           </td>
                           <td style={{ padding:'13px 16px',color:'#9ca3af',fontSize:13 }}>
                             {u.team==='Global'
-                              ? <span style={{ color:'#e879f9',fontWeight:600,fontSize:12 }}>✦ Global</span>
+                              ? <span style={{ color:'#e879f9',fontWeight:600,fontSize:12 }}>Global</span>
                               : u.team}
                           </td>
                           <td style={{ padding:'13px 16px' }}><RoleBadge role={u.role}/></td>
