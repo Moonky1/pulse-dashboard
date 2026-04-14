@@ -186,7 +186,8 @@ function findAgentInHistoryRows(rows, ext) {
   return null
 }
 
-async function loadAgentData(ext) {
+// ── Source 1: this device's localStorage snapshots ──────────────────────────
+function loadAgentDataFromLocal(ext) {
   const records  = []
   const teamInfo = getTeamFromExt(ext)
   for(let i=0;i<localStorage.length;i++){
@@ -217,19 +218,103 @@ async function loadAgentData(ext) {
       }
     }catch(e){}
   }
+  return records
+}
+
+// ── Source 2: Apps Script — getAgentSnapshots (per-agent Sheets record) ──────
+async function loadAgentSnapshotsFromSheets(ext) {
   try{
     const url=`${SCRIPT_URL}?action=getAgentSnapshots&ext=${encodeURIComponent(ext)}`
-    const res=await fetchWithTimeout(url,{},7000)
+    const res=await fetchWithTimeout(url,{},8000)
     const data=await res.json()
-    if(Array.isArray(data)&&data.length>0){
-      data.forEach(d=>{
-        const date=normalizeDate(d.date)
-        if(!date)return
-        if(!records.find(r=>r.date===date))records.push({date,name:d.name,english:d.english||0,spanish:d.spanish||0,total:d.total||0,rank:null,source:'sheets'})
-      })
+    if(!Array.isArray(data))return[]
+    return data.map(d=>({
+      date:normalizeDate(d.date),
+      name:d.name||`Agent #${ext}`,
+      english:d.english||0,
+      spanish:d.spanish||0,
+      total:d.total||0,
+      rank:null,
+      source:'agent_sheets'
+    })).filter(r=>r.date&&isValidIsoDate(r.date))
+  }catch(e){return[]}
+}
+
+// ── Source 3: team snapshots by date — works cross-device ───────────────────
+// getDailyTotals gives us available dates, then we hit getTeamSnapshot per date
+async function loadAgentDataFromTeamSnapshots(ext, knownDates = new Set()) {
+  const teamInfo = getTeamFromExt(ext)
+  if(teamInfo.id==='unknown')return[]
+
+  // Get all dates we have team-level data for
+  let availableDates = []
+  try{
+    const url=`${SCRIPT_URL}?action=getDailyTotals`
+    const res=await fetchWithTimeout(url,{},8000)
+    const data=await res.json()
+    if(Array.isArray(data)){
+      availableDates = data
+        .map(e=>normalizeDate(e.date))
+        .filter(d=>d&&isValidIsoDate(d)&&!knownDates.has(d))
     }
-  }catch(e){}
-  return records.map(r=>({...r,date:normalizeDate(r.date)})).filter(r=>r.date&&isValidIsoDate(r.date)).filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i).sort((a,b)=>a.date.localeCompare(b.date))
+  }catch(e){return[]}
+
+  if(availableDates.length===0)return[]
+
+  // Fetch team snapshot for each missing date (parallel, max 30 dates)
+  const datesToFetch = availableDates.slice(0, 30)
+  const jobs = datesToFetch.map(async(date)=>{
+    try{
+      const url=`${SCRIPT_URL}?action=getTeamSnapshot&date=${encodeURIComponent(date)}&teamId=${encodeURIComponent(teamInfo.id)}`
+      const res=await fetchWithTimeout(url,{},7000)
+      const data=await res.json()
+      // Response may be {ok:true,agents:[...]} or just [...]
+      const agents=Array.isArray(data)?data:(data?.ok&&Array.isArray(data.agents)?data.agents:null)
+      if(!agents)return null
+      const agent=agents.find(a=>String(a.ext)===String(ext))
+      if(!agent)return null
+      return{
+        date,
+        name: agent.name||`Agent #${ext}`,
+        english: agent.english||0,
+        spanish: agent.spanish||0,
+        total:   agent.total||0,
+        rank:    null,
+        source:  'team_snapshot'
+      }
+    }catch(e){return null}
+  })
+
+  const results=await Promise.allSettled(jobs)
+  return results
+    .filter(r=>r.status==='fulfilled'&&r.value)
+    .map(r=>r.value)
+}
+
+// ── Main loader: merges all three sources ────────────────────────────────────
+async function loadAgentData(ext) {
+  // Source 1: local (instant)
+  const localRecords = loadAgentDataFromLocal(ext)
+  const knownDates   = new Set(localRecords.map(r=>r.date))
+
+  // Source 2 + 3: remote (parallel)
+  const [sheetsRecords, teamRecords] = await Promise.all([
+    loadAgentSnapshotsFromSheets(ext),
+    loadAgentDataFromTeamSnapshots(ext, knownDates),
+  ])
+
+  // Merge — local wins over remote for the same date
+  const all = [...localRecords]
+  for(const r of [...sheetsRecords, ...teamRecords]){
+    if(!r.date||!isValidIsoDate(r.date))continue
+    if(!all.find(x=>x.date===r.date))all.push(r)
+  }
+
+  return all
+    .map(r=>({...r,date:normalizeDate(r.date)}))
+    .filter(r=>r.date&&isValidIsoDate(r.date))
+    .filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i)
+    .sort((a,b)=>a.date.localeCompare(b.date))
 }
 
 async function loadAsiaHistoryData(ext) {
