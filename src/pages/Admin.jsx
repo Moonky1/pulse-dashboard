@@ -5,7 +5,7 @@ const ADMIN_PASSWORD  = 'pulse2026kk'
 const SCRIPT_URL      = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 const ADMIN_AUTH_KEY  = 'pulse_admin_auth'
 
-const TEAMS = ['Philippines', 'Venezuela', 'Colombia', 'Mexico BJ', 'Central America', 'Asia']
+const TEAMS = ['Global', 'Philippines', 'Venezuela', 'Colombia', 'Mexico BJ', 'Central America', 'Asia']
 const ROLES = ['Supervisor', 'QA', 'Team Leader']
 const ROLES_ADMIN = ['Supervisor', 'QA', 'Team Leader', 'Global'] // Global only via /admin
 
@@ -30,29 +30,29 @@ function fmtDate(raw) {
 function fmtTime(raw) {
   if (!raw) return ''
   const s = String(raw).trim()
-  // Already HH:MM:SS AM/PM
-  if (/^\d{1,2}:\d{2}(:\d{2})?\s*(AM|PM)/i.test(s)) {
-    // Convert to 24h compact
-    try {
-      const d = new Date(`2000/01/01 ${s}`)
-      if (!isNaN(d.getTime())) {
-        const h = d.getHours().toString().padStart(2,'0')
-        const m = d.getMinutes().toString().padStart(2,'0')
-        return `${h}:${m}`
-      }
-    } catch(e) {}
-    return s.split(':').slice(0,2).join(':')
-  }
-  // Try parsing full datetime
+  if (!s) return ''
+
+  // Normalize "a.m." / "p.m." to AM/PM
+  const norm = s.replace(/\s*a\.m\./gi, ' AM').replace(/\s*p\.m\./gi, ' PM')
+
+  // Try Date parse on normalized string
   try {
-    const d = new Date(s)
+    const d = new Date(`2000/01/01 ${norm}`)
     if (!isNaN(d.getTime())) {
-      const h = d.getHours().toString().padStart(2,'0')
-      const m = d.getMinutes().toString().padStart(2,'0')
-      return `${h}:${m}`
+      return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
     }
   } catch(e) {}
-  return s
+
+  // Fallback: extract digits and detect AM/PM
+  const match = norm.match(/(\d{1,2}):(\d{2})/)
+  if (match) {
+    let h = parseInt(match[1]), m = match[2]
+    const isPM = /pm/i.test(norm), isAM = /am/i.test(norm)
+    if (isPM && h < 12) h += 12
+    if (isAM && h === 12) h = 0
+    return `${h.toString().padStart(2,'0')}:${m}`
+  }
+  return ''
 }
 
 async function callScript(params) {
@@ -110,10 +110,10 @@ function CustomSelect({ value, onChange, options, placeholder }) {
             return (
               <button key={val} type="button"
                 onClick={() => { onChange(val); setOpen(false) }}
-                style={{ width: '100%', padding: '10px 14px', background: isSelected ? 'rgba(249,115,22,0.1)' : 'transparent', border: 'none', color: rc ? rc.color : '#e5e7eb', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif", display: 'flex', alignItems: 'center', gap: 8, transition: 'background .1s' }}
+                style={{ width: '100%', padding: '10px 14px', background: isSelected ? 'rgba(249,115,22,0.1)' : 'transparent', border: 'none', color: isGlobalTeam ? '#e879f9' : (rc ? rc.color : '#e5e7eb'), fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif", display: 'flex', alignItems: 'center', gap: 8, transition: 'background .1s' }}
                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
                 onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}>
-                {val === 'Global' && <span style={{ color: '#e879f9', fontSize: 10 }}>✦</span>}
+                {(val === 'Global') && <span style={{ color: '#e879f9', fontSize: 10 }}>✦</span>}
                 {lbl}
                 {isSelected && <span style={{ marginLeft: 'auto', color: '#f97316', fontSize: 12 }}>✓</span>}
               </button>
