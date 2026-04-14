@@ -123,70 +123,39 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
 // ── One-time backfill: push all local snapshots to Sheets ──────────────────
 // Runs once per device. Makes all agent history visible cross-device.
 async function backfillHistoricalDataToSheets() {
-  const DONE_KEY = 'pulse_backfill_v6'
+  const DONE_KEY = 'pulse_backfill_v7'
   if (localStorage.getItem(DONE_KEY)) return
-
   const snaps = loadAllSnapshots()
   if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }
-
+  const BATCH = 50
   for (const snap of snaps) {
     try {
-      // ── Collect all agents for this date ──
-      const allAgents = []
-      const teamTotalsForDate = []
-
+      const allAgents = [], tt = []
       for (const t of TEAM_SHEETS) {
-        const rawRows = snap.teams?.[t.id]
-        if (!rawRows?.length) continue
-        const { agents, totals } = parseTeamSheet(rawRows, t)
-        agents.forEach(a => allAgents.push({ ...a, team: t.id }))
-        if (totals.english > 0 || totals.spanish > 0) {
-          teamTotalsForDate.push({
-            id: t.id, name: TEAM_DISPLAY_NAMES[t.id] || t.id,
-            english: totals.english, spanish: totals.spanish,
-            total: totals.total, agents: agents.length, noSpanish: !t.hasSp
-          })
-        }
+        const raw = snap.teams?.[t.id]; if (!raw?.length) continue
+        const { agents, totals } = parseTeamSheet(raw, t)
+        agents.forEach(a => allAgents.push({ ext:a.ext, name:a.name, english:a.english, spanish:a.spanish||0, total:a.total, team:t.id }))
+        if (totals.total > 0) tt.push({ id:t.id, name:TEAM_DISPLAY_NAMES[t.id]||t.id, english:totals.english, spanish:totals.spanish, total:totals.total, agents:agents.length, noSpanish:!t.hasSp })
       }
-      // Asia
       if (snap.asiaData?.length) {
         const { agents, totals } = parseAsiaSheet(snap.asiaData)
-        agents.forEach(a => allAgents.push({ ...a, team: 'asia' }))
-        if (totals.english > 0 || totals.spanish > 0) {
-          teamTotalsForDate.push({
-            id: 'asia', name: 'Asia',
-            english: totals.english, spanish: totals.spanish,
-            total: totals.total, agents: agents.length, noSpanish: false
-          })
-        }
+        agents.forEach(a => allAgents.push({ ext:a.ext, name:a.name, english:a.english, spanish:a.spanish||0, total:a.total, team:'asia' }))
+        if (totals.total > 0) tt.push({ id:'asia', name:'Asia', english:totals.english, spanish:totals.spanish, total:totals.total, agents:agents.length, noSpanish:false })
       }
-
-      if (allAgents.length === 0) continue
-
-      // ── Save agent snapshots (one call — enables getAgentSnapshots per ext) ──
-      const agentBody = new URLSearchParams({
-        action: 'saveAgentSnapshots',
-        date: snap.date,
-        snapshots: JSON.stringify(allAgents)
-      })
-      await fetch(SCRIPT_URL, { method: 'POST', body: agentBody, mode: 'no-cors' })
-      await new Promise(r => setTimeout(r, 200))
-
-      // ── Save daily totals (so getDailyTotals includes historical dates) ──
-      if (teamTotalsForDate.length > 0) {
-        const totalsBody = new URLSearchParams({
-          action: 'saveDailyTotals',
-          date: snap.date,
-          teams: JSON.stringify(teamTotalsForDate)
-        })
-        await fetch(SCRIPT_URL, { method: 'POST', body: totalsBody, mode: 'no-cors' })
-        await new Promise(r => setTimeout(r, 200))
+      if (!allAgents.length) continue
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({action:'saveAgentSnapshots',date:snap.date,snapshots:'[]'})})
+      await new Promise(r=>setTimeout(r,350))
+      for (let b=0;b<allAgents.length;b+=BATCH) {
+        await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({action:'appendAgentSnapshots',date:snap.date,snapshots:JSON.stringify(allAgents.slice(b,b+BATCH))})})
+        await new Promise(r=>setTimeout(r,350))
       }
-
-    } catch(e) {}
+      if (tt.length>0) {
+        await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({action:'saveDailyTotals',date:snap.date,teams:JSON.stringify(tt)})})
+        await new Promise(r=>setTimeout(r,300))
+      }
+    } catch(e){}
   }
-
-  localStorage.setItem(DONE_KEY, '1')
+  localStorage.setItem(DONE_KEY,'1')
 }
 
 
