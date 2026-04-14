@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { generateToken, secondsUntilNext } from '../utils/token'
 
 const ADMIN_PASSWORD  = 'pulse2026kk'
@@ -77,6 +77,54 @@ function RoleBadge({ role }) {
   )
 }
 
+// ── Custom dropdown (replaces ugly native select) ────────────────────────────
+function CustomSelect({ value, onChange, options, placeholder }) {
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef(null)
+
+  React.useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const selected = options.find(o => (o.value||o) === value)
+  const label    = selected ? (selected.label || selected) : placeholder || 'Select...'
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', padding: '10px 14px', background: '#0d0f14', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, color: '#f5f5f5', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: "'DM Sans',sans-serif", textAlign: 'left' }}>
+        <span>{label}</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s', flexShrink: 0 }}>
+          <path d="M2 4l4 4 4-4" stroke="#6b7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'rgba(10,13,20,0.98)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, zIndex: 9999, overflow: 'hidden', boxShadow: '0 16px 40px rgba(0,0,0,0.7)', backdropFilter: 'blur(14px)' }}>
+          {options.map(o => {
+            const val = o.value || o
+            const lbl = o.label || o
+            const rc  = ROLE_COLORS[val]
+            const isSelected = val === value
+            return (
+              <button key={val} type="button"
+                onClick={() => { onChange(val); setOpen(false) }}
+                style={{ width: '100%', padding: '10px 14px', background: isSelected ? 'rgba(249,115,22,0.1)' : 'transparent', border: 'none', color: rc ? rc.color : '#e5e7eb', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif", display: 'flex', alignItems: 'center', gap: 8, transition: 'background .1s' }}
+                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}>
+                {val === 'Global' && <span style={{ color: '#e879f9', fontSize: 10 }}>✦</span>}
+                {lbl}
+                {isSelected && <span style={{ marginLeft: 'auto', color: '#f97316', fontSize: 12 }}>✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Admin() {
   const [auth, setAuth]       = useState(() => sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true')
   const [pw, setPw]           = useState('')
@@ -131,11 +179,18 @@ export default function Admin() {
   const copy = () => { navigator.clipboard.writeText(token); setCopied(true); setTimeout(() => setCopied(false), 2000) }
   const pct  = ((300 - seconds) / 300) * 100
 
-  const filtered = users.filter(u => {
-    const matchFilter = filter === 'all' || u.role?.toLowerCase().includes(filter)
-    const matchSearch = !search || u.name?.toLowerCase().includes(search.toLowerCase()) || u.team?.toLowerCase().includes(search.toLowerCase())
-    return matchFilter && matchSearch
-  })
+  const filtered = users
+    .filter(u => {
+      const matchFilter = filter === 'all' || u.role?.toLowerCase().includes(filter)
+      const matchSearch = !search || u.name?.toLowerCase().includes(search.toLowerCase()) || u.team?.toLowerCase().includes(search.toLowerCase())
+      return matchFilter && matchSearch
+    })
+    .sort((a, b) => {
+      // Global always first
+      if (a.role === 'Global' && b.role !== 'Global') return -1
+      if (b.role === 'Global' && a.role !== 'Global') return 1
+      return 0
+    })
 
   const roleCount = (role) => users.filter(u => u.role === role).length
 
@@ -232,9 +287,7 @@ export default function Admin() {
                   <label style={{ fontSize:10, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:6 }}>{label}</label>
                   {type==='input'
                     ? <input value={editForm[key]} onChange={e=>setEditForm(f=>({...f,[key]:e.target.value}))} style={{ width:'100%', padding:'10px 14px', background:'#0d0f14', border:'1px solid rgba(255,255,255,0.07)', borderRadius:10, color:'#f5f5f5', fontSize:14, outline:'none', boxSizing:'border-box', fontFamily:"'DM Sans',sans-serif" }}/>
-                    : <select value={editForm[key]} onChange={e=>setEditForm(f=>({...f,[key]:e.target.value}))} style={{ width:'100%', padding:'10px 14px', background:'#0d0f14', border:'1px solid rgba(255,255,255,0.07)', borderRadius:10, color:'#f5f5f5', fontSize:14, outline:'none', boxSizing:'border-box' }}>
-                        {opts.map(o=><option key={o} value={o}>{o}</option>)}
-                      </select>
+                    : <CustomSelect value={editForm[key]} onChange={v=>setEditForm(f=>({...f,[key]:v}))} options={opts}/>
                   }
                 </div>
               ))}
