@@ -1,19 +1,5 @@
 .settings-root { min-height:100vh; background:#080a0f; color:#f5f5f5; font-family:'DM Sans',sans-serif; }
 
-.settings-nav {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:0 2rem; height:58px;
-  background:#181b23; border-bottom:0.5px solid #2a2d38;
-  position:sticky; top:0; z-index:50;
-}
-.settings-nav-brand { display:flex; align-items:center; gap:10px; }
-.settings-nav-brand span { font-family:'Sora',sans-serif; font-weight:700; font-size:15px; color:#f97316; }
-.settings-back-btn {
-  padding:6px 14px; background:transparent; border:0.5px solid #2a2d38;
-  border-radius:8px; color:#9ca3af; font-size:13px; cursor:pointer; transition:all .15s;
-}
-.settings-back-btn:hover { border-color:#f97316; color:#f97316; }
-
 .settings-body { max-width:680px; margin:0 auto; padding:2rem; }
 .settings-header { margin-bottom:2rem; }
 .settings-title { font-family:'Sora',sans-serif; font-size:26px; font-weight:800; margin:0 0 6px; }
@@ -68,7 +54,6 @@
 }
 .settings-ext-info p { margin:0; font-size:13px; color:#9ca3af; line-height:1.6; }
 .settings-ext-info strong { color:#f5f5f5; }
-
 .settings-ext-input-row { display:flex; align-items:center; gap:10px; }
 .settings-ext-hash { font-family:'Sora',sans-serif; font-size:22px; font-weight:800; color:#6b7280; }
 .settings-ext-input {
@@ -78,7 +63,6 @@
   outline:none; transition:border-color .15s; max-width:200px;
 }
 .settings-ext-input:focus { border-color:#f97316; }
-
 .settings-ext-registered {
   display:flex; align-items:center; gap:16px;
   background:#0d2018; border:0.5px solid #1a4a2e;

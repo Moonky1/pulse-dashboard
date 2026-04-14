@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Navbar from '../components/Navbar'
 import './settings.css'
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 
-// Compress to 40px JPEG — small enough to fit in a GET URL (~1-2KB base64)
 function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -15,7 +15,6 @@ function compressImage(file) {
         const canvas = document.createElement('canvas')
         canvas.width = SIZE; canvas.height = SIZE
         const ctx = canvas.getContext('2d')
-        // Crop to square from center
         const min = Math.min(img.width, img.height)
         const sx  = (img.width  - min) / 2
         const sy  = (img.height - min) / 2
@@ -34,8 +33,7 @@ async function savePhotoToSheets(userName, photoB64) {
   try {
     const url = `${SCRIPT_URL}?action=saveUserPhoto&userName=${encodeURIComponent(userName)}&photo=${encodeURIComponent(photoB64)}`
     await fetch(url, { mode: 'no-cors' })
-    console.log('Photo saved to Sheets')
-  } catch(e) { console.warn('savePhotoToSheets failed:', e) }
+  } catch(e) {}
 }
 
 async function loadPhotoFromSheets(userName) {
@@ -47,7 +45,7 @@ async function loadPhotoFromSheets(userName) {
       localStorage.setItem('pulse_user_photo', data.photo)
       return data.photo
     }
-  } catch(e) { console.warn('loadPhotoFromSheets failed:', e) }
+  } catch(e) {}
   return null
 }
 
@@ -66,10 +64,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (!user) { navigate('/signin'); return }
-    // Load photo from Sheets — may be newer than localStorage
-    loadPhotoFromSheets(user.name).then(p => {
-      if (p) setPhoto(p)
-    })
+    loadPhotoFromSheets(user.name).then(p => { if (p) setPhoto(p) })
   }, [])
 
   const handlePhotoChange = async (e) => {
@@ -80,14 +75,12 @@ export default function Settings() {
     setSaveMsg('⏳ Processing photo...')
     try {
       const compressed = await compressImage(file)
-      console.log('Compressed size:', compressed.length, 'chars')
       setPhoto(compressed)
       localStorage.setItem('pulse_user_photo', compressed)
       setSaveMsg('⏳ Saving to cloud...')
       await savePhotoToSheets(user.name, compressed)
       setSaveMsg('✅ Photo synced to all devices!')
     } catch(err) {
-      console.error('Photo upload error:', err)
       setSaveMsg('❌ Error. Try again.')
     }
     setUploadingPhoto(false)
@@ -123,16 +116,8 @@ export default function Settings() {
 
   return (
     <div className="settings-root">
-      <nav className="settings-nav">
-        <div className="settings-nav-brand" onClick={() => navigate('/dashboard')} style={{cursor:'pointer'}}>
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="9" fill="#f97316"/>
-            <polyline points="4,16 9,16 11,9 14,23 17,12 20,16 28,16" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>Pulse</span>
-        </div>
-        <button className="settings-back-btn" onClick={() => navigate('/dashboard')}>← Dashboard</button>
-      </nav>
+      {/* ── Shared Navbar ── */}
+      <Navbar />
 
       <div className="settings-body">
         <div className="settings-header">
