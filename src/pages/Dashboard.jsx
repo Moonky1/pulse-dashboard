@@ -121,9 +121,9 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
   try { const body=new URLSearchParams({action:'saveTeamSnapshot',date,teamId,agents:payload}); await fetch(SCRIPT_URL,{method:'POST',body,mode:'no-cors'}) } catch(e) {}
 }
 // ── One-time backfill: push all local snapshots to Sheets ──────────────────
-// Runs silently once per device. Enables cross-device profile viewing.
+// Runs once per device. Makes all agent history visible cross-device.
 async function backfillHistoricalDataToSheets() {
-  const DONE_KEY = 'pulse_backfill_v3'
+  const DONE_KEY = 'pulse_backfill_v5'
   if (localStorage.getItem(DONE_KEY)) return
 
   const snaps = loadAllSnapshots()
@@ -131,29 +131,58 @@ async function backfillHistoricalDataToSheets() {
 
   for (const snap of snaps) {
     try {
+      // ── Collect all agents for this date ──
       const allAgents = []
-      // Collect agents from each team
+      const teamTotalsForDate = []
+
       for (const t of TEAM_SHEETS) {
         const rawRows = snap.teams?.[t.id]
         if (!rawRows?.length) continue
-        const { agents } = parseTeamSheet(rawRows, t)
+        const { agents, totals } = parseTeamSheet(rawRows, t)
         agents.forEach(a => allAgents.push({ ...a, team: t.id }))
+        if (totals.english > 0 || totals.spanish > 0) {
+          teamTotalsForDate.push({
+            id: t.id, name: TEAM_DISPLAY_NAMES[t.id] || t.id,
+            english: totals.english, spanish: totals.spanish,
+            total: totals.total, agents: agents.length, noSpanish: !t.hasSp
+          })
+        }
       }
-      // Asia team
+      // Asia
       if (snap.asiaData?.length) {
-        const { agents } = parseAsiaSheet(snap.asiaData)
+        const { agents, totals } = parseAsiaSheet(snap.asiaData)
         agents.forEach(a => allAgents.push({ ...a, team: 'asia' }))
+        if (totals.english > 0 || totals.spanish > 0) {
+          teamTotalsForDate.push({
+            id: 'asia', name: 'Asia',
+            english: totals.english, spanish: totals.spanish,
+            total: totals.total, agents: agents.length, noSpanish: false
+          })
+        }
       }
+
       if (allAgents.length === 0) continue
 
-      // Save all agents for this date in one call
-      const body = new URLSearchParams({
+      // ── Save agent snapshots (one call — enables getAgentSnapshots per ext) ──
+      const agentBody = new URLSearchParams({
         action: 'saveAgentSnapshots',
         date: snap.date,
         snapshots: JSON.stringify(allAgents)
       })
-      await fetch(SCRIPT_URL, { method: 'POST', body, mode: 'no-cors' })
-      await new Promise(r => setTimeout(r, 250)) // gentle pacing
+      await fetch(SCRIPT_URL, { method: 'POST', body: agentBody, mode: 'no-cors' })
+      await new Promise(r => setTimeout(r, 200))
+
+      // ── Save daily totals (so getDailyTotals includes historical dates) ──
+      if (teamTotalsForDate.length > 0) {
+        const totalsBody = new URLSearchParams({
+          action: 'saveDailyTotals',
+          date: snap.date,
+          teams: JSON.stringify(teamTotalsForDate)
+        })
+        await fetch(SCRIPT_URL, { method: 'POST', body: totalsBody, mode: 'no-cors' })
+        await new Promise(r => setTimeout(r, 200))
+      }
+
     } catch(e) {}
   }
 
