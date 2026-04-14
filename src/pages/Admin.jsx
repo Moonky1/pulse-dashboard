@@ -158,7 +158,7 @@ function RoleBadge({ role }) {
    ADMIN PAGE
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function Admin() {
-  const [auth, setAuth]     = useState(() => sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true')
+  const [auth, setAuth]     = useState(false)  // always ask on load
   const [pw, setPw]         = useState('')
   const [pwErr, setPwErr]   = useState('')
   const [token, setToken]   = useState(generateToken())
@@ -179,10 +179,10 @@ export default function Admin() {
   const [busy, setBusy]         = useState(false)
 
   const login = () => {
-    if (pw === ADMIN_PASSWORD) { setAuth(true); sessionStorage.setItem(ADMIN_AUTH_KEY,'true'); setPwErr('') }
+    if (pw === ADMIN_PASSWORD) { setAuth(true); setPwErr('') }
     else { setPwErr('Wrong password'); setPw('') }
   }
-  const lock = () => { setAuth(false); sessionStorage.removeItem(ADMIN_AUTH_KEY); setPw('') }
+  const lock = () => { setAuth(false); setPw('') }
 
   useEffect(() => {
     if (!auth) return
@@ -218,9 +218,12 @@ export default function Admin() {
       return mf && ms
     })
     .sort((a, b) => {
-      if (a.role==='Global' && b.role!=='Global') return -1
-      if (b.role==='Global' && a.role!=='Global') return 1
-      return parseSortKey(b) - parseSortKey(a) // newest first
+      // Pure registration date sort (newest first)
+      // Global role users still float to top
+      const aGlob = a.role === 'Global' ? 1 : 0
+      const bGlob = b.role === 'Global' ? 1 : 0
+      if (aGlob !== bGlob) return bGlob - aGlob
+      return parseSortKey(b) - parseSortKey(a)
     })
 
   const cnt = (role) => users.filter(u => u.role===role).length
