@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { APP_CONFIG } from '../config'
-import './Navbar.css'
+import './navbar.css'
 
 export default function Navbar({ lastUpdate }) {
   const navigate    = useNavigate()
