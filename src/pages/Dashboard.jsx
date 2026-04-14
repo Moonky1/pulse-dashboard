@@ -123,39 +123,76 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
 // ── One-time backfill: push all local snapshots to Sheets ──────────────────
 // Runs once per device. Makes all agent history visible cross-device.
 async function backfillHistoricalDataToSheets() {
-  const DONE_KEY = 'pulse_backfill_v8'
+  const DONE_KEY = 'pulse_backfill_v9'
   if (localStorage.getItem(DONE_KEY)) return
   const snaps = loadAllSnapshots()
   if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }
-  const BATCH = 50
+
+  const BATCH = 40  // 40 agents per request keeps payload ~4KB
+
   for (const snap of snaps) {
     try {
       const allAgents = [], tt = []
+
       for (const t of TEAM_SHEETS) {
         const raw = snap.teams?.[t.id]; if (!raw?.length) continue
         const { agents, totals } = parseTeamSheet(raw, t)
-        agents.forEach(a => allAgents.push({ ext:a.ext, name:a.name, english:a.english, spanish:a.spanish||0, total:a.total, team:t.id }))
-        if (totals.total > 0) tt.push({ id:t.id, name:TEAM_DISPLAY_NAMES[t.id]||t.id, english:totals.english, spanish:totals.spanish, total:totals.total, agents:agents.length, noSpanish:!t.hasSp })
+        agents.forEach(a => allAgents.push({
+          ext: a.ext, name: a.name,
+          english: a.english, spanish: a.spanish||0, total: a.total, team: t.id
+        }))
+        if (totals.total > 0) tt.push({
+          id: t.id, name: TEAM_DISPLAY_NAMES[t.id]||t.id,
+          english: totals.english, spanish: totals.spanish,
+          total: totals.total, agents: agents.length, noSpanish: !t.hasSp
+        })
       }
       if (snap.asiaData?.length) {
         const { agents, totals } = parseAsiaSheet(snap.asiaData)
-        agents.forEach(a => allAgents.push({ ext:a.ext, name:a.name, english:a.english, spanish:a.spanish||0, total:a.total, team:'asia' }))
-        if (totals.total > 0) tt.push({ id:'asia', name:'Asia', english:totals.english, spanish:totals.spanish, total:totals.total, agents:agents.length, noSpanish:false })
+        agents.forEach(a => allAgents.push({
+          ext: a.ext, name: a.name,
+          english: a.english, spanish: a.spanish||0, total: a.total, team: 'asia'
+        }))
+        if (totals.total > 0) tt.push({
+          id: 'asia', name: 'Asia',
+          english: totals.english, spanish: totals.spanish,
+          total: totals.total, agents: agents.length, noSpanish: false
+        })
       }
       if (!allAgents.length) continue
-      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({action:'saveAgentSnapshots',date:snap.date,snapshots:'[]'})})
-      await new Promise(r=>setTimeout(r,350))
-      for (let b=0;b<allAgents.length;b+=BATCH) {
-        await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({action:'appendAgentSnapshots',date:snap.date,snapshots:JSON.stringify(allAgents.slice(b,b+BATCH))})})
-        await new Promise(r=>setTimeout(r,350))
+
+      // ── Append in batches — NO clear step (deleteRow is too slow in Apps Script) ──
+      // getAgentSnapshotsFromSheet deduplicates by date so duplicates are harmless
+      for (let b = 0; b < allAgents.length; b += BATCH) {
+        const batch = allAgents.slice(b, b + BATCH)
+        await fetch(SCRIPT_URL, {
+          method: 'POST', mode: 'no-cors',
+          body: new URLSearchParams({
+            action: 'appendAgentSnapshots',
+            date:   snap.date,
+            snapshots: JSON.stringify(batch)
+          })
+        })
+        await new Promise(r => setTimeout(r, 400))
       }
-      if (tt.length>0) {
-        await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:new URLSearchParams({action:'saveDailyTotals',date:snap.date,teams:JSON.stringify(tt)})})
-        await new Promise(r=>setTimeout(r,300))
+
+      // ── Save daily totals (for Share% in profiles) ──
+      if (tt.length > 0) {
+        await fetch(SCRIPT_URL, {
+          method: 'POST', mode: 'no-cors',
+          body: new URLSearchParams({
+            action: 'saveDailyTotals',
+            date: snap.date,
+            teams: JSON.stringify(tt)
+          })
+        })
+        await new Promise(r => setTimeout(r, 400))
       }
-    } catch(e){}
+
+    } catch(e) {}
   }
-  localStorage.setItem(DONE_KEY,'1')
+
+  localStorage.setItem(DONE_KEY, '1')
 }
 
 
