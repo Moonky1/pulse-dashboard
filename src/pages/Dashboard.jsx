@@ -210,7 +210,17 @@ function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
   if (!rows||!Array.isArray(rows)||rows.length===0) return{agents:[],totals:{english:0,spanish:0,total:0,activeAgents:0}}
   const agentMap={}; let inOT=false,afterMainEnd=false,otColEn=-1,otColSp=-1
-  const isOTRow=(row)=>{for(let c=0;c<Math.min(row.length,6);c++){const v=cellUpper(row[c]);if(!v)continue;if(v==='OT TAKERS'||v.startsWith('OT ')||v.endsWith(' OT')||v.includes(' OT '))return true}return false}
+  const isOTRow=(row)=>{
+    for(let c=0;c<Math.min(row.length,3);c++){
+      const v=cellUpper(row[c]); if(!v||v.length>30)continue
+      if(v==='OT TAKERS'||v==='OT')return true
+      // "{TEAM} OT" — e.g. "COLOMBIA OT", "MEXICO OT", "PHILIPPINES OT"
+      if(/^[A-Z\s]{1,18}\sOT$/.test(v))return true
+      // "OT {label}" — short only to avoid matching summaries
+      if(v.startsWith('OT ')&&v.length<=15)return true
+    }
+    return false
+  }
   const isEndRow=(row)=>{for(let c=0;c<Math.min(row.length,3);c++){const v=cellUpper(row[c]);if(v.length<3)continue;if(v.includes('AGENT')&&(v.includes('LOGGED')||v.includes('LOG IN')))return true;if(v.includes('TOTAL')&&v.includes('TRANSFER'))return true}return false}
   const isSkipRow=(u)=>(u.includes('TOTAL')&&u.includes('TRANSFER'))||u.includes('THIS HOUR')||u.includes('THIS OUR')||u.includes('HOURLY')||u.includes('ON SITE')||u.includes('WEEKLY')
   const SKIP=new Set(['USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR','MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT','ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT','AGENTS','NEW AGENTS'])
@@ -218,9 +228,15 @@ function parseTeamSheet(rows, config) {
     const row=rows[i];if(!Array.isArray(row))continue
     const cell0=(row[0]||'').toString().trim(),cell0U=cell0.toUpperCase().trim()
     if(!inOT&&isOTRow(row)){if(!includeOT())break;inOT=true;afterMainEnd=false;otColEn=-1;otColSp=-1;continue}
-    if(!inOT&&isEndRow(row)){if(!includeOT())break;afterMainEnd=true;continue}
+    if(!inOT&&isEndRow(row)){
+      if(!includeOT())break
+      // Store summary row totals as safety fallback
+      const _summaryEn=safeInt(row[colEn]),_summarySp=colSp!=null?safeInt(row[colSp]):0
+      if(_summaryEn>0)agentMap['__MAIN_SUMMARY__']={ext:'__MAIN_SUMMARY__',name:'__MAIN_SUMMARY__',english:_summaryEn,spanish:_summarySp,total:_summaryEn+_summarySp,_isSummary:true}
+      afterMainEnd=true;continue
+    }
     if(afterMainEnd&&!inOT)continue
-    if(inOT&&otColEn<0){const hdrs=row.map(c=>(c||'').toString().toUpperCase().trim());if(hasSp){const ei=hdrs.findIndex(h=>h==='ENGLISH'),si=hdrs.findIndex(h=>h==='SPANISH');if(ei>=0||si>=0){otColEn=ei>=0?ei:colEn;otColSp=si>=0?si:(colSp!=null?colSp:-1);continue}}else{const ei=hdrs.findIndex(h=>h==='ENGLISH'||h==='TRANSFER'||h==='TRANSFERS');if(ei>=0){otColEn=ei;otColSp=-1;continue}}const ck=parseInt((row[1]||'').toString().replace(/,/g,''));if(ck>=1000&&ck<=9999&&String(ck).startsWith(extStart)){otColEn=colEn;otColSp=colSp!=null?colSp:-1}else continue}
+    if(inOT&&otColEn<0){const hdrs=row.map(c=>(c||'').toString().toUpperCase().trim());if(hasSp){const ei=hdrs.findIndex(h=>h==='ENGLISH'),si=hdrs.findIndex(h=>h==='SPANISH');if(ei>=0||si>=0){otColEn=ei>=0?ei:colEn;otColSp=si>=0?si:(colSp!=null?colSp:-1);continue}}else{const ei=hdrs.findIndex(h=>h==='ENGLISH'||h==='TRANSFER'||h==='TRANSFERS'||h==='TOTAL XFERS'||h==='XFERS'||h==='XFER');if(ei>=0){otColEn=ei;otColSp=-1;continue}}const ck=parseInt((row[1]||'').toString().replace(/,/g,''));if(ck>=1000&&ck<=9999&&String(ck).startsWith(extStart)){otColEn=colEn;otColSp=colSp!=null?colSp:-1}else continue}
     if(inOT&&isEndRow(row)){const otAC=Object.values(agentMap).filter(a=>a._fromOT).length;if(otColEn>=0&&otAC===0){const en=safeInt(row[otColEn]),sp=otColSp>=0?safeInt(row[otColSp]):0;if(en>0||sp>0)agentMap['__OT__']={name:'__OT__',ext:'__OT__',english:en,spanish:sp,total:en+sp,_fromOT:true}};break}
     if(isSkipRow(cell0U)||cell0.length<2||SKIP.has(cell0U))continue
     const rawExt=(row[1]||'').toString().replace(/,/g,'').trim(),extNum=parseInt(rawExt)
@@ -231,8 +247,14 @@ function parseTeamSheet(rows, config) {
     else agentMap[extNum]={name:cell0,ext:String(extNum),english:en,spanish:sp,total:en+sp,_fromOT:inOT}
   }
   const allEntries=Object.values(agentMap)
-  const agents=allEntries.filter(a=>a.ext!=='__OT__'&&a.ext!=='__MAIN_TOTAL__').map(a=>{const{_fromOT,...rest}=a;return rest})
-  const en=allEntries.reduce((s,a)=>s+a.english,0),sp=allEntries.reduce((s,a)=>s+a.spanish,0)
+  const agents=allEntries.filter(a=>a.ext!=='__OT__'&&a.ext!=='__MAIN_TOTAL__'&&a.ext!=='__MAIN_SUMMARY__').map(a=>{const{_fromOT,_isSummary,...rest}=a;return rest})
+  // Individual agent sum (includes OT agents via +=)
+  const agentEn=agents.reduce((s,a)=>s+a.english,0)
+  const agentSp=agents.reduce((s,a)=>s+a.spanish,0)
+  // OT synthetic entry (when OT header had total but no individual rows)
+  const otEntry=agentMap['__OT__']
+  const en=agentEn+(otEntry?.english||0)
+  const sp=agentSp+(otEntry?.spanish||0)
   return{agents,totals:{english:en,spanish:sp,total:en+sp,activeAgents:agents.length}}
 }
 
