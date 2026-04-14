@@ -123,7 +123,7 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
 // ── One-time backfill: push all local snapshots to Sheets ──────────────────
 // Runs once per device. Makes all agent history visible cross-device.
 async function backfillHistoricalDataToSheets() {
-  const DONE_KEY = 'pulse_backfill_v7'
+  const DONE_KEY = 'pulse_backfill_v8'
   if (localStorage.getItem(DONE_KEY)) return
   const snaps = loadAllSnapshots()
   if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }

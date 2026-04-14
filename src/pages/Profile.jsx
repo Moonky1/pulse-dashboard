@@ -97,7 +97,7 @@ async function loadUserPhotoFromSheets(userName) {
 
 async function loadDailyTotals() {
   const CACHE_KEY = 'pulse_daily_totals_cache'
-  const CACHE_DURATION = 5 * 60 * 1000
+  const CACHE_DURATION = 0
   try {
     const cached = localStorage.getItem(CACHE_KEY)
     if (cached) {
