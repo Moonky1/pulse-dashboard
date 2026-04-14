@@ -120,6 +120,47 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
   if(lastSaved&&(Date.now()-parseInt(lastSaved))<3*60*1000)return; sessionStorage.setItem(cacheKey,String(Date.now()))
   try { const body=new URLSearchParams({action:'saveTeamSnapshot',date,teamId,agents:payload}); await fetch(SCRIPT_URL,{method:'POST',body,mode:'no-cors'}) } catch(e) {}
 }
+// ── One-time backfill: push all local snapshots to Sheets ──────────────────
+// Runs silently once per device. Enables cross-device profile viewing.
+async function backfillHistoricalDataToSheets() {
+  const DONE_KEY = 'pulse_backfill_v3'
+  if (localStorage.getItem(DONE_KEY)) return
+
+  const snaps = loadAllSnapshots()
+  if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }
+
+  for (const snap of snaps) {
+    try {
+      const allAgents = []
+      // Collect agents from each team
+      for (const t of TEAM_SHEETS) {
+        const rawRows = snap.teams?.[t.id]
+        if (!rawRows?.length) continue
+        const { agents } = parseTeamSheet(rawRows, t)
+        agents.forEach(a => allAgents.push({ ...a, team: t.id }))
+      }
+      // Asia team
+      if (snap.asiaData?.length) {
+        const { agents } = parseAsiaSheet(snap.asiaData)
+        agents.forEach(a => allAgents.push({ ...a, team: 'asia' }))
+      }
+      if (allAgents.length === 0) continue
+
+      // Save all agents for this date in one call
+      const body = new URLSearchParams({
+        action: 'saveAgentSnapshots',
+        date: snap.date,
+        snapshots: JSON.stringify(allAgents)
+      })
+      await fetch(SCRIPT_URL, { method: 'POST', body, mode: 'no-cors' })
+      await new Promise(r => setTimeout(r, 250)) // gentle pacing
+    } catch(e) {}
+  }
+
+  localStorage.setItem(DONE_KEY, '1')
+}
+
+
 
 const E = {goal:'/emojis/goal.webp',goal1:'/emojis/goal1.webp',goal3:'/emojis/goal3.webp',goal4:'/emojis/goal4.webp',medal1:'/emojis/medal1.webp',medal2:'/emojis/medal2.webp',medal3:'/emojis/web3.webp',zero:'/emojis/zero.webp',firework:'/emojis/firework.webp'}
 const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
@@ -350,7 +391,7 @@ export default function Dashboard() {
   const loadData=async()=>{try{const[general,asia,slacks]=await Promise.all([fetchSheet(SHEET_ID,"WELL'S REPORT"),fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),fetchSheet(USERS_SHEET_ID,'Slacks')]);setLiveGeneral(general);setLiveAsia(asia);setLastUpdate(new Date());setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]));const results=await Promise.allSettled(TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName)));const newTeams={},allAgents=[];TEAM_SHEETS.forEach((t,i)=>{if(results[i].status==='fulfilled'){newTeams[t.id]=results[i].value;const{agents}=parseTeamSheet(results[i].value,t);agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}));saveTeamSnapshotToSheets(todayKey(),t.id,agents)}});setLiveTeams(newTeams);const{agents:asiaAgentsLive}=parseAsiaSheet(asia);asiaAgentsLive.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:'asia'}));saveLocalSnapshot(general,asia,newTeams);setSnapshots(loadAllSnapshots());saveAgentSnapshotsToSheets(todayKey(),allAgents)}catch(e){}finally{setLoading(false)}}
   const loadTeamsOnly=async()=>{try{const[asiaResult,...teamResults]=await Promise.allSettled([fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),...TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName))]);if(asiaResult.status==='fulfilled')setLiveAsia(asiaResult.value);const newTeams={};TEAM_SHEETS.forEach((t,i)=>{newTeams[t.id]=teamResults[i].status==='fulfilled'?teamResults[i].value:(liveTeams[t.id]||[])});setLiveTeams(newTeams);setLastUpdate(new Date())}catch(e){}}
 
-  useEffect(()=>{loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1));if(user?.name)loadUserPhotoFromSheets(user.name).then(()=>{});setSnapshots(loadAllSnapshots());loadDailyTotals();loadData();const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000);return()=>{clearInterval(fullIv);clearInterval(fastIv)}},[])
+  useEffect(()=>{loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1));if(user?.name)loadUserPhotoFromSheets(user.name).then(()=>{});setSnapshots(loadAllSnapshots());loadDailyTotals();loadData().then(()=>backfillHistoricalDataToSheets());const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000);return()=>{clearInterval(fullIv);clearInterval(fastIv)}},[])
   useEffect(()=>{if(!isHistDate||!histMeta||histCache[selectedDate])return;setHistLoading(true);fetchSheet(HISTORY_SHEET_ID,histMeta.tab).then(rows=>setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)}))).catch(()=>{}).finally(()=>setHistLoading(false))},[selectedDate])
   useEffect(()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)},[selectedDate])
 
