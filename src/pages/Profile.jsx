@@ -220,50 +220,87 @@ function loadAgentDataFromLocal(ext) {
   return records
 }
 
-// ── Source 2: Sheets — getAgentSnapshots (cross-device, all history) ────────
-// Works once the backfill has run from at least one device with local data.
-async function loadAgentSnapshotsFromSheets(ext) {
+// ── Source 2: AGENT_SNAPSHOTS sheet read directly via CSV ────────────────────
+// Same approach as how Dashboard reads "Slacks" tab — no endpoint needed.
+// Populated by the backfill when Simon opens the dashboard.
+const USERS_SHEET_ID_PROFILE = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
+
+async function loadAgentSnapshotsFromCSV(ext) {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${USERS_SHEET_ID_PROFILE}/gviz/tq?tqx=out:csv&sheet=AGENT_SNAPSHOTS&t=${Date.now()}`
+    const res = await fetchWithTimeout(url, {}, 12000)
+    const text = await res.text()
+    if (!text || text.trim().startsWith('<!') || text.trim().length < 20) return []
+    const rows = parseCSV(text)
+    if (rows.length <= 1) return []
+    // Headers: date, ext, name, english, spanish, total, savedAt
+    const byDate = {}
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i]
+      if (!row || !row[1]) continue
+      if (String(row[1]).trim() !== String(ext).trim()) continue
+      const date = normalizeDate(row[0])
+      if (!date || !isValidIsoDate(date)) continue
+      byDate[date] = {
+        date,
+        name:    row[2] || `Agent #${ext}`,
+        english: parseInt(row[3]) || 0,
+        spanish: parseInt(row[4]) || 0,
+        total:   parseInt(row[5]) || 0,
+        rank:    null,
+        source:  'csv'
+      }
+    }
+    return Object.values(byDate).sort((a,b) => a.date.localeCompare(b.date))
+  } catch(e) { return [] }
+}
+
+// ── Source 3: getAgentSnapshots endpoint (fallback) ──────────────────────────
+async function loadAgentSnapshotsFromEndpoint(ext) {
   try{
     const url=`${SCRIPT_URL}?action=getAgentSnapshots&ext=${encodeURIComponent(ext)}`
     const res=await fetchWithTimeout(url,{},10000)
     const data=await res.json()
     if(!Array.isArray(data)||data.length===0)return[]
     return data.map(d=>({
-      date:  normalizeDate(d.date),
-      name:  d.name||`Agent #${ext}`,
+      date:    normalizeDate(d.date),
+      name:    d.name||`Agent #${ext}`,
       english: Number(d.english)||0,
       spanish: Number(d.spanish)||0,
       total:   Number(d.total)||0,
       rank:    null,
-      source:  'sheets'
+      source:  'endpoint'
     })).filter(r=>r.date&&isValidIsoDate(r.date))
   }catch(e){return[]}
 }
 
-// ── Main loader ───────────────────────────────────────────────────────────────
+// ── Main loader — all 3 sources in parallel ───────────────────────────────────
 async function loadAgentData(ext) {
-  // Both sources fire in parallel
-  const [localRecords, sheetsRecords] = await Promise.all([
+  const [localRecords, csvRecords, endpointRecords] = await Promise.all([
     Promise.resolve(loadAgentDataFromLocal(ext)),
-    loadAgentSnapshotsFromSheets(ext),
+    loadAgentSnapshotsFromCSV(ext),
+    loadAgentSnapshotsFromEndpoint(ext),
   ])
 
-  const localDates = new Set(localRecords.map(r=>r.date))
-
-  // Merge — local wins for same date (has rank data), sheets fills gaps
+  // Merge: local wins (has rank), then CSV, then endpoint
   const merged = [...localRecords]
-  for(const r of sheetsRecords){
-    if(r.date && isValidIsoDate(r.date) && !localDates.has(r.date)){
-      merged.push(r)
+  const knownDates = new Set(localRecords.map(r => r.date))
+
+  for (const r of [...csvRecords, ...endpointRecords]) {
+    const d = normalizeDate(r.date)
+    if (d && isValidIsoDate(d) && !knownDates.has(d)) {
+      merged.push({ ...r, date: d })
+      knownDates.add(d)
     }
   }
 
   return merged
-    .map(r=>({...r, date:normalizeDate(r.date)}))
-    .filter(r=>r.date&&isValidIsoDate(r.date))
-    .filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i)
-    .sort((a,b)=>a.date.localeCompare(b.date))
+    .map(r => ({ ...r, date: normalizeDate(r.date) }))
+    .filter(r => r.date && isValidIsoDate(r.date))
+    .filter((r, i, arr) => arr.findIndex(x => x.date === r.date) === i)
+    .sort((a, b) => a.date.localeCompare(b.date))
 }
+
 
 async function loadAsiaHistoryData(ext) {
   const jobs = HISTORY_DATES.map(async(hd)=>{
