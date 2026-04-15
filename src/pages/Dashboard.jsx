@@ -123,7 +123,7 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
 // ── One-time backfill: push all local snapshots to Sheets ──────────────────
 // Runs once per device. Makes all agent history visible cross-device.
 async function backfillHistoricalDataToSheets() {
-  const DONE_KEY = 'pulse_backfill_v10'
+  const DONE_KEY = 'pulse_backfill_v11'
   if (localStorage.getItem(DONE_KEY)) return
   const snaps = loadAllSnapshots()
   if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }
@@ -794,7 +794,7 @@ function TeamRankingsSection({ snapshots, remoteDailyTotals }) {
 
 
 // ── MVP Section ──────────────────────────────────────────────────────────────
-function MVPSection({ snapshots, navigate, teamsSorted }) {
+function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
 
   // ── Compute EN + SP agent rankings from all snapshots ──────────────────────
   const data = useMemo(() => {
@@ -829,6 +829,28 @@ function MVPSection({ snapshots, navigate, teamsSorted }) {
         processSnapshot(agents, t.id)
       })
     })
+
+    // Also process remote agent snapshots (from other devices via Sheets)
+    if (Array.isArray(agentSnapshotsRemote)) {
+      // Group by date to compute per-day rankings
+      const byDate = {}
+      agentSnapshotsRemote.forEach(a => {
+        if (!a.date || !a.ext) return
+        const d = normalizeDate(a.date); if (!d) return
+        if (!byDate[d]) byDate[d] = []
+        byDate[d].push(a)
+      })
+      Object.values(byDate).forEach(agents => {
+        // Group by team for processSnapshot
+        const byTeam = {}
+        agents.forEach(a => {
+          const tid = a.team || 'asia'
+          if (!byTeam[tid]) byTeam[tid] = []
+          byTeam[tid].push({ ext:a.ext, name:a.name||a.ext, english:Number(a.english)||0, spanish:Number(a.spanish)||0, total:Number(a.total)||0 })
+        })
+        Object.entries(byTeam).forEach(([tid, agts]) => processSnapshot(agts, tid))
+      })
+    }
 
     const sortFn = list => [...list].sort((a,b) => b.top1-a.top1 || b.top3-a.top3 || b.total-a.total)
     const enList = sortFn(Object.values(enMap)).slice(0,8)
@@ -933,6 +955,7 @@ export default function Dashboard() {
   const canEdit=['supervisor','qa','leader'].includes(user?.role)
 
   const [liveGeneral,setLiveGeneral]=useState([]),[liveAsia,setLiveAsia]=useState([]),[liveTeams,setLiveTeams]=useState({}),[slacksData,setSlacksData]=useState([]),[loading,setLoading]=useState(true),[lastUpdate,setLastUpdate]=useState(null)
+  const [agentSnapshotsRemote,setAgentSnapshotsRemote]=useState([])
   const [activeTab,setActiveTab]=useState('general'),[asiaView,setAsiaView]=useState('stats'),[chartMetric,setChartMetric]=useState('english'),[snapshots,setSnapshots]=useState([]),[selectedDate,setSelectedDate]=useState(todayKey()),[overridesTick,setOverridesTick]=useState(0),[savingOverride,setSavingOverride]=useState(false),[remoteDailyTotals,setRemoteDailyTotals]=useState([]),[remoteTeamAgents,setRemoteTeamAgents]=useState({}),[loadingRemoteTeam,setLoadingRemoteTeam]=useState(false),[editingAgent,setEditingAgent]=useState(null),[editForm,setEditForm]=useState({}),[editMenuOpen,setEditMenuOpen]=useState(false),[bulkEditMode,setBulkEditMode]=useState(false),[bulkEdits,setBulkEdits]=useState({}),[bulkTotalsEdit,setBulkTotalsEdit]=useState(null),[histCache,setHistCache]=useState({}),[histLoading,setHistLoading]=useState(false),[introData,setIntroData]=useState(null),[introLeaving,setIntroLeaving]=useState(false)
 
   const isToday=selectedDate===todayKey(),isHistDate=HISTORY_ISO_SET.has(selectedDate),histMeta=HISTORY_DATES.find(d=>d.isoDate===selectedDate),activeSnap=(!isToday&&!isHistDate)?snapshots.find(s=>s.date===selectedDate):null
@@ -949,7 +972,24 @@ export default function Dashboard() {
   const loadData=async()=>{try{const[general,asia,slacks]=await Promise.all([fetchSheet(SHEET_ID,"WELL'S REPORT"),fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),fetchSheet(USERS_SHEET_ID,'Slacks')]);setLiveGeneral(general);setLiveAsia(asia);setLastUpdate(new Date());setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]));const results=await Promise.allSettled(TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName)));const newTeams={},allAgents=[];TEAM_SHEETS.forEach((t,i)=>{if(results[i].status==='fulfilled'){newTeams[t.id]=results[i].value;const{agents}=parseTeamSheet(results[i].value,t);agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}));saveTeamSnapshotToSheets(todayKey(),t.id,agents)}});setLiveTeams(newTeams);const{agents:asiaAgentsLive}=parseAsiaSheet(asia);asiaAgentsLive.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:'asia'}));saveLocalSnapshot(general,asia,newTeams);setSnapshots(loadAllSnapshots());saveAgentSnapshotsToSheets(todayKey(),allAgents)}catch(e){}finally{setLoading(false)}}
   const loadTeamsOnly=async()=>{try{const[asiaResult,...teamResults]=await Promise.allSettled([fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),...TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName))]);if(asiaResult.status==='fulfilled')setLiveAsia(asiaResult.value);const newTeams={};TEAM_SHEETS.forEach((t,i)=>{newTeams[t.id]=teamResults[i].status==='fulfilled'?teamResults[i].value:(liveTeams[t.id]||[])});setLiveTeams(newTeams);setLastUpdate(new Date())}catch(e){}}
 
-  useEffect(()=>{loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1));if(user?.name)loadUserPhotoFromSheets(user.name).then(()=>{});setSnapshots(loadAllSnapshots());loadDailyTotals();loadData().then(()=>backfillHistoricalDataToSheets());const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000);return()=>{clearInterval(fullIv);clearInterval(fastIv)}},[])
+  useEffect(()=>{
+    loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1))
+    if(user?.name)loadUserPhotoFromSheets(user.name).then(()=>{})
+    setSnapshots(loadAllSnapshots())
+    loadDailyTotals()
+    loadData().then(()=>backfillHistoricalDataToSheets())
+    // Load all agent snapshots from Sheets for cross-device MVP data
+    const USERS_SID='1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
+    fetch(`https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=AGENT_SNAPSHOTS&t=${Date.now()}`)
+      .then(r=>r.text()).then(text=>{
+        if(!text||text.startsWith('<!'))return
+        const rows=parseCSV(text).slice(1) // skip header
+        const agents=rows.map(r=>({date:r[0],ext:r[1],name:r[2],english:Number(r[3])||0,spanish:Number(r[4])||0,total:Number(r[5])||0,team:r[6]||'asia'})).filter(a=>a.date&&a.ext)
+        setAgentSnapshotsRemote(agents)
+      }).catch(()=>{})
+    const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000)
+    return()=>{clearInterval(fullIv);clearInterval(fastIv)}
+  },[])
   useEffect(()=>{if(!isHistDate||!histMeta||histCache[selectedDate])return;setHistLoading(true);fetchSheet(HISTORY_SHEET_ID,histMeta.tab).then(rows=>setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)}))).catch(()=>{}).finally(()=>setHistLoading(false))},[selectedDate])
   useEffect(()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)},[selectedDate])
 
@@ -1061,7 +1101,7 @@ export default function Dashboard() {
             <div className="vteams-header"><h2 className="section-title" style={{marginBottom:0}}>Auto Warranty Garrett {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}</h2><span className="vteams-sub">{teamsSorted.length} teams · ranked by English xfers</span></div>
             {teamsSorted.length===0?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No data for {formatDateLabel(selectedDate)}.</div>:<div className="vteams-grid">{teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0} onSelect={handleTeamCardSelect}/>)}</div>}
             <TeamRankingsSection snapshots={snapshots} remoteDailyTotals={remoteDailyTotals}/>
-            <MVPSection snapshots={snapshots} navigate={navigate}/>
+            <MVPSection snapshots={snapshots} navigate={navigate} agentSnapshotsRemote={agentSnapshotsRemote}/>
           </div>
         ):activeTab==='asia'?(
           <div className="fade-in">
