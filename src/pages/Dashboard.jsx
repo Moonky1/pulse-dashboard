@@ -123,7 +123,7 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
 // ── One-time backfill: push all local snapshots to Sheets ──────────────────
 // Runs once per device. Makes all agent history visible cross-device.
 async function backfillHistoricalDataToSheets() {
-  const DONE_KEY = 'pulse_backfill_v9'
+  const DONE_KEY = 'pulse_backfill_v10'
   if (localStorage.getItem(DONE_KEY)) return
   const snaps = loadAllSnapshots()
   if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }
@@ -241,17 +241,54 @@ function parseTeamSheet(rows, config) {
     else agentMap[extNum]={name:cell0,ext:String(extNum),english:en,spanish:sp,total:en+sp,_fromOT:inOT}
   }
   // ── Second-pass OT fallback: count "Agents Logged in" rows ─────────────────
-  // If isOTRow never fired (formatting edge cases), the 2nd such row = OT footer
+  // Handles Colombia-style OT (has "X Agents Logged in" footer)
   if(includeOT()&&!agentMap['__OT__']){
-    let loggedCount=0
+    let loggedCount=0,mainEndRow=-1
     for(let i=0;i<rows.length;i++){
       const row=rows[i]; if(!Array.isArray(row))continue
       const v0=cellUpper(row[0]||'')
       if(v0.length>3&&v0.includes('AGENT')&&(v0.includes('LOGGED')||v0.includes('LOG IN'))){
         loggedCount++
+        if(loggedCount===1){mainEndRow=i}
         if(loggedCount>=2){
           const otEn=safeInt(row[colEn]),otSp=colSp!=null?safeInt(row[colSp]):0
           if(otEn>0||otSp>0)agentMap['__OT__']={ext:'__OT__',name:'__OT__',english:otEn,spanish:otSp,total:otEn+otSp}
+          break
+        }
+      }
+    }
+    // ── Third-pass: Venezuela-style OT (plain total row, no "Agents Logged in" footer)
+    // After main end, look for any row after an OT marker that has totals
+    if(!agentMap['__OT__']&&mainEndRow>=0){
+      let pastMain=false,inOTScan=false
+      for(let i=0;i<rows.length;i++){
+        const row=rows[i]; if(!Array.isArray(row))continue
+        if(i===mainEndRow){pastMain=true;continue}
+        if(!pastMain)continue
+        // Look for OT section header
+        if(!inOTScan){
+          for(let cc=0;cc<Math.min(row.length,6);cc++){
+            const v=cellUpper(row[cc]||'')
+            if(v&&v.length<=36&&(v.startsWith('OT ')||v.endsWith(' OT')||v==='OT TAKERS'))
+              {inOTScan=true;break}
+          }
+          continue
+        }
+        // Inside OT section — look for a summary row (col A blank, numbers in colEn/colSp)
+        const v0=cellUpper(row[0]||'')
+        const v1=cellUpper(row[1]||'')
+        const allBlankLeading=!v0&&!v1
+        if(allBlankLeading){
+          const en2=safeInt(row[colEn]),sp2=colSp!=null?safeInt(row[colSp]):0
+          if(en2>0||sp2>0){
+            agentMap['__OT__']={ext:'__OT__',name:'__OT__',english:en2,spanish:sp2,total:en2+sp2}
+            break
+          }
+        }
+        // Stop at end of data or next section
+        if(v0.includes('AGENT')&&v0.includes('LOGGED')){
+          const en2=safeInt(row[colEn]),sp2=colSp!=null?safeInt(row[colSp]):0
+          if(en2>0||sp2>0)agentMap['__OT__']={ext:'__OT__',name:'__OT__',english:en2,spanish:sp2,total:en2+sp2}
           break
         }
       }

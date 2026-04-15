@@ -274,7 +274,7 @@ async function loadAgentSnapshotsFromEndpoint(ext) {
   }catch(e){return[]}
 }
 
-// ── Main loader — all 3 sources in parallel ───────────────────────────────────
+// ── Main loader — all sources in parallel + local raw snapshot scan ──────────
 async function loadAgentData(ext) {
   const [localRecords, csvRecords, endpointRecords] = await Promise.all([
     Promise.resolve(loadAgentDataFromLocal(ext)),
@@ -282,7 +282,7 @@ async function loadAgentData(ext) {
     loadAgentSnapshotsFromEndpoint(ext),
   ])
 
-  // Merge: local wins (has rank), then CSV, then endpoint
+  // Merge all sources — local wins, then CSV, then endpoint
   const merged = [...localRecords]
   const knownDates = new Set(localRecords.map(r => r.date))
 
@@ -299,6 +299,63 @@ async function loadAgentData(ext) {
     .filter(r => r.date && isValidIsoDate(r.date))
     .filter((r, i, arr) => arr.findIndex(x => x.date === r.date) === i)
     .sort((a, b) => a.date.localeCompare(b.date))
+}
+
+// ── Extra: parse raw local snapshots for dates not covered by AGENT_SNAPSHOTS ──
+// This ensures all data from this device's localStorage appears in profile.
+function loadRawSnapshotsForAgent(ext) {
+  const extStr = String(ext)
+  const records = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (!k?.startsWith('pulse_snap_')) continue
+    try {
+      const date = k.replace('pulse_snap_', '')
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
+      const snap = JSON.parse(localStorage.getItem(k))
+      if (!snap) continue
+
+      // Search all teams for this ext
+      let en = 0, sp = 0, team = null
+      const checkAgents = (agents, tid) => {
+        if (!Array.isArray(agents)) return
+        const a = agents.find(x => String(x.ext) === extStr)
+        if (a) { en = a.english || 0; sp = a.spanish || 0; team = tid }
+      }
+
+      // Try teams
+      if (snap.teams) {
+        const TIDS = ['philippines','colombia','central','mexico','venezuela']
+        for (const tid of TIDS) {
+          if (!snap.teams[tid]?.length) continue
+          // Quick scan: look for ext in raw rows
+          for (const row of snap.teams[tid]) {
+            if (Array.isArray(row) && String(row[1]).replace(/,/g,'') === extStr) {
+              en = parseInt((row[3]||'').toString().replace(/,/g,'')) || 0
+              sp = parseInt((row[4]||'').toString().replace(/,/g,'')) || 0
+              team = tid; break
+            }
+          }
+          if (team) break
+        }
+      }
+      // Try Asia raw rows
+      if (!team && snap.asiaData?.length) {
+        for (const row of snap.asiaData) {
+          if (Array.isArray(row) && String(row[1]).replace(/,/g,'') === extStr) {
+            sp = parseInt((row[2]||'').toString().replace(/,/g,'')) || 0
+            en = parseInt((row[3]||'').toString().replace(/,/g,'')) || 0
+            team = 'asia'; break
+          }
+        }
+      }
+
+      if ((en > 0 || sp > 0) && team) {
+        records.push({ date, ext: extStr, english: en, spanish: sp, total: en + sp, team })
+      }
+    } catch(e) {}
+  }
+  return records
 }
 
 
@@ -368,7 +425,13 @@ export default function Profile() {
     let cancelled=false
     setLoading(true)
     loadUserPhotoFromSheets(user.name).then(p=>{if(!cancelled&&p)setUserPhoto(p)})
-    loadAgentData(ext).then(recs=>{
+    Promise.all([loadAgentData(ext), Promise.resolve(loadRawSnapshotsForAgent(ext))])
+      .then(([recs, rawRecs]) => {
+        const knownDates = new Set(recs.map(r => r.date))
+        rawRecs.forEach(r => { if (r.date && !knownDates.has(r.date)) { recs.push(r); knownDates.add(r.date) } })
+        return recs.sort((a,b) => a.date.localeCompare(b.date))
+      })
+      .then(recs=>{
       if(cancelled)return
       const finalRecs=Array.isArray(recs)?recs:[]
       setRecords(finalRecs)
