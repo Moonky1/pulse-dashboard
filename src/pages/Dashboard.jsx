@@ -249,7 +249,8 @@ function parseTeamSheet(rows, config) {
   }
   // ── Second-pass OT fallback: count "Agents Logged in" rows ─────────────────
   // Handles Colombia-style OT (has "X Agents Logged in" footer)
-  if(includeOT()&&!agentMap['__OT__']){
+  const hasOTAgents=Object.values(agentMap).some(a=>a._fromOT)
+  if(includeOT()&&!agentMap['__OT__']&&!hasOTAgents){
     let loggedCount=0,mainEndRow=-1
     for(let i=0;i<rows.length;i++){
       const row=rows[i]; if(!Array.isArray(row))continue
@@ -828,49 +829,57 @@ function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
       sortedSP.forEach((a,i) => reg(spMap, a, i===0, i<3, 'sp'))
     }
 
+    // Step 1: Build a merged map of date -> ext -> {english, spanish, team}
+    // combining local snapshots + remote AGENT_SNAPSHOTS
+    // For each date+ext, keep the MAX english value (avoids duplicates from multiple backfills)
+    const mergedByDate = {}  // date -> { ext -> {name, english, spanish, team} }
+
+    // Local snapshots
     snapshots.forEach(snap => {
+      if (!mergedByDate[snap.date]) mergedByDate[snap.date] = {}
+      const day = mergedByDate[snap.date]
+
       if (snap.asiaData?.length) {
         const { agents } = parseAsiaSheet(snap.asiaData)
-        processSnapshot(agents, 'asia')
+        agents.forEach(a => {
+          const cur = day[a.ext]
+          if (!cur || a.english > cur.english)
+            day[a.ext] = { name:a.name, english:a.english, spanish:a.spanish||0, team:'asia' }
+        })
       }
       TEAM_SHEETS.forEach(t => {
         const raw = snap.teams?.[t.id]; if (!raw?.length) return
         const { agents } = parseTeamSheet(raw, t)
-        processSnapshot(agents, t.id)
+        agents.forEach(a => {
+          const cur = day[a.ext]
+          if (!cur || a.english > cur.english)
+            day[a.ext] = { name:a.name, english:a.english, spanish:a.spanish||0, team:t.id }
+        })
       })
     })
 
-    // Process remote agent snapshots — deduplicate by date+ext (keep max English)
-    // Skip dates already in local snapshots to avoid double-counting
-    if (Array.isArray(agentSnapshotsRemote) && agentSnapshotsRemote.length > 0) {
-      const localDates = new Set(snapshots.map(s => s.date))
-
-      // Step 1: deduplicate — for same date+ext keep max english value
-      const dedupMap = {}  // key: "date|ext"
+    // Remote AGENT_SNAPSHOTS — add dates not in local, or fill agents missing from local
+    if (Array.isArray(agentSnapshotsRemote)) {
       agentSnapshotsRemote.forEach(a => {
         if (!a.date || !a.ext) return
         const d = normalizeDate(a.date); if (!d) return
-        if (localDates.has(d)) return  // covered by local snapshot
-        const key = `${d}|${a.ext}`
-        const en = Number(a.english)||0, sp = Number(a.spanish)||0
-        if (!dedupMap[key] || en > dedupMap[key].english) {
-          dedupMap[key] = { date:d, ext:a.ext, name:a.name||a.ext, english:en, spanish:sp, total:en+sp, team:a.team||'asia' }
-        }
-      })
-
-      // Step 2: group by date → team → agents
-      const byDate = {}
-      Object.values(dedupMap).forEach(a => {
-        if (!byDate[a.date]) byDate[a.date] = {}
-        if (!byDate[a.date][a.team]) byDate[a.date][a.team] = []
-        byDate[a.date][a.team].push(a)
-      })
-
-      // Step 3: process each date
-      Object.values(byDate).forEach(teams => {
-        Object.entries(teams).forEach(([tid, agts]) => processSnapshot(agts, tid))
+        const en = Number(a.english)||0
+        if (!mergedByDate[d]) mergedByDate[d] = {}
+        const cur = mergedByDate[d][a.ext]
+        if (!cur || en > cur.english)
+          mergedByDate[d][a.ext] = { name:a.name||a.ext, english:en, spanish:Number(a.spanish)||0, team:a.team||'asia' }
       })
     }
+
+    // Step 2: Process each date — group by team, run processSnapshot
+    Object.values(mergedByDate).forEach(day => {
+      const byTeam = {}
+      Object.entries(day).forEach(([ext, a]) => {
+        if (!byTeam[a.team]) byTeam[a.team] = []
+        byTeam[a.team].push({ ext, name:a.name, english:a.english, spanish:a.spanish, total:a.english+(a.spanish||0) })
+      })
+      Object.entries(byTeam).forEach(([tid, agts]) => processSnapshot(agts, tid))
+    })
 
     const sortFn = list => [...list].sort((a,b) => b.top1-a.top1 || b.top3-a.top3 || b.total-a.total)
     const enList = sortFn(Object.values(enMap)).slice(0,8)
@@ -879,7 +888,7 @@ function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
     const goatSP = Object.values(spMap).sort((a,b)=>b.total-a.total)[0]||null
 
     return { enList, spList, goatEN, goatSP }
-  }, [snapshots])
+  }, [snapshots, agentSnapshotsRemote])
 
   if (!data.enList.length) return null
 
