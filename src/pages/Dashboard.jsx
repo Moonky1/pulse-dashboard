@@ -238,12 +238,27 @@ function parseTeamSheet(rows, config) {
     if(agentMap[extNum]){agentMap[extNum].english+=en;agentMap[extNum].spanish+=sp;agentMap[extNum].total=agentMap[extNum].english+agentMap[extNum].spanish;if(inOT)agentMap[extNum]._fromOT=true}
     else agentMap[extNum]={name:cell0,ext:String(extNum),english:en,spanish:sp,total:en+sp,_fromOT:inOT}
   }
+  // ── Second-pass OT fallback: count "Agents Logged in" rows ─────────────────
+  // If isOTRow never fired (formatting edge cases), the 2nd such row = OT footer
+  if(includeOT()&&!agentMap['__OT__']){
+    let loggedCount=0
+    for(let i=0;i<rows.length;i++){
+      const row=rows[i]; if(!Array.isArray(row))continue
+      const v0=cellUpper(row[0]||'')
+      if(v0.length>3&&v0.includes('AGENT')&&(v0.includes('LOGGED')||v0.includes('LOG IN'))){
+        loggedCount++
+        if(loggedCount>=2){
+          const otEn=safeInt(row[colEn]),otSp=colSp!=null?safeInt(row[colSp]):0
+          if(otEn>0||otSp>0)agentMap['__OT__']={ext:'__OT__',name:'__OT__',english:otEn,spanish:otSp,total:otEn+otSp}
+          break
+        }
+      }
+    }
+  }
   const allEntries=Object.values(agentMap)
   const agents=allEntries.filter(a=>a.ext!=='__OT__'&&a.ext!=='__MAIN_TOTAL__').map(a=>{const{_fromOT,...rest}=a;return rest})
-  // Individual agent sum (includes OT agents via +=)
   const agentEn=agents.reduce((s,a)=>s+a.english,0)
   const agentSp=agents.reduce((s,a)=>s+a.spanish,0)
-  // OT synthetic entry (when OT header had total but no individual rows)
   const otEntry=agentMap['__OT__']
   const en=agentEn+(otEntry?.english||0)
   const sp=agentSp+(otEntry?.spanish||0)
@@ -433,140 +448,140 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
   )
 }
 
-// ── MVP Section ──────────────────────────────────────────────────────────────
-function MVPSection({ snapshots, navigate }) {
-  const data = useMemo(() => {
-    // { ext -> { name, team, top1, top3, totalEn, appearances } }
-    const map = {}
+// ── Hourly rates per team ─────────────────────────────────────────────────────
+const TEAM_HOURLY_RATE = { philippines:4, venezuela:4, central:4, colombia:4, mexico:3, asia:3 }
 
-    const processAgents = (agents, teamId) => {
-      if (!agents || agents.length === 0) return
-      const sorted = [...agents].sort((a, b) => b.english - a.english)
-      sorted.forEach((a, i) => {
-        if (a.english === 0) return
-        if (!map[a.ext]) map[a.ext] = { name: a.name, team: teamId, ext: a.ext, top1: 0, top3: 0, totalEn: 0, totalSp: 0, days: 0 }
-        map[a.ext].totalEn += a.english
-        map[a.ext].totalSp = (map[a.ext].totalSp||0) + (a.spanish||0)
-        map[a.ext].days += 1
-        if (i === 0) { map[a.ext].top1 += 1; map[a.ext].top3 += 1 }
-        else if (i <= 2) { map[a.ext].top3 += 1 }
-      })
+// ── MVP Section ──────────────────────────────────────────────────────────────
+function MVPSection({ snapshots, navigate, teamsSorted }) {
+
+  // ── Compute EN + SP agent rankings from all snapshots ──────────────────────
+  const data = useMemo(() => {
+    const enMap = {}, spMap = {}, teamWins = {}
+
+    const processSnapshot = (agents, teamId, date) => {
+      const actEN = agents.filter(a => a.english > 0)
+      const actSP = agents.filter(a => (a.spanish||0) > 0)
+      const sortedEN = [...actEN].sort((a,b) => b.english - a.english)
+      const sortedSP = [...actSP].sort((a,b) => (b.spanish||0) - (a.spanish||0))
+
+      const reg = (map, a, isTop1, isTop3, lang) => {
+        if (!map[a.ext]) map[a.ext] = { name:a.name, team:teamId, ext:a.ext, top1:0, top3:0, total:0, days:0 }
+        map[a.ext].total += lang === 'en' ? a.english : (a.spanish||0)
+        map[a.ext].days  += 1
+        if (isTop1) map[a.ext].top1 += 1
+        if (isTop3) map[a.ext].top3 += 1
+      }
+
+      sortedEN.forEach((a,i) => reg(enMap, a, i===0, i<3, 'en'))
+      sortedSP.forEach((a,i) => reg(spMap, a, i===0, i<3, 'sp'))
     }
 
     snapshots.forEach(snap => {
-      // Asia
       if (snap.asiaData?.length) {
         const { agents } = parseAsiaSheet(snap.asiaData)
-        processAgents(agents, 'asia')
+        processSnapshot(agents, 'asia', snap.date)
       }
-      // Teams
       TEAM_SHEETS.forEach(t => {
-        const raw = snap.teams?.[t.id]
-        if (!raw?.length) return
+        const raw = snap.teams?.[t.id]; if (!raw?.length) return
         const { agents } = parseTeamSheet(raw, t)
-        processAgents(agents, t.id)
+        processSnapshot(agents, t.id, snap.date)
+
+        // Track team rankings per day via totals
+        if (!teamWins[t.id]) teamWins[t.id] = { id:t.id, name:TEAM_DISPLAY_NAMES[t.id]||t.id, top1:0, top3:0, days:0 }
+        teamWins[t.id].days += 1
       })
     })
 
-    const all = Object.values(map).filter(a => a.top3 > 0 || a.totalEn > 100)
-    // Sort by #1 days first, then Top3, then Total EN
-    const sorted = [...all].sort((a, b) => b.top1 - a.top1 || b.top3 - a.top3 || b.totalEn - a.totalEn)
-    const top10  = sorted.slice(0, 10)
-    // GOAT by total english
-    const goat   = [...all].sort((a, b) => b.totalEn - a.totalEn)[0] || null
-    // Spanish GOAT
-    const goatSp = [...all].sort((a, b) => b.totalSp - a.totalSp)[0] || null
-    return { top10, goat, goatSp }
+    const sortFn = list => [...list].sort((a,b) => b.top1-a.top1 || b.top3-a.top3 || b.total-a.total)
+    const enList = sortFn(Object.values(enMap)).slice(0,8)
+    const spList = sortFn(Object.values(spMap)).slice(0,8)
+    const goatEN = Object.values(enMap).sort((a,b)=>b.total-a.total)[0]||null
+    const goatSP = Object.values(spMap).sort((a,b)=>b.total-a.total)[0]||null
+
+    return { enList, spList, goatEN, goatSP }
   }, [snapshots])
 
-  if (!data.top10.length) return null
+  if (!data.enList.length) return null
 
   const teamColors = { asia:'#f97316', philippines:'#3b82f6', colombia:'#f59e0b', central:'#8b5cf6', mexico:'#10b981', venezuela:'#ef4444' }
   const teamLabels = { ...TEAM_DISPLAY_NAMES, asia:'Asia' }
 
-  return (
-    <div style={{ marginTop:'2.5rem' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:'1.2rem' }}>
-        <h2 className="section-title" style={{ marginBottom:0 }}>🏆 Operation MVPs</h2>
-        <span style={{ fontSize:12, color:'#6b7280' }}>Ranked by Top 3 appearances · All-time</span>
+  const GoatCard = ({ ag, label, color, icon, statLabel }) => ag ? (
+    <div style={{ background:`linear-gradient(135deg,${color}18,${color}06)`, border:`1px solid ${color}35`, borderRadius:16, padding:'1rem 1.4rem', display:'flex', alignItems:'center', gap:14, flex:1 }}>
+      <div style={{ fontSize:24 }}>{icon}</div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:9, color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:1 }}>{label}</div>
+        <div style={{ fontSize:15, fontWeight:800, color:'#f5f5f5', fontFamily:"'Sora',sans-serif", cursor:'pointer', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} onClick={()=>navigate(`/profile/${ag.ext}`)}>{ag.name}</div>
+        <div style={{ fontSize:11, color:'#9ca3af', marginTop:1 }}>{teamLabels[ag.team]||ag.team} · #{ag.ext}</div>
       </div>
-
-      {/* GOAT cards row */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:'1rem' }}>
-        {data.goat && (
-          <div style={{ background:'linear-gradient(135deg,rgba(249,115,22,0.12),rgba(251,191,36,0.06))', border:'1px solid rgba(249,115,22,0.3)', borderRadius:16, padding:'1rem 1.5rem', display:'flex', alignItems:'center', gap:14, boxShadow:'0 0 30px rgba(249,115,22,0.08)' }}>
-            <div style={{ fontSize:26 }}>🐐</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:10, color:'#f97316', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:2 }}>All-Time Top English</div>
-              <div style={{ fontSize:16, fontWeight:800, color:'#f5f5f5', fontFamily:"'Sora',sans-serif", cursor:'pointer', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} onClick={() => navigate(`/profile/${data.goat.ext}`)}>{data.goat.name}</div>
-              <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>{teamLabels[data.goat.team]||data.goat.team} · #{data.goat.ext}</div>
-            </div>
-            <div style={{ textAlign:'right', flexShrink:0 }}>
-              <div style={{ fontSize:28, fontWeight:800, color:'#f97316', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.totalEn.toLocaleString()}</div>
-              <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>Total English</div>
-            </div>
-            <div style={{ textAlign:'right', flexShrink:0 }}>
-              <div style={{ fontSize:22, fontWeight:800, color:'#fbbf24', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.top1}</div>
-              <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>#1 Days</div>
-            </div>
-          </div>
-        )}
-        {data.goatSp && (
-          <div style={{ background:'linear-gradient(135deg,rgba(52,211,153,0.1),rgba(16,185,129,0.04))', border:'1px solid rgba(52,211,153,0.25)', borderRadius:16, padding:'1rem 1.5rem', display:'flex', alignItems:'center', gap:14, boxShadow:'0 0 30px rgba(52,211,153,0.06)' }}>
-            <div style={{ fontSize:26 }}>🌟</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:10, color:'#34d399', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:2 }}>All-Time Top Spanish</div>
-              <div style={{ fontSize:16, fontWeight:800, color:'#f5f5f5', fontFamily:"'Sora',sans-serif", cursor:'pointer', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} onClick={() => navigate(`/profile/${data.goatSp.ext}`)}>{data.goatSp.name}</div>
-              <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>{teamLabels[data.goatSp.team]||data.goatSp.team} · #{data.goatSp.ext}</div>
-            </div>
-            <div style={{ textAlign:'right', flexShrink:0 }}>
-              <div style={{ fontSize:28, fontWeight:800, color:'#34d399', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{(data.goatSp.totalSp||0).toLocaleString()}</div>
-              <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>Total Spanish</div>
-            </div>
-            <div style={{ textAlign:'right', flexShrink:0 }}>
-              <div style={{ fontSize:22, fontWeight:800, color:'#fbbf24', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goatSp.top1}</div>
-              <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>#1 Days</div>
-            </div>
-          </div>
-        )}
+      <div style={{ textAlign:'right', flexShrink:0 }}>
+        <div style={{ fontSize:26, fontWeight:800, color, fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{ag.total.toLocaleString()}</div>
+        <div style={{ fontSize:10, color:'#6b7280', marginTop:1 }}>{statLabel}</div>
       </div>
+      <div style={{ textAlign:'right', flexShrink:0 }}>
+        <div style={{ fontSize:20, fontWeight:800, color:'#fbbf24', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{ag.top1}</div>
+        <div style={{ fontSize:10, color:'#6b7280', marginTop:1 }}>#1 Days</div>
+      </div>
+    </div>
+  ) : null
 
-      {/* Top 10 table */}
-      <div style={{ background:'rgba(18,22,31,0.85)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:16, overflow:'hidden' }}>
-        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+  const RankTable = ({ list, color, title, statKey, statLabel }) => (
+    <div style={{ flex:1 }}>
+      <div style={{ fontSize:12, fontWeight:700, color, marginBottom:10, textTransform:'uppercase', letterSpacing:'0.06em' }}>{title}</div>
+      <div style={{ background:'rgba(0,0,0,0.25)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:14, overflow:'hidden' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
           <thead>
-            <tr style={{ background:'rgba(0,0,0,0.3)' }}>
-              {['#','Agent','Team','Top 3','#1 Days','Total EN','Avg EN/day'].map((h,i) => (
-                <th key={i} style={{ padding:'10px 14px', textAlign:i>2?'center':'left', fontSize:10, fontWeight:700, color:'#4b5563', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid rgba(255,255,255,0.05)', whiteSpace:'nowrap' }}>{h}</th>
+            <tr style={{ background:'rgba(0,0,0,0.25)' }}>
+              {['#','Agent','Team','#1','Top3',statLabel].map((h,i)=>(
+                <th key={i} style={{ padding:'8px 12px', textAlign:i>2?'center':'left', fontSize:9, fontWeight:700, color:'#4b5563', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid rgba(255,255,255,0.05)', whiteSpace:'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {data.top10.map((a, i) => {
-              const accent = teamColors[a.team] || '#f97316'
-              const rankStyle = i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#4b5563'}
-              const avg = a.days > 0 ? (a.totalEn / a.days).toFixed(1) : '—'
+            {list.map((a,i)=>{
+              const accent = teamColors[a.team]||'#f97316'
+              const rs = i===0?{color:'#FFD700',fontWeight:800}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#4b5563'}
               return (
-                <tr key={a.ext} style={{ borderBottom:'1px solid rgba(255,255,255,0.04)' }}
+                <tr key={a.ext} style={{ borderBottom:'1px solid rgba(255,255,255,0.03)' }}
                   onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
                   onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <td style={{ padding:'11px 14px', ...rankStyle }}>#{i+1}</td>
-                  <td style={{ padding:'11px 14px' }}>
-                    <span style={{ fontWeight:600, color:'#f1f5f9', cursor:'pointer' }} onClick={() => navigate(`/profile/${a.ext}`)}>{a.name}</span>
-                    <span style={{ color:'#4b5563', fontSize:11, marginLeft:6 }}>#{a.ext}</span>
+                  <td style={{ padding:'9px 12px', ...rs, fontSize:11 }}>#{i+1}</td>
+                  <td style={{ padding:'9px 12px' }}>
+                    <span style={{ fontWeight:600, color:'#f1f5f9', cursor:'pointer', fontSize:12 }} onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span>
+                    <span style={{ color:'#374151', fontSize:10, marginLeft:5 }}>#{a.ext}</span>
                   </td>
-                  <td style={{ padding:'11px 14px' }}>
-                    <span style={{ fontSize:11, background:`${accent}18`, border:`1px solid ${accent}40`, color:accent, padding:'2px 8px', borderRadius:5, fontWeight:600 }}>{teamLabels[a.team]||a.team}</span>
+                  <td style={{ padding:'9px 12px' }}>
+                    <span style={{ fontSize:10, background:`${accent}18`, border:`1px solid ${accent}35`, color:accent, padding:'1px 7px', borderRadius:5, fontWeight:600 }}>{teamLabels[a.team]||a.team}</span>
                   </td>
-                  <td style={{ padding:'11px 14px', textAlign:'center', color:'#34d399', fontWeight:700 }}>{a.top3}</td>
-                  <td style={{ padding:'11px 14px', textAlign:'center', color:'#fbbf24', fontWeight:700 }}>{a.top1}</td>
-                  <td style={{ padding:'11px 14px', textAlign:'center', color:'#60a5fa', fontWeight:700 }}>{a.totalEn.toLocaleString()}</td>
-                  <td style={{ padding:'11px 14px', textAlign:'center', color:'#9ca3af' }}>{avg}</td>
+                  <td style={{ padding:'9px 12px', textAlign:'center', color:'#fbbf24', fontWeight:700, fontSize:13 }}>{a.top1}</td>
+                  <td style={{ padding:'9px 12px', textAlign:'center', color:'#34d399', fontWeight:600 }}>{a.top3}</td>
+                  <td style={{ padding:'9px 12px', textAlign:'center', color, fontWeight:700 }}>{a.total.toLocaleString()}</td>
                 </tr>
               )
             })}
           </tbody>
         </table>
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ marginTop:'2.5rem' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:'1.2rem' }}>
+        <h2 className="section-title" style={{ marginBottom:0 }}>🏆 Operation MVPs</h2>
+        <span style={{ fontSize:12, color:'#6b7280' }}>Sorted by #1 days · All-time</span>
+      </div>
+
+      {/* GOAT row */}
+      <div style={{ display:'flex', gap:14, marginBottom:'1.2rem' }}>
+        <GoatCard ag={data.goatEN} label="All-Time Top English" color="#f97316" icon="🐐" statLabel="Total EN"/>
+        <GoatCard ag={data.goatSP} label="All-Time Top Spanish" color="#34d399" icon="🌟" statLabel="Total SP"/>
+      </div>
+
+      {/* Dual ranking tables */}
+      <div style={{ display:'flex', gap:16 }}>
+        <RankTable list={data.enList} color="#60a5fa" title="🏅 English Rankings" statKey="totalEn" statLabel="Total EN"/>
+        <RankTable list={data.spList} color="#34d399" title="🏅 Spanish Rankings" statKey="totalSp" statLabel="Total SP"/>
       </div>
     </div>
   )
