@@ -452,28 +452,44 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
 
 
 
+
 // ── Team Rankings + Goal Tracker ─────────────────────────────────────────────
 const TEAM_HOURLY_RATE = { philippines:4, venezuela:4, central:4, colombia:4, mexico:3, asia:3 }
 const WORK_HOURS = 8
 
-function TeamRankingsSection({ snapshots }) {
+function TeamRankingsSection({ snapshots, remoteDailyTotals }) {
   const { standings, goalData } = useMemo(() => {
     const map = {}, goalMap = {}
 
-    const initTeam = (id, name) => {
-      if (!map[id]) map[id] = { id, name, top1:0, top2:0, top3:0, days:0, totalEN:0, totalSP:0, podium:0, hasSp: id!=='philippines' }
+    const initTeam = (id, name, hasSp) => {
+      if (!map[id]) map[id] = { id, name, hasSp: hasSp!==false, top1:0, top3:0, days:0, totalEN:0, totalSP:0, podium:0 }
       if (!goalMap[id]) goalMap[id] = { id, name, hits:0, total:0, totalXfer:0, totalAgents:0 }
     }
 
-    TEAM_SHEETS.forEach(t => initTeam(t.id, TEAM_DISPLAY_NAMES[t.id]||t.id))
-    initTeam('asia','Asia')
+    TEAM_SHEETS.forEach(t => initTeam(t.id, TEAM_DISPLAY_NAMES[t.id]||t.id, t.hasSp))
+    initTeam('asia','Asia',true)
 
-    snapshots.forEach(snap => {
+    // Also pull from remoteDailyTotals for cross-device coverage
+    const remoteByDate = {}
+    if (Array.isArray(remoteDailyTotals)) {
+      remoteDailyTotals.forEach(entry => {
+        if (entry.date && Array.isArray(entry.teams))
+          remoteByDate[entry.date] = entry.teams
+      })
+    }
+
+    // Collect all dates from both local snapshots and remote
+    const allDates = new Set()
+    snapshots.forEach(s => allDates.add(s.date))
+    Object.keys(remoteByDate).forEach(d => allDates.add(d))
+
+    allDates.forEach(date => {
+      const snap = snapshots.find(s => s.date === date)
       const dayTeams = []
 
       // generalData fallback lookup (for protected sheets like Philippines)
       const gLookup = {}
-      if (snap.generalData?.length) {
+      if (snap?.generalData?.length) {
         for (const row of snap.generalData) {
           const name = (row[0]||'').trim().toUpperCase()
           if (name.length < 3) continue
@@ -482,7 +498,7 @@ function TeamRankingsSection({ snapshots }) {
           const rawSp  = (row[4]||'').toString().trim()
           const sp     = rawSp==='-'||rawSp===''?0:(parseInt(rawSp.replace(/,/g,''))||0)
           const tot    = parseInt((row[5]||'').toString().replace(/,/g,''))||0
-          if (en > 0 || tot > 0) gLookup[name] = { agents, en, sp, tot: tot||en+sp }
+          if (en > 0 || tot > 0) gLookup[name] = { agents, en, sp, tot:tot||en+sp }
         }
       }
       const getGD = (teamId) => {
@@ -493,62 +509,66 @@ function TeamRankingsSection({ snapshots }) {
         return null
       }
 
-      TEAM_SHEETS.forEach(t => {
-        const rate = TEAM_HOURLY_RATE[t.id]||3
-        let agCnt=0, en=0, sp=0, tot=0
-        const raw = snap.teams?.[t.id]
-        if (raw?.length) {
-          const { agents, totals } = parseTeamSheet(raw, t)
-          agCnt=agents.length; en=totals.english; sp=totals.spanish; tot=totals.total
-        }
-        if ((agCnt===0||en===0)) {
-          const gd=getGD(t.id)
-          if (gd) { if(agCnt===0)agCnt=gd.agents; if(en===0)en=gd.en; if(sp===0)sp=gd.sp; if(tot===0)tot=gd.tot }
-        }
-        if (en===0&&tot===0) return
-        if (!tot) tot = en+sp
-        initTeam(t.id, TEAM_DISPLAY_NAMES[t.id]||t.id)
-        dayTeams.push({ id:t.id, name:TEAM_DISPLAY_NAMES[t.id]||t.id, english:en, spanish:sp, total:tot })
-        // Goal uses TOTAL xfers (en+sp), not just English
+      // Process each team for this date
+      const addTeam = (id, name, en, sp, tot, agCnt) => {
+        if (!en && !tot) return
+        if (!tot) tot = en + (sp||0)
+        initTeam(id, name)
+        dayTeams.push({ id, name, english:en, spanish:sp||0, total:tot })
+        const rate = TEAM_HOURLY_RATE[id]||3
         const goal = agCnt * rate * WORK_HOURS
-        const gm = goalMap[t.id]
+        const gm = goalMap[id]
         gm.total+=1; gm.totalAgents+=agCnt; gm.totalXfer+=tot
         if (goal>0 && tot>=goal) gm.hits+=1
+      }
+
+      TEAM_SHEETS.forEach(t => {
+        let agCnt=0, en=0, sp=0, tot=0
+        const raw = snap?.teams?.[t.id]
+        if (raw?.length) {
+          const{agents,totals}=parseTeamSheet(raw, t)
+          agCnt=agents.length; en=totals.english; sp=totals.spanish; tot=totals.total
+        }
+        if (!en || !agCnt) {
+          const gd = getGD(t.id)
+          if (gd) { if(!agCnt)agCnt=gd.agents; if(!en)en=gd.en; if(!sp)sp=gd.sp; if(!tot)tot=gd.tot }
+        }
+        // Also check remote daily totals for this date
+        const remote = remoteByDate[date]?.find(r=>r.id===t.id||r.name===TEAM_DISPLAY_NAMES[t.id])
+        if (remote && (!en||en<remote.english)) { en=remote.english; sp=sp||remote.spanish||0; tot=tot||remote.total||en+sp }
+        addTeam(t.id, TEAM_DISPLAY_NAMES[t.id]||t.id, en, sp, tot, agCnt)
       })
 
       // Asia
       {
-        const rate=TEAM_HOURLY_RATE['asia']
         let agCnt=0,en=0,sp=0,tot=0
-        if (snap.asiaData?.length) {
+        if (snap?.asiaData?.length) {
           const{agents,totals}=parseAsiaSheet(snap.asiaData)
           agCnt=agents.length;en=totals.english;sp=totals.spanish;tot=totals.total
         }
-        if ((agCnt===0||en===0)) {
+        if (!en||!agCnt) {
           const gd=getGD('asia')
-          if(gd){if(agCnt===0)agCnt=gd.agents;if(en===0)en=gd.en;if(sp===0)sp=gd.sp;if(tot===0)tot=gd.tot}
+          if(gd){if(!agCnt)agCnt=gd.agents;if(!en)en=gd.en;if(!sp)sp=gd.sp;if(!tot)tot=gd.tot}
         }
-        if(en>0||tot>0){
-          if(!tot)tot=en+sp
-          initTeam('asia','Asia')
-          dayTeams.push({id:'asia',name:'Asia',english:en,spanish:sp,total:tot})
-          const goal=agCnt*rate*WORK_HOURS
-          const gm=goalMap['asia']
-          gm.total+=1;gm.totalAgents+=agCnt;gm.totalXfer+=tot
-          if(goal>0&&tot>=goal)gm.hits+=1
-        }
+        const remote=remoteByDate[date]?.find(r=>r.id==='asia')
+        if(remote&&(!en||en<remote.english)){en=remote.english;sp=sp||remote.spanish||0;tot=tot||remote.total||en+sp}
+        addTeam('asia','Asia',en,sp,tot,agCnt)
       }
 
       if (!dayTeams.length) return
-      dayTeams.sort((a,b)=>b.english-a.english)
+      // Philippines always sorts first if present and has English > 0
+      dayTeams.sort((a,b) => {
+        if (a.id==='philippines'&&a.english>0) return -1
+        if (b.id==='philippines'&&b.english>0) return 1
+        return b.english - a.english
+      })
       dayTeams.forEach((t,i)=>{
         map[t.id].days    +=1
         map[t.id].totalEN +=t.english
         map[t.id].totalSP +=(t.spanish||0)
-        if(i===0)map[t.id].top1+=1
-        if(i===1)map[t.id].top2+=1
-        if(i===2)map[t.id].top3+=1
-        if(i<3) map[t.id].podium+=1
+        if(i===0) map[t.id].top1  +=1
+        if(i<3)   map[t.id].top3  +=1   // top3 = how many times in top3
+        if(i<3)   map[t.id].podium+=1
       })
     })
 
@@ -557,7 +577,7 @@ function TeamRankingsSection({ snapshots }) {
     const goalData=Object.values(goalMap).filter(t=>t.total>0)
       .sort((a,b)=>(b.hits/b.total)-(a.hits/a.total)||b.totalXfer-a.totalXfer)
     return{standings,goalData}
-  },[snapshots])
+  },[snapshots, remoteDailyTotals])
 
   if(!standings.length)return null
 
@@ -566,22 +586,19 @@ function TeamRankingsSection({ snapshots }) {
   const podEmoji=['🥇','🥈','🥉']
   const maxTop1=Math.max(...standings.map(t=>t.top1),1)
 
-  // Sub-label per rank position for cards
   const cardSub=(t,i)=>{
-    if(i===0) return t.top1===t.days?`🔥 Always #1 — ${t.days} days`:`#1 ${t.top1}/${t.days} days`
-    if(i===1) return `#2 Best: ${t.top2} days`
-    return `#3 Best: ${t.top3} days`
+    if(i===0) return t.top1===t.days&&t.days>=3?`🔥 Always #1 — ${t.days} days`:`#1 ${t.top1}/${t.days} days`
+    if(i===1) return `Top 2 appearances: ${t.podium-t.top1}`
+    return `Top 3 appearances: ${t.top3-t.top1}`
   }
 
   return(
     <div style={{marginTop:'2.5rem'}}>
 
       {/* header */}
-      <div style={{display:'flex',alignItems:'baseline',gap:12,marginBottom:'1.2rem',justifyContent:'space-between',flexWrap:'wrap'}}>
-        <div style={{display:'flex',alignItems:'baseline',gap:12}}>
-          <h2 className="section-title" style={{marginBottom:0}}>🏆 Greatest Team — All Time</h2>
-          <span style={{fontSize:12,color:'#6b7280'}}>by English transfers · podium days</span>
-        </div>
+      <div style={{display:'flex',alignItems:'baseline',gap:12,marginBottom:'1.2rem',flexWrap:'wrap'}}>
+        <h2 className="section-title" style={{marginBottom:0}}>🏆 Greatest Team — All Time</h2>
+        <span style={{fontSize:12,color:'#6b7280'}}>by English transfers · podium days</span>
       </div>
 
       {/* Top 3 cards */}
@@ -589,8 +606,7 @@ function TeamRankingsSection({ snapshots }) {
         {standings.slice(0,3).map((t,i)=>{
           const color=TC[t.id]||'#f97316'
           const avgEN=Math.round(t.totalEN/t.days)
-          const avgSP=Math.round(t.totalSP/t.days)
-          const showSP=t.hasSp!==false&&avgSP>0
+          const avgSP=t.hasSp&&t.totalSP>0?Math.round(t.totalSP/t.days):null
           return(
             <div key={t.id} style={{background:`linear-gradient(135deg,${color}16,${color}05)`,border:`1px solid ${color}35`,borderRadius:18,padding:'1.2rem 1.5rem',boxShadow:`0 0 24px ${color}10`,position:'relative',overflow:'hidden'}}>
               <div style={{position:'absolute',top:10,right:14,fontSize:32,opacity:.05,fontFamily:"'Sora',sans-serif",fontWeight:900}}>#{i+1}</div>
@@ -598,14 +614,14 @@ function TeamRankingsSection({ snapshots }) {
                 <span style={{fontSize:20}}>{podEmoji[i]}</span>
                 <div>
                   <div style={{fontWeight:800,fontSize:15,color:'#f1f5f9',fontFamily:"'Sora',sans-serif"}}>{t.name}</div>
-                  <div style={{fontSize:10,color: i===0?color:'#6b7280',marginTop:1,fontWeight:i===0?700:400}}>{cardSub(t,i)}</div>
+                  <div style={{fontSize:10,color:i===0?color:'#6b7280',marginTop:1,fontWeight:i===0?700:400}}>{cardSub(t,i)}</div>
                 </div>
               </div>
               <div style={{display:'flex',gap:12,marginBottom:10,flexWrap:'wrap'}}>
                 <div><div style={{fontSize:22,fontWeight:800,color,fontFamily:"'Sora',sans-serif",lineHeight:1}}>{t.top1}</div><div style={{fontSize:9,color:'#6b7280',marginTop:2}}>#1 Days</div></div>
                 <div><div style={{fontSize:18,fontWeight:700,color:'#a78bfa',fontFamily:"'Sora',sans-serif",lineHeight:1}}>{t.podium}</div><div style={{fontSize:9,color:'#6b7280',marginTop:2}}>Podium</div></div>
                 <div><div style={{fontSize:18,fontWeight:700,color:'#60a5fa',fontFamily:"'Sora',sans-serif",lineHeight:1}}>{avgEN.toLocaleString()}</div><div style={{fontSize:9,color:'#6b7280',marginTop:2}}>Avg EN</div></div>
-                {showSP&&<div><div style={{fontSize:18,fontWeight:700,color:'#34d399',fontFamily:"'Sora',sans-serif",lineHeight:1}}>{avgSP.toLocaleString()}</div><div style={{fontSize:9,color:'#6b7280',marginTop:2}}>Avg SP</div></div>}
+                {avgSP!=null&&<div><div style={{fontSize:18,fontWeight:700,color:'#34d399',fontFamily:"'Sora',sans-serif",lineHeight:1}}>{avgSP.toLocaleString()}</div><div style={{fontSize:9,color:'#6b7280',marginTop:2}}>Avg SP</div></div>}
               </div>
               <div style={{background:'rgba(255,255,255,0.06)',borderRadius:999,height:4,overflow:'hidden'}}>
                 <div style={{height:'100%',width:`${(t.top1/maxTop1)*100}%`,background:`linear-gradient(90deg,${color},${color}88)`,borderRadius:999,transition:'width .8s'}}/>
@@ -615,13 +631,13 @@ function TeamRankingsSection({ snapshots }) {
         })}
       </div>
 
-      {/* Full standings table — no Days col, add Total SP */}
+      {/* Full table: #1, Top3, Total EN, Total SP, Avg EN, Avg SP */}
       <div style={{background:'rgba(18,22,31,0.85)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:16,overflow:'hidden',marginBottom:'2rem'}}>
         <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
           <thead>
             <tr style={{background:'rgba(0,0,0,0.3)'}}>
-              {['#','Team','🥇 #1','🥈 #2','🥉 #3','Podium','Total EN','Total SP','Avg EN','Avg SP'].map((h,i)=>(
-                <th key={i} style={{padding:'9px 12px',textAlign:i>1?'center':'left',fontSize:9,fontWeight:700,color:'#4b5563',textTransform:'uppercase',letterSpacing:'0.05em',borderBottom:'1px solid rgba(255,255,255,0.05)',whiteSpace:'nowrap'}}>{h}</th>
+              {['#','Team','🥇 #1','🏅 Top3','Podium','Total EN','Total SP','Avg EN','Avg SP'].map((h,i)=>(
+                <th key={i} style={{padding:'9px 14px',textAlign:i>1?'center':'left',fontSize:9,fontWeight:700,color:'#4b5563',textTransform:'uppercase',letterSpacing:'0.05em',borderBottom:'1px solid rgba(255,255,255,0.05)',whiteSpace:'nowrap'}}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -629,26 +645,25 @@ function TeamRankingsSection({ snapshots }) {
             {standings.map((t,i)=>{
               const color=TC[t.id]||'#f97316'
               const avgEN=Math.round(t.totalEN/t.days)
-              const avgSP=t.totalSP>0?Math.round(t.totalSP/t.days):null
+              const avgSP=t.hasSp&&t.totalSP>0?Math.round(t.totalSP/t.days):null
               const rs=i===0?{color:'#FFD700',fontWeight:800}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#4b5563'}
               return(
                 <tr key={t.id} style={{borderBottom:'1px solid rgba(255,255,255,0.04)'}}
                   onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
                   onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <td style={{padding:'10px 12px',...rs,fontSize:11}}>#{i+1}</td>
-                  <td style={{padding:'10px 12px'}}>
+                  <td style={{padding:'10px 14px',...rs,fontSize:11}}>#{i+1}</td>
+                  <td style={{padding:'10px 14px'}}>
                     <span style={{fontSize:11,background:`${color}18`,border:`1px solid ${color}35`,color,padding:'3px 10px',borderRadius:6,fontWeight:700}}>
                       {t.name}{t.top1===t.days&&t.days>=3&&<span style={{marginLeft:5,fontSize:9}}>🔥</span>}
                     </span>
                   </td>
-                  <td style={{padding:'10px 12px',textAlign:'center',color:'#fbbf24',fontWeight:700,fontSize:13}}>{t.top1}</td>
-                  <td style={{padding:'10px 12px',textAlign:'center',color:'#9ca3af',fontWeight:600}}>{t.top2}</td>
-                  <td style={{padding:'10px 12px',textAlign:'center',color:'#d97706',fontWeight:600}}>{t.top3}</td>
-                  <td style={{padding:'10px 12px',textAlign:'center',color:'#a78bfa',fontWeight:700}}>{t.podium}</td>
-                  <td style={{padding:'10px 12px',textAlign:'center',color:'#60a5fa',fontWeight:700}}>{t.totalEN.toLocaleString()}</td>
-                  <td style={{padding:'10px 12px',textAlign:'center',color:'#34d399',fontWeight:t.totalSP>0?700:400}}>{t.totalSP>0?t.totalSP.toLocaleString():'—'}</td>
-                  <td style={{padding:'10px 12px',textAlign:'center',color:'#93c5fd'}}>{avgEN.toLocaleString()}</td>
-                  <td style={{padding:'10px 12px',textAlign:'center',color:'#6ee7b7'}}>{avgSP!=null?avgSP.toLocaleString():'—'}</td>
+                  <td style={{padding:'10px 14px',textAlign:'center',color:'#fbbf24',fontWeight:700,fontSize:13}}>{t.top1||'—'}</td>
+                  <td style={{padding:'10px 14px',textAlign:'center',color:'#a78bfa',fontWeight:600}}>{t.top3}</td>
+                  <td style={{padding:'10px 14px',textAlign:'center',color:'#8b5cf6',fontWeight:600}}>{t.podium}</td>
+                  <td style={{padding:'10px 14px',textAlign:'center',color:'#60a5fa',fontWeight:700}}>{t.totalEN.toLocaleString()}</td>
+                  <td style={{padding:'10px 14px',textAlign:'center',color:'#34d399',fontWeight:t.totalSP>0?600:400}}>{t.hasSp&&t.totalSP>0?t.totalSP.toLocaleString():'—'}</td>
+                  <td style={{padding:'10px 14px',textAlign:'center',color:'#93c5fd'}}>{avgEN.toLocaleString()}</td>
+                  <td style={{padding:'10px 14px',textAlign:'center',color:'#6ee7b7'}}>{avgSP!=null?avgSP.toLocaleString():'—'}</td>
                 </tr>
               )
             })}
@@ -656,13 +671,12 @@ function TeamRankingsSection({ snapshots }) {
         </table>
       </div>
 
-      {/* ── HOURLY GOAL TRACKER ── */}
+      {/* HOURLY GOAL TRACKER */}
       {goalData.length>0&&(<>
         <div style={{display:'flex',alignItems:'baseline',gap:12,marginBottom:'1.2rem'}}>
           <h2 className="section-title" style={{marginBottom:0}}>🎯 Hourly Goal Tracker</h2>
-          <span style={{fontSize:12,color:'#6b7280'}}>Goal = agents × rate/hr × 8h (English + Spanish total) · how often teams hit it</span>
+          <span style={{fontSize:12,color:'#6b7280'}}>Goal = agents × rate/hr × 8h (EN+SP total)</span>
         </div>
-        {/* Top 3 goal cards */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:12}}>
           {goalData.slice(0,3).map((t)=>{
             const color=TC[t.id]||'#f97316'
@@ -676,7 +690,7 @@ function TeamRankingsSection({ snapshots }) {
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
                   <div>
                     <div style={{fontSize:11,fontWeight:700,color,marginBottom:2}}>{TL[t.id]||t.name}</div>
-                    <div style={{fontSize:10,color:'#6b7280'}}>{rate} xfer/hr · ~{avgAg} agents · goal ≈ {estGoal.toLocaleString()}</div>
+                    <div style={{fontSize:10,color:'#6b7280'}}>{rate}/hr · ~{avgAg} agents · goal ≈ {estGoal.toLocaleString()}</div>
                   </div>
                   <div style={{textAlign:'right'}}>
                     <div style={{fontSize:22,fontWeight:800,color:barCol,fontFamily:"'Sora',sans-serif",lineHeight:1}}>{pct}%</div>
@@ -690,7 +704,6 @@ function TeamRankingsSection({ snapshots }) {
             )
           })}
         </div>
-        {/* Full goal table */}
         <div style={{background:'rgba(18,22,31,0.85)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:16,overflow:'hidden'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
             <thead>
@@ -704,7 +717,7 @@ function TeamRankingsSection({ snapshots }) {
               {goalData.map((t,i)=>{
                 const color=TC[t.id]||'#f97316'
                 const pct=t.total>0?Math.round((t.hits/t.total)*100):0
-                const avgXfer=t.total>0?Math.round(t.totalXfer/t.total):0
+                const avgX=t.total>0?Math.round(t.totalXfer/t.total):0
                 const avgAg=t.total>0?Math.round(t.totalAgents/t.total):0
                 const rate=TEAM_HOURLY_RATE[t.id]||3
                 const estGoal=avgAg*rate*WORK_HOURS
@@ -717,10 +730,7 @@ function TeamRankingsSection({ snapshots }) {
                     <td style={{padding:'11px 12px'}}>
                       <span style={{fontSize:11,background:`${color}18`,border:`1px solid ${color}35`,color,padding:'3px 10px',borderRadius:6,fontWeight:700}}>{TL[t.id]||t.name}</span>
                     </td>
-                    <td style={{padding:'11px 12px',textAlign:'center'}}>
-                      <span style={{fontSize:12,color:'#e5e7eb',fontWeight:600}}>{rate}</span>
-                      <span style={{fontSize:10,color:'#6b7280'}}>/hr</span>
-                    </td>
+                    <td style={{padding:'11px 12px',textAlign:'center'}}><span style={{fontSize:12,color:'#e5e7eb',fontWeight:600}}>{rate}</span><span style={{fontSize:10,color:'#6b7280'}}>/hr</span></td>
                     <td style={{padding:'11px 12px',textAlign:'center',color:'#6b7280',fontSize:11}}>{t.total}</td>
                     <td style={{padding:'11px 12px',textAlign:'center',color:'#34d399',fontWeight:700}}>{t.hits}/{t.total}</td>
                     <td style={{padding:'11px 12px',textAlign:'center',minWidth:110}}>
@@ -733,7 +743,7 @@ function TeamRankingsSection({ snapshots }) {
                     </td>
                     <td style={{padding:'11px 12px',textAlign:'center',color:'#9ca3af',fontSize:11}}>~{avgAg}</td>
                     <td style={{padding:'11px 12px',textAlign:'center',color:'#6b7280',fontSize:11}}>{estGoal.toLocaleString()}</td>
-                    <td style={{padding:'11px 12px',textAlign:'center',color:'#60a5fa',fontWeight:600}}>{avgXfer.toLocaleString()}</td>
+                    <td style={{padding:'11px 12px',textAlign:'center',color:'#60a5fa',fontWeight:600}}>{avgX.toLocaleString()}</td>
                   </tr>
                 )
               })}
@@ -1013,7 +1023,7 @@ export default function Dashboard() {
           <div className="fade-in">
             <div className="vteams-header"><h2 className="section-title" style={{marginBottom:0}}>Auto Warranty Garrett {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}</h2><span className="vteams-sub">{teamsSorted.length} teams · ranked by English xfers</span></div>
             {teamsSorted.length===0?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No data for {formatDateLabel(selectedDate)}.</div>:<div className="vteams-grid">{teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0} onSelect={handleTeamCardSelect}/>)}</div>}
-            <TeamRankingsSection snapshots={snapshots}/>
+            <TeamRankingsSection snapshots={snapshots} remoteDailyTotals={remoteDailyTotals}/>
             <MVPSection snapshots={snapshots} navigate={navigate}/>
           </div>
         ):activeTab==='asia'?(
