@@ -211,13 +211,11 @@ function parseTeamSheet(rows, config) {
   if (!rows||!Array.isArray(rows)||rows.length===0) return{agents:[],totals:{english:0,spanish:0,total:0,activeAgents:0}}
   const agentMap={}; let inOT=false,afterMainEnd=false,otColEn=-1,otColSp=-1
   const isOTRow=(row)=>{
-    for(let c=0;c<Math.min(row.length,6);c++){
-      const v=cellUpper(row[c]); if(!v||v.length>28)continue
-      if(v==='OT TAKERS')return true
-      // "{TEAM} OT" — "COLOMBIA OT", "MEXICO OT", "VENEZUELA OT", etc.
-      // uses includes to handle any spacing variant
-      if(v.includes(' OT')&&v.length<=24)return true
-      if(v.startsWith('OT ')&&v.length<=15)return true
+    // Check up to 8 cols — merged OT header can land in different columns
+    for(let c=0;c<Math.min(row.length,8);c++){
+      const v=cellUpper(row[c]); if(!v||v.length>30)continue
+      // Word-boundary match: "COLOMBIA OT", "MEXICO OT", "OT TAKERS", etc.
+      if(/\bOT\b/.test(v)&&v.length<=26)return true
     }
     return false
   }
@@ -446,8 +444,9 @@ function MVPSection({ snapshots, navigate }) {
       const sorted = [...agents].sort((a, b) => b.english - a.english)
       sorted.forEach((a, i) => {
         if (a.english === 0) return
-        if (!map[a.ext]) map[a.ext] = { name: a.name, team: teamId, ext: a.ext, top1: 0, top3: 0, totalEn: 0, days: 0 }
+        if (!map[a.ext]) map[a.ext] = { name: a.name, team: teamId, ext: a.ext, top1: 0, top3: 0, totalEn: 0, totalSp: 0, days: 0 }
         map[a.ext].totalEn += a.english
+        map[a.ext].totalSp = (map[a.ext].totalSp||0) + (a.spanish||0)
         map[a.ext].days += 1
         if (i === 0) { map[a.ext].top1 += 1; map[a.ext].top3 += 1 }
         else if (i <= 2) { map[a.ext].top3 += 1 }
@@ -470,10 +469,14 @@ function MVPSection({ snapshots, navigate }) {
     })
 
     const all = Object.values(map).filter(a => a.top3 > 0 || a.totalEn > 100)
-    all.sort((a, b) => b.top3 - a.top3 || b.totalEn - a.totalEn)
-    const top10 = all.slice(0, 10)
-    const goat  = all.sort((a, b) => b.totalEn - a.totalEn)[0] || null
-    return { top10, goat }
+    // Sort by #1 days first, then Top3, then Total EN
+    const sorted = [...all].sort((a, b) => b.top1 - a.top1 || b.top3 - a.top3 || b.totalEn - a.totalEn)
+    const top10  = sorted.slice(0, 10)
+    // GOAT by total english
+    const goat   = [...all].sort((a, b) => b.totalEn - a.totalEn)[0] || null
+    // Spanish GOAT
+    const goatSp = [...all].sort((a, b) => b.totalSp - a.totalSp)[0] || null
+    return { top10, goat, goatSp }
   }, [snapshots])
 
   if (!data.top10.length) return null
@@ -488,32 +491,45 @@ function MVPSection({ snapshots, navigate }) {
         <span style={{ fontSize:12, color:'#6b7280' }}>Ranked by Top 3 appearances · All-time</span>
       </div>
 
-      {/* GOAT card */}
-      {data.goat && (
-        <div style={{ background:'linear-gradient(135deg,rgba(249,115,22,0.12),rgba(251,191,36,0.06))', border:'1px solid rgba(249,115,22,0.3)', borderRadius:16, padding:'1rem 1.5rem', marginBottom:'1rem', display:'flex', alignItems:'center', gap:16, boxShadow:'0 0 30px rgba(249,115,22,0.1)' }}>
-          <div style={{ fontSize:28 }}>🐐</div>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:10, color:'#f97316', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:2 }}>All-Time Top English</div>
-            <div style={{ fontSize:18, fontWeight:800, color:'#f5f5f5', fontFamily:"'Sora',sans-serif", cursor:'pointer' }}
-              onClick={() => navigate(`/profile/${data.goat.ext}`)}>
-              {data.goat.name}
+      {/* GOAT cards row */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:'1rem' }}>
+        {data.goat && (
+          <div style={{ background:'linear-gradient(135deg,rgba(249,115,22,0.12),rgba(251,191,36,0.06))', border:'1px solid rgba(249,115,22,0.3)', borderRadius:16, padding:'1rem 1.5rem', display:'flex', alignItems:'center', gap:14, boxShadow:'0 0 30px rgba(249,115,22,0.08)' }}>
+            <div style={{ fontSize:26 }}>🐐</div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:10, color:'#f97316', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:2 }}>All-Time Top English</div>
+              <div style={{ fontSize:16, fontWeight:800, color:'#f5f5f5', fontFamily:"'Sora',sans-serif", cursor:'pointer', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} onClick={() => navigate(`/profile/${data.goat.ext}`)}>{data.goat.name}</div>
+              <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>{teamLabels[data.goat.team]||data.goat.team} · #{data.goat.ext}</div>
             </div>
-            <div style={{ fontSize:12, color:'#9ca3af', marginTop:2 }}>{teamLabels[data.goat.team] || data.goat.team} · #{data.goat.ext}</div>
+            <div style={{ textAlign:'right', flexShrink:0 }}>
+              <div style={{ fontSize:28, fontWeight:800, color:'#f97316', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.totalEn.toLocaleString()}</div>
+              <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>Total English</div>
+            </div>
+            <div style={{ textAlign:'right', flexShrink:0 }}>
+              <div style={{ fontSize:22, fontWeight:800, color:'#fbbf24', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.top1}</div>
+              <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>#1 Days</div>
+            </div>
           </div>
-          <div style={{ textAlign:'right' }}>
-            <div style={{ fontSize:32, fontWeight:800, color:'#f97316', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.totalEn.toLocaleString()}</div>
-            <div style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>Total English</div>
+        )}
+        {data.goatSp && (
+          <div style={{ background:'linear-gradient(135deg,rgba(52,211,153,0.1),rgba(16,185,129,0.04))', border:'1px solid rgba(52,211,153,0.25)', borderRadius:16, padding:'1rem 1.5rem', display:'flex', alignItems:'center', gap:14, boxShadow:'0 0 30px rgba(52,211,153,0.06)' }}>
+            <div style={{ fontSize:26 }}>🌟</div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:10, color:'#34d399', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:2 }}>All-Time Top Spanish</div>
+              <div style={{ fontSize:16, fontWeight:800, color:'#f5f5f5', fontFamily:"'Sora',sans-serif", cursor:'pointer', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} onClick={() => navigate(`/profile/${data.goatSp.ext}`)}>{data.goatSp.name}</div>
+              <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>{teamLabels[data.goatSp.team]||data.goatSp.team} · #{data.goatSp.ext}</div>
+            </div>
+            <div style={{ textAlign:'right', flexShrink:0 }}>
+              <div style={{ fontSize:28, fontWeight:800, color:'#34d399', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{(data.goatSp.totalSp||0).toLocaleString()}</div>
+              <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>Total Spanish</div>
+            </div>
+            <div style={{ textAlign:'right', flexShrink:0 }}>
+              <div style={{ fontSize:22, fontWeight:800, color:'#fbbf24', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goatSp.top1}</div>
+              <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>#1 Days</div>
+            </div>
           </div>
-          <div style={{ textAlign:'right' }}>
-            <div style={{ fontSize:24, fontWeight:800, color:'#fbbf24', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.top1}</div>
-            <div style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>#1 Days</div>
-          </div>
-          <div style={{ textAlign:'right' }}>
-            <div style={{ fontSize:24, fontWeight:800, color:'#34d399', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.top3}</div>
-            <div style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>Top 3</div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Top 10 table */}
       <div style={{ background:'rgba(18,22,31,0.85)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:16, overflow:'hidden' }}>
