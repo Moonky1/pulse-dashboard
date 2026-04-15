@@ -831,17 +831,18 @@ function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
     })
 
     // Also process remote agent snapshots (from other devices via Sheets)
+    // ONLY for dates NOT already covered by local snapshots (avoid double-counting)
     if (Array.isArray(agentSnapshotsRemote)) {
-      // Group by date to compute per-day rankings
+      const localDates = new Set(snapshots.map(s => s.date))
       const byDate = {}
       agentSnapshotsRemote.forEach(a => {
         if (!a.date || !a.ext) return
         const d = normalizeDate(a.date); if (!d) return
+        if (localDates.has(d)) return  // already counted from local snapshot
         if (!byDate[d]) byDate[d] = []
         byDate[d].push(a)
       })
       Object.values(byDate).forEach(agents => {
-        // Group by team for processSnapshot
         const byTeam = {}
         agents.forEach(a => {
           const tid = a.team || 'asia'
