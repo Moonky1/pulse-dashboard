@@ -203,7 +203,7 @@ const MEDALS = [E.medal1, E.medal2, E.medal3]
 
 const todayKey     = () => new Date().toISOString().slice(0,10)
 const colombiaHour = () => (new Date().getUTCHours()-5+24)%24
-const includeOT    = () => colombiaHour() >= 18
+const includeOT    = () => colombiaHour() >= 18 || colombiaHour() < 6
 const cellUpper    = (v) => (v||'').toString().toUpperCase().trim()
 
 function parseTeamSheet(rows, config) {
@@ -212,12 +212,12 @@ function parseTeamSheet(rows, config) {
   const agentMap={}; let inOT=false,afterMainEnd=false,otColEn=-1,otColSp=-1
   const isOTRow=(row)=>{
     for(let c=0;c<Math.min(row.length,6);c++){
-      const v=cellUpper(row[c]); if(!v||v.length>26)continue
+      const v=cellUpper(row[c]); if(!v||v.length>36)continue
       if(v==='OT TAKERS')return true
       // "COLOMBIA OT", "MEXICO OT", "VENEZUELA OT", etc.
       if(v.endsWith(' OT'))return true
       // "OT SHIFT" etc.
-      if(v.startsWith('OT ')&&v.length<=14)return true
+      if(v.startsWith('OT ')&&v.length<=32)return true
     }
     return false
   }
