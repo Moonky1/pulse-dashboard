@@ -64,9 +64,13 @@
 
 /* ── Center tabs ── */
 .pnav-center {
-  justify-self: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
+  pointer-events: auto;
+  z-index: 1;
 }
 
 .pnav-tabs {

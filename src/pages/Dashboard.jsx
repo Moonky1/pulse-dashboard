@@ -211,12 +211,12 @@ function parseTeamSheet(rows, config) {
   if (!rows||!Array.isArray(rows)||rows.length===0) return{agents:[],totals:{english:0,spanish:0,total:0,activeAgents:0}}
   const agentMap={}; let inOT=false,afterMainEnd=false,otColEn=-1,otColSp=-1
   const isOTRow=(row)=>{
-    for(let c=0;c<Math.min(row.length,3);c++){
+    for(let c=0;c<Math.min(row.length,6);c++){
       const v=cellUpper(row[c]); if(!v||v.length>28)continue
       if(v==='OT TAKERS')return true
-      // "{TEAM} OT" — "COLOMBIA OT", "MEXICO OT", "PHILIPPINES OT", etc.
-      if(v.endsWith(' OT')&&v.length<=22)return true
-      // "OT {short label}" e.g. "OT SHIFT"
+      // "{TEAM} OT" — "COLOMBIA OT", "MEXICO OT", "VENEZUELA OT", etc.
+      // uses includes to handle any spacing variant
+      if(v.includes(' OT')&&v.length<=24)return true
       if(v.startsWith('OT ')&&v.length<=15)return true
     }
     return false
@@ -268,7 +268,23 @@ const TEAMS_ORDER=['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL A
 const RANGES=[{label:'0',min:0,max:0,color:'#f87171'},{label:'1-4',min:1,max:4,color:'#fb923c'},{label:'5-9',min:5,max:9,color:'#fbbf24'},{label:'10-14',min:10,max:14,color:'#a3e635'},{label:'15-19',min:15,max:19,color:'#34d399'},{label:'20+',min:20,max:9999,color:'#22c55e'}]
 const SAT_GOALS={colombia:5,central:5,venezuela:5,philippines:10,mexico:5,asia:10}
 const getGoalForDate=(dateStr,baseGoal,teamId='asia')=>{try{const day=new Date(dateStr+'T12:00:00').getDay();if(day!==6)return baseGoal;return SAT_GOALS[teamId]??10}catch(e){return baseGoal}}
-const saveLocalSnapshot=(generalData,asiaData,teamsData={})=>{const key=`pulse_snap_${todayKey()}`;try{localStorage.setItem(key,JSON.stringify({generalData:generalData||[],asiaData:asiaData||[],teams:teamsData,savedAt:new Date().toISOString()}))}catch(e){}}
+const saveLocalSnapshot=(generalData,asiaData,teamsData={})=>{
+  const key=`pulse_snap_${todayKey()}`
+  try{
+    // Count total xfers in new data to avoid overwriting with cleaned sheet data
+    let newTotal=0
+    if(Array.isArray(generalData)){for(const row of generalData){const v=safeInt(row[5]);if(v>0)newTotal+=v}}
+    const existing=localStorage.getItem(key)
+    if(existing){
+      const prev=JSON.parse(existing)
+      let prevTotal=0
+      if(Array.isArray(prev.generalData)){for(const row of prev.generalData){const v=safeInt(row[5]);if(v>0)prevTotal+=v}}
+      // Keep existing if new data has significantly fewer xfers (supervisor cleaned sheet)
+      if(prevTotal>0&&newTotal<prevTotal*0.6){return}
+    }
+    localStorage.setItem(key,JSON.stringify({generalData:generalData||[],asiaData:asiaData||[],teams:teamsData,savedAt:new Date().toISOString()}))
+  }catch(e){}
+}
 const loadAllSnapshots=()=>{const snaps=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k?.startsWith('pulse_snap_')){try{const date=k.replace('pulse_snap_','');const data=JSON.parse(localStorage.getItem(k));snaps.push({date,generalData:Array.isArray(data.generalData)?data.generalData:[],asiaData:Array.isArray(data.asiaData)?data.asiaData:[],teams:data.teams||{},savedAt:data.savedAt})}catch(e){}}}return snaps.sort((a,b)=>b.date.localeCompare(a.date))}
 const formatDateLabel=(dateStr)=>{const today=todayKey(),yest=new Date();yest.setDate(yest.getDate()-1);const yKey=yest.toISOString().slice(0,10);if(dateStr===today)return'Today';if(dateStr===yKey)return'Yesterday';const[y,m,d]=dateStr.split('-');return`${d}/${m}/${y}`}
 
@@ -394,9 +410,9 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
     <div className="fade-in" onClick={()=>setMenuOpen(false)}>
       <div className="asia-header-row">
         <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <h2 className="section-title" style={{marginBottom:0}}>
-            <span style={{marginRight:6,verticalAlign:'middle'}}>{getTeamFlagElement(config.label,18)}</span>
-            {config.label} — Agent Detail
+          <h2 className="section-title" style={{marginBottom:0,fontSize:22,display:'flex',alignItems:'center',gap:8,justifyContent:'center'}}>
+            <span style={{verticalAlign:'middle'}}>{getTeamFlagElement(config.label,22)}</span>
+            {config.label}
             {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{dateLabel}</span>}
             {bulkMode&&<span style={{fontSize:11,background:'#f97316',color:'#fff',padding:'2px 8px',borderRadius:4,fontWeight:600}}>EDIT MODE</span>}
             {hasOvr&&!bulkMode&&<span style={{fontSize:11,background:'#1e2230',color:'#9ca3af',padding:'2px 8px',borderRadius:4,border:'0.5px solid #2a2d38'}}>✏️ edited</span>}
@@ -418,6 +434,128 @@ function TeamDetail({config,agents,dateLabel,isToday,canEdit,selectedDate,onOver
     </div>
   )
 }
+
+// ── MVP Section ──────────────────────────────────────────────────────────────
+function MVPSection({ snapshots, navigate }) {
+  const data = useMemo(() => {
+    // { ext -> { name, team, top1, top3, totalEn, appearances } }
+    const map = {}
+
+    const processAgents = (agents, teamId) => {
+      if (!agents || agents.length === 0) return
+      const sorted = [...agents].sort((a, b) => b.english - a.english)
+      sorted.forEach((a, i) => {
+        if (a.english === 0) return
+        if (!map[a.ext]) map[a.ext] = { name: a.name, team: teamId, ext: a.ext, top1: 0, top3: 0, totalEn: 0, days: 0 }
+        map[a.ext].totalEn += a.english
+        map[a.ext].days += 1
+        if (i === 0) { map[a.ext].top1 += 1; map[a.ext].top3 += 1 }
+        else if (i <= 2) { map[a.ext].top3 += 1 }
+      })
+    }
+
+    snapshots.forEach(snap => {
+      // Asia
+      if (snap.asiaData?.length) {
+        const { agents } = parseAsiaSheet(snap.asiaData)
+        processAgents(agents, 'asia')
+      }
+      // Teams
+      TEAM_SHEETS.forEach(t => {
+        const raw = snap.teams?.[t.id]
+        if (!raw?.length) return
+        const { agents } = parseTeamSheet(raw, t)
+        processAgents(agents, t.id)
+      })
+    })
+
+    const all = Object.values(map).filter(a => a.top3 > 0 || a.totalEn > 100)
+    all.sort((a, b) => b.top3 - a.top3 || b.totalEn - a.totalEn)
+    const top10 = all.slice(0, 10)
+    const goat  = all.sort((a, b) => b.totalEn - a.totalEn)[0] || null
+    return { top10, goat }
+  }, [snapshots])
+
+  if (!data.top10.length) return null
+
+  const teamColors = { asia:'#f97316', philippines:'#3b82f6', colombia:'#f59e0b', central:'#8b5cf6', mexico:'#10b981', venezuela:'#ef4444' }
+  const teamLabels = { ...TEAM_DISPLAY_NAMES, asia:'Asia' }
+
+  return (
+    <div style={{ marginTop:'2.5rem' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:'1.2rem' }}>
+        <h2 className="section-title" style={{ marginBottom:0 }}>🏆 Operation MVPs</h2>
+        <span style={{ fontSize:12, color:'#6b7280' }}>Ranked by Top 3 appearances · All-time</span>
+      </div>
+
+      {/* GOAT card */}
+      {data.goat && (
+        <div style={{ background:'linear-gradient(135deg,rgba(249,115,22,0.12),rgba(251,191,36,0.06))', border:'1px solid rgba(249,115,22,0.3)', borderRadius:16, padding:'1rem 1.5rem', marginBottom:'1rem', display:'flex', alignItems:'center', gap:16, boxShadow:'0 0 30px rgba(249,115,22,0.1)' }}>
+          <div style={{ fontSize:28 }}>🐐</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:10, color:'#f97316', textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:2 }}>All-Time Top English</div>
+            <div style={{ fontSize:18, fontWeight:800, color:'#f5f5f5', fontFamily:"'Sora',sans-serif", cursor:'pointer' }}
+              onClick={() => navigate(`/profile/${data.goat.ext}`)}>
+              {data.goat.name}
+            </div>
+            <div style={{ fontSize:12, color:'#9ca3af', marginTop:2 }}>{teamLabels[data.goat.team] || data.goat.team} · #{data.goat.ext}</div>
+          </div>
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontSize:32, fontWeight:800, color:'#f97316', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.totalEn.toLocaleString()}</div>
+            <div style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>Total English</div>
+          </div>
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontSize:24, fontWeight:800, color:'#fbbf24', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.top1}</div>
+            <div style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>#1 Days</div>
+          </div>
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontSize:24, fontWeight:800, color:'#34d399', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{data.goat.top3}</div>
+            <div style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>Top 3</div>
+          </div>
+        </div>
+      )}
+
+      {/* Top 10 table */}
+      <div style={{ background:'rgba(18,22,31,0.85)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:16, overflow:'hidden' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+          <thead>
+            <tr style={{ background:'rgba(0,0,0,0.3)' }}>
+              {['#','Agent','Team','Top 3','#1 Days','Total EN','Avg EN/day'].map((h,i) => (
+                <th key={i} style={{ padding:'10px 14px', textAlign:i>2?'center':'left', fontSize:10, fontWeight:700, color:'#4b5563', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid rgba(255,255,255,0.05)', whiteSpace:'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.top10.map((a, i) => {
+              const accent = teamColors[a.team] || '#f97316'
+              const rankStyle = i===0?{color:'#FFD700',fontWeight:700}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#4b5563'}
+              const avg = a.days > 0 ? (a.totalEn / a.days).toFixed(1) : '—'
+              return (
+                <tr key={a.ext} style={{ borderBottom:'1px solid rgba(255,255,255,0.04)' }}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <td style={{ padding:'11px 14px', ...rankStyle }}>#{i+1}</td>
+                  <td style={{ padding:'11px 14px' }}>
+                    <span style={{ fontWeight:600, color:'#f1f5f9', cursor:'pointer' }} onClick={() => navigate(`/profile/${a.ext}`)}>{a.name}</span>
+                    <span style={{ color:'#4b5563', fontSize:11, marginLeft:6 }}>#{a.ext}</span>
+                  </td>
+                  <td style={{ padding:'11px 14px' }}>
+                    <span style={{ fontSize:11, background:`${accent}18`, border:`1px solid ${accent}40`, color:accent, padding:'2px 8px', borderRadius:5, fontWeight:600 }}>{teamLabels[a.team]||a.team}</span>
+                  </td>
+                  <td style={{ padding:'11px 14px', textAlign:'center', color:'#34d399', fontWeight:700 }}>{a.top3}</td>
+                  <td style={{ padding:'11px 14px', textAlign:'center', color:'#fbbf24', fontWeight:700 }}>{a.top1}</td>
+                  <td style={{ padding:'11px 14px', textAlign:'center', color:'#60a5fa', fontWeight:700 }}>{a.totalEn.toLocaleString()}</td>
+                  <td style={{ padding:'11px 14px', textAlign:'center', color:'#9ca3af' }}>{avg}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 
 export default function Dashboard() {
   const canvasRef=useRef(null),introHideRef=useRef(null),introClearRef=useRef(null)
@@ -448,6 +586,31 @@ export default function Dashboard() {
 
   const playIntroChime=useCallback(()=>{try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;const ctx=new AudioCtx();const makeTone=(freq,start,duration,gainValue)=>{const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(freq,start);gain.gain.setValueAtTime(0.0001,start);gain.gain.exponentialRampToValueAtTime(gainValue,start+0.02);gain.gain.exponentialRampToValueAtTime(0.0001,start+duration);osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(start+duration+0.02)};const now=ctx.currentTime;makeTone(392,now,0.22,0.07);makeTone(523.25,now+0.11,0.28,0.06);makeTone(659.25,now+0.24,0.38,0.05);setTimeout(()=>{try{ctx.close()}catch{}},1200)}catch{}},[])
   useEffect(()=>{try{const raw=localStorage.getItem('pulse_intro');if(!raw)return;const parsed=JSON.parse(raw);if(!parsed?.name||!parsed?.mode){localStorage.removeItem('pulse_intro');return};const age=Date.now()-(parsed.at||0);if(age>15000){localStorage.removeItem('pulse_intro');return};setIntroData({name:parsed.name,mode:parsed.mode});setIntroLeaving(false);localStorage.removeItem('pulse_intro');playIntroChime();introHideRef.current=setTimeout(()=>setIntroLeaving(true),1900);introClearRef.current=setTimeout(()=>{setIntroData(null);setIntroLeaving(false)},2700)}catch{localStorage.removeItem('pulse_intro')};return()=>{if(introHideRef.current)clearTimeout(introHideRef.current);if(introClearRef.current)clearTimeout(introClearRef.current)}},[playIntroChime])
+
+  // ── Sound when agent hits English goal ────────────────────────────────────
+  const playGoalSound  = useCallback(() => {
+    try {
+      const ACtx = window.AudioContext || window.webkitAudioContext
+      if (!ACtx) return
+      const ctx = new ACtx()
+      const now = ctx.currentTime
+      const tone = (freq, start, dur, vol) => {
+        const o = ctx.createOscillator(), g = ctx.createGain()
+        o.type = 'sine'; o.frequency.value = freq
+        g.gain.setValueAtTime(0.001, start)
+        g.gain.exponentialRampToValueAtTime(vol, start + 0.01)
+        g.gain.exponentialRampToValueAtTime(0.001, start + dur)
+        o.connect(g); g.connect(ctx.destination)
+        o.start(start); o.stop(start + dur + 0.05)
+      }
+      tone(523, now,      0.12, 0.06)
+      tone(659, now+0.10, 0.14, 0.07)
+      tone(784, now+0.21, 0.22, 0.08)
+      setTimeout(() => { try { ctx.close() } catch {} }, 800)
+    } catch {}
+  }, [])
+
+
 
   const {asiaAgents,asiaTotals}=(()=>{if(isHistDate&&histParsed)return{asiaAgents:histParsed.agents,asiaTotals:histParsed.totals};const{agents,totals}=parseAsiaSheet(asiaDataRaw);return{asiaAgents:agents,asiaTotals:totals}})()
   const asiaAgentsFinal=(()=>{void overridesTick;const ovr=JSON.parse(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'))||'{}');let agents=asiaAgents.map(a=>ovr[a.ext]?{...a,...ovr[a.ext]}:a);if(bulkEditMode&&Object.keys(bulkEdits).length>0)agents=agents.map(a=>{if(!bulkEdits[a.ext])return a;const en=parseInt(bulkEdits[a.ext].english),sp=parseInt(bulkEdits[a.ext].spanish);return{...a,english:isNaN(en)?a.english:en,spanish:isNaN(sp)?a.spanish:sp,total:(isNaN(en)?a.english:en)+(isNaN(sp)?a.spanish:sp)}});return agents})()
@@ -486,6 +649,18 @@ export default function Dashboard() {
   const showAsiaEditBtn=!isToday&&canEdit,currentTeamConfig=TEAM_SHEETS.find(t=>t.id===activeTab),needsRemoteLoad=!isToday&&!isHistDate&&currentTeamConfig&&!(activeSnap?.teams?.[currentTeamConfig?.id]?.length>0)&&remoteTeamAgents[`${selectedDate}_${currentTeamConfig?.id}`]===undefined
   const handleTeamCardSelect=useCallback((teamId)=>{setActiveTab(teamId);window.scrollTo({top:0,behavior:'smooth'})},[])
 
+  // Trigger goal sound when Asia agent crosses threshold (live data only)
+  const prevAgentGoals = useRef({})
+  useEffect(() => {
+    if (!isToday || !asiaAgentsFinal.length) return
+    const prev = prevAgentGoals.current
+    let anyNew = false
+    asiaAgentsFinal.forEach(a => { if (!(prev[a.ext] >= goal) && a.english >= goal) anyNew = true })
+    if (anyNew) playGoalSound()
+    const next = {}; asiaAgentsFinal.forEach(a => { next[a.ext] = a.english }); prevAgentGoals.current = next
+  }, [asiaAgentsFinal])
+
+
   return(
     <div className="dash-root" onClick={()=>setEditMenuOpen(false)}>
       <canvas ref={canvasRef} className="dash-trail-canvas"/>
@@ -516,6 +691,7 @@ export default function Dashboard() {
           <div className="fade-in">
             <div className="vteams-header"><h2 className="section-title" style={{marginBottom:0}}>Auto Warranty Garrett {isToday?<span className="live-badge">LIVE</span>:<span className="date-badge">{formatDateLabel(selectedDate)}</span>}</h2><span className="vteams-sub">{teamsSorted.length} teams · ranked by English xfers</span></div>
             {teamsSorted.length===0?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No data for {formatDateLabel(selectedDate)}.</div>:<div className="vteams-grid">{teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0} onSelect={handleTeamCardSelect}/>)}</div>}
+            <MVPSection snapshots={snapshots} navigate={navigate}/>
           </div>
         ):activeTab==='asia'?(
           <div className="fade-in">
