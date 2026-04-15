@@ -128,65 +128,72 @@ async function backfillHistoricalDataToSheets() {
   const snaps = loadAllSnapshots()
   if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }
 
-  const BATCH = 40  // 40 agents per request keeps payload ~4KB
+  const BATCH = 40
 
   for (const snap of snaps) {
     try {
       const allAgents = [], tt = []
+      const addedExts = new Set()  // dedup within same snapshot
 
       for (const t of TEAM_SHEETS) {
         const raw = snap.teams?.[t.id]; if (!raw?.length) continue
         const { agents, totals } = parseTeamSheet(raw, t)
-        agents.forEach(a => allAgents.push({
-          ext: a.ext, name: a.name,
-          english: a.english, spanish: a.spanish||0, total: a.total, team: t.id
-        }))
+        agents.forEach(a => {
+          if (addedExts.has(a.ext)) return
+          addedExts.add(a.ext)
+          allAgents.push({ ext:a.ext, name:a.name, english:a.english, spanish:a.spanish||0, total:a.total, team:t.id })
+        })
         if (totals.total > 0) tt.push({
-          id: t.id, name: TEAM_DISPLAY_NAMES[t.id]||t.id,
-          english: totals.english, spanish: totals.spanish,
-          total: totals.total, agents: agents.length, noSpanish: !t.hasSp
+          id:t.id, name:TEAM_DISPLAY_NAMES[t.id]||t.id,
+          english:totals.english, spanish:totals.spanish,
+          total:totals.total, agents:agents.length, noSpanish:!t.hasSp
         })
       }
+
+      // Asia
       if (snap.asiaData?.length) {
         const { agents, totals } = parseAsiaSheet(snap.asiaData)
-        agents.forEach(a => allAgents.push({
-          ext: a.ext, name: a.name,
-          english: a.english, spanish: a.spanish||0, total: a.total, team: 'asia'
-        }))
-        if (totals.total > 0) tt.push({
-          id: 'asia', name: 'Asia',
-          english: totals.english, spanish: totals.spanish,
-          total: totals.total, agents: agents.length, noSpanish: false
+        agents.forEach(a => {
+          if (addedExts.has(a.ext)) return
+          addedExts.add(a.ext)
+          allAgents.push({ ext:a.ext, name:a.name, english:a.english, spanish:a.spanish||0, total:a.total, team:'asia' })
         })
+        if (totals.total > 0) tt.push({ id:'asia', name:'Asia', english:totals.english, spanish:totals.spanish, total:totals.total, agents:agents.length, noSpanish:false })
       }
-      if (!allAgents.length) continue
 
-      // ── Append in batches — NO clear step (deleteRow is too slow in Apps Script) ──
-      // getAgentSnapshotsFromSheet deduplicates by date so duplicates are harmless
-      for (let b = 0; b < allAgents.length; b += BATCH) {
-        const batch = allAgents.slice(b, b + BATCH)
-        await fetch(SCRIPT_URL, {
-          method: 'POST', mode: 'no-cors',
-          body: new URLSearchParams({
-            action: 'appendAgentSnapshots',
-            date:   snap.date,
-            snapshots: JSON.stringify(batch)
+      // Philippines fallback: extract from generalData summary row
+      if (!allAgents.some(a => a.team === 'philippines') && snap.generalData?.length) {
+        for (const row of snap.generalData) {
+          const name = (row[0]||'').toUpperCase().trim()
+          if (name.includes('PHILIPPINES')) {
+            const en = safeInt(row[3])
+            const agents = safeInt(row[2])
+            if (en > 0 && !tt.find(t=>t.id==='philippines')) {
+              tt.push({ id:'philippines', name:'Philippines', english:en, spanish:0, total:en, agents, noSpanish:true })
+            }
+            break
+          }
+        }
+      }
+
+      if (!allAgents.length && !tt.length) continue
+
+      // Append agents in batches
+      if (allAgents.length > 0) {
+        for (let b = 0; b < allAgents.length; b += BATCH) {
+          await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors',
+            body: new URLSearchParams({ action:'appendAgentSnapshots', date:snap.date, snapshots:JSON.stringify(allAgents.slice(b,b+BATCH)) })
           })
-        })
-        await new Promise(r => setTimeout(r, 400))
+          await new Promise(r => setTimeout(r, 350))
+        }
       }
 
-      // ── Save daily totals (for Share% in profiles) ──
+      // Save daily totals
       if (tt.length > 0) {
-        await fetch(SCRIPT_URL, {
-          method: 'POST', mode: 'no-cors',
-          body: new URLSearchParams({
-            action: 'saveDailyTotals',
-            date: snap.date,
-            teams: JSON.stringify(tt)
-          })
+        await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors',
+          body: new URLSearchParams({ action:'saveDailyTotals', date:snap.date, teams:JSON.stringify(tt) })
         })
-        await new Promise(r => setTimeout(r, 400))
+        await new Promise(r => setTimeout(r, 350))
       }
 
     } catch(e) {}
