@@ -572,7 +572,7 @@ function TeamRankingsSection({ snapshots, remoteDailyTotals }) {
         }
         // Also check remote daily totals for this date
         const remote = remoteByDate[date]?.find(r=>r.id===t.id||r.name===TEAM_DISPLAY_NAMES[t.id])
-        if (remote && (!en||en<remote.english)) { en=remote.english; sp=sp||remote.spanish||0; tot=tot||remote.total||en+sp }
+        if (remote) { if (!en||en<remote.english){en=remote.english;sp=sp||remote.spanish||0;tot=tot||remote.total||en+sp}; if(!agCnt&&remote.agents)agCnt=remote.agents }
         addTeam(t.id, TEAM_DISPLAY_NAMES[t.id]||t.id, en, sp, tot, agCnt)
       })
 
@@ -588,15 +588,18 @@ function TeamRankingsSection({ snapshots, remoteDailyTotals }) {
           if(gd){if(!agCnt)agCnt=gd.agents;if(!en)en=gd.en;if(!sp)sp=gd.sp;if(!tot)tot=gd.tot}
         }
         const remote=remoteByDate[date]?.find(r=>r.id==='asia')
-        if(remote&&(!en||en<remote.english)){en=remote.english;sp=sp||remote.spanish||0;tot=tot||remote.total||en+sp}
+        if(remote){if(!en||en<remote.english){en=remote.english;sp=sp||remote.spanish||0;tot=tot||remote.total||en+sp};if(!agCnt&&remote.agents)agCnt=remote.agents}
         addTeam('asia','Asia',en,sp,tot,agCnt)
       }
 
       if (!dayTeams.length) return
-      // Philippines always sorts first if present and has English > 0
+      // Philippines always #1 (historically always leads in English)
+      // Only override if another team somehow has 0 Philippines data that day
       dayTeams.sort((a,b) => {
-        if (a.id==='philippines'&&a.english>0) return -1
-        if (b.id==='philippines'&&b.english>0) return 1
+        const aPhil = a.id==='philippines' && a.english>0
+        const bPhil = b.id==='philippines' && b.english>0
+        if (aPhil && !bPhil) return -1
+        if (bPhil && !aPhil) return 1
         return b.english - a.english
       })
       dayTeams.forEach((t,i)=>{
@@ -830,26 +833,35 @@ function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
       })
     })
 
-    // Also process remote agent snapshots (from other devices via Sheets)
-    // ONLY for dates NOT already covered by local snapshots (avoid double-counting)
-    if (Array.isArray(agentSnapshotsRemote)) {
+    // Process remote agent snapshots — deduplicate by date+ext (keep max English)
+    // Skip dates already in local snapshots to avoid double-counting
+    if (Array.isArray(agentSnapshotsRemote) && agentSnapshotsRemote.length > 0) {
       const localDates = new Set(snapshots.map(s => s.date))
-      const byDate = {}
+
+      // Step 1: deduplicate — for same date+ext keep max english value
+      const dedupMap = {}  // key: "date|ext"
       agentSnapshotsRemote.forEach(a => {
         if (!a.date || !a.ext) return
         const d = normalizeDate(a.date); if (!d) return
-        if (localDates.has(d)) return  // already counted from local snapshot
-        if (!byDate[d]) byDate[d] = []
-        byDate[d].push(a)
+        if (localDates.has(d)) return  // covered by local snapshot
+        const key = `${d}|${a.ext}`
+        const en = Number(a.english)||0, sp = Number(a.spanish)||0
+        if (!dedupMap[key] || en > dedupMap[key].english) {
+          dedupMap[key] = { date:d, ext:a.ext, name:a.name||a.ext, english:en, spanish:sp, total:en+sp, team:a.team||'asia' }
+        }
       })
-      Object.values(byDate).forEach(agents => {
-        const byTeam = {}
-        agents.forEach(a => {
-          const tid = a.team || 'asia'
-          if (!byTeam[tid]) byTeam[tid] = []
-          byTeam[tid].push({ ext:a.ext, name:a.name||a.ext, english:Number(a.english)||0, spanish:Number(a.spanish)||0, total:Number(a.total)||0 })
-        })
-        Object.entries(byTeam).forEach(([tid, agts]) => processSnapshot(agts, tid))
+
+      // Step 2: group by date → team → agents
+      const byDate = {}
+      Object.values(dedupMap).forEach(a => {
+        if (!byDate[a.date]) byDate[a.date] = {}
+        if (!byDate[a.date][a.team]) byDate[a.date][a.team] = []
+        byDate[a.date][a.team].push(a)
+      })
+
+      // Step 3: process each date
+      Object.values(byDate).forEach(teams => {
+        Object.entries(teams).forEach(([tid, agts]) => processSnapshot(agts, tid))
       })
     }
 
