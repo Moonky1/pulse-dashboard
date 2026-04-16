@@ -241,12 +241,20 @@ async function loadAgentSnapshotsFromCSV(ext) {
       if (String(row[1]).trim() !== String(ext).trim()) continue
       const date = normalizeDate(row[0])
       if (!date || !isValidIsoDate(date)) continue
+      const rawTeam = String(row[6]||'').trim()
+      const VTEAMS  = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
+      const extStr2 = String(ext)
       byDate[date] = {
         date,
         name:    row[2] || `Agent #${ext}`,
         english: parseInt(row[3]) || 0,
         spanish: parseInt(row[4]) || 0,
         total:   parseInt(row[5]) || 0,
+        team:    VTEAMS.has(rawTeam) ? rawTeam : (
+          extStr2.startsWith('1')?'philippines':extStr2.startsWith('2')?'colombia':
+          extStr2.startsWith('3')?'asia':extStr2.startsWith('4')?'central':
+          extStr2.startsWith('5')?'mexico':extStr2.startsWith('6')?'venezuela':'asia'
+        ),
         rank:    null,
         source:  'csv'
       }

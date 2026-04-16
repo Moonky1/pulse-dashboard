@@ -371,13 +371,18 @@ function parseTeamSheet(rows, config) {
     return false
   }
   const isEndRow=(row)=>{for(let c=0;c<Math.min(row.length,3);c++){const v=cellUpper(row[c]);if(v.length<3)continue;if(v.includes('AGENT')&&(v.includes('LOGGED')||v.includes('LOG IN')))return true;if(v.includes('TOTAL')&&v.includes('TRANSFER'))return true}return false}
+  // Capture footer total when end row fires
+  const captureFooter=(row)=>{
+    const en=safeInt(row[colEn]),sp=colSp!=null?safeInt(row[colSp]):0
+    if(en>0||sp>0)agentMap['__FOOTER__']={ext:'__FOOTER__',name:'__FOOTER__',english:en,spanish:sp,total:en+sp}
+  }
   const isSkipRow=(u)=>(u.includes('TOTAL')&&u.includes('TRANSFER'))||u.includes('THIS HOUR')||u.includes('THIS OUR')||u.includes('HOURLY')||u.includes('ON SITE')||u.includes('WEEKLY')
   const SKIP=new Set(['USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR','MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT','ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT','AGENTS','NEW AGENTS'])
   for(let i=0;i<rows.length;i++){
     const row=rows[i];if(!Array.isArray(row))continue
     const cell0=(row[0]||'').toString().trim(),cell0U=cell0.toUpperCase().trim()
     if(!inOT&&isOTRow(row)){if(!includeOT())break;inOT=true;afterMainEnd=false;otColEn=-1;otColSp=-1;continue}
-    if(!inOT&&isEndRow(row)){if(!includeOT())break;afterMainEnd=true;continue}
+    if(!inOT&&isEndRow(row)){captureFooter(row);if(!includeOT())break;afterMainEnd=true;continue}
     if(afterMainEnd&&!inOT)continue
     if(inOT&&otColEn<0){const hdrs=row.map(c=>(c||'').toString().toUpperCase().trim());if(hasSp){const ei=hdrs.findIndex(h=>h==='ENGLISH'),si=hdrs.findIndex(h=>h==='SPANISH');if(ei>=0||si>=0){otColEn=ei>=0?ei:colEn;otColSp=si>=0?si:(colSp!=null?colSp:-1);continue}}else{const ei=hdrs.findIndex(h=>h==='ENGLISH'||h==='TRANSFER'||h==='TRANSFERS'||h==='TOTAL XFERS'||h==='XFERS'||h==='XFER');if(ei>=0){otColEn=ei;otColSp=-1;continue}}const ck=parseInt((row[1]||'').toString().replace(/,/g,''));if(ck>=1000&&ck<=9999&&String(ck).startsWith(extStart)){otColEn=colEn;otColSp=colSp!=null?colSp:-1}else continue}
     if(inOT&&isEndRow(row)){const otAC=Object.values(agentMap).filter(a=>a._fromOT).length;if(otColEn>=0&&otAC===0){const en=safeInt(row[otColEn]),sp=otColSp>=0?safeInt(row[otColSp]):0;if(en>0||sp>0)agentMap['__OT__']={name:'__OT__',ext:'__OT__',english:en,spanish:sp,total:en+sp,_fromOT:true}};break}
@@ -445,12 +450,16 @@ function parseTeamSheet(rows, config) {
     }
   }
   const allEntries=Object.values(agentMap)
-  const agents=allEntries.filter(a=>a.ext!=='__OT__'&&a.ext!=='__MAIN_TOTAL__').map(a=>{const{_fromOT,...rest}=a;return rest})
+  const agents=allEntries.filter(a=>a.ext!=='__OT__'&&a.ext!=='__MAIN_TOTAL__'&&a.ext!=='__FOOTER__').map(a=>{const{_fromOT,...rest}=a;return rest})
   const agentEn=agents.reduce((s,a)=>s+a.english,0)
   const agentSp=agents.reduce((s,a)=>s+a.spanish,0)
   const otEntry=agentMap['__OT__']
-  const en=agentEn+(otEntry?.english||0)
-  const sp=agentSp+(otEntry?.spanish||0)
+  const footerEntry=agentMap['__FOOTER__']
+  // Use footer total when it's higher (catches agents skipped by parser)
+  const baseEn=footerEntry&&footerEntry.english>agentEn?footerEntry.english:agentEn
+  const baseSp=footerEntry&&footerEntry.spanish>agentSp?footerEntry.spanish:agentSp
+  const en=baseEn+(otEntry?.english||0)
+  const sp=baseSp+(otEntry?.spanish||0)
   return{agents,totals:{english:en,spanish:sp,total:en+sp,activeAgents:agents.length}}
 }
 
@@ -1192,13 +1201,22 @@ export default function Dashboard() {
           const rows = parseCSV(text).slice(1)
           // Deduplicate: per date+ext keep max english
           const snapDedup = {}
+          const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
           rows.forEach(r => {
             if (!r[0] || !r[1]) return
             const d = normalizeDate(r[0]); if (!d) return
             const key = `${d}|${String(r[1]).trim()}`
             const en = Number(r[3])||0, sp = Number(r[4])||0
+            // Detect team from column 6 (new schema) or infer from ext prefix
+            const rawTeam = String(r[6]||'').trim()
+            const ext1 = String(r[1]).trim()
+            let team = VALID_TEAMS.has(rawTeam) ? rawTeam : (
+              ext1.startsWith('1')?'philippines':ext1.startsWith('2')?'colombia':
+              ext1.startsWith('3')?'asia':ext1.startsWith('4')?'central':
+              ext1.startsWith('5')?'mexico':ext1.startsWith('6')?'venezuela':'asia'
+            )
             if (!snapDedup[key] || en > (snapDedup[key].english||0))
-              snapDedup[key] = {date:d, ext:String(r[1]).trim(), name:r[2]||'', english:en, spanish:sp, total:en+sp, team:r[6]||'asia'}
+              snapDedup[key] = {date:d, ext:ext1, name:r[2]||'', english:en, spanish:sp, total:en+sp, team}
           })
           agents = Object.values(snapDedup)
         }
