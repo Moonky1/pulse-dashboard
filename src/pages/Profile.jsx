@@ -304,12 +304,15 @@ async function loadAgentData(ext) {
 
   if (weeklyTeam) {
     try {
+      // Pass ALL known dates (local + CSV + endpoint) so weekly only fills gaps
       const weeklyRecs = await fetchWeeklyForAgent(ext, weeklyTeam, knownDatesForWeekly)
+      let added = 0
       weeklyRecs.forEach(r => {
         const d = normalizeDate(r.date)
-        if (d && !knownDatesForWeekly.has(d)) {
-          merged.push({ ...r, date: d })
+        if (d && isValidIsoDate(d) && !knownDatesForWeekly.has(d)) {
+          merged.push({ ...r, date: d, source: 'weekly' })
           knownDatesForWeekly.add(d)
+          added++
         }
       })
     } catch(e) {}

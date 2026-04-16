@@ -988,16 +988,45 @@ function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
       })
     })
 
-    // Remote AGENT_SNAPSHOTS — add dates not in local, or fill agents missing from local
+    // Dates covered by local snapshots — these WIN, no remote override
+    const localCoveredDates = new Set(Object.keys(mergedByDate))
+
+    // Remote data: split into AGENT_SNAPSHOTS (trusted) vs weekly sheets (supplementary)
     if (Array.isArray(agentSnapshotsRemote)) {
-      agentSnapshotsRemote.forEach(a => {
+      // Separate weekly-sheet records (they have a 'fromWeekly' flag set in loadAllRemoteAgents)
+      const snapRecords   = agentSnapshotsRemote.filter(a => !a.fromWeekly)
+      const weeklyRecords = agentSnapshotsRemote.filter(a => a.fromWeekly)
+
+      // AGENT_SNAPSHOTS: add missing agents on existing dates, or add entirely new dates
+      snapRecords.forEach(a => {
         if (!a.date || !a.ext) return
         const d = normalizeDate(a.date); if (!d) return
-        const en = Number(a.english)||0
+        const en = Number(a.english)||0, sp = Number(a.spanish)||0
+        if (localCoveredDates.has(d)) {
+          // Only fill agents NOT already in local snapshot for this date
+          if (!mergedByDate[d][a.ext])
+            mergedByDate[d][a.ext] = { name:a.name||a.ext, english:en, spanish:sp, team:a.team||'asia' }
+        } else {
+          // New date from another device
+          if (!mergedByDate[d]) mergedByDate[d] = {}
+          if (!mergedByDate[d][a.ext] || en > (mergedByDate[d][a.ext].english||0))
+            mergedByDate[d][a.ext] = { name:a.name||a.ext, english:en, spanish:sp, team:a.team||'asia' }
+        }
+      })
+
+      // Weekly sheets: ONLY add dates not covered by local OR AGENT_SNAPSHOTS
+      const allCoveredDates = new Set([
+        ...localCoveredDates,
+        ...snapRecords.map(a => normalizeDate(a.date)).filter(Boolean)
+      ])
+      weeklyRecords.forEach(a => {
+        if (!a.date || !a.ext) return
+        const d = normalizeDate(a.date); if (!d) return
+        if (allCoveredDates.has(d)) return  // skip — Pulse or AGENT_SNAPSHOTS has this date
+        const en = Number(a.english)||0, sp = Number(a.spanish)||0
         if (!mergedByDate[d]) mergedByDate[d] = {}
-        const cur = mergedByDate[d][a.ext]
-        if (!cur || en > cur.english)
-          mergedByDate[d][a.ext] = { name:a.name||a.ext, english:en, spanish:Number(a.spanish)||0, team:a.team||'asia' }
+        if (!mergedByDate[d][a.ext] || en > (mergedByDate[d][a.ext].english||0))
+          mergedByDate[d][a.ext] = { name:a.name||a.ext, english:en, spanish:sp, team:a.team||'asia' }
       })
     }
 
@@ -1172,7 +1201,12 @@ export default function Dashboard() {
         fetchWeeklySheetAgents('philippines', existingDates),
         fetchWeeklySheetAgents('venezuela',   existingDates),
       ])
-      weeklyResults.forEach(r => { if(r.status==='fulfilled') agents = agents.concat(r.value) })
+      weeklyResults.forEach(r => {
+        if(r.status==='fulfilled') {
+          // Mark as weekly-sheet data so MVPSection can prioritize correctly
+          agents = agents.concat(r.value.map(a => ({...a, fromWeekly: true})))
+        }
+      })
       setAgentSnapshotsRemote(agents)
     }
     loadAllRemoteAgents().catch(()=>{})
