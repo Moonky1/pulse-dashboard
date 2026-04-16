@@ -248,6 +248,9 @@ async function saveAgentSnapshotsToSheets(date, allAgents) {
   if(sessionStorage.getItem(cacheKey)===payload)return; sessionStorage.setItem(cacheKey,payload)
   try { const body=new URLSearchParams({action:'saveAgentSnapshots',date,snapshots:payload}); await fetch(SCRIPT_URL,{method:'POST',body,mode:'no-cors'}) } catch(e) {}
 }
+async function appendAgentSnapshotsToSheets(date, batch) {
+  try { const body=new URLSearchParams({action:'appendAgentSnapshots',date,snapshots:JSON.stringify(batch)}); await fetch(SCRIPT_URL,{method:'POST',body,mode:'no-cors'}) } catch(e) {}
+}
 async function saveDailyTotalsToSheets(date, teamRows) {
   const teams=teamRows.map(t=>({id:t.id||t.name.toLowerCase().replace(/\s+/g,'_'),name:t.name,english:t.english,spanish:t.spanish,total:t.total,agents:t.agents,noSpanish:t.noSpanish||false}))
   const payload=JSON.stringify(teams); const cacheKey=`pulse_totals_saved_${date}`; const lastSaved=sessionStorage.getItem(cacheKey)
@@ -262,7 +265,7 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
 // ── One-time backfill: push all local snapshots to Sheets ──────────────────
 // Runs once per device. Makes all agent history visible cross-device.
 async function backfillHistoricalDataToSheets() {
-  const DONE_KEY = 'pulse_backfill_v11'
+  const DONE_KEY = 'pulse_backfill_v12'
   if (localStorage.getItem(DONE_KEY)) return
   const snaps = loadAllSnapshots()
   if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }
