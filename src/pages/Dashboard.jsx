@@ -11,9 +11,9 @@ const SCRIPT_URL       = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnX
 
 // ── Weekly transfer sheets (historical agent data) ──────────────────────────
 const WEEKLY_SHEETS = {
-  asia:        { id:'1GHj5MCxNJLUBtBAAM9nS1WqIkahbaAMg7NLCDE57LQw', type:'eng_spa' },
-  philippines: { id:'15GCXWZnrJjI_9LJfqnoIvjavN8R8NWwaplr8d5Jjl_8', type:'total_only' },
-  venezuela:   { id:'1H9rfZUp5T3rvAu6C5mJZF3zXfQychNJopGYE8_LHt4k', type:'eng_spa'  },
+  asia:        { id:'1GHj5MCxNJLUBtBAAM9nS1WqIkahbaAMg7NLCDE57LQw', type:'eng_spa',    startDate:'2026-03-23' },
+  philippines: { id:'15GCXWZnrJjI_9LJfqnoIvjavN8R8NWwaplr8d5Jjl_8', type:'total_only', startDate:'2026-03-23' },
+  venezuela:   { id:'1H9rfZUp5T3rvAu6C5mJZF3zXfQychNJopGYE8_LHt4k', type:'eng_spa',    startDate:'2026-03-30' },
 }
 
 const HISTORY_DATES = [
@@ -120,6 +120,8 @@ async function fetchWeeklySheetAgents(teamId, existingDates) {
   for (const tab of tabs) {
     const startDate = parseTabStartDate(tab)
     if (!startDate) continue
+    // Skip weeks before this sheet's start date
+    if (cfg.startDate && startDate < cfg.startDate) continue
     // Skip entire week if all days already covered by Pulse snapshots
     const weekDates = Array.from({length:6},(_,i)=>{
       const d = new Date(startDate+'T12:00:00'); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10)
@@ -134,6 +136,13 @@ async function fetchWeeklySheetAgents(teamId, existingDates) {
 
       const rows = parseCSV(text)
       if (rows.length < 4) continue
+
+      // Validate: the title row should contain the expected start date month/year
+      // If Google returns wrong tab (tab not found → returns first tab), skip it
+      const titleRow = (rows[0]?.[0] || rows[1]?.[0] || '').toUpperCase()
+      const expectedMonth = new Date(startDate+'T12:00:00').toLocaleString('en-US',{month:'long'}).toUpperCase()
+      const expectedYear  = startDate.slice(0,4)
+      if (!titleRow.includes(expectedMonth) && !titleRow.includes(expectedYear)) continue
 
       // Find ENG/SPA header row dynamically
       let hRow = [], dataStartRow = 3

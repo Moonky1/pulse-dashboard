@@ -691,9 +691,9 @@ export default function Profile() {
     </div>
   )
 }const WEEKLY_SHEETS_PROFILE = {
-  asia:        { id:'1GHj5MCxNJLUBtBAAM9nS1WqIkahbaAMg7NLCDE57LQw', type:'eng_spa'   },
-  philippines: { id:'15GCXWZnrJjI_9LJfqnoIvjavN8R8NWwaplr8d5Jjl_8', type:'total_only' },
-  venezuela:   { id:'1H9rfZUp5T3rvAu6C5mJZF3zXfQychNJopGYE8_LHt4k', type:'eng_spa'   },
+  asia:        { id:'1GHj5MCxNJLUBtBAAM9nS1WqIkahbaAMg7NLCDE57LQw', type:'eng_spa',    startDate:'2026-03-23' },
+  philippines: { id:'15GCXWZnrJjI_9LJfqnoIvjavN8R8NWwaplr8d5Jjl_8', type:'total_only', startDate:'2026-03-23' },
+  venezuela:   { id:'1H9rfZUp5T3rvAu6C5mJZF3zXfQychNJopGYE8_LHt4k', type:'eng_spa',    startDate:'2026-03-30' },
 }
 const MONTH_MAP = {JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12}
 
@@ -734,6 +734,8 @@ async function fetchWeeklyForAgent(ext, teamId, existingDates) {
   for (const tab of tabs) {
     const startDate = parseWeekTabDate(tab)
     if (!startDate) continue
+    // Skip weeks before this sheet's data starts
+    if (cfg.startDate && startDate < cfg.startDate) continue
     const weekDates = Array.from({length:6},(_,i)=>{
       const d=new Date(startDate+'T12:00:00'); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10)
     })
@@ -745,6 +747,12 @@ async function fetchWeeklyForAgent(ext, teamId, existingDates) {
       const res = await fetch(url)
       const text = await res.text()
       if (!text || text.trim().startsWith('<!') || text.length < 20) continue
+
+      // Validate title row matches expected week (prevents using wrong tab when tab not found)
+      const firstLine = text.trim().split('\n')[0].toUpperCase()
+      const expMonth = new Date(startDate+'T12:00:00').toLocaleString('en-US',{month:'long'}).toUpperCase()
+      const expYear  = startDate.slice(0,4)
+      if (!firstLine.includes(expMonth) && !firstLine.includes(expYear)) continue
 
       const rows = text.trim().split('\n').map(row => {
         const result=[]; let cur=''; let inQ=false
