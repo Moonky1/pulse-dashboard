@@ -135,16 +135,18 @@ async function fetchWeeklySheetAgents(teamId, existingDates) {
       const rows = parseCSV(text)
       if (rows.length < 4) continue
 
-      // Find data start row: skip headers (first 3 rows typically)
-      // Row 0: title, Row 1: day headers, Row 2: col headers, Row 3+: agents
-      const dataStartRow = 3
+      // Find ENG/SPA header row dynamically
+      let hRow = [], dataStartRow = 3
+      for (let ri = 0; ri <= Math.min(4, rows.length-1); ri++) {
+        const row = rows[ri] || []
+        if (row.some(h => (h||'').toUpperCase().trim() === 'ENG' || (h||'').toUpperCase().includes('TOTAL XFER'))) {
+          hRow = row; dataStartRow = ri + 1; break
+        }
+      }
+      if (!hRow.length) { hRow = rows[2] || []; dataStartRow = 3 }
 
       if (cfg.type === 'total_only') {
-        // Philippines: A=agent, B=ext, D=Mon,E=Tue,F=Wed,G=Thu,H=Fri,I=Sat (idx 3-8)
-        // But need to detect actual column positions by scanning header row
-        let dayColStart = 3  // default col D
-        // Check row 2 for "TOTAL XFERS" positions
-        const hRow = rows[2] || []
+        let dayColStart = 3  // default
         const totalCols = []
         hRow.forEach((h,i) => { if ((h||'').toUpperCase().includes('TOTAL XFER')) totalCols.push(i) })
         if (totalCols.length >= 1) dayColStart = totalCols[0]
@@ -1145,7 +1147,17 @@ export default function Dashboard() {
         const text = await res.text()
         if (text && !text.startsWith('<!')) {
           const rows = parseCSV(text).slice(1)
-          rows.forEach(r => { if(r[0]&&r[1]) agents.push({date:r[0],ext:r[1],name:r[2],english:Number(r[3])||0,spanish:Number(r[4])||0,total:Number(r[5])||0,team:r[6]||'asia'}) })
+          // Deduplicate: per date+ext keep max english
+          const snapDedup = {}
+          rows.forEach(r => {
+            if (!r[0] || !r[1]) return
+            const d = normalizeDate(r[0]); if (!d) return
+            const key = `${d}|${String(r[1]).trim()}`
+            const en = Number(r[3])||0, sp = Number(r[4])||0
+            if (!snapDedup[key] || en > (snapDedup[key].english||0))
+              snapDedup[key] = {date:d, ext:String(r[1]).trim(), name:r[2]||'', english:en, spanish:sp, total:en+sp, team:r[6]||'asia'}
+          })
+          agents = Object.values(snapDedup)
         }
       } catch(e) {}
 

@@ -294,6 +294,27 @@ async function loadAgentData(ext) {
     }
   }
 
+  // Source 3: weekly sheets for Asia, Philippines, Venezuela
+  const knownDatesForWeekly = new Set(merged.map(r=>r.date).filter(Boolean))
+  const extStr = String(ext)
+  let weeklyTeam = null
+  if (extStr.startsWith('3')) weeklyTeam = 'asia'
+  else if (extStr.startsWith('1')) weeklyTeam = 'philippines'
+  else if (extStr.startsWith('6')) weeklyTeam = 'venezuela'
+
+  if (weeklyTeam) {
+    try {
+      const weeklyRecs = await fetchWeeklyForAgent(ext, weeklyTeam, knownDatesForWeekly)
+      weeklyRecs.forEach(r => {
+        const d = normalizeDate(r.date)
+        if (d && !knownDatesForWeekly.has(d)) {
+          merged.push({ ...r, date: d })
+          knownDatesForWeekly.add(d)
+        }
+      })
+    } catch(e) {}
+  }
+
   return merged
     .map(r => ({ ...r, date: normalizeDate(r.date) }))
     .filter(r => r.date && isValidIsoDate(r.date))
@@ -666,4 +687,113 @@ export default function Profile() {
       )}
     </div>
   )
+}const WEEKLY_SHEETS_PROFILE = {
+  asia:        { id:'1GHj5MCxNJLUBtBAAM9nS1WqIkahbaAMg7NLCDE57LQw', type:'eng_spa'   },
+  philippines: { id:'15GCXWZnrJjI_9LJfqnoIvjavN8R8NWwaplr8d5Jjl_8', type:'total_only' },
+  venezuela:   { id:'1H9rfZUp5T3rvAu6C5mJZF3zXfQychNJopGYE8_LHt4k', type:'eng_spa'   },
+}
+const MONTH_MAP = {JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12}
+
+function parseWeekTabDate(tabName) {
+  const s = tabName.trim().toUpperCase()
+  const m = s.match(/^([A-Z]+)\s+(\d+)\s*[-\u2013]\s*[A-Z]+\s+\d+\s+(\d{4})/)
+  if (!m) return null
+  const month = MONTH_MAP[m[1]], day = parseInt(m[2]), year = parseInt(m[3])
+  if (!month) return null
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+}
+
+function genWeekTabs(weeksBack=14) {
+  const MONS=['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER']
+  const tabs=[], now=new Date()
+  const d=now.getDay()
+  const mon=new Date(now); mon.setDate(now.getDate()-(d===0?6:d-1))
+  for(let w=0;w<weeksBack;w++){
+    const s=new Date(mon); s.setDate(mon.getDate()-w*7)
+    const e=new Date(s); e.setDate(s.getDate()+5)
+    const sm=MONS[s.getMonth()],sd1=String(s.getDate()).padStart(2,'0'),sd2=String(s.getDate())
+    const em=MONS[e.getMonth()],ed1=String(e.getDate()).padStart(2,'0'),ed2=String(e.getDate())
+    const yr=s.getFullYear()
+    tabs.push(`${sm} ${sd1} - ${em} ${ed1} ${yr}`)
+    tabs.push(`${sm} ${sd1} - ${em} ${ed2} ${yr}`)
+    tabs.push(`${sm} ${sd2} - ${em} ${ed1} ${yr}`)
+    tabs.push(`${sm} ${sd2} - ${em} ${ed2} ${yr}`)
+  }
+  return [...new Set(tabs)]
+}
+
+async function fetchWeeklyForAgent(ext, teamId, existingDates) {
+  const cfg = WEEKLY_SHEETS_PROFILE[teamId]
+  if (!cfg) return []
+  const extStr = String(ext), results = []
+  const tabs = genWeekTabs(14)
+
+  for (const tab of tabs) {
+    const startDate = parseWeekTabDate(tab)
+    if (!startDate) continue
+    const weekDates = Array.from({length:6},(_,i)=>{
+      const d=new Date(startDate+'T12:00:00'); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10)
+    })
+    // Skip week if all days already covered
+    if (weekDates.every(d => existingDates.has(d))) continue
+
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}&t=${Date.now()}`
+      const res = await fetch(url)
+      const text = await res.text()
+      if (!text || text.trim().startsWith('<!') || text.length < 20) continue
+
+      const rows = text.trim().split('\n').map(row => {
+        const result=[]; let cur=''; let inQ=false
+        for(let i=0;i<row.length;i++){if(row[i]==='"'){inQ=!inQ;continue}if(row[i]===','&&!inQ){result.push(cur.trim());cur='';continue}cur+=row[i]}
+        result.push(cur.trim()); return result
+      })
+      if (rows.length < 4) continue
+
+      // Find the ENG/SPA header row dynamically (usually row 2 or 3)
+      let hRow = [], dataStartRow = 3
+      for (let ri = 0; ri <= Math.min(4, rows.length-1); ri++) {
+        const row = rows[ri] || []
+        if (row.some(h => (h||'').toUpperCase().trim() === 'ENG')) {
+          hRow = row; dataStartRow = ri + 1; break
+        }
+      }
+      if (!hRow.length) hRow = rows[2] || []
+
+      if (cfg.type === 'total_only') {
+        const totalCols = []
+        hRow.forEach((h,i) => { if((h||'').toUpperCase().includes('TOTAL XFER'))totalCols.push(i) })
+        const dayColStart = totalCols.length >= 1 ? totalCols[0] : 3
+        for (let ri = dataStartRow; ri < rows.length; ri++) {
+          const row = rows[ri]
+          const rowExt = (row[1]||'').toString().replace(/,/g,'').trim()
+          if (rowExt !== extStr) continue
+          for (let di = 0; di < 6; di++) {
+            const date = weekDates[di]
+            if (existingDates.has(date)) continue
+            const xf = parseInt((row[dayColStart+di]||'').replace(/,/g,''))||0
+            if (xf > 0) results.push({date,ext:extStr,english:xf,spanish:0,total:xf,team:teamId})
+          }
+          break
+        }
+      } else {
+        const engIdx = hRow.findIndex(h=>(h||'').toUpperCase().trim()==='ENG')
+        const dayColStart = engIdx >= 0 ? engIdx : 2
+        for (let ri = dataStartRow; ri < rows.length; ri++) {
+          const row = rows[ri]
+          const rowExt = (row[1]||'').toString().replace(/,/g,'').trim()
+          if (rowExt !== extStr) continue
+          for (let di = 0; di < 6; di++) {
+            const date = weekDates[di]
+            if (existingDates.has(date)) continue
+            const en = parseInt((row[dayColStart+di*3]||'').replace(/,/g,''))||0
+            const sp = parseInt((row[dayColStart+di*3+1]||'').replace(/,/g,''))||0
+            if (en > 0 || sp > 0) results.push({date,ext:extStr,english:en,spanish:sp,total:en+sp,team:teamId})
+          }
+          break
+        }
+      }
+    } catch(e) {}
+  }
+  return results
 }
