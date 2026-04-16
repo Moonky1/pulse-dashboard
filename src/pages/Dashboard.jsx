@@ -9,6 +9,13 @@ const USERS_SHEET_ID   = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
 const SCRIPT_URL       = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 
+// ── Weekly transfer sheets (historical agent data) ──────────────────────────
+const WEEKLY_SHEETS = {
+  asia:        { id:'1GHj5MCxNJLUBtBAAM9nS1WqIkahbaAMg7NLCDE57LQw', type:'eng_spa' },
+  philippines: { id:'15GCXWZnrJjI_9LJfqnoIvjavN8R8NWwaplr8d5Jjl_8', type:'total_only' },
+  venezuela:   { id:'1H9rfZUp5T3rvAu6C5mJZF3zXfQychNJopGYE8_LHt4k', type:'eng_spa'  },
+}
+
 const HISTORY_DATES = [
   { isoDate:'2026-03-14', tab:'14032026', slackLabel:'14/03/2026' },
   { isoDate:'2026-03-16', tab:'16032026', slackLabel:'16/03/2026' },
@@ -63,6 +70,127 @@ function normalizeDate(raw) {
     const y = d.getUTCFullYear(), m = String(d.getUTCMonth()+1).padStart(2,'0'), day = String(d.getUTCDate()).padStart(2,'0')
     return `${y}-${m}-${day}`
   } catch(e) { return null }
+}
+
+// ── Weekly sheet parser ────────────────────────────────────────────────────
+const MONTH_NUMS = {JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12}
+
+function parseTabStartDate(tabName) {
+  // "MARCH 30 - APRIL 4 2026" or "APRIL 06 - APRIL 11 2026"
+  const s = tabName.trim().toUpperCase()
+  const m = s.match(/^([A-Z]+)\s+(\d+)\s*[-–]\s*[A-Z]+\s+\d+\s+(\d{4})/)
+  if (!m) return null
+  const month = MONTH_NUMS[m[1]], day = parseInt(m[2]), year = parseInt(m[3])
+  if (!month) return null
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+}
+
+function generateWeekTabNames(weeksBack = 14) {
+  // Generate Mon-Sat week tab names going back from today
+  const MONTHS = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER']
+  const tabs = []
+  const now = new Date()
+  // Find last Monday
+  const day = now.getDay()
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
+  for (let w = 0; w < weeksBack; w++) {
+    const start = new Date(monday)
+    start.setDate(monday.getDate() - w * 7)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 5)
+    const sm = MONTHS[start.getMonth()], sd = String(start.getDate()).padStart(2,'0')
+    const em = MONTHS[end.getMonth()],   ed = String(end.getDate()).padStart(2,'0')
+    const yr = start.getFullYear()
+    // Try both zero-padded and non-padded
+    tabs.push(`${sm} ${sd} - ${em} ${ed} ${yr}`)
+    tabs.push(`${sm} ${sd} - ${em} ${String(end.getDate())} ${yr}`)
+    tabs.push(`${sm} ${String(start.getDate())} - ${em} ${ed} ${yr}`)
+    tabs.push(`${sm} ${String(start.getDate())} - ${em} ${String(end.getDate())} ${yr}`)
+  }
+  return [...new Set(tabs)]
+}
+
+async function fetchWeeklySheetAgents(teamId, existingDates) {
+  const cfg = WEEKLY_SHEETS[teamId]
+  if (!cfg) return []
+  const results = []
+  const tabs = generateWeekTabNames(14)
+
+  for (const tab of tabs) {
+    const startDate = parseTabStartDate(tab)
+    if (!startDate) continue
+    // Skip entire week if all days already covered by Pulse snapshots
+    const weekDates = Array.from({length:6},(_,i)=>{
+      const d = new Date(startDate+'T12:00:00'); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10)
+    })
+    if (weekDates.every(d => existingDates.has(d))) continue
+
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}&t=${Date.now()}`
+      const res = await fetch(url)
+      const text = await res.text()
+      if (!text || text.trim().startsWith('<!') || text.trim().length < 20) continue
+
+      const rows = parseCSV(text)
+      if (rows.length < 4) continue
+
+      // Find data start row: skip headers (first 3 rows typically)
+      // Row 0: title, Row 1: day headers, Row 2: col headers, Row 3+: agents
+      const dataStartRow = 3
+
+      if (cfg.type === 'total_only') {
+        // Philippines: A=agent, B=ext, D=Mon,E=Tue,F=Wed,G=Thu,H=Fri,I=Sat (idx 3-8)
+        // But need to detect actual column positions by scanning header row
+        let dayColStart = 3  // default col D
+        // Check row 2 for "TOTAL XFERS" positions
+        const hRow = rows[2] || []
+        const totalCols = []
+        hRow.forEach((h,i) => { if ((h||'').toUpperCase().includes('TOTAL XFER')) totalCols.push(i) })
+        if (totalCols.length >= 1) dayColStart = totalCols[0]
+
+        for (let di = 0; di < 6; di++) {
+          const colIdx = dayColStart + di
+          const date = weekDates[di]
+          if (existingDates.has(date)) continue
+          for (let ri = dataStartRow; ri < rows.length; ri++) {
+            const row = rows[ri]
+            const name = (row[0]||'').trim()
+            const ext  = (row[1]||'').toString().replace(/,/g,'').trim()
+            if (!name || !ext || isNaN(parseInt(ext))) continue
+            if (name.toUpperCase().includes('TOTAL')) continue
+            const xfers = parseInt((row[colIdx]||'').toString().replace(/,/g,'')) || 0
+            if (xfers > 0) results.push({ date, ext, name, english:xfers, spanish:0, total:xfers, team:teamId })
+          }
+        }
+      } else {
+        // Asia / Venezuela: A=agent, B=ext, then ENG|SPA|TOTAL per day (3 cols each)
+        // Find first ENG column
+        let dayColStart = 2
+        const hRow = rows[2] || []
+        const engIdx = hRow.findIndex(h => (h||'').toUpperCase().trim() === 'ENG')
+        if (engIdx >= 0) dayColStart = engIdx
+
+        for (let di = 0; di < 6; di++) {
+          const engCol = dayColStart + di * 3
+          const spaCol = dayColStart + di * 3 + 1
+          const date   = weekDates[di]
+          if (existingDates.has(date)) continue
+          for (let ri = dataStartRow; ri < rows.length; ri++) {
+            const row = rows[ri]
+            const name = (row[0]||'').trim()
+            const ext  = (row[1]||'').toString().replace(/,/g,'').trim()
+            if (!name || !ext || isNaN(parseInt(ext))) continue
+            if (name.toUpperCase().includes('TOTAL')) continue
+            const en = parseInt((row[engCol]||'').toString().replace(/,/g,'')) || 0
+            const sp = parseInt((row[spaCol]||'').toString().replace(/,/g,'')) || 0
+            if (en > 0 || sp > 0) results.push({ date, ext, name, english:en, spanish:sp, total:en+sp, team:teamId })
+          }
+        }
+      }
+    } catch(e) {}
+  }
+  return results
 }
 
 const csvUrl = (sheetId, sheet) => `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}&t=${Date.now()}`
@@ -1007,15 +1135,35 @@ export default function Dashboard() {
     setSnapshots(loadAllSnapshots())
     loadDailyTotals()
     loadData().then(()=>backfillHistoricalDataToSheets())
-    // Load all agent snapshots from Sheets for cross-device MVP data
+    // Load agent snapshots: AGENT_SNAPSHOTS sheet + weekly transfer sheets
     const USERS_SID='1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
-    fetch(`https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=AGENT_SNAPSHOTS&t=${Date.now()}`)
-      .then(r=>r.text()).then(text=>{
-        if(!text||text.startsWith('<!'))return
-        const rows=parseCSV(text).slice(1) // skip header
-        const agents=rows.map(r=>({date:r[0],ext:r[1],name:r[2],english:Number(r[3])||0,spanish:Number(r[4])||0,total:Number(r[5])||0,team:r[6]||'asia'})).filter(a=>a.date&&a.ext)
-        setAgentSnapshotsRemote(agents)
-      }).catch(()=>{})
+    const loadAllRemoteAgents = async () => {
+      let agents = []
+      // Source 1: AGENT_SNAPSHOTS (from backfill)
+      try {
+        const res  = await fetch(`https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=AGENT_SNAPSHOTS&t=${Date.now()}`)
+        const text = await res.text()
+        if (text && !text.startsWith('<!')) {
+          const rows = parseCSV(text).slice(1)
+          rows.forEach(r => { if(r[0]&&r[1]) agents.push({date:r[0],ext:r[1],name:r[2],english:Number(r[3])||0,spanish:Number(r[4])||0,total:Number(r[5])||0,team:r[6]||'asia'}) })
+        }
+      } catch(e) {}
+
+      // Source 2: Weekly transfer sheets for Asia, Philippines, Venezuela
+      const localSnaps  = loadAllSnapshots()
+      const existingDates = new Set(localSnaps.map(s => s.date))
+      // Also mark dates already in AGENT_SNAPSHOTS
+      agents.forEach(a => { if(a.date) existingDates.add(normalizeDate(a.date)) })
+
+      const weeklyResults = await Promise.allSettled([
+        fetchWeeklySheetAgents('asia',        existingDates),
+        fetchWeeklySheetAgents('philippines', existingDates),
+        fetchWeeklySheetAgents('venezuela',   existingDates),
+      ])
+      weeklyResults.forEach(r => { if(r.status==='fulfilled') agents = agents.concat(r.value) })
+      setAgentSnapshotsRemote(agents)
+    }
+    loadAllRemoteAgents().catch(()=>{})
     const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000)
     return()=>{clearInterval(fullIv);clearInterval(fastIv)}
   },[])
