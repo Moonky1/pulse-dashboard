@@ -1203,14 +1203,15 @@ export default function Dashboard() {
 
       // Source 2: Weekly transfer sheets for Asia, Philippines, Venezuela
       const localSnaps  = loadAllSnapshots()
-      const existingDates = new Set(localSnaps.map(s => s.date))
-      // Also mark dates already in AGENT_SNAPSHOTS
-      agents.forEach(a => { if(a.date) existingDates.add(normalizeDate(a.date)) })
+      // Only use LOCAL dates for week-skipping (not AGENT_SNAPSHOTS dates)
+      // This ensures weekly sheets are fetched even when AGENT_SNAPSHOTS has partial data
+      // date+ext dedup in mergedByDate prevents actual double-counting
+      const localOnlyDates = new Set(localSnaps.map(s => s.date))
 
       const weeklyResults = await Promise.allSettled([
-        fetchWeeklySheetAgents('asia',        existingDates),
-        fetchWeeklySheetAgents('philippines', existingDates),
-        fetchWeeklySheetAgents('venezuela',   existingDates),
+        fetchWeeklySheetAgents('asia',        localOnlyDates),
+        fetchWeeklySheetAgents('philippines', localOnlyDates),
+        fetchWeeklySheetAgents('venezuela',   localOnlyDates),
       ])
       weeklyResults.forEach(r => {
         if(r.status==='fulfilled') {

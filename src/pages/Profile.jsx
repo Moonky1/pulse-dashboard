@@ -295,7 +295,11 @@ async function loadAgentData(ext) {
   }
 
   // Source 3: weekly sheets for Asia, Philippines, Venezuela
-  const knownDatesForWeekly = new Set(merged.map(r=>r.date).filter(Boolean))
+  // Only skip weeks already covered by LOCAL data (not CSV/endpoint data)
+  // This ensures cross-device visibility via weekly sheets
+  const knownDatesForWeekly = new Set(
+    merged.filter(r => r.source === 'local').map(r => r.date).filter(Boolean)
+  )
   const extStr = String(ext)
   let weeklyTeam = null
   if (extStr.startsWith('3')) weeklyTeam = 'asia'
