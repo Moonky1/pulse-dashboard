@@ -253,7 +253,7 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
 }
 // ── One-time backfill: push all local snapshots to Sheets ──────────────────
 async function backfillHistoricalDataToSheets() {
-  const DONE_KEY = 'pulse_backfill_v12'
+  const DONE_KEY = 'pulse_backfill_v13'
   if (localStorage.getItem(DONE_KEY)) return
   const snaps = loadAllSnapshots()
   if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }
