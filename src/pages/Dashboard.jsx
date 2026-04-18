@@ -258,7 +258,7 @@ async function backfillHistoricalDataToSheets() {
   const snaps = loadAllSnapshots()
   if (snaps.length === 0) { localStorage.setItem(DONE_KEY, '1'); return }
 
-  const BATCH = 40
+  const BATCH = 500
 
   for (const snap of snaps) {
     try {
@@ -313,7 +313,7 @@ async function backfillHistoricalDataToSheets() {
           await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors',
             body: new URLSearchParams({ action:'appendAgentSnapshots', date:snap.date, snapshots:JSON.stringify(allAgents.slice(b,b+BATCH)) })
           })
-          await new Promise(r => setTimeout(r, 350))
+          await new Promise(r => setTimeout(r, 3000))
         }
       }
 
@@ -321,7 +321,7 @@ async function backfillHistoricalDataToSheets() {
         await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors',
           body: new URLSearchParams({ action:'saveDailyTotals', date:snap.date, teams:JSON.stringify(tt) })
         })
-        await new Promise(r => setTimeout(r, 350))
+        await new Promise(r => setTimeout(r, 3000))
       }
 
     } catch(e) {}
@@ -1308,7 +1308,7 @@ export default function Dashboard() {
               <span className="vteams-sub">{teamsSorted.length} teams · ranked by {teamSortMetric==='english'?'English':teamSortMetric==='spanish'?'Spanish':'Total'} xfers</span>
             </div>
             {teamsSorted.length===0?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No data for {formatDateLabel(selectedDate)}.</div>:<div className="vteams-grid">{teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0} onSelect={handleTeamCardSelect}/>)}</div>}
-            <TeamRankingsSection snapshots={snapshots} remoteDailyTotals={remoteDailyTotals}/>
+            {/* <TeamRankingsSection snapshots={snapshots} remoteDailyTotals={remoteDailyTotals}/> */}
             <MVPSection snapshots={snapshots} navigate={navigate} agentSnapshotsRemote={agentSnapshotsRemote}/>
           </div>
         ):activeTab==='asia'?(
