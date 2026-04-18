@@ -1228,7 +1228,7 @@ export default function Dashboard() {
   const totalSpanish=asiaOvrTotals?.spanish??(isToday?asiaTotals.spanish:(isHistDate?asiaTotals.spanish:asiaAgentsFinal.reduce((s,a)=>s+a.spanish,0)))
   const totalEnglish=asiaOvrTotals?.english??(isToday?asiaTotals.english:(isHistDate?asiaTotals.english:asiaAgentsFinal.reduce((s,a)=>s+a.english,0)))
   const totalXfers=totalSpanish+totalEnglish
-  const goal=getGoalForDate(selectedDate,APP_CONFIG.dailyGoal,'asia'),hitGoal=asiaAgentsFinal.filter(a=>a.english>=goal),atZero=asiaAgentsFinal.filter(a=>a.total===0)
+  const goal=getGoalForDate(selectedDate,20,'asia'),hitGoal=asiaAgentsFinal.filter(a=>a.english>=goal),atZero=asiaAgentsFinal.filter(a=>a.total===0)
   const top3English=[...asiaAgentsFinal].sort((a,b)=>b.english-a.english).slice(0,3),top3Spanish=[...asiaAgentsFinal].sort((a,b)=>b.spanish-a.spanish).slice(0,3)
   void overridesTick
   const hasAsiaOverrides=!!(localStorage.getItem(OVERRIDE_KEY_AGENTS(selectedDate,'asia'))||localStorage.getItem(OVERRIDE_KEY_TOTALS(selectedDate,'asia')))
