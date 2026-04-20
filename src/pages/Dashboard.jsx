@@ -244,36 +244,77 @@ async function appendAgentSnapshotsToSheets(date, batch) {
   try { const body=new URLSearchParams({action:'appendAgentSnapshots',date,snapshots:JSON.stringify(batch)}); await fetch(SCRIPT_URL,{method:'POST',body,mode:'no-cors'}) } catch(e) {}
 }
 async function saveDailyTotalsToSheets(date, teamRows) {
-  const teams=teamRows.map(t=>({id:t.id||t.name.toLowerCase().replace(/\s+/g,'_'),name:t.name,english:t.english,spanish:t.spanish,total:t.total,agents:t.agents,noSpanish:t.noSpanish||false}))
-  const payload=JSON.stringify(teams); const cacheKey=`pulse_totals_saved_${date}`; const lastSaved=sessionStorage.getItem(cacheKey)
-  if(lastSaved&&(Date.now()-parseInt(lastSaved))<3*60*1000)return; sessionStorage.setItem(cacheKey,String(Date.now()))
-  try { const body=new URLSearchParams({action:'saveDailyTotals',date,teams:payload}); await fetch(SCRIPT_URL,{method:'POST',body,mode:'no-cors'}) } catch(e) {}
+  const teams = teamRows.map(t => ({
+    id: t.id || t.name.toLowerCase().replace(/\s+/g, '_'),
+    name: t.name,
+    english: t.english,
+    spanish: t.spanish,
+    total: t.total,
+    agents: t.agents,
+    noSpanish: t.noSpanish || false,
+  }))
+
+  const payload = JSON.stringify(teams)
+  const cacheKey = `pulse_totals_saved_${date}`
+  const lastSaved = sessionStorage.getItem(cacheKey)
+
+  if (lastSaved && (Date.now() - parseInt(lastSaved, 10)) < 3 * 60 * 1000) return
+  sessionStorage.setItem(cacheKey, String(Date.now()))
+
+  try {
+    const body = new URLSearchParams({ action: 'saveDailyTotals', date, teams: payload })
+    await fetch(SCRIPT_URL, { method: 'POST', body, mode: 'no-cors' })
+  } catch (e) {}
 }
+
 async function saveTeamSnapshotToSheets(date, teamId, agents) {
+  const payload = JSON.stringify(agents || [])
+  const cacheKey = `pulse_team_snap_${date}_${teamId}`
+  const lastSaved = sessionStorage.getItem(cacheKey)
+
+  if (lastSaved && (Date.now() - parseInt(lastSaved, 10)) < 3 * 60 * 1000) return
+  sessionStorage.setItem(cacheKey, String(Date.now()))
+
+  try {
+    const body = new URLSearchParams({
+      action: 'saveTeamSnapshot',
+      date,
+      teamId,
+      agents: payload,
+    })
+    await fetch(SCRIPT_URL, { method: 'POST', body, mode: 'no-cors' })
+  } catch (e) {}
+}
+
 async function saveToWeeklySheet(date, teamId, agents) {
-  if (!date || !teamId || !Array.isArray(agents)) return
-  if (!agents.length) return
+  if (!date || !teamId || !Array.isArray(agents) || !agents.length) return
+
+  const normalizedAgents = agents.map(a => ({
+    ext: String(a.ext || '').trim(),
+    name: String(a.name || '').trim(),
+    english: Number(a.english) || 0,
+    spanish: Number(a.spanish) || 0,
+    total: Number(a.total) || ((Number(a.english) || 0) + (Number(a.spanish) || 0)),
+  }))
+
+  const payload = JSON.stringify(normalizedAgents)
+  const cacheKey = `pulse_weekly_${date}_${teamId}`
+
+  if (sessionStorage.getItem(cacheKey) === payload) return
+  sessionStorage.setItem(cacheKey, payload)
 
   try {
     const body = new URLSearchParams({
       action: 'saveToWeeklySheet',
       date,
       team: teamId,
-      agents: JSON.stringify(
-        agents.map(a => ({
-          ext: String(a.ext || '').trim(),
-          name: String(a.name || '').trim(),
-          english: Number(a.english) || 0,
-          spanish: Number(a.spanish) || 0,
-          total: Number(a.total) || ((Number(a.english) || 0) + (Number(a.spanish) || 0))
-        }))
-      )
+      agents: payload,
     })
 
     await fetch(SCRIPT_URL, {
       method: 'POST',
       body,
-      mode: 'no-cors'
+      mode: 'no-cors',
     })
   } catch (e) {}
 }
@@ -282,7 +323,9 @@ async function saveAllWeeklySheetsLive(date, asiaRows, teamSheetsMap) {
   try {
     if (asiaRows?.length) {
       const { agents: asiaAgents } = parseAsiaSheet(asiaRows)
-      if (asiaAgents.length) await saveToWeeklySheet(date, 'asia', asiaAgents)
+      if (asiaAgents.length) {
+        await saveToWeeklySheet(date, 'asia', asiaAgents)
+      }
     }
 
     for (const t of TEAM_SHEETS) {
@@ -296,10 +339,7 @@ async function saveAllWeeklySheetsLive(date, asiaRows, teamSheetsMap) {
     }
   } catch (e) {}
 }
-  const payload=JSON.stringify(agents||[]); const cacheKey=`pulse_team_snap_${date}_${teamId}`; const lastSaved=sessionStorage.getItem(cacheKey)
-  if(lastSaved&&(Date.now()-parseInt(lastSaved))<3*60*1000)return; sessionStorage.setItem(cacheKey,String(Date.now()))
-  try { const body=new URLSearchParams({action:'saveTeamSnapshot',date,teamId,agents:payload}); await fetch(SCRIPT_URL,{method:'POST',body,mode:'no-cors'}) } catch(e) {}
-}
+
 // ── One-time backfill: push all local snapshots to Sheets ──────────────────
 async function backfillHistoricalDataToSheets() {
   const DONE_KEY = 'pulse_backfill_v14'
@@ -319,7 +359,6 @@ async function backfillHistoricalDataToSheets() {
       const tt = []
       const addedExts = new Set()
 
-      // Teams normales
       for (const t of TEAM_SHEETS) {
         const raw = snap.teams?.[t.id]
         if (!raw?.length) continue
@@ -339,7 +378,7 @@ async function backfillHistoricalDataToSheets() {
             english: a.english,
             spanish: a.spanish || 0,
             total: a.total,
-            team: t.id
+            team: t.id,
           })
         })
 
@@ -351,12 +390,11 @@ async function backfillHistoricalDataToSheets() {
             spanish: totals.spanish,
             total: totals.total,
             agents: agents.length,
-            noSpanish: !t.hasSp
+            noSpanish: !t.hasSp,
           })
         }
       }
 
-      // Asia
       if (snap.asiaData?.length) {
         const { agents, totals } = parseAsiaSheet(snap.asiaData)
 
@@ -373,7 +411,7 @@ async function backfillHistoricalDataToSheets() {
             english: a.english,
             spanish: a.spanish || 0,
             total: a.total,
-            team: 'asia'
+            team: 'asia',
           })
         })
 
@@ -385,12 +423,11 @@ async function backfillHistoricalDataToSheets() {
             spanish: totals.spanish,
             total: totals.total,
             agents: agents.length,
-            noSpanish: false
+            noSpanish: false,
           })
         }
       }
 
-      // Philippines fallback totals
       if (!allAgents.some(a => a.team === 'philippines') && snap.generalData?.length) {
         for (const row of snap.generalData) {
           const name = (row[0] || '').toUpperCase().trim()
@@ -405,7 +442,7 @@ async function backfillHistoricalDataToSheets() {
                 spanish: 0,
                 total: en,
                 agents,
-                noSpanish: true
+                noSpanish: true,
               })
             }
             break
@@ -423,8 +460,8 @@ async function backfillHistoricalDataToSheets() {
             body: new URLSearchParams({
               action: 'appendAgentSnapshots',
               date: snap.date,
-              snapshots: JSON.stringify(allAgents.slice(b, b + BATCH))
-            })
+              snapshots: JSON.stringify(allAgents.slice(b, b + BATCH)),
+            }),
           })
           await new Promise(r => setTimeout(r, 1200))
         }
@@ -437,8 +474,8 @@ async function backfillHistoricalDataToSheets() {
           body: new URLSearchParams({
             action: 'saveDailyTotals',
             date: snap.date,
-            teams: JSON.stringify(tt)
-          })
+            teams: JSON.stringify(tt),
+          }),
         })
         await new Promise(r => setTimeout(r, 1200))
       }
