@@ -496,111 +496,297 @@ const cellUpper    = (v) => (v||'').toString().toUpperCase().trim()
 
 function parseTeamSheet(rows, config) {
   const { extStart, hasSp, colEn, colSp } = config
-  if (!rows||!Array.isArray(rows)||rows.length===0) return{agents:[],totals:{english:0,spanish:0,total:0,activeAgents:0}}
-  const agentMap={}; let inOT=false,afterMainEnd=false,otColEn=-1,otColSp=-1
-  const isOTRow=(row)=>{
-    for(let c=0;c<Math.min(row.length,6);c++){
-      const v=cellUpper(row[c]); if(!v||v.length>36)continue
-      if(v==='OT TAKERS')return true
-      if(v.endsWith(' OT'))return true
-      if(v.startsWith('OT ')&&v.length<=32)return true
+
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return {
+      agents: [],
+      totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 }
     }
-    return false
   }
-  const isEndRow=(row)=>{for(let c=0;c<Math.min(row.length,3);c++){const v=cellUpper(row[c]);if(v.length<3)continue;if(v.includes('AGENT')&&(v.includes('LOGGED')||v.includes('LOG IN')))return true;if(v.includes('TOTAL')&&v.includes('TRANSFER'))return true}return false}
-  const captureFooter=(row)=>{
-    const en=safeInt(row[colEn]),sp=colSp!=null?safeInt(row[colSp]):0
-    if(en>0||sp>0)agentMap['__FOOTER__']={ext:'__FOOTER__',name:'__FOOTER__',english:en,spanish:sp,total:en+sp}
+
+  const agentMap = {}
+  let inOT = false
+  let afterMainFooter = false
+  let mainFooter = null
+  let otFooter = null
+
+  const includeOTNow = includeOT()
+
+  const rowText = (row, limit = 6) =>
+    row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
+
+  const isOTHeader = (row) => {
+    const txt = rowText(row, 6)
+    return txt.includes('OT TAKERS') || txt.includes(' COLOMBIA OT') || txt.includes(' CENTRAL') || txt.includes(' OT AW GARRET') || txt.startsWith('OT ') || txt.includes(' OT ')
   }
-  const isSkipRow=(u)=>(u.includes('TOTAL')&&u.includes('TRANSFER'))||u.includes('THIS HOUR')||u.includes('THIS OUR')||u.includes('HOURLY')||u.includes('ON SITE')||u.includes('WEEKLY')
-  const SKIP=new Set(['USERS','USER','AGENT NAME','ARWIN','LEXNER','SUPERVISOR','MANAGER','EXTENSION','TRANSFER','TRANSFERS','CAMPAIGN','PER AGENT','ENGLISH','SPANISH','TOTAL','GENERAL MANAGER','OPENERS','NEW AGENT','AGENTS','NEW AGENTS'])
-  for(let i=0;i<rows.length;i++){
-    const row=rows[i];if(!Array.isArray(row))continue
-    const cell0=(row[0]||'').toString().trim(),cell0U=cell0.toUpperCase().trim()
-    if(!inOT&&isOTRow(row)){if(!includeOT())break;inOT=true;afterMainEnd=false;otColEn=-1;otColSp=-1;continue}
-    if(!inOT&&isEndRow(row)){captureFooter(row);if(!includeOT())break;afterMainEnd=true;continue}
-    if(afterMainEnd&&!inOT)continue
-    if(inOT&&otColEn<0){const hdrs=row.map(c=>(c||'').toString().toUpperCase().trim());if(hasSp){const ei=hdrs.findIndex(h=>h==='ENGLISH'),si=hdrs.findIndex(h=>h==='SPANISH');if(ei>=0||si>=0){otColEn=ei>=0?ei:colEn;otColSp=si>=0?si:(colSp!=null?colSp:-1);continue}}else{const ei=hdrs.findIndex(h=>h==='ENGLISH'||h==='TRANSFER'||h==='TRANSFERS'||h==='TOTAL XFERS'||h==='XFERS'||h==='XFER');if(ei>=0){otColEn=ei;otColSp=-1;continue}}const ck=parseInt((row[1]||'').toString().replace(/,/g,''));if(ck>=1000&&ck<=9999&&String(ck).startsWith(extStart)){otColEn=colEn;otColSp=colSp!=null?colSp:-1}else continue}
-    if(inOT&&isEndRow(row)){const otAC=Object.values(agentMap).filter(a=>a._fromOT).length;if(otColEn>=0&&otAC===0){const en=safeInt(row[otColEn]),sp=otColSp>=0?safeInt(row[otColSp]):0;if(en>0||sp>0)agentMap['__OT__']={name:'__OT__',ext:'__OT__',english:en,spanish:sp,total:en+sp,_fromOT:true}};break}
-    if(isSkipRow(cell0U)||cell0.length<2||SKIP.has(cell0U))continue
-    const rawExt=(row[1]||'').toString().replace(/,/g,'').trim(),extNum=parseInt(rawExt)
-    if(isNaN(extNum)||extNum<1000||extNum>9999)continue;if(!rawExt.startsWith(extStart))continue
-    const ec=inOT?otColEn:colEn,sc=inOT?otColSp:(colSp!=null?colSp:-1);if(ec<0)continue
-    const en=safeInt(row[ec]),sp=sc>=0?safeInt(row[sc]):0
-    if(agentMap[extNum]){agentMap[extNum].english+=en;agentMap[extNum].spanish+=sp;agentMap[extNum].total=agentMap[extNum].english+agentMap[extNum].spanish;if(inOT)agentMap[extNum]._fromOT=true}
-    else agentMap[extNum]={name:cell0,ext:String(extNum),english:en,spanish:sp,total:en+sp,_fromOT:inOT}
+
+  const isFooterRow = (row) => {
+    const txt = rowText(row, 6)
+    return txt.includes('LOGGED IN') || txt.includes('TOTAL TRANSFERS')
   }
-  const hasOTAgents=Object.values(agentMap).some(a=>a._fromOT)
-  if(includeOT()&&!agentMap['__OT__']&&!hasOTAgents){
-    let loggedCount=0,mainEndRow=-1
-    for(let i=0;i<rows.length;i++){
-      const row=rows[i]; if(!Array.isArray(row))continue
-      const v0=cellUpper(row[0]||'')
-      if(v0.length>3&&v0.includes('AGENT')&&(v0.includes('LOGGED')||v0.includes('LOG IN'))){
-        loggedCount++
-        if(loggedCount===1){mainEndRow=i}
-        if(loggedCount>=2){
-          const otEn=safeInt(row[colEn]),otSp=colSp!=null?safeInt(row[colSp]):0
-          if(otEn>0||otSp>0)agentMap['__OT__']={ext:'__OT__',name:'__OT__',english:otEn,spanish:otSp,total:otEn+otSp}
-          break
-        }
+
+  const isHardSkip = (txt) =>
+    txt.includes('THIS HOUR') ||
+    txt.includes('HOURLY') ||
+    txt.includes('ON SITE') ||
+    txt.includes('WEEKLY') ||
+    txt.includes('OUR GOAL') ||
+    txt.includes('GOAL +') ||
+    txt.includes('GOAL+') ||
+    txt.includes('SUPERVISOR') ||
+    txt.includes('CAMPAIGN') ||
+    txt.includes('MANAGEMENT')
+
+  const getFooterTotals = (row) => {
+    const en = safeInt(row[colEn])
+    const sp = colSp != null ? safeInt(row[colSp]) : 0
+    const totalCol = colSp != null ? colSp + 1 : colEn + 1
+    const tot = safeInt(row[totalCol]) || (en + sp)
+    return { english: en, spanish: sp, total: tot }
+  }
+
+  const SKIP = new Set([
+    'USER','USERS','AGENT NAME','AGENTS','NEW AGENT','NEW AGENTS',
+    'SUPERVISOR','MANAGER','GENERAL MANAGER','EXTENSION',
+    'ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS',
+    'OPENERS','CAMPAIGN','PER AGENT','LEXNER','ARWIN'
+  ])
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
+
+    const c0 = String(row[0] || '').trim()
+    const c0U = cellUpper(c0)
+    const txt = rowText(row, 6)
+
+    // Detect OT header
+    if (!inOT && isOTHeader(row)) {
+      if (!includeOTNow) break
+      inOT = true
+      afterMainFooter = false
+      continue
+    }
+
+    // Detect main / OT footer
+    if (isFooterRow(row)) {
+      const ft = getFooterTotals(row)
+
+      if (!inOT && !mainFooter && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
+        mainFooter = ft
+        if (!includeOTNow) break
+        afterMainFooter = true
+        continue
+      }
+
+      if (inOT && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
+        otFooter = ft
+        break
       }
     }
-    if(!agentMap['__OT__']&&mainEndRow>=0){
-      let pastMain=false,inOTScan=false
-      for(let i=0;i<rows.length;i++){
-        const row=rows[i]; if(!Array.isArray(row))continue
-        if(i===mainEndRow){pastMain=true;continue}
-        if(!pastMain)continue
-        if(!inOTScan){
-          for(let cc=0;cc<Math.min(row.length,6);cc++){
-            const v=cellUpper(row[cc]||'')
-            if(v&&v.length<=36&&(v.startsWith('OT ')||v.endsWith(' OT')||v==='OT TAKERS'))
-              {inOTScan=true;break}
-          }
-          continue
-        }
-        const v0=cellUpper(row[0]||'')
-        const v1=cellUpper(row[1]||'')
-        const allBlankLeading=!v0&&!v1
-        if(allBlankLeading){
-          const en2=safeInt(row[colEn]),sp2=colSp!=null?safeInt(row[colSp]):0
-          if(en2>0||sp2>0){
-            agentMap['__OT__']={ext:'__OT__',name:'__OT__',english:en2,spanish:sp2,total:en2+sp2}
-            break
-          }
-        }
-        if(v0.includes('AGENT')&&v0.includes('LOGGED')){
-          const en2=safeInt(row[colEn]),sp2=colSp!=null?safeInt(row[colSp]):0
-          if(en2>0||sp2>0)agentMap['__OT__']={ext:'__OT__',name:'__OT__',english:en2,spanish:sp2,total:en2+sp2}
-          break
-        }
+
+    // Ignore rows between main footer and OT block
+    if (afterMainFooter && !inOT) continue
+
+    if (isHardSkip(txt) || SKIP.has(c0U) || c0.length < 2) continue
+
+    const rawExt = String(row[1] || '').replace(/,/g, '').trim()
+    const extNum = parseInt(rawExt, 10)
+
+    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
+    if (!rawExt.startsWith(extStart)) continue
+
+    const en = safeInt(row[colEn])
+    const sp = colSp != null ? safeInt(row[colSp]) : 0
+    const tot = en + sp
+
+    if (agentMap[rawExt]) {
+      agentMap[rawExt].english += en
+      agentMap[rawExt].spanish += sp
+      agentMap[rawExt].total = agentMap[rawExt].english + agentMap[rawExt].spanish
+      if (inOT) agentMap[rawExt]._fromOT = true
+    } else {
+      agentMap[rawExt] = {
+        name: c0,
+        ext: rawExt,
+        english: en,
+        spanish: sp,
+        total: tot,
+        _fromOT: inOT
       }
     }
   }
-  const allEntries=Object.values(agentMap)
-  const agents=allEntries.filter(a=>a.ext!=='__OT__'&&a.ext!=='__MAIN_TOTAL__'&&a.ext!=='__FOOTER__').map(a=>{const{_fromOT,...rest}=a;return rest})
-  const agentEn=agents.reduce((s,a)=>s+a.english,0)
-  const agentSp=agents.reduce((s,a)=>s+a.spanish,0)
-  const otEntry=agentMap['__OT__']
-  const footerEntry=agentMap['__FOOTER__']
-  const baseEn=footerEntry&&footerEntry.english>agentEn?footerEntry.english:agentEn
-  const baseSp=footerEntry&&footerEntry.spanish>agentSp?footerEntry.spanish:agentSp
-  const en=baseEn+(otEntry?.english||0)
-  const sp=baseSp+(otEntry?.spanish||0)
-  return{agents,totals:{english:en,spanish:sp,total:en+sp,activeAgents:agents.length}}
+
+  const allAgents = Object.values(agentMap)
+  const mainAgents = allAgents.filter(a => !a._fromOT)
+  const otAgents = allAgents.filter(a => a._fromOT)
+
+  const mainAgentEn = mainAgents.reduce((s, a) => s + a.english, 0)
+  const mainAgentSp = mainAgents.reduce((s, a) => s + a.spanish, 0)
+  const otAgentEn = otAgents.reduce((s, a) => s + a.english, 0)
+  const otAgentSp = otAgents.reduce((s, a) => s + a.spanish, 0)
+
+  const mainEn = mainFooter ? Math.max(mainFooter.english, mainAgentEn) : mainAgentEn
+  const mainSp = mainFooter ? Math.max(mainFooter.spanish, mainAgentSp) : mainAgentSp
+
+  const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otAgentEn) : otAgentEn) : 0
+  const extraOtSp = includeOTNow ? (otFooter ? Math.max(otFooter.spanish, otAgentSp) : otAgentSp) : 0
+
+  const agents = includeOTNow
+    ? allAgents.map(({ _fromOT, ...rest }) => rest)
+    : mainAgents.map(({ _fromOT, ...rest }) => rest)
+
+  const english = mainEn + extraOtEn
+  const spanish = mainSp + extraOtSp
+
+  return {
+    agents,
+    totals: {
+      english,
+      spanish,
+      total: english + spanish,
+      activeAgents: agents.length
+    }
+  }
 }
 
 function parseAsiaSheet(rows) {
-  if(!rows||!Array.isArray(rows)||rows.length===0)return{agents:[],totals:{spanish:0,english:0,total:0,activeAgents:0}}
-  const agentMap={}; let afterMainEnd=false,inOT=false,otDetected=false
-  const COL_EXT=1,COL_SP=2,COL_EN=3
-  const SKIP_NAMES=new Set(['ASIA','MANAGEMENT','LEXNER','GENERAL MANAGER','USER','USERS','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS','AGENTS'])
-  const isEndMarker=(row)=>{for(let c=0;c<Math.min(row.length,4);c++){const v=cellUpper(row[c]);if(v.includes('AGENT')&&(v.includes('LOGGED')||v.includes('LOG IN')))return true;if(v.includes('TOTAL')&&v.includes('TRANSFER'))return true}return false}
-  const isOTHeader=(row)=>{for(let c=0;c<Math.min(row.length,4);c++){const v=cellUpper(row[c]);if(v==='OT TAKERS'||v.startsWith('OT ')||v.endsWith(' OT')||v.includes(' OT '))return true}return false}
-  for(let i=0;i<rows.length;i++){const row=rows[i];if(!Array.isArray(row))continue;const cell0=(row[0]||'').toString().trim(),cell0U=cellUpper(cell0);if(!inOT&&isOTHeader(row)){if(!includeOT())break;inOT=true;otDetected=true;afterMainEnd=false;continue};if(!inOT&&isEndMarker(row)){if(!includeOT())break;afterMainEnd=true;continue};if(afterMainEnd&&!inOT)continue;if(inOT&&!otDetected){otDetected=true;continue};if(inOT&&isEndMarker(row))break;if(SKIP_NAMES.has(cell0U)||cell0.length<2)continue;const extRaw=(row[COL_EXT]||'').toString().replace(/,/g,'').trim(),ext=parseInt(extRaw);if(isNaN(ext)||ext<1000||ext>9999)continue;const en=safeInt(row[COL_EN]),sp=safeInt(row[COL_SP]);if(agentMap[ext]){agentMap[ext].english+=en;agentMap[ext].spanish+=sp;agentMap[ext].total=agentMap[ext].english+agentMap[ext].spanish}else agentMap[ext]={name:cell0,ext:String(ext),spanish:sp,english:en,total:sp+en}}
-  const agents=Object.values(agentMap),en=agents.reduce((s,a)=>s+a.english,0),sp=agents.reduce((s,a)=>s+a.spanish,0)
-  return{agents,totals:{spanish:sp,english:en,total:sp+en,activeAgents:agents.length}}
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return {
+      agents: [],
+      totals: { spanish: 0, english: 0, total: 0, activeAgents: 0 }
+    }
+  }
+
+  const COL_EXT = 1
+  const COL_SP = 2
+  const COL_EN = 3
+
+  const includeOTNow = includeOT()
+  const agentMap = {}
+
+  let inOT = false
+  let afterMainFooter = false
+  let mainFooter = null
+  let otFooter = null
+
+  const rowText = (row, limit = 6) =>
+    row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
+
+  const isOTHeader = (row) => {
+    const txt = rowText(row, 6)
+    return txt.includes('OT TAKERS') || txt.startsWith('OT ') || txt.includes(' OT ')
+  }
+
+  const isFooterRow = (row) => {
+    const txt = rowText(row, 6)
+    return txt.includes('LOGGED IN') || txt.includes('TOTAL TRANSFERS')
+  }
+
+  const SKIP = new Set([
+    'ASIA','MANAGEMENT','LEXNER','GENERAL MANAGER','USER','USERS',
+    'SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL',
+    'TRANSFER','TRANSFERS','AGENTS'
+  ])
+
+  const getFooterTotals = (row) => {
+    const sp = safeInt(row[COL_SP])
+    const en = safeInt(row[COL_EN])
+    const tot = safeInt(row[COL_EN + 1]) || (sp + en)
+    return { spanish: sp, english: en, total: tot }
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
+
+    const c0 = String(row[0] || '').trim()
+    const c0U = cellUpper(c0)
+
+    if (!inOT && isOTHeader(row)) {
+      if (!includeOTNow) break
+      inOT = true
+      afterMainFooter = false
+      continue
+    }
+
+    if (isFooterRow(row)) {
+      const ft = getFooterTotals(row)
+
+      if (!inOT && !mainFooter && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
+        mainFooter = ft
+        if (!includeOTNow) break
+        afterMainFooter = true
+        continue
+      }
+
+      if (inOT && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
+        otFooter = ft
+        break
+      }
+    }
+
+    // Esto evita que sume Jay / Ronnie / filas sueltas entre footer principal y OT
+    if (afterMainFooter && !inOT) continue
+
+    if (SKIP.has(c0U) || c0.length < 2) continue
+
+    const extRaw = String(row[COL_EXT] || '').replace(/,/g, '').trim()
+    const ext = parseInt(extRaw, 10)
+
+    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
+
+    const sp = safeInt(row[COL_SP])
+    const en = safeInt(row[COL_EN])
+
+    if (agentMap[extRaw]) {
+      agentMap[extRaw].english += en
+      agentMap[extRaw].spanish += sp
+      agentMap[extRaw].total = agentMap[extRaw].english + agentMap[extRaw].spanish
+      if (inOT) agentMap[extRaw]._fromOT = true
+    } else {
+      agentMap[extRaw] = {
+        name: c0,
+        ext: extRaw,
+        spanish: sp,
+        english: en,
+        total: sp + en,
+        _fromOT: inOT
+      }
+    }
+  }
+
+  const allAgents = Object.values(agentMap)
+  const mainAgents = allAgents.filter(a => !a._fromOT)
+  const otAgents = allAgents.filter(a => a._fromOT)
+
+  const mainEnAgents = mainAgents.reduce((s, a) => s + a.english, 0)
+  const mainSpAgents = mainAgents.reduce((s, a) => s + a.spanish, 0)
+  const otEnAgents = otAgents.reduce((s, a) => s + a.english, 0)
+  const otSpAgents = otAgents.reduce((s, a) => s + a.spanish, 0)
+
+  const mainEn = mainFooter ? Math.max(mainFooter.english, mainEnAgents) : mainEnAgents
+  const mainSp = mainFooter ? Math.max(mainFooter.spanish, mainSpAgents) : mainSpAgents
+
+  const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otEnAgents) : otEnAgents) : 0
+  const extraOtSp = includeOTNow ? (otFooter ? Math.max(otFooter.spanish, otSpAgents) : otSpAgents) : 0
+
+  const agents = includeOTNow
+    ? allAgents.map(({ _fromOT, ...rest }) => rest)
+    : mainAgents.map(({ _fromOT, ...rest }) => rest)
+
+  const english = mainEn + extraOtEn
+  const spanish = mainSp + extraOtSp
+
+  return {
+    agents,
+    totals: {
+      spanish,
+      english,
+      total: spanish + english,
+      activeAgents: agents.length
+    }
+  }
 }
 
 const TEAMS_ORDER=['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
