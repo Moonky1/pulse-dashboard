@@ -1473,76 +1473,134 @@ export default function Dashboard() {
     loadDailyTotals()
     loadData().then(()=>backfillHistoricalDataToSheets())
     const USERS_SID='1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
-    const loadAllRemoteAgents = async () => {
-      let agents = []
+ const loadAllRemoteAgents = async () => {
+  let agents = []
+
+  try {
+    let sheetNames = ['AGENT_SNAPSHOTS']
+
+    try {
+      const namesRes = await fetch(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`)
+      const namesData = await namesRes.json()
+      if (namesData?.ok && Array.isArray(namesData.sheets) && namesData.sheets.length > 0) {
+        sheetNames = namesData.sheets
+      }
+    } catch (e) {}
+
+    const mergedByKey = {}
+    const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
+
+    // Source 1: AGENT_SNAPSHOTS
+    for (const shName of sheetNames) {
       try {
-        let sheetNames = ['AGENT_SNAPSHOTS']
-        try {
-          const namesRes = await fetch(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`)
-          const namesData = await namesRes.json()
-          if (namesData?.ok && Array.isArray(namesData.sheets) && namesData.sheets.length > 0) {
-            sheetNames = namesData.sheets
-          }
-        } catch (e) {}
-        const mergedRemote = {}
-        for (const shName of sheetNames) {
-          try {
-            const res = await fetch(`https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`)
-            const csv = await res.text()
-            if (!csv || csv.startsWith('<!')) continue
-            const rows = parseCSV(csv).slice(1)
-            const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
-            rows.forEach(r => {
-              if (!r[0] || !r[1]) return
-              const d = normalizeDate(r[0])
-              if (!d) return
-              const ext = String(r[1]).trim()
-              const key = `${d}|${ext}`
-              const en = Number(r[3]) || 0
-              const sp = Number(r[4]) || 0
-              const total = en + sp
-              const rawTeam = String(r[6] || '').trim()
-              const team = VALID_TEAMS.has(rawTeam) ? rawTeam : (
+        const res = await fetch(
+          `https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`
+        )
+        const csv = await res.text()
+        if (!csv || csv.startsWith('<!')) continue
+
+        const rows = parseCSV(csv).slice(1)
+
+        rows.forEach(r => {
+          if (!r[0] || !r[1]) return
+
+          const d = normalizeDate(r[0])
+          if (!d) return
+
+          const ext = String(r[1]).trim()
+          if (!ext) return
+
+          const en = Number(r[3]) || 0
+          const sp = Number(r[4]) || 0
+          const total = Number(r[5]) || (en + sp)
+
+          if (total <= 0) return
+
+          const rawTeam = String(r[6] || '').trim()
+          const team = VALID_TEAMS.has(rawTeam)
+            ? rawTeam
+            : (
                 ext.startsWith('1') ? 'philippines' :
                 ext.startsWith('2') ? 'colombia' :
                 ext.startsWith('3') ? 'asia' :
                 ext.startsWith('4') ? 'central' :
                 ext.startsWith('5') ? 'mexico' :
-                ext.startsWith('6') ? 'venezuela' : 'asia'
+                ext.startsWith('6') ? 'venezuela' :
+                'asia'
               )
-              if (!mergedRemote[key] || total > (mergedRemote[key].total || 0) || en > (mergedRemote[key].english || 0)) {
-                mergedRemote[key] = {
-                  date: d,
-                  ext,
-                  name: r[2] || '',
-                  english: en,
-                  spanish: sp,
-                  total,
-                  team
-                }
-              }
-            })
-          } catch (e) {}
-        }
-        agents = Object.values(mergedRemote)
-        const remoteDates = new Set(agents.map(a => a.date).filter(Boolean))
-        const weeklyResults = await Promise.allSettled([
-          fetchWeeklySheetAgents('asia', remoteDates),
-          fetchWeeklySheetAgents('philippines', remoteDates),
-          fetchWeeklySheetAgents('colombia', remoteDates),
-          fetchWeeklySheetAgents('central', remoteDates),
-          fetchWeeklySheetAgents('mexico', remoteDates),
-          fetchWeeklySheetAgents('venezuela', remoteDates),
-        ])
-        weeklyResults.forEach(r => {
-          if (r.status === 'fulfilled') {
-            agents = agents.concat(r.value.map(a => ({ ...a, fromWeekly: true })))
+
+          const key = `${d}|${ext}`
+
+          if (
+            !mergedByKey[key] ||
+            total > (mergedByKey[key].total || 0) ||
+            en > (mergedByKey[key].english || 0)
+          ) {
+            mergedByKey[key] = {
+              date: d,
+              ext,
+              name: r[2] || '',
+              english: en,
+              spanish: sp,
+              total,
+              team,
+              fromWeekly: false
+            }
           }
         })
       } catch (e) {}
-      setAgentSnapshotsRemote(agents)
     }
-    loadAllRemoteAgents().catch(()=>{})
+
+    // Source 2: Weekly sheets
+    const weeklyResults = await Promise.allSettled([
+      fetchWeeklySheetAgents('asia', new Set()),
+      fetchWeeklySheetAgents('philippines', new Set()),
+      fetchWeeklySheetAgents('colombia', new Set()),
+      fetchWeeklySheetAgents('central', new Set()),
+      fetchWeeklySheetAgents('mexico', new Set()),
+      fetchWeeklySheetAgents('venezuela', new Set()),
+    ])
+
+    weeklyResults.forEach(result => {
+      if (result.status !== 'fulfilled' || !Array.isArray(result.value)) return
+
+      result.value.forEach(a => {
+        const d = normalizeDate(a.date)
+        if (!d || !a.ext) return
+
+        const ext = String(a.ext).trim()
+        const en = Number(a.english) || 0
+        const sp = Number(a.spanish) || 0
+        const total = Number(a.total) || (en + sp)
+
+        if (total <= 0) return
+
+        const key = `${d}|${ext}`
+
+        if (
+          !mergedByKey[key] ||
+          total > (mergedByKey[key].total || 0) ||
+          en > (mergedByKey[key].english || 0)
+        ) {
+          mergedByKey[key] = {
+            date: d,
+            ext,
+            name: a.name || '',
+            english: en,
+            spanish: sp,
+            total,
+            team: a.team,
+            fromWeekly: true
+          }
+        }
+      })
+    })
+
+    agents = Object.values(mergedByKey)
+  } catch (e) {}
+
+  setAgentSnapshotsRemote(agents)
+}
     const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000)
     return()=>{clearInterval(fullIv);clearInterval(fastIv)}
   },[])
