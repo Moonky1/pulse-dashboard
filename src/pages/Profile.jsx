@@ -19,12 +19,12 @@ const HISTORY_DATES = [
 ]
 
 const WEEKLY_SHEETS_PROFILE = {
-  asia:        { id:'1GHj5MCxNJLUBtBAAM9nS1WqIkahbaAMg7NLCDE57LQw', type:'eng_spa',    startDate:'2026-03-23' },
-  philippines: { id:'15GCXWZnrJjI_9LJfqnoIvjavN8R8NWwaplr8d5Jjl_8', type:'total_only', startDate:'2026-03-23' },
+  asia:        { id:'1AF-1K2Ir2po7FPeISMLCgG-Dphn4F6sXkkyfne5G_1c', type:'eng_spa',    startDate:'2026-03-23' },
+  philippines: { id:'1ihKH07WKnmaD_-2lm4Ivq-s7lRIB2VbTi3zI1FE_G40', type:'total_only', startDate:'2026-03-23' },
   colombia:    { id:'1eFCPK-i4fAtMfeAUKpZ45md0CPiFp2h16MrlLWYl7M0', type:'eng_spa',    startDate:'2026-03-23' },
   central:     { id:'1f6dFWRTe4vmXi0q-qw6fLKNo45RnSWFUMOQ8FyHYnZY', type:'eng_spa',    startDate:'2026-03-23' },
   mexico:      { id:'1YHNJIFlTjtVwbWi1W6aCWbt89HEF12JXMwPgbR6qqcg', type:'total_only', startDate:'2026-03-23' },
-  venezuela:   { id:'1H9rfZUp5T3rvAu6C5mJZF3zXfQychNJopGYE8_LHt4k', type:'eng_spa',    startDate:'2026-03-30' },
+  venezuela:   { id:'1Rz7V3JIbQutCtSSosE1C7mq9pxQKlBsATMzxqvKQqMw', type:'eng_spa',    startDate:'2026-03-23' },
 }
 
 const FLAG_LOCAL = {

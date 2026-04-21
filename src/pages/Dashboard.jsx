@@ -614,17 +614,17 @@ function parseAsiaSheet(rows) {
 }
 function parseColombiaSheet_(rows, config, includeOTNow) {
   return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
-    otHeaderIncludes: ['COLOMBIA OT']
+    otHeaderIncludes: ['OT TAKERS', 'COLOMBIA OT', 'OT COLOMBIA']
   })
 }
 function parseCentralSheet_(rows, config, includeOTNow) {
   return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
-    otHeaderIncludes: ['CENTRAL AMERICA', '16:00 - 17:00 PST']
+    otHeaderIncludes: ['OT TAKERS', 'OT CENTRAL', 'CENTRAL OT']
   })
 }
 function parseVenezuelaSheet_(rows, config, includeOTNow) {
   return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
-    otHeaderIncludes: ['OT AW GARRET VENEZUELA']
+    otHeaderIncludes: ['OT TAKERS', 'OT AW GARRET', 'VENEZUELA OT']
   })
 }
 function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
@@ -652,9 +652,9 @@ function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
     return { english: en, spanish: sp, total: tot }
   }
   const getOTFooterTotals = (row) => {
-    const en = safeInt(row[colEn + 1]) || safeInt(row[colEn])
-    const sp = safeInt(row[colSp + 1]) || safeInt(row[colSp])
-    const tot = safeInt(row[colSp + 2]) || (en + sp)
+    const en = safeInt(row[colEn])
+    const sp = safeInt(row[colSp])
+    const tot = en + sp
     return { english: en, spanish: sp, total: tot }
   }
   for (let i = 0; i < rows.length; i++) {
@@ -689,15 +689,8 @@ function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
     const extNum = parseInt(rawExt, 10)
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (!rawExt.startsWith(extStart)) continue
-    let en = 0
-    let sp = 0
-    if (!inOT) {
-      en = safeInt(row[colEn])
-      sp = safeInt(row[colSp])
-    } else {
-      en = safeInt(row[colEn + 1]) || safeInt(row[colEn])
-      sp = safeInt(row[colSp + 1]) || safeInt(row[colSp])
-    }
+    const en = safeInt(row[colEn])
+    const sp = safeInt(row[colSp])
     const tot = en + sp
     if (agentMap[rawExt]) {
       agentMap[rawExt].english += en
@@ -1544,7 +1537,7 @@ export default function Dashboard() {
                 </h2>
                 {!isToday&&canEdit&&(<div style={{position:'relative'}} onClick={e=>e.stopPropagation()}><button className="asia-menu-btn" onClick={()=>setEditMenuOpen(o=>!o)}>···</button>{editMenuOpen&&(<div className="asia-menu-dropdown">{!bulkEditMode?<button className="asia-menu-item" onClick={()=>{setBulkEditMode(true);setEditMenuOpen(false);setAsiaView('stats')}}>✏️ Edit this day's data</button>:<><button className="asia-menu-item green-item" onClick={()=>{saveAsiaBulk();setEditMenuOpen(false)}}>{savingOverride?'Saving...':'Save all changes'}</button><button className="asia-menu-item red-item" onClick={()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)}}>Cancel edit</button></>}{hasAsiaOverrides&&<button className="asia-menu-item" style={{borderTop:'0.5px solid #2a2d38',marginTop:4,paddingTop:10,color:'#f87171'}} onClick={resetAsiaOverrides}>Reset to original data</button>}</div>)}</div>)}
               </div>
-              <div className="asia-view-tabs"><button className={`view-tab ${asiaView==='stats'?'active':''}`} onClick={()=>setAsiaView('stats')}>📊 Stats</button><button className={`view-tab ${asiaView==='charts'?'active':''}`} onClick={()=>setAsiaView('charts')}>📈 Charts</button><button className={`view-tab ${asiaView==='slacks'?'active':''}`} onClick={()=>setAsiaView('slacks')}>💬 Slacks</button></div>
+                            <div className="asia-view-tabs"><button className={`view-tab ${asiaView==='stats'?'active':''}`} onClick={()=>setAsiaView('stats')}>📊 Stats</button><button className={`view-tab ${asiaView==='charts'?'active':''}`} onClick={()=>setAsiaView('charts')}>📈 Charts</button><button className={`view-tab ${asiaView==='slacks'?'active':''}`} onClick={()=>setAsiaView('slacks')}>💬 Slacks</button><button className="view-tab" onClick={()=>downloadTeamDayCsv_({config:{label:'Asia',hasSp:true,id:'asia'},selectedDate,dateLabel:formatDateLabel(selectedDate),goal,totalEn:totalEnglish,totalSp:totalSpanish,totalXf:totalXfers,agents:asiaAgentsFinal})}>⬇ Download</button></div>
             </div>
             {asiaView!=='slacks'&&(histLoading?<div style={{color:'#6b7280',padding:'2rem',textAlign:'center'}}>Loading...</div>:bulkEditMode?(
               <div className="summary-grid" style={{marginBottom:'1.5rem'}}><div className="sum-card green"><div className="sum-val">{hitGoal.length}</div><div className="sum-label">Hit Goal ({goal}+ EN)</div></div><div className="sum-card orange"><div className="sum-val">{asiaAgentsFinal.length-hitGoal.length-atZero.length}</div><div className="sum-label">In Progress</div></div><div className="sum-card teal"><input type="number" className="sum-edit-input" style={{color:'#2dd4bf'}} value={bulkTotalsEdit?.spanish??totalSpanish} onChange={e=>setBulkTotalsEdit(t=>({spanish:e.target.value,english:t?.english??totalEnglish}))}/><div className="sum-label">Spanish Xfers</div></div><div className="sum-card blue"><input type="number" className="sum-edit-input" style={{color:'#60a5fa'}} value={bulkTotalsEdit?.english??totalEnglish} onChange={e=>setBulkTotalsEdit(t=>({english:e.target.value,spanish:t?.spanish??totalSpanish}))}/><div className="sum-label">English Xfers</div></div><div className="sum-card indigo"><div className="sum-val">{((parseInt(bulkTotalsEdit?.spanish)||totalSpanish)+(parseInt(bulkTotalsEdit?.english)||totalEnglish)).toLocaleString()}</div><div className="sum-label">Total Xfers</div></div></div>
