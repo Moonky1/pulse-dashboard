@@ -65,6 +65,12 @@ function normalizeDate(raw) {
     const y = d.getUTCFullYear(), m = String(d.getUTCMonth()+1).padStart(2,'0'), day = String(d.getUTCDate()).padStart(2,'0')
     return `${y}-${m}-${day}`
   } catch(e) { return null }
+  const RANKING_START_DATE = '2026-04-01'
+
+function keepRankingDate(date) {
+  const d = normalizeDate(date)
+  return !!d && d >= RANKING_START_DATE
+}
 }
 // ── Weekly sheet parser ────────────────────────────────────────────────────
 const MONTH_NUMS = {JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12}
@@ -1596,7 +1602,7 @@ export default function Dashboard() {
       })
     })
 
-    agents = Object.values(mergedByKey)
+    agents = Object.values(mergedByKey).filter(a => keepRankingDate(a.date))
   } catch (e) {}
 
   setAgentSnapshotsRemote(agents)
