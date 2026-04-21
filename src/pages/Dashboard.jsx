@@ -251,7 +251,7 @@ async function saveDailyTotalsToSheets(date, teamRows) {
     spanish: t.spanish,
     total: t.total,
     agents: t.agents,
-    noSpanish: t.noSpanish || false,
+    noSpanish: t.noSpanish || false
   }))
 
   const payload = JSON.stringify(teams)
@@ -280,7 +280,7 @@ async function saveTeamSnapshotToSheets(date, teamId, agents) {
       action: 'saveTeamSnapshot',
       date,
       teamId,
-      agents: payload,
+      agents: payload
     })
     await fetch(SCRIPT_URL, { method: 'POST', body, mode: 'no-cors' })
   } catch (e) {}
@@ -294,7 +294,7 @@ async function saveToWeeklySheet(date, teamId, agents) {
     name: String(a.name || '').trim(),
     english: Number(a.english) || 0,
     spanish: Number(a.spanish) || 0,
-    total: Number(a.total) || ((Number(a.english) || 0) + (Number(a.spanish) || 0)),
+    total: Number(a.total) || ((Number(a.english) || 0) + (Number(a.spanish) || 0))
   }))
 
   const payload = JSON.stringify(normalizedAgents)
@@ -308,13 +308,13 @@ async function saveToWeeklySheet(date, teamId, agents) {
       action: 'saveToWeeklySheet',
       date,
       team: teamId,
-      agents: payload,
+      agents: payload
     })
 
     await fetch(SCRIPT_URL, {
       method: 'POST',
       body,
-      mode: 'no-cors',
+      mode: 'no-cors'
     })
   } catch (e) {}
 }
@@ -378,7 +378,7 @@ async function backfillHistoricalDataToSheets() {
             english: a.english,
             spanish: a.spanish || 0,
             total: a.total,
-            team: t.id,
+            team: t.id
           })
         })
 
@@ -390,7 +390,7 @@ async function backfillHistoricalDataToSheets() {
             spanish: totals.spanish,
             total: totals.total,
             agents: agents.length,
-            noSpanish: !t.hasSp,
+            noSpanish: !t.hasSp
           })
         }
       }
@@ -411,7 +411,7 @@ async function backfillHistoricalDataToSheets() {
             english: a.english,
             spanish: a.spanish || 0,
             total: a.total,
-            team: 'asia',
+            team: 'asia'
           })
         })
 
@@ -423,7 +423,7 @@ async function backfillHistoricalDataToSheets() {
             spanish: totals.spanish,
             total: totals.total,
             agents: agents.length,
-            noSpanish: false,
+            noSpanish: false
           })
         }
       }
@@ -434,6 +434,7 @@ async function backfillHistoricalDataToSheets() {
           if (name.includes('PHILIPPINES')) {
             const en = safeInt(row[3])
             const agents = safeInt(row[2])
+
             if (en > 0 && !tt.find(t => t.id === 'philippines')) {
               tt.push({
                 id: 'philippines',
@@ -442,7 +443,7 @@ async function backfillHistoricalDataToSheets() {
                 spanish: 0,
                 total: en,
                 agents,
-                noSpanish: true,
+                noSpanish: true
               })
             }
             break
@@ -460,8 +461,8 @@ async function backfillHistoricalDataToSheets() {
             body: new URLSearchParams({
               action: 'appendAgentSnapshots',
               date: snap.date,
-              snapshots: JSON.stringify(allAgents.slice(b, b + BATCH)),
-            }),
+              snapshots: JSON.stringify(allAgents.slice(b, b + BATCH))
+            })
           })
           await new Promise(r => setTimeout(r, 1200))
         }
@@ -474,8 +475,8 @@ async function backfillHistoricalDataToSheets() {
           body: new URLSearchParams({
             action: 'saveDailyTotals',
             date: snap.date,
-            teams: JSON.stringify(tt),
-          }),
+            teams: JSON.stringify(tt)
+          })
         })
         await new Promise(r => setTimeout(r, 1200))
       }
@@ -484,6 +485,7 @@ async function backfillHistoricalDataToSheets() {
 
   localStorage.setItem(DONE_KEY, '1')
 }
+
 
 const E = {goal:'/emojis/goal.webp',goal1:'/emojis/goal1.webp',goal3:'/emojis/goal3.webp',goal4:'/emojis/goal4.webp',medal1:'/emojis/medal1.webp',medal2:'/emojis/medal2.webp',medal3:'/emojis/web3.webp',zero:'/emojis/zero.webp',firework:'/emojis/firework.webp'}
 const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
@@ -495,7 +497,7 @@ const includeOT    = () => colombiaHour() >= 18 || colombiaHour() < 6
 const cellUpper    = (v) => (v||'').toString().toUpperCase().trim()
 
 function parseTeamSheet(rows, config) {
-  const { extStart, hasSp, colEn, colSp } = config
+  const { id, extStart, hasSp, colEn, colSp } = config
 
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
     return {
@@ -504,20 +506,25 @@ function parseTeamSheet(rows, config) {
     }
   }
 
+  const includeOTNow = includeOT()
+
+  if (id === 'colombia') return parseColombiaSheet_(rows, config, includeOTNow)
+  if (id === 'central') return parseCentralSheet_(rows, config, includeOTNow)
+  if (id === 'venezuela') return parseVenezuelaSheet_(rows, config, includeOTNow)
+
+  // Mexico / Philippines / default
   const agentMap = {}
   let inOT = false
   let afterMainFooter = false
   let mainFooter = null
   let otFooter = null
 
-  const includeOTNow = includeOT()
-
   const rowText = (row, limit = 6) =>
     row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
 
   const isOTHeader = (row) => {
     const txt = rowText(row, 6)
-    return txt.includes('OT TAKERS') || txt.includes(' COLOMBIA OT') || txt.includes(' CENTRAL') || txt.includes(' OT AW GARRET') || txt.startsWith('OT ') || txt.includes(' OT ')
+    return txt.includes('OT TAKERS') || txt.includes('PHILIPPINES OT') || txt.startsWith('OT ') || txt.includes(' OT ')
   }
 
   const isFooterRow = (row) => {
@@ -560,7 +567,6 @@ function parseTeamSheet(rows, config) {
     const c0U = cellUpper(c0)
     const txt = rowText(row, 6)
 
-    // Detect OT header
     if (!inOT && isOTHeader(row)) {
       if (!includeOTNow) break
       inOT = true
@@ -568,7 +574,6 @@ function parseTeamSheet(rows, config) {
       continue
     }
 
-    // Detect main / OT footer
     if (isFooterRow(row)) {
       const ft = getFooterTotals(row)
 
@@ -585,9 +590,7 @@ function parseTeamSheet(rows, config) {
       }
     }
 
-    // Ignore rows between main footer and OT block
     if (afterMainFooter && !inOT) continue
-
     if (isHardSkip(txt) || SKIP.has(c0U) || c0.length < 2) continue
 
     const rawExt = String(row[1] || '').replace(/,/g, '').trim()
@@ -598,6 +601,308 @@ function parseTeamSheet(rows, config) {
 
     const en = safeInt(row[colEn])
     const sp = colSp != null ? safeInt(row[colSp]) : 0
+    const tot = en + sp
+
+    if (agentMap[rawExt]) {
+      agentMap[rawExt].english += en
+      agentMap[rawExt].spanish += sp
+      agentMap[rawExt].total = agentMap[rawExt].english + agentMap[rawExt].spanish
+      if (inOT) agentMap[rawExt]._fromOT = true
+    } else {
+      agentMap[rawExt] = {
+        name: c0,
+        ext: rawExt,
+        english: en,
+        spanish: sp,
+        total: tot,
+        _fromOT: inOT
+      }
+    }
+  }
+
+  const allAgents = Object.values(agentMap)
+  const mainAgents = allAgents.filter(a => !a._fromOT)
+  const otAgents = allAgents.filter(a => a._fromOT)
+
+  const mainAgentEn = mainAgents.reduce((s, a) => s + a.english, 0)
+  const mainAgentSp = mainAgents.reduce((s, a) => s + a.spanish, 0)
+  const otAgentEn = otAgents.reduce((s, a) => s + a.english, 0)
+
+  const mainEn = mainFooter ? Math.max(mainFooter.english, mainAgentEn) : mainAgentEn
+  const mainSp = mainFooter ? Math.max(mainFooter.spanish, mainAgentSp) : mainAgentSp
+  const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otAgentEn) : otAgentEn) : 0
+
+  const agents = includeOTNow
+    ? allAgents.map(({ _fromOT, ...rest }) => rest)
+    : mainAgents.map(({ _fromOT, ...rest }) => rest)
+
+  const english = mainEn + extraOtEn
+  const spanish = mainSp
+
+  return {
+    agents,
+    totals: {
+      english,
+      spanish,
+      total: english + spanish,
+      activeAgents: agents.length
+    }
+  }
+}
+
+
+function parseAsiaSheet(rows) {
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return {
+      agents: [],
+      totals: { spanish: 0, english: 0, total: 0, activeAgents: 0 }
+    }
+  }
+
+  const COL_EXT = 1
+  const COL_SP = 2
+  const COL_EN = 3
+  const includeOTNow = includeOT()
+
+  const agentMap = {}
+  let inOT = false
+  let afterMainFooter = false
+  let mainFooter = null
+  let otFooter = null
+
+  const rowText = (row, limit = 6) =>
+    row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
+
+  const isOTHeader = (row) => {
+    const txt = rowText(row, 6)
+    return txt.includes('OT TAKERS') || txt.startsWith('OT ') || txt.includes(' OT ')
+  }
+
+  const isFooterRow = (row) => {
+    const txt = rowText(row, 6)
+    return txt.includes('LOGGED IN') || txt.includes('TOTAL TRANSFERS')
+  }
+
+  const getFooterTotals = (row) => {
+    const sp = safeInt(row[COL_SP])
+    const en = safeInt(row[COL_EN])
+    const tot = safeInt(row[COL_EN + 1]) || (sp + en)
+    return { spanish: sp, english: en, total: tot }
+  }
+
+  const SKIP = new Set([
+    'ASIA','MANAGEMENT','LEXNER','GENERAL MANAGER','USER','USERS',
+    'SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL',
+    'TRANSFER','TRANSFERS','AGENTS'
+  ])
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
+
+    const c0 = String(row[0] || '').trim()
+    const c0U = cellUpper(c0)
+
+    if (!inOT && isOTHeader(row)) {
+      if (!includeOTNow) break
+      inOT = true
+      afterMainFooter = false
+      continue
+    }
+
+    if (isFooterRow(row)) {
+      const ft = getFooterTotals(row)
+
+      if (!inOT && !mainFooter && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
+        mainFooter = ft
+        if (!includeOTNow) break
+        afterMainFooter = true
+        continue
+      }
+
+      if (inOT && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
+        otFooter = ft
+        break
+      }
+    }
+
+    // ignora Jay / Ronnie / cualquier fila intermedia
+    if (afterMainFooter && !inOT) continue
+    if (SKIP.has(c0U) || c0.length < 2) continue
+
+    const extRaw = String(row[COL_EXT] || '').replace(/,/g, '').trim()
+    const ext = parseInt(extRaw, 10)
+    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
+
+    const sp = safeInt(row[COL_SP])
+    const en = safeInt(row[COL_EN])
+
+    if (agentMap[extRaw]) {
+      agentMap[extRaw].english += en
+      agentMap[extRaw].spanish += sp
+      agentMap[extRaw].total = agentMap[extRaw].english + agentMap[extRaw].spanish
+      if (inOT) agentMap[extRaw]._fromOT = true
+    } else {
+      agentMap[extRaw] = {
+        name: c0,
+        ext: extRaw,
+        spanish: sp,
+        english: en,
+        total: sp + en,
+        _fromOT: inOT
+      }
+    }
+  }
+
+  const allAgents = Object.values(agentMap)
+  const mainAgents = allAgents.filter(a => !a._fromOT)
+  const otAgents = allAgents.filter(a => a._fromOT)
+
+  const mainEnAgents = mainAgents.reduce((s, a) => s + a.english, 0)
+  const mainSpAgents = mainAgents.reduce((s, a) => s + a.spanish, 0)
+  const otEnAgents = otAgents.reduce((s, a) => s + a.english, 0)
+  const otSpAgents = otAgents.reduce((s, a) => s + a.spanish, 0)
+
+  const mainEn = mainFooter ? Math.max(mainFooter.english, mainEnAgents) : mainEnAgents
+  const mainSp = mainFooter ? Math.max(mainFooter.spanish, mainSpAgents) : mainSpAgents
+  const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otEnAgents) : otEnAgents) : 0
+  const extraOtSp = includeOTNow ? (otFooter ? Math.max(otFooter.spanish, otSpAgents) : otSpAgents) : 0
+
+  const agents = includeOTNow
+    ? allAgents.map(({ _fromOT, ...rest }) => rest)
+    : mainAgents.map(({ _fromOT, ...rest }) => rest)
+
+  const english = mainEn + extraOtEn
+  const spanish = mainSp + extraOtSp
+
+  return {
+    agents,
+    totals: {
+      spanish,
+      english,
+      total: spanish + english,
+      activeAgents: agents.length
+    }
+  }
+}
+
+function parseColombiaSheet_(rows, config, includeOTNow) {
+  return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
+    otHeaderIncludes: ['COLOMBIA OT'],
+    footerNeedsLoggedIn: true,
+    otUsesFooter: true
+  })
+}
+
+function parseCentralSheet_(rows, config, includeOTNow) {
+  return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
+    otHeaderIncludes: ['CENTRAL AMERICA', '16:00 - 17:00 PST'],
+    footerNeedsLoggedIn: true,
+    otUsesFooter: true
+  })
+}
+
+function parseVenezuelaSheet_(rows, config, includeOTNow) {
+  return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
+    otHeaderIncludes: ['OT AW GARRET VENEZUELA'],
+    footerNeedsLoggedIn: true,
+    otUsesFooter: true
+  })
+}
+
+function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
+  const { extStart, colEn, colSp } = config
+  const agentMap = {}
+
+  let inOT = false
+  let afterMainFooter = false
+  let mainFooter = null
+  let otFooter = null
+
+  const otHeaderIncludes = opts.otHeaderIncludes || []
+
+  const rowText = (row, limit = 8) =>
+    row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
+
+  const isOTHeader = (row) => {
+    const txt = rowText(row, 8)
+    return otHeaderIncludes.some(k => txt.includes(k))
+  }
+
+  const isMainFooter = (row) => {
+    const txt = rowText(row, 8)
+    return txt.includes('LOGGED IN')
+  }
+
+  const isOTFooter = (row) => {
+    const txt = rowText(row, 8)
+    return txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')
+  }
+
+  const getMainFooterTotals = (row) => {
+    const en = safeInt(row[colEn])
+    const sp = safeInt(row[colSp])
+    const tot = safeInt(row[colSp + 1]) || (en + sp)
+    return { english: en, spanish: sp, total: tot }
+  }
+
+  const getOTFooterTotals = (row) => {
+    const en = safeInt(row[colEn + 1]) || safeInt(row[colEn])
+    const sp = safeInt(row[colSp + 1]) || safeInt(row[colSp])
+    const tot = safeInt(row[colSp + 2]) || (en + sp)
+    return { english: en, spanish: sp, total: tot }
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
+
+    const c0 = String(row[0] || '').trim()
+
+    if (!inOT && isOTHeader(row)) {
+      if (!includeOTNow) break
+      inOT = true
+      afterMainFooter = false
+      continue
+    }
+
+    if (!inOT && isMainFooter(row)) {
+      const ft = getMainFooterTotals(row)
+      if (ft.english > 0 || ft.spanish > 0 || ft.total > 0) {
+        mainFooter = ft
+        if (!includeOTNow) break
+        afterMainFooter = true
+        continue
+      }
+    }
+
+    if (inOT && isOTFooter(row)) {
+      const ft = getOTFooterTotals(row)
+      if (ft.english > 0 || ft.spanish > 0 || ft.total > 0) {
+        otFooter = ft
+        break
+      }
+    }
+
+    if (afterMainFooter && !inOT) continue
+    if (!c0 || c0.length < 2) continue
+
+    const rawExt = String(row[1] || '').replace(/,/g, '').trim()
+    const extNum = parseInt(rawExt, 10)
+    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
+    if (!rawExt.startsWith(extStart)) continue
+
+    let en = 0
+    let sp = 0
+
+    if (!inOT) {
+      en = safeInt(row[colEn])
+      sp = safeInt(row[colSp])
+    } else {
+      en = safeInt(row[colEn + 1]) || safeInt(row[colEn])
+      sp = safeInt(row[colSp + 1]) || safeInt(row[colSp])
+    }
+
     const tot = en + sp
 
     if (agentMap[rawExt]) {
@@ -650,144 +955,6 @@ function parseTeamSheet(rows, config) {
   }
 }
 
-function parseAsiaSheet(rows) {
-  if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return {
-      agents: [],
-      totals: { spanish: 0, english: 0, total: 0, activeAgents: 0 }
-    }
-  }
-
-  const COL_EXT = 1
-  const COL_SP = 2
-  const COL_EN = 3
-
-  const includeOTNow = includeOT()
-  const agentMap = {}
-
-  let inOT = false
-  let afterMainFooter = false
-  let mainFooter = null
-  let otFooter = null
-
-  const rowText = (row, limit = 6) =>
-    row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
-
-  const isOTHeader = (row) => {
-    const txt = rowText(row, 6)
-    return txt.includes('OT TAKERS') || txt.startsWith('OT ') || txt.includes(' OT ')
-  }
-
-  const isFooterRow = (row) => {
-    const txt = rowText(row, 6)
-    return txt.includes('LOGGED IN') || txt.includes('TOTAL TRANSFERS')
-  }
-
-  const SKIP = new Set([
-    'ASIA','MANAGEMENT','LEXNER','GENERAL MANAGER','USER','USERS',
-    'SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL',
-    'TRANSFER','TRANSFERS','AGENTS'
-  ])
-
-  const getFooterTotals = (row) => {
-    const sp = safeInt(row[COL_SP])
-    const en = safeInt(row[COL_EN])
-    const tot = safeInt(row[COL_EN + 1]) || (sp + en)
-    return { spanish: sp, english: en, total: tot }
-  }
-
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]
-    if (!Array.isArray(row)) continue
-
-    const c0 = String(row[0] || '').trim()
-    const c0U = cellUpper(c0)
-
-    if (!inOT && isOTHeader(row)) {
-      if (!includeOTNow) break
-      inOT = true
-      afterMainFooter = false
-      continue
-    }
-
-    if (isFooterRow(row)) {
-      const ft = getFooterTotals(row)
-
-      if (!inOT && !mainFooter && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
-        mainFooter = ft
-        if (!includeOTNow) break
-        afterMainFooter = true
-        continue
-      }
-
-      if (inOT && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
-        otFooter = ft
-        break
-      }
-    }
-
-    // Esto evita que sume Jay / Ronnie / filas sueltas entre footer principal y OT
-    if (afterMainFooter && !inOT) continue
-
-    if (SKIP.has(c0U) || c0.length < 2) continue
-
-    const extRaw = String(row[COL_EXT] || '').replace(/,/g, '').trim()
-    const ext = parseInt(extRaw, 10)
-
-    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
-
-    const sp = safeInt(row[COL_SP])
-    const en = safeInt(row[COL_EN])
-
-    if (agentMap[extRaw]) {
-      agentMap[extRaw].english += en
-      agentMap[extRaw].spanish += sp
-      agentMap[extRaw].total = agentMap[extRaw].english + agentMap[extRaw].spanish
-      if (inOT) agentMap[extRaw]._fromOT = true
-    } else {
-      agentMap[extRaw] = {
-        name: c0,
-        ext: extRaw,
-        spanish: sp,
-        english: en,
-        total: sp + en,
-        _fromOT: inOT
-      }
-    }
-  }
-
-  const allAgents = Object.values(agentMap)
-  const mainAgents = allAgents.filter(a => !a._fromOT)
-  const otAgents = allAgents.filter(a => a._fromOT)
-
-  const mainEnAgents = mainAgents.reduce((s, a) => s + a.english, 0)
-  const mainSpAgents = mainAgents.reduce((s, a) => s + a.spanish, 0)
-  const otEnAgents = otAgents.reduce((s, a) => s + a.english, 0)
-  const otSpAgents = otAgents.reduce((s, a) => s + a.spanish, 0)
-
-  const mainEn = mainFooter ? Math.max(mainFooter.english, mainEnAgents) : mainEnAgents
-  const mainSp = mainFooter ? Math.max(mainFooter.spanish, mainSpAgents) : mainSpAgents
-
-  const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otEnAgents) : otEnAgents) : 0
-  const extraOtSp = includeOTNow ? (otFooter ? Math.max(otFooter.spanish, otSpAgents) : otSpAgents) : 0
-
-  const agents = includeOTNow
-    ? allAgents.map(({ _fromOT, ...rest }) => rest)
-    : mainAgents.map(({ _fromOT, ...rest }) => rest)
-
-  const english = mainEn + extraOtEn
-  const spanish = mainSp + extraOtSp
-
-  return {
-    agents,
-    totals: {
-      spanish,
-      english,
-      total: spanish + english,
-      activeAgents: agents.length
-    }
-  }
-}
 
 const TEAMS_ORDER=['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 const RANGES=[{label:'0',min:0,max:0,color:'#f87171'},{label:'1-4',min:1,max:4,color:'#fb923c'},{label:'5-9',min:5,max:9,color:'#fbbf24'},{label:'10-14',min:10,max:14,color:'#a3e635'},{label:'15-19',min:15,max:19,color:'#34d399'},{label:'20+',min:20,max:9999,color:'#22c55e'}]
