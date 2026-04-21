@@ -486,7 +486,6 @@ async function backfillHistoricalDataToSheets() {
   localStorage.setItem(DONE_KEY, '1')
 }
 
-
 const E = {goal:'/emojis/goal.webp',goal1:'/emojis/goal1.webp',goal3:'/emojis/goal3.webp',goal4:'/emojis/goal4.webp',medal1:'/emojis/medal1.webp',medal2:'/emojis/medal2.webp',medal3:'/emojis/web3.webp',zero:'/emojis/zero.webp',firework:'/emojis/firework.webp'}
 const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
 const MEDALS = [E.medal1, E.medal2, E.medal3]
@@ -500,10 +499,7 @@ function parseTeamSheet(rows, config) {
   const { id, extStart, hasSp, colEn, colSp } = config
 
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return {
-      agents: [],
-      totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 }
-    }
+    return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 } }
   }
 
   const includeOTNow = includeOT()
@@ -512,37 +508,25 @@ function parseTeamSheet(rows, config) {
   if (id === 'central') return parseCentralSheet_(rows, config, includeOTNow)
   if (id === 'venezuela') return parseVenezuelaSheet_(rows, config, includeOTNow)
 
-  // Mexico / Philippines / default
   const agentMap = {}
   let inOT = false
   let afterMainFooter = false
   let mainFooter = null
   let otFooter = null
 
-  const rowText = (row, limit = 6) =>
-    row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
-
+  const rowText = (row, limit = 6) => row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
   const isOTHeader = (row) => {
     const txt = rowText(row, 6)
     return txt.includes('OT TAKERS') || txt.includes('PHILIPPINES OT') || txt.startsWith('OT ') || txt.includes(' OT ')
   }
-
   const isFooterRow = (row) => {
     const txt = rowText(row, 6)
     return txt.includes('LOGGED IN') || txt.includes('TOTAL TRANSFERS')
   }
-
   const isHardSkip = (txt) =>
-    txt.includes('THIS HOUR') ||
-    txt.includes('HOURLY') ||
-    txt.includes('ON SITE') ||
-    txt.includes('WEEKLY') ||
-    txt.includes('OUR GOAL') ||
-    txt.includes('GOAL +') ||
-    txt.includes('GOAL+') ||
-    txt.includes('SUPERVISOR') ||
-    txt.includes('CAMPAIGN') ||
-    txt.includes('MANAGEMENT')
+    txt.includes('THIS HOUR') || txt.includes('HOURLY') || txt.includes('ON SITE') || txt.includes('WEEKLY') ||
+    txt.includes('OUR GOAL') || txt.includes('GOAL +') || txt.includes('GOAL+') || txt.includes('SUPERVISOR') ||
+    txt.includes('CAMPAIGN') || txt.includes('MANAGEMENT')
 
   const getFooterTotals = (row) => {
     const en = safeInt(row[colEn])
@@ -552,12 +536,7 @@ function parseTeamSheet(rows, config) {
     return { english: en, spanish: sp, total: tot }
   }
 
-  const SKIP = new Set([
-    'USER','USERS','AGENT NAME','AGENTS','NEW AGENT','NEW AGENTS',
-    'SUPERVISOR','MANAGER','GENERAL MANAGER','EXTENSION',
-    'ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS',
-    'OPENERS','CAMPAIGN','PER AGENT','LEXNER','ARWIN'
-  ])
+  const SKIP = new Set(['USER','USERS','AGENT NAME','AGENTS','NEW AGENT','NEW AGENTS','SUPERVISOR','MANAGER','GENERAL MANAGER','EXTENSION','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS','OPENERS','CAMPAIGN','PER AGENT','LEXNER','ARWIN'])
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
@@ -576,14 +555,12 @@ function parseTeamSheet(rows, config) {
 
     if (isFooterRow(row)) {
       const ft = getFooterTotals(row)
-
       if (!inOT && !mainFooter && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
         mainFooter = ft
         if (!includeOTNow) break
         afterMainFooter = true
         continue
       }
-
       if (inOT && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
         otFooter = ft
         break
@@ -595,7 +572,6 @@ function parseTeamSheet(rows, config) {
 
     const rawExt = String(row[1] || '').replace(/,/g, '').trim()
     const extNum = parseInt(rawExt, 10)
-
     if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
     if (!rawExt.startsWith(extStart)) continue
 
@@ -609,14 +585,7 @@ function parseTeamSheet(rows, config) {
       agentMap[rawExt].total = agentMap[rawExt].english + agentMap[rawExt].spanish
       if (inOT) agentMap[rawExt]._fromOT = true
     } else {
-      agentMap[rawExt] = {
-        name: c0,
-        ext: rawExt,
-        english: en,
-        spanish: sp,
-        total: tot,
-        _fromOT: inOT
-      }
+      agentMap[rawExt] = { name: c0, ext: rawExt, english: en, spanish: sp, total: tot, _fromOT: inOT }
     }
   }
 
@@ -632,31 +601,17 @@ function parseTeamSheet(rows, config) {
   const mainSp = mainFooter ? Math.max(mainFooter.spanish, mainAgentSp) : mainAgentSp
   const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otAgentEn) : otAgentEn) : 0
 
-  const agents = includeOTNow
-    ? allAgents.map(({ _fromOT, ...rest }) => rest)
-    : mainAgents.map(({ _fromOT, ...rest }) => rest)
+  const agents = includeOTNow ? allAgents.map(({ _fromOT, ...rest }) => rest) : mainAgents.map(({ _fromOT, ...rest }) => rest)
 
   const english = mainEn + extraOtEn
   const spanish = mainSp
 
-  return {
-    agents,
-    totals: {
-      english,
-      spanish,
-      total: english + spanish,
-      activeAgents: agents.length
-    }
-  }
+  return { agents, totals: { english, spanish, total: english + spanish, activeAgents: agents.length } }
 }
-
 
 function parseAsiaSheet(rows) {
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return {
-      agents: [],
-      totals: { spanish: 0, english: 0, total: 0, activeAgents: 0 }
-    }
+    return { agents: [], totals: { spanish: 0, english: 0, total: 0, activeAgents: 0 } }
   }
 
   const COL_EXT = 1
@@ -670,31 +625,22 @@ function parseAsiaSheet(rows) {
   let mainFooter = null
   let otFooter = null
 
-  const rowText = (row, limit = 6) =>
-    row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
-
+  const rowText = (row, limit = 6) => row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
   const isOTHeader = (row) => {
     const txt = rowText(row, 6)
     return txt.includes('OT TAKERS') || txt.startsWith('OT ') || txt.includes(' OT ')
   }
-
   const isFooterRow = (row) => {
     const txt = rowText(row, 6)
     return txt.includes('LOGGED IN') || txt.includes('TOTAL TRANSFERS')
   }
-
   const getFooterTotals = (row) => {
     const sp = safeInt(row[COL_SP])
     const en = safeInt(row[COL_EN])
     const tot = safeInt(row[COL_EN + 1]) || (sp + en)
     return { spanish: sp, english: en, total: tot }
   }
-
-  const SKIP = new Set([
-    'ASIA','MANAGEMENT','LEXNER','GENERAL MANAGER','USER','USERS',
-    'SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL',
-    'TRANSFER','TRANSFERS','AGENTS'
-  ])
+  const SKIP = new Set(['ASIA','MANAGEMENT','LEXNER','GENERAL MANAGER','USER','USERS','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS','AGENTS'])
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
@@ -712,21 +658,18 @@ function parseAsiaSheet(rows) {
 
     if (isFooterRow(row)) {
       const ft = getFooterTotals(row)
-
       if (!inOT && !mainFooter && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
         mainFooter = ft
         if (!includeOTNow) break
         afterMainFooter = true
         continue
       }
-
       if (inOT && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
         otFooter = ft
         break
       }
     }
 
-    // ignora Jay / Ronnie / cualquier fila intermedia
     if (afterMainFooter && !inOT) continue
     if (SKIP.has(c0U) || c0.length < 2) continue
 
@@ -743,14 +686,7 @@ function parseAsiaSheet(rows) {
       agentMap[extRaw].total = agentMap[extRaw].english + agentMap[extRaw].spanish
       if (inOT) agentMap[extRaw]._fromOT = true
     } else {
-      agentMap[extRaw] = {
-        name: c0,
-        ext: extRaw,
-        spanish: sp,
-        english: en,
-        total: sp + en,
-        _fromOT: inOT
-      }
+      agentMap[extRaw] = { name: c0, ext: extRaw, spanish: sp, english: en, total: sp + en, _fromOT: inOT }
     }
   }
 
@@ -768,45 +704,29 @@ function parseAsiaSheet(rows) {
   const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otEnAgents) : otEnAgents) : 0
   const extraOtSp = includeOTNow ? (otFooter ? Math.max(otFooter.spanish, otSpAgents) : otSpAgents) : 0
 
-  const agents = includeOTNow
-    ? allAgents.map(({ _fromOT, ...rest }) => rest)
-    : mainAgents.map(({ _fromOT, ...rest }) => rest)
+  const agents = includeOTNow ? allAgents.map(({ _fromOT, ...rest }) => rest) : mainAgents.map(({ _fromOT, ...rest }) => rest)
 
   const english = mainEn + extraOtEn
   const spanish = mainSp + extraOtSp
 
-  return {
-    agents,
-    totals: {
-      spanish,
-      english,
-      total: spanish + english,
-      activeAgents: agents.length
-    }
-  }
+  return { agents, totals: { spanish, english, total: spanish + english, activeAgents: agents.length } }
 }
 
 function parseColombiaSheet_(rows, config, includeOTNow) {
   return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
-    otHeaderIncludes: ['COLOMBIA OT'],
-    footerNeedsLoggedIn: true,
-    otUsesFooter: true
+    otHeaderIncludes: ['COLOMBIA OT']
   })
 }
 
 function parseCentralSheet_(rows, config, includeOTNow) {
   return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
-    otHeaderIncludes: ['CENTRAL AMERICA', '16:00 - 17:00 PST'],
-    footerNeedsLoggedIn: true,
-    otUsesFooter: true
+    otHeaderIncludes: ['CENTRAL AMERICA', '16:00 - 17:00 PST']
   })
 }
 
 function parseVenezuelaSheet_(rows, config, includeOTNow) {
   return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
-    otHeaderIncludes: ['OT AW GARRET VENEZUELA'],
-    footerNeedsLoggedIn: true,
-    otUsesFooter: true
+    otHeaderIncludes: ['OT AW GARRET VENEZUELA']
   })
 }
 
@@ -821,19 +741,12 @@ function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
 
   const otHeaderIncludes = opts.otHeaderIncludes || []
 
-  const rowText = (row, limit = 8) =>
-    row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
-
+  const rowText = (row, limit = 8) => row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
   const isOTHeader = (row) => {
     const txt = rowText(row, 8)
     return otHeaderIncludes.some(k => txt.includes(k))
   }
-
-  const isMainFooter = (row) => {
-    const txt = rowText(row, 8)
-    return txt.includes('LOGGED IN')
-  }
-
+  const isMainFooter = (row) => rowText(row, 8).includes('LOGGED IN')
   const isOTFooter = (row) => {
     const txt = rowText(row, 8)
     return txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')
@@ -858,7 +771,6 @@ function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
     if (!Array.isArray(row)) continue
 
     const c0 = String(row[0] || '').trim()
-
     if (!inOT && isOTHeader(row)) {
       if (!includeOTNow) break
       inOT = true
@@ -894,7 +806,6 @@ function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
 
     let en = 0
     let sp = 0
-
     if (!inOT) {
       en = safeInt(row[colEn])
       sp = safeInt(row[colSp])
@@ -911,14 +822,7 @@ function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
       agentMap[rawExt].total = agentMap[rawExt].english + agentMap[rawExt].spanish
       if (inOT) agentMap[rawExt]._fromOT = true
     } else {
-      agentMap[rawExt] = {
-        name: c0,
-        ext: rawExt,
-        english: en,
-        spanish: sp,
-        total: tot,
-        _fromOT: inOT
-      }
+      agentMap[rawExt] = { name: c0, ext: rawExt, english: en, spanish: sp, total: tot, _fromOT: inOT }
     }
   }
 
@@ -933,28 +837,16 @@ function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
 
   const mainEn = mainFooter ? Math.max(mainFooter.english, mainAgentEn) : mainAgentEn
   const mainSp = mainFooter ? Math.max(mainFooter.spanish, mainAgentSp) : mainAgentSp
-
   const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otAgentEn) : otAgentEn) : 0
   const extraOtSp = includeOTNow ? (otFooter ? Math.max(otFooter.spanish, otAgentSp) : otAgentSp) : 0
 
-  const agents = includeOTNow
-    ? allAgents.map(({ _fromOT, ...rest }) => rest)
-    : mainAgents.map(({ _fromOT, ...rest }) => rest)
+  const agents = includeOTNow ? allAgents.map(({ _fromOT, ...rest }) => rest) : mainAgents.map(({ _fromOT, ...rest }) => rest)
 
   const english = mainEn + extraOtEn
   const spanish = mainSp + extraOtSp
 
-  return {
-    agents,
-    totals: {
-      english,
-      spanish,
-      total: english + spanish,
-      activeAgents: agents.length
-    }
-  }
+  return { agents, totals: { english, spanish, total: english + spanish, activeAgents: agents.length } }
 }
-
 
 const TEAMS_ORDER=['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 const RANGES=[{label:'0',min:0,max:0,color:'#f87171'},{label:'1-4',min:1,max:4,color:'#fb923c'},{label:'5-9',min:5,max:9,color:'#fbbf24'},{label:'10-14',min:10,max:14,color:'#a3e635'},{label:'15-19',min:15,max:19,color:'#34d399'},{label:'20+',min:20,max:9999,color:'#22c55e'}]
@@ -1420,99 +1312,71 @@ function TeamRankingsSection({ snapshots, remoteDailyTotals }) {
 
 // ── MVP Section ──────────────────────────────────────────────────────────────
 function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
-const data = useMemo(() => {
-  const enMap = {}
-  const spMap = {}
+  const data = useMemo(() => {
+    const enMap = {}, spMap = {}
 
-  const processSnapshot = (agents, teamId) => {
-    const actEN = agents.filter(a => (a.english || 0) > 0)
-    const actSP = agents.filter(a => (a.spanish || 0) > 0)
+    const processSnapshot = (agents, teamId) => {
+      const actEN = agents.filter(a => (a.english || 0) > 0)
+      const actSP = agents.filter(a => (a.spanish || 0) > 0)
+      const sortedEN = [...actEN].sort((a, b) => b.english - a.english)
+      const sortedSP = [...actSP].sort((a, b) => (b.spanish || 0) - (a.spanish || 0))
 
-    const sortedEN = [...actEN].sort((a, b) => b.english - a.english)
-    const sortedSP = [...actSP].sort((a, b) => (b.spanish || 0) - (a.spanish || 0))
-
-    const reg = (map, a, isTop1, isTop3, lang) => {
-      if (!map[a.ext]) {
-        map[a.ext] = {
-          name: a.name,
-          team: teamId,
-          ext: a.ext,
-          top1: 0,
-          top3: 0,
-          total: 0,
-          days: 0
-        }
+      const reg = (map, a, isTop1, isTop3, lang) => {
+        if (!map[a.ext]) map[a.ext] = { name: a.name, team: teamId, ext: a.ext, top1: 0, top3: 0, total: 0, days: 0 }
+        map[a.ext].total += lang === 'en' ? (a.english || 0) : (a.spanish || 0)
+        map[a.ext].days += 1
+        if (isTop1) map[a.ext].top1 += 1
+        if (isTop3) map[a.ext].top3 += 1
       }
 
-      map[a.ext].total += lang === 'en' ? (a.english || 0) : (a.spanish || 0)
-      map[a.ext].days += 1
-      if (isTop1) map[a.ext].top1 += 1
-      if (isTop3) map[a.ext].top3 += 1
+      sortedEN.forEach((a, i) => reg(enMap, a, i === 0, i < 3, 'en'))
+      sortedSP.forEach((a, i) => reg(spMap, a, i === 0, i < 3, 'sp'))
     }
 
-    sortedEN.forEach((a, i) => reg(enMap, a, i === 0, i < 3, 'en'))
-    sortedSP.forEach((a, i) => reg(spMap, a, i === 0, i < 3, 'sp'))
-  }
+    const mergedByDate = {}
 
-  const mergedByDate = {}
+    if (Array.isArray(agentSnapshotsRemote)) {
+      agentSnapshotsRemote.forEach(a => {
+        if (!a.date || !a.ext) return
+        const d = normalizeDate(a.date)
+        if (!d) return
 
-  // REMOTE ONLY for rankings
-  if (Array.isArray(agentSnapshotsRemote)) {
-    agentSnapshotsRemote.forEach(a => {
-      if (!a.date || !a.ext) return
+        const ext = String(a.ext).trim()
+        const en = Number(a.english) || 0
+        const sp = Number(a.spanish) || 0
+        const total = en + sp
+        if (total === 0) return
 
-      const d = normalizeDate(a.date)
-      if (!d) return
+        if (!mergedByDate[d]) mergedByDate[d] = {}
 
-      const ext = String(a.ext).trim()
-      const en = Number(a.english) || 0
-      const sp = Number(a.spanish) || 0
-      const total = en + sp
-      if (total === 0) return
-
-      if (!mergedByDate[d]) mergedByDate[d] = {}
-
-      if (
-        !mergedByDate[d][ext] ||
-        total > ((mergedByDate[d][ext].english || 0) + (mergedByDate[d][ext].spanish || 0)) ||
-        en > (mergedByDate[d][ext].english || 0)
-      ) {
-        mergedByDate[d][ext] = {
-          name: a.name || ext,
-          english: en,
-          spanish: sp,
-          team: a.team || 'asia'
+        if (!mergedByDate[d][ext] || total > ((mergedByDate[d][ext].english || 0) + (mergedByDate[d][ext].spanish || 0)) || en > (mergedByDate[d][ext].english || 0)) {
+          mergedByDate[d][ext] = {
+            name: a.name || ext,
+            english: en,
+            spanish: sp,
+            team: a.team || 'asia'
+          }
         }
-      }
-    })
-  }
-
-  Object.values(mergedByDate).forEach(day => {
-    const byTeam = {}
-
-    Object.entries(day).forEach(([ext, a]) => {
-      if (!byTeam[a.team]) byTeam[a.team] = []
-      byTeam[a.team].push({
-        ext,
-        name: a.name,
-        english: a.english,
-        spanish: a.spanish,
-        total: a.english + (a.spanish || 0)
       })
+    }
+
+    Object.values(mergedByDate).forEach(day => {
+      const byTeam = {}
+      Object.entries(day).forEach(([ext, a]) => {
+        if (!byTeam[a.team]) byTeam[a.team] = []
+        byTeam[a.team].push({ ext, name: a.name, english: a.english, spanish: a.spanish, total: a.english + (a.spanish || 0) })
+      })
+      Object.entries(byTeam).forEach(([tid, agts]) => processSnapshot(agts, tid))
     })
 
-    Object.entries(byTeam).forEach(([tid, agts]) => processSnapshot(agts, tid))
-  })
+    const sortFn = list => [...list].sort((a, b) => b.top1 - a.top1 || b.top3 - a.top3 || b.total - a.total)
+    const enList = sortFn(Object.values(enMap)).slice(0, 8)
+    const spList = sortFn(Object.values(spMap)).slice(0, 8)
+    const goatEN = Object.values(enMap).sort((a, b) => b.total - a.total)[0] || null
+    const goatSP = Object.values(spMap).sort((a, b) => b.total - a.total)[0] || null
 
-  const sortFn = list => [...list].sort((a, b) => b.top1 - a.top1 || b.top3 - a.top3 || b.total - a.total)
-
-  const enList = sortFn(Object.values(enMap)).slice(0, 8)
-  const spList = sortFn(Object.values(spMap)).slice(0, 8)
-  const goatEN = Object.values(enMap).sort((a, b) => b.total - a.total)[0] || null
-  const goatSP = Object.values(spMap).sort((a, b) => b.total - a.total)[0] || null
-
-  return { enList, spList, goatEN, goatSP }
-}, [agentSnapshotsRemote])
+    return { enList, spList, goatEN, goatSP }
+  }, [agentSnapshotsRemote])
 
   if (!data.enList.length) return null
 
@@ -1628,86 +1492,86 @@ export default function Dashboard() {
     loadDailyTotals()
     loadData().then(()=>backfillHistoricalDataToSheets())
     const USERS_SID='1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
-const loadAllRemoteAgents = async () => {
-  let agents = []
+    const loadAllRemoteAgents = async () => {
+      let agents = []
 
-  // Source 1: AGENT_SNAPSHOTS only (source of truth)
-  try {
-    let sheetNames = ['AGENT_SNAPSHOTS']
-
-    try {
-      const namesRes = await fetch(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`)
-      const namesData = await namesRes.json()
-      if (namesData?.ok && Array.isArray(namesData.sheets) && namesData.sheets.length > 0) {
-        sheetNames = namesData.sheets
-      }
-    } catch (e) {}
-
-    const mergedRemote = {}
-
-    for (const shName of sheetNames) {
       try {
-        const res = await fetch(
-          `https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`
-        )
-        const text = await res.text()
+        let sheetNames = ['AGENT_SNAPSHOTS']
+        try {
+          const namesRes = await fetch(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`)
+          const namesData = await namesRes.json()
+          if (namesData?.ok && Array.isArray(namesData.sheets) && namesData.sheets.length > 0) {
+            sheetNames = namesData.sheets
+          }
+        } catch (e) {}
 
-        if (text && !text.startsWith('<!')) {
-          const rows = parseCSV(text).slice(1)
-          const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
+        const mergedRemote = {}
 
-          rows.forEach(r => {
-            if (!r[0] || !r[1]) return
+        for (const shName of sheetNames) {
+          try {
+            const res = await fetch(`https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`)
+            const csv = await res.text()
+            if (!csv || csv.startsWith('<!')) continue
 
-            const d = normalizeDate(r[0])
-            if (!d) return
+            const rows = parseCSV(csv).slice(1)
+            const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
 
-            const ext = String(r[1]).trim()
-            const key = `${d}|${ext}`
-            const en = Number(r[3]) || 0
-            const sp = Number(r[4]) || 0
-            const rawTeam = String(r[6] || '').trim()
+            rows.forEach(r => {
+              if (!r[0] || !r[1]) return
+              const d = normalizeDate(r[0])
+              if (!d) return
 
-            let team = VALID_TEAMS.has(rawTeam)
-              ? rawTeam
-              : (
-                  ext.startsWith('1') ? 'philippines' :
-                  ext.startsWith('2') ? 'colombia' :
-                  ext.startsWith('3') ? 'asia' :
-                  ext.startsWith('4') ? 'central' :
-                  ext.startsWith('5') ? 'mexico' :
-                  ext.startsWith('6') ? 'venezuela' :
-                  'asia'
-                )
+              const ext = String(r[1]).trim()
+              const key = `${d}|${ext}`
+              const en = Number(r[3]) || 0
+              const sp = Number(r[4]) || 0
+              const total = en + sp
+              const rawTeam = String(r[6] || '').trim()
+              const team = VALID_TEAMS.has(rawTeam) ? rawTeam : (
+                ext.startsWith('1') ? 'philippines' :
+                ext.startsWith('2') ? 'colombia' :
+                ext.startsWith('3') ? 'asia' :
+                ext.startsWith('4') ? 'central' :
+                ext.startsWith('5') ? 'mexico' :
+                ext.startsWith('6') ? 'venezuela' : 'asia'
+              )
 
-            const total = en + sp
-
-            // Keep best remote record for same date/ext
-            if (
-              !mergedRemote[key] ||
-              total > (mergedRemote[key].total || 0) ||
-              en > (mergedRemote[key].english || 0)
-            ) {
-              mergedRemote[key] = {
-                date: d,
-                ext,
-                name: r[2] || '',
-                english: en,
-                spanish: sp,
-                total,
-                team
+              if (!mergedRemote[key] || total > (mergedRemote[key].total || 0) || en > (mergedRemote[key].english || 0)) {
+                mergedRemote[key] = {
+                  date: d,
+                  ext,
+                  name: r[2] || '',
+                  english: en,
+                  spanish: sp,
+                  total,
+                  team
+                }
               }
-            }
-          })
+            })
+          } catch (e) {}
         }
+
+        agents = Object.values(mergedRemote)
+
+        const remoteDates = new Set(agents.map(a => a.date).filter(Boolean))
+        const weeklyResults = await Promise.allSettled([
+          fetchWeeklySheetAgents('asia', remoteDates),
+          fetchWeeklySheetAgents('philippines', remoteDates),
+          fetchWeeklySheetAgents('colombia', remoteDates),
+          fetchWeeklySheetAgents('central', remoteDates),
+          fetchWeeklySheetAgents('mexico', remoteDates),
+          fetchWeeklySheetAgents('venezuela', remoteDates),
+        ])
+
+        weeklyResults.forEach(r => {
+          if (r.status === 'fulfilled') {
+            agents = agents.concat(r.value.map(a => ({ ...a, fromWeekly: true })))
+          }
+        })
       } catch (e) {}
+
+      setAgentSnapshotsRemote(agents)
     }
-
-    agents = Object.values(mergedRemote)
-  } catch (e) {}
-
-  setAgentSnapshotsRemote(agents)
-}
     loadAllRemoteAgents().catch(()=>{})
     const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000)
     return()=>{clearInterval(fullIv);clearInterval(fastIv)}
