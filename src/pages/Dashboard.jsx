@@ -612,6 +612,52 @@ function parseAsiaSheet(rows) {
   const spanish = mainSp + extraOtSp
   return { agents, totals: { spanish, english, total: spanish + english, activeAgents: agents.length } }
 }
+function parseVenezuelaLiveTotals(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return { english: 0, spanish: 0, total: 0 }
+
+  const includeOTNow = includeOT()
+  let main = { english: 0, spanish: 0, total: 0 }
+  let ot = { english: 0, spanish: 0, total: 0 }
+  let inOT = false
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const c0 = cellUpper(row[0] || '')
+    const txt = row.slice(0, 8).map(v => cellUpper(v)).join(' | ')
+
+    if (!inOT && (txt.includes('OT AW GARRET VENEZUELA') || txt.includes('VENEZUELA OT'))) {
+      if (!includeOTNow) break
+      inOT = true
+      continue
+    }
+
+    if (c0.includes('LOGGED IN')) {
+      const t = {
+        english: safeInt(row[3]),
+        spanish: safeInt(row[4]),
+        total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4]))
+      }
+      if (!inOT) main = t
+      else {
+        ot = t
+        break
+      }
+    }
+  }
+
+  if (!includeOTNow) return main
+  return {
+    english: main.english + ot.english,
+    spanish: main.spanish + ot.spanish,
+    total: main.total + ot.total
+  }
+}
+
+function getLiveCardTotals(teamId, rawRows, fallbackTotals) {
+  if (teamId === 'venezuela') return parseVenezuelaLiveTotals(rawRows)
+  return fallbackTotals
+}
+
 function parseColombiaSheet_(rows, config, includeOTNow) {
   return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
     otHeaderIncludes: ['OT TAKERS', 'COLOMBIA OT', 'OT COLOMBIA']
@@ -747,8 +793,11 @@ function slugify_(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'team'
 }
 function downloadTeamDayCsv_({ config, selectedDate, dateLabel, goal, totalEn, totalSp, totalXf, agents }) {
+  const CSV_DELIMITER = ';'
   const sorted = [...(agents || [])].sort((a, b) => (b.english || 0) - (a.english || 0))
   const rows = []
+
+  rows.push(['Pulse Export'])
   rows.push(['Team', config.label])
   rows.push(['Date', selectedDate])
   rows.push(['Label', dateLabel])
@@ -757,29 +806,35 @@ function downloadTeamDayCsv_({ config, selectedDate, dateLabel, goal, totalEn, t
   if (config.hasSp) rows.push(['Total Spanish', totalSp])
   rows.push(['Total Xfers', totalXf])
   rows.push([])
-  rows.push(['Rank','Agent','Ext','English', ...(config.hasSp ? ['Spanish'] : []), 'Total','Goal Status','Share %'])
+  rows.push(['Rank', 'Agent', 'Ext', 'English', ...(config.hasSp ? ['Spanish'] : []), 'Total', 'Goal Status', 'Share %'])
+
   sorted.forEach((a, i) => {
-    const share = totalEn > 0 ? `${(((a.english || 0) / totalEn) * 100).toFixed(1)}%` : '—'
+    const english = Number(a.english) || 0
+    const spanish = Number(a.spanish) || 0
+    const total = Number(a.total) || (english + spanish)
+    const share = totalEn > 0 ? `${((english / totalEn) * 100).toFixed(1)}%` : '—'
+    const goalStatus = english >= goal ? 'Goal' : `${Math.max(goal - english, 0)} left`
     rows.push([
       `#${i + 1}`,
       a.name || '',
       a.ext || '',
-      a.english || 0,
-      ...(config.hasSp ? [a.spanish || 0] : []),
-      a.total || ((a.english || 0) + (a.spanish || 0)),
-      (a.english || 0) >= goal ? 'Goal' : `${goal - (a.english || 0)} left`,
+      english,
+      ...(config.hasSp ? [spanish] : []),
+      total,
+      goalStatus,
       share,
     ])
   })
-  const csv = '﻿' + rows.map(row => row.map(csvEscape_).join(',')).join('\n')
+
+  const csv = '\uFEFF' + rows.map(row => row.map(csvEscape_).join(CSV_DELIMITER)).join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `pulse-${slugify_(config.label)}-${selectedDate}.csv`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `pulse-${slugify_(config.label)}-${selectedDate}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
 function parseHistorySheet(rows) {
@@ -1194,114 +1249,196 @@ function TeamRankingsSection({ snapshots, remoteDailyTotals }) {
     </div>
   )
 }
-// ── MVP Section ──────────────────────────────────────────────────────────────
-function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
+// ── Global Top 10 Agents ─────────────────────────────────────────────────────
+function GlobalTopAgentsSection({ navigate, agentSnapshotsRemote }) {
+  const [metric, setMetric] = useState('english')
+
   const data = useMemo(() => {
-    const enMap = {}, spMap = {}
-    const processSnapshot = (agents, teamId) => {
-      const actEN = agents.filter(a => (a.english || 0) > 0)
-      const actSP = agents.filter(a => (a.spanish || 0) > 0)
-      const sortedEN = [...actEN].sort((a, b) => b.english - a.english)
-      const sortedSP = [...actSP].sort((a, b) => (b.spanish || 0) - (a.spanish || 0))
-      const reg = (map, a, isTop1, isTop3, lang) => {
-        if (!map[a.ext]) map[a.ext] = { name: a.name, team: teamId, ext: a.ext, top1: 0, top3: 0, total: 0, days: 0 }
-        map[a.ext].total += lang === 'en' ? (a.english || 0) : (a.spanish || 0)
-        map[a.ext].days += 1
-        if (isTop1) map[a.ext].top1 += 1
-        if (isTop3) map[a.ext].top3 += 1
+    const dedup = {}
+    const agentsMap = {}
+    const daysByTeam = {}
+
+    ;(agentSnapshotsRemote || []).forEach(rec => {
+      const date = normalizeDate(rec?.date)
+      const ext = String(rec?.ext || '').trim()
+      if (!date || !ext) return
+
+      const english = Number(rec.english) || 0
+      const spanish = Number(rec.spanish) || 0
+      const total = Number(rec.total) || (english + spanish)
+      if (total <= 0) return
+
+      const team = rec.team || (
+        ext.startsWith('1') ? 'philippines' :
+        ext.startsWith('2') ? 'colombia' :
+        ext.startsWith('3') ? 'asia' :
+        ext.startsWith('4') ? 'central' :
+        ext.startsWith('5') ? 'mexico' :
+        ext.startsWith('6') ? 'venezuela' : 'asia'
+      )
+
+      const key = `${date}|${ext}`
+      if (!dedup[key] || total > dedup[key].total || english > dedup[key].english) {
+        dedup[key] = { date, ext, name: rec.name || `Agent #${ext}`, english, spanish, total, team }
       }
-      sortedEN.forEach((a, i) => reg(enMap, a, i === 0, i < 3, 'en'))
-      sortedSP.forEach((a, i) => reg(spMap, a, i === 0, i < 3, 'sp'))
-    }
-    const mergedByDate = {}
-    if (Array.isArray(agentSnapshotsRemote)) {
-      agentSnapshotsRemote.forEach(a => {
-        if (!a.date || !a.ext) return
-        const d = normalizeDate(a.date)
-        if (!d) return
-        const ext = String(a.ext).trim()
-        const en = Number(a.english) || 0
-        const sp = Number(a.spanish) || 0
-        const total = en + sp
-        if (total === 0) return
-        if (!mergedByDate[d]) mergedByDate[d] = {}
-        if (!mergedByDate[d][ext] || total > ((mergedByDate[d][ext].english || 0) + (mergedByDate[d][ext].spanish || 0)) || en > (mergedByDate[d][ext].english || 0)) {
-          mergedByDate[d][ext] = {
-            name: a.name || ext,
-            english: en,
-            spanish: sp,
-            team: a.team || 'asia'
-          }
-        }
-      })
-    }
-    Object.values(mergedByDate).forEach(day => {
-      const byTeam = {}
-      Object.entries(day).forEach(([ext, a]) => {
-        if (!byTeam[a.team]) byTeam[a.team] = []
-        byTeam[a.team].push({ ext, name: a.name, english: a.english, spanish: a.spanish, total: a.english + (a.spanish || 0) })
-      })
-      Object.entries(byTeam).forEach(([tid, agts]) => processSnapshot(agts, tid))
     })
-    const sortFn = list => [...list].sort((a, b) => b.top1 - a.top1 || b.top3 - a.top3 || b.total - a.total)
-    const enList = sortFn(Object.values(enMap)).slice(0, 8)
-    const spList = sortFn(Object.values(spMap)).slice(0, 8)
-    const goatEN = sortFn(Object.values(enMap))[0] || null
-    const goatSP = sortFn(Object.values(spMap))[0] || null
-    return { enList, spList, goatEN, goatSP }
+
+    Object.values(dedup).forEach(rec => {
+      if (!agentsMap[rec.ext]) {
+        agentsMap[rec.ext] = {
+          ext: rec.ext,
+          name: rec.name,
+          team: rec.team,
+          totalEnglish: 0,
+          totalSpanish: 0,
+          totalXfers: 0,
+          top1Days: 0,
+          top3Days: 0,
+          activeDays: 0,
+          _activeDates: new Set(),
+          _top1Keys: new Set(),
+          _top3Keys: new Set(),
+        }
+      }
+      const agent = agentsMap[rec.ext]
+      agent.name = rec.name || agent.name
+      agent.team = rec.team || agent.team
+      agent.totalEnglish += rec.english || 0
+      agent.totalSpanish += rec.spanish || 0
+      agent.totalXfers += rec.total || 0
+      agent._activeDates.add(rec.date)
+      const dayTeamKey = `${rec.date}|${rec.team}`
+      if (!daysByTeam[dayTeamKey]) daysByTeam[dayTeamKey] = []
+      daysByTeam[dayTeamKey].push(rec)
+    })
+
+    Object.entries(daysByTeam).forEach(([dayTeamKey, recs]) => {
+      const sortedEN = [...recs].filter(r => (r.english || 0) > 0).sort((a, b) => (b.english || 0) - (a.english || 0))
+      const sortedSP = [...recs].filter(r => (r.spanish || 0) > 0).sort((a, b) => (b.spanish || 0) - (a.spanish || 0))
+
+      sortedEN.slice(0, 3).forEach((r, index) => {
+        const agent = agentsMap[r.ext]
+        if (!agent) return
+        agent._top3Keys.add(dayTeamKey)
+        if (index === 0) agent._top1Keys.add(`${dayTeamKey}|EN`)
+      })
+      sortedSP.slice(0, 3).forEach((r, index) => {
+        const agent = agentsMap[r.ext]
+        if (!agent) return
+        agent._top3Keys.add(dayTeamKey)
+        if (index === 0) agent._top1Keys.add(`${dayTeamKey}|SP`)
+      })
+    })
+
+    const allAgents = Object.values(agentsMap).map(agent => ({
+      ext: agent.ext,
+      name: agent.name,
+      team: agent.team,
+      totalEnglish: agent.totalEnglish,
+      totalSpanish: agent.totalSpanish,
+      totalXfers: agent.totalXfers,
+      top1Days: agent._top1Keys.size,
+      top3Days: agent._top3Keys.size,
+      activeDays: agent._activeDates.size,
+    }))
+
+    const english = [...allAgents].sort((a, b) => b.totalEnglish - a.totalEnglish || b.top1Days - a.top1Days || b.top3Days - a.top3Days || b.totalXfers - a.totalXfers).slice(0, 10)
+    const spanish = [...allAgents].filter(a => a.totalSpanish > 0).sort((a, b) => b.totalSpanish - a.totalSpanish || b.top1Days - a.top1Days || b.top3Days - a.top3Days || b.totalXfers - a.totalXfers).slice(0, 10)
+    const top1 = [...allAgents].filter(a => a.top1Days > 0).sort((a, b) => b.top1Days - a.top1Days || b.top3Days - a.top3Days || b.totalEnglish - a.totalEnglish || b.totalSpanish - a.totalSpanish).slice(0, 10)
+
+    return { english, spanish, top1 }
   }, [agentSnapshotsRemote])
-  if (!data.enList.length) return null
+
   const teamColors = { asia:'#f97316', philippines:'#3b82f6', colombia:'#f59e0b', central:'#8b5cf6', mexico:'#10b981', venezuela:'#ef4444' }
   const teamLabels = { ...TEAM_DISPLAY_NAMES, asia:'Asia' }
-  const GoatCard = ({ ag, label, color, icon, statLabel }) => ag ? (
-    <div style={{ background:`linear-gradient(135deg,${color}18,${color}06)`, border:`1px solid ${color}35`, borderRadius:16, padding:'1rem 1.4rem', display:'flex', alignItems:'center', gap:14, flex:1 }}>
-      <div style={{ fontSize:24 }}>{icon}</div>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:9, color, textTransform:'uppercase', letterSpacing:'0.08em', fontWeight:700, marginBottom:1 }}>{label}</div>
-        <div style={{ fontSize:15, fontWeight:800, color:'#f5f5f5', fontFamily:"'Sora',sans-serif", cursor:'pointer', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} onClick={()=>navigate(`/profile/${ag.ext}`)}>{ag.name}</div>
-        <div style={{ fontSize:11, color:'#9ca3af', marginTop:1 }}>{teamLabels[ag.team]||ag.team} · #{ag.ext}</div>
+  const options = {
+    english: { label:'English Xfers', accent:'#60a5fa', valueKey:'totalEnglish' },
+    spanish: { label:'Spanish Xfers', accent:'#34d399', valueKey:'totalSpanish' },
+    top1: { label:'#1 Appearances', accent:'#fbbf24', valueKey:'top1Days' },
+  }
+
+  const current = options[metric]
+  const rows = data[metric] || []
+  if (!rows.length) return null
+
+  const leaders = {
+    english: data.english[0] || null,
+    spanish: data.spanish[0] || null,
+    top1: data.top1[0] || null,
+  }
+
+  return (
+    <div style={{ marginTop:'2.5rem' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:'1rem', flexWrap:'wrap' }}>
+        <div>
+          <h2 className="section-title" style={{ marginBottom:0 }}>🏆 Top 10 Agents — Global</h2>
+          <div style={{ fontSize:12, color:'#6b7280', marginTop:4 }}>Across all teams · switch ranking mode below</div>
+        </div>
+        <div style={{ display:'flex', gap:6, background:'rgba(255,255,255,0.04)', borderRadius:10, padding:4, border:'1px solid rgba(255,255,255,0.06)' }}>
+          {Object.entries(options).map(([key, opt]) => (
+            <button
+              key={key}
+              onClick={() => setMetric(key)}
+              style={{ padding:'7px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11, fontWeight:800, background:metric===key?`${opt.accent}20`:'transparent', color:metric===key?opt.accent:'#6b7280', fontFamily:"'Sora',sans-serif" }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
-      <div style={{ textAlign:'right', flexShrink:0 }}>
-        <div style={{ fontSize:26, fontWeight:800, color, fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{ag.total.toLocaleString()}</div>
-        <div style={{ fontSize:10, color:'#6b7280', marginTop:1 }}>{statLabel}</div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(220px, 1fr))', gap:14, marginBottom:'1rem' }}>
+        {Object.entries(leaders).map(([key, agent]) => {
+          const opt = options[key]
+          if (!agent) return <div key={key} />
+          return (
+            <div key={key} style={{ background:`linear-gradient(135deg, ${opt.accent}18, rgba(255,255,255,0.03))`, border:`1px solid ${opt.accent}35`, borderRadius:16, padding:'14px 16px' }}>
+              <div style={{ fontSize:10, letterSpacing:'0.08em', textTransform:'uppercase', color:opt.accent, fontWeight:800, marginBottom:6 }}>{opt.label}</div>
+              <div style={{ fontSize:18, color:'#f8fafc', fontWeight:800, fontFamily:"'Sora',sans-serif", cursor:'pointer' }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</div>
+              <div style={{ marginTop:4, fontSize:12, color:'#94a3b8' }}>{teamLabels[agent.team] || agent.team} · #{agent.ext}</div>
+              <div style={{ display:'flex', gap:18, marginTop:10 }}>
+                <div>
+                  <div style={{ fontSize:26, lineHeight:1, color:opt.accent, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>{Number(agent[opt.valueKey] || 0).toLocaleString()}</div>
+                  <div style={{ fontSize:10, color:'#6b7280', marginTop:4 }}>{opt.label}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:20, lineHeight:1, color:'#fbbf24', fontWeight:800, fontFamily:"'Sora',sans-serif" }}>{agent.top1Days}</div>
+                  <div style={{ fontSize:10, color:'#6b7280', marginTop:4 }}>#1 Days</div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </div>
-      <div style={{ textAlign:'right', flexShrink:0 }}>
-        <div style={{ fontSize:20, fontWeight:800, color:'#fbbf24', fontFamily:"'Sora',sans-serif", lineHeight:1 }}>{ag.top1}</div>
-        <div style={{ fontSize:10, color:'#6b7280', marginTop:1 }}>#1 Days</div>
-      </div>
-    </div>
-  ) : null
-  const RankTable = ({ list, color, title, statKey, statLabel }) => (
-    <div style={{ flex:1 }}>
-      <div style={{ fontSize:12, fontWeight:700, color, marginBottom:10, textTransform:'uppercase', letterSpacing:'0.06em' }}>{title}</div>
+
       <div style={{ background:'rgba(0,0,0,0.25)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:14, overflow:'hidden' }}>
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
           <thead>
             <tr style={{ background:'rgba(0,0,0,0.25)' }}>
-              {['#','Agent','Team','#1','Top3',statLabel].map((h,i)=>(
-                <th key={i} style={{ padding:'8px 12px', textAlign:i>2?'center':'left', fontSize:9, fontWeight:700, color:'#4b5563', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid rgba(255,255,255,0.05)', whiteSpace:'nowrap' }}>{h}</th>
+              {['#','Agent','Team','English','Spanish','#1 Days','Top 3','Days'].map((h, i) => (
+                <th key={i} style={{ padding:'9px 12px', textAlign:i >= 3 ? 'center' : 'left', fontSize:9, fontWeight:700, color:'#4b5563', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'1px solid rgba(255,255,255,0.05)', whiteSpace:'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {list.map((a,i)=>{
-              const accent = teamColors[a.team]||'#f97316'
-              const rs = i===0?{color:'#FFD700',fontWeight:800}:i===1?{color:'#C0C0C0',fontWeight:700}:i===2?{color:'#CD7F32',fontWeight:700}:{color:'#4b5563'}
+            {rows.map((a, i) => {
+              const accent = teamColors[a.team] || '#f97316'
+              const rs = i === 0 ? { color:'#FFD700', fontWeight:800 } : i === 1 ? { color:'#C0C0C0', fontWeight:700 } : i === 2 ? { color:'#CD7F32', fontWeight:700 } : { color:'#4b5563' }
               return (
-                <tr key={a.ext} style={{ borderBottom:'1px solid rgba(255,255,255,0.03)' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <td style={{ padding:'9px 12px', ...rs, fontSize:11 }}>#{i+1}</td>
+                <tr key={`${metric}_${a.ext}`} style={{ borderBottom:'1px solid rgba(255,255,255,0.03)' }}>
+                  <td style={{ padding:'9px 12px', ...rs, fontSize:11 }}>#{i + 1}</td>
                   <td style={{ padding:'9px 12px' }}>
-                    <span style={{ fontWeight:600, color:'#f1f5f9', cursor:'pointer', fontSize:12 }} onClick={()=>navigate(`/profile/${a.ext}`)}>{a.name}</span>
+                    <span style={{ fontWeight:700, color:'#f1f5f9', cursor:'pointer', fontSize:12 }} onClick={() => navigate(`/profile/${a.ext}`)}>{a.name}</span>
                     <span style={{ color:'#374151', fontSize:10, marginLeft:5 }}>#{a.ext}</span>
                   </td>
                   <td style={{ padding:'9px 12px' }}>
-                    <span style={{ fontSize:10, background:`${accent}18`, border:`1px solid ${accent}35`, color:accent, padding:'1px 7px', borderRadius:5, fontWeight:600 }}>{teamLabels[a.team]||a.team}</span>
+                    <span style={{ fontSize:10, background:`${accent}18`, border:`1px solid ${accent}35`, color:accent, padding:'1px 7px', borderRadius:5, fontWeight:600 }}>{teamLabels[a.team] || a.team}</span>
                   </td>
-                  <td style={{ padding:'9px 12px', textAlign:'center', color:'#fbbf24', fontWeight:700, fontSize:13 }}>{a.top1}</td>
-                  <td style={{ padding:'9px 12px', textAlign:'center', color:'#34d399', fontWeight:600 }}>{a.top3}</td>
-                  <td style={{ padding:'9px 12px', textAlign:'center', color, fontWeight:700 }}>{a.total.toLocaleString()}</td>
+                  <td style={{ padding:'9px 12px', textAlign:'center', color:'#60a5fa', fontWeight:700 }}>{a.totalEnglish.toLocaleString()}</td>
+                  <td style={{ padding:'9px 12px', textAlign:'center', color:'#34d399', fontWeight:700 }}>{a.totalSpanish.toLocaleString()}</td>
+                  <td style={{ padding:'9px 12px', textAlign:'center', color:'#fbbf24', fontWeight:800 }}>{a.top1Days}</td>
+                  <td style={{ padding:'9px 12px', textAlign:'center', color:'#a78bfa', fontWeight:700 }}>{a.top3Days}</td>
+                  <td style={{ padding:'9px 12px', textAlign:'center', color:'#94a3b8', fontWeight:600 }}>{a.activeDays}</td>
                 </tr>
               )
             })}
@@ -1310,23 +1447,8 @@ function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
       </div>
     </div>
   )
-  return (
-    <div style={{ marginTop:'2.5rem' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:'1.2rem' }}>
-        <h2 className="section-title" style={{ marginBottom:0 }}>🏆 Operation MVPs</h2>
-        <span style={{ fontSize:12, color:'#6b7280' }}>Sorted by #1 days · All-time</span>
-      </div>
-      <div style={{ display:'flex', gap:14, marginBottom:'1.2rem' }}>
-        <GoatCard ag={data.goatEN} label="All-Time Top English" color="#f97316" icon="🐐" statLabel="Total EN"/>
-        <GoatCard ag={data.goatSP} label="All-Time Top Spanish" color="#34d399" icon="🌟" statLabel="Total SP"/>
-      </div>
-      <div style={{ display:'flex', gap:16 }}>
-        <RankTable list={data.enList} color="#60a5fa" title="🏅 English Rankings" statKey="totalEn" statLabel="Total EN"/>
-        <RankTable list={data.spList} color="#34d399" title="🏅 Spanish Rankings" statKey="totalSp" statLabel="Total SP"/>
-      </div>
-    </div>
-  )
 }
+
 export default function Dashboard() {
   const canvasRef=useRef(null),introHideRef=useRef(null),introClearRef=useRef(null)
   const navigate=useNavigate()
@@ -1470,7 +1592,17 @@ export default function Dashboard() {
   const isMyTeam=(name)=>{const n=name.toUpperCase();return(team?.id==='asia'&&n.includes('ASIA'))||(team?.id==='philippines'&&n.includes('PHIL'))||(team?.id==='venezuela'&&n.includes('VENE'))||(team?.id==='colombia'&&n.includes('COLOM'))||(team?.id==='mexico'&&n.includes('MEXICO'))||(team?.id==='central'&&n.includes('CENTRAL'))}
   const dateTabs=useMemo(()=>{const dates=new Set();dates.add(todayKey());snapshots.forEach(s=>{if(/^\d{4}-\d{2}-\d{2}$/.test(s.date))dates.add(s.date)});remoteDailyTotals.forEach(r=>{if(r.date&&/^\d{4}-\d{2}-\d{2}$/.test(r.date))dates.add(r.date)});HISTORY_DATES.forEach(d=>dates.add(d.isoDate));return[...dates].sort((a,b)=>b.localeCompare(a))},[snapshots,remoteDailyTotals])
   const teamRows=useMemo(()=>{
-    if(isToday){const rows=TEAM_SHEETS.map(t=>{const rawRows=liveTeams[t.id];if(!rawRows||rawRows.length===0)return null;const{agents,totals}=parseTeamSheet(rawRows,t);return{name:TEAM_DISPLAY_NAMES[t.id]||t.id,agents:agents.length,english:totals.english,spanish:totals.spanish,total:totals.total,noSpanish:!t.hasSp}}).filter(Boolean);rows.push({name:'Asia',agents:asiaAgents.length,english:totalEnglish,spanish:totalSpanish,total:totalXfers,noSpanish:false});return rows}
+    if(isToday){
+      const rows=TEAM_SHEETS.map(t=>{
+        const rawRows=liveTeams[t.id]
+        if(!rawRows||rawRows.length===0)return null
+        const { agents, totals } = parseTeamSheet(rawRows,t)
+        const liveTotals = getLiveCardTotals(t.id, rawRows, totals)
+        return { name:TEAM_DISPLAY_NAMES[t.id]||t.id, agents:agents.length, english:liveTotals.english, spanish:liveTotals.spanish, total:liveTotals.total, noSpanish:!t.hasSp }
+      }).filter(Boolean)
+      rows.push({name:'Asia',agents:asiaAgents.length,english:totalEnglish,spanish:totalSpanish,total:totalXfers,noSpanish:false})
+      return rows
+    }
     if(activeSnap?.generalData?.length>0){const found=[];for(const row of activeSnap.generalData){const name=row[0]?.toUpperCase().trim();if(TEAMS_ORDER.some(t=>name===t)){if(!found.find(f=>f.name.toUpperCase()===name)){const rawSp=row[4]?.trim();found.push({name:row[0]?.trim()||'',agents:safeInt(row[2]),english:safeInt(row[3]),spanish:safeInt(rawSp),total:safeInt(row[5]),noSpanish:rawSp==='-'||rawSp===''||!rawSp})}};if(found.length===6)break};if(found.length>0)return found}
     const remote=remoteDailyTotals.find(r=>r.date===selectedDate);if(remote?.teams?.length>0)return remote.teams.map(t=>({name:t.name,agents:t.agents||0,english:t.english||0,spanish:t.spanish||0,total:t.total||0,noSpanish:t.noSpanish||false}));return[]
   },[isToday,liveTeams,activeSnap,remoteDailyTotals,selectedDate,asiaAgents,asiaTotals,totalEnglish,totalSpanish,totalXfers])
@@ -1501,6 +1633,19 @@ export default function Dashboard() {
         <div className="dash-topbar-right">
           {!isToday&&activeSnap?.savedAt&&<span className="date-snap-info">Snapshot {new Date(activeSnap.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
           {isHistDate&&<span className="date-snap-info">Historical</span>}
+          {activeTab!=='general'&&(
+            <button className="view-tab" style={{marginRight:6}} onClick={()=>{
+              const config = activeTab==='asia' ? { label:'Asia', hasSp:true, id:'asia' } : currentTeamConfig
+              const agents = activeTab==='asia' ? asiaAgentsFinal : (currentTeamConfig ? getTeamAgents(currentTeamConfig.id) : [])
+              const totalObj = activeTab==='asia'
+                ? { english: totalEnglish, spanish: totalSpanish, total: totalXfers }
+                : (currentTeamConfig && liveTeams[currentTeamConfig.id]?.length
+                    ? getLiveCardTotals(currentTeamConfig.id, liveTeams[currentTeamConfig.id], parseTeamSheet(liveTeams[currentTeamConfig.id], currentTeamConfig).totals)
+                    : { english: 0, spanish: 0, total: 0 })
+              const exportGoal = activeTab==='asia' ? getGoalForDate(selectedDate, 20, 'asia') : (currentTeamConfig ? getGoalForDate(selectedDate, currentTeamConfig.goal, currentTeamConfig.id) : 10)
+              if (config) downloadTeamDayCsv_({ config, selectedDate, dateLabel: formatDateLabel(selectedDate), goal: exportGoal, totalEn: totalObj.english, totalSp: totalObj.spanish, totalXf: totalObj.total, agents })
+            }}>⬇ Download</button>
+          )}
           <DatePicker dateTabs={dateTabs} selectedDate={selectedDate} onSelect={setSelectedDate}/>
         </div>
       </div>
@@ -1522,7 +1667,7 @@ export default function Dashboard() {
             </div>
             {teamsSorted.length===0?<div style={{background:'#181b23',border:'0.5px solid #2a2d38',borderRadius:12,padding:'3rem',textAlign:'center',color:'#6b7280'}}>No data for {formatDateLabel(selectedDate)}.</div>:<div className="vteams-grid">{teamsSorted.map((row,rank)=><TeamCard key={rank} row={row} rank={rank} isMyTeam={isMyTeam(row.name)} isFirst={rank===0} onSelect={handleTeamCardSelect}/>)}</div>}
             {/* <TeamRankingsSection snapshots={snapshots} remoteDailyTotals={remoteDailyTotals}/> */}
-            <MVPSection snapshots={snapshots} navigate={navigate} agentSnapshotsRemote={agentSnapshotsRemote}/>
+            <GlobalTopAgentsSection navigate={navigate} agentSnapshotsRemote={agentSnapshotsRemote}/>
           </div>
         ):activeTab==='asia'?(
           <div className="fade-in">
@@ -1555,7 +1700,7 @@ export default function Dashboard() {
             {editingAgent&&(<div className="edit-modal-overlay" onClick={()=>setEditingAgent(null)}><div className="edit-modal" onClick={e=>e.stopPropagation()}><h3 className="edit-modal-title">Edit - {editingAgent.name} <span style={{color:'#6b7280',fontSize:12}}>#{editingAgent.ext}</span></h3><div className="edit-modal-fields"><label>English<input type="number" value={editForm.english} onChange={e=>setEditForm(f=>({...f,english:e.target.value}))}/></label><label>Spanish<input type="number" value={editForm.spanish} onChange={e=>setEditForm(f=>({...f,spanish:e.target.value}))}/></label></div><div className="edit-modal-actions"><button className="btn-cancel" onClick={()=>setEditingAgent(null)}>Cancel</button><button className="btn-save" onClick={saveAsiaAgentEdit}>{savingOverride?'Saving...':'Save'}</button></div></div></div>)}
           </div>
         ):currentTeamConfig?(
-          <TeamDetail key={`${activeTab}_${selectedDate}`} config={currentTeamConfig} agents={getTeamAgents(currentTeamConfig.id)} dateLabel={formatDateLabel(selectedDate)} isToday={isToday} canEdit={canEdit} selectedDate={selectedDate} onOverrideTick={()=>setOverridesTick(t=>t+1)} navigate={navigate} loadingRemote={!isToday&&needsRemoteLoad&&loadingRemoteTeam} liveTotal={isToday&&liveTeams[currentTeamConfig.id]?.length?parseTeamSheet(liveTeams[currentTeamConfig.id],currentTeamConfig).totals:null}/>
+          <TeamDetail key={`${activeTab}_${selectedDate}`} config={currentTeamConfig} agents={getTeamAgents(currentTeamConfig.id)} dateLabel={formatDateLabel(selectedDate)} isToday={isToday} canEdit={canEdit} selectedDate={selectedDate} onOverrideTick={()=>setOverridesTick(t=>t+1)} navigate={navigate} loadingRemote={!isToday&&needsRemoteLoad&&loadingRemoteTeam} liveTotal={isToday&&liveTeams[currentTeamConfig.id]?.length?getLiveCardTotals(currentTeamConfig.id, liveTeams[currentTeamConfig.id], parseTeamSheet(liveTeams[currentTeamConfig.id],currentTeamConfig).totals):null}/>
         ):null}
       </div>
     </div>

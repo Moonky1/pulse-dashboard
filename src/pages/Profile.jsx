@@ -375,7 +375,7 @@ async function loadLegacyAsiaHistory(ext, existingDates) {
   return results.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value)
 }
 
-function mergeRecordsWithRanks(records) {
+function mergeRecordsWithRanks(records, teamInfo = null) {
   const dedup = {}
   records.forEach(r => {
     const date = normalizeDate(r.date)
@@ -392,6 +392,8 @@ function mergeRecordsWithRanks(records) {
         total,
         team: r.team,
         rank: r.rank ?? null,
+        rankEn: null,
+        rankSp: null,
       }
     }
   })
@@ -403,11 +405,22 @@ function mergeRecordsWithRanks(records) {
   })
 
   Object.values(byDate).forEach(list => {
-    const sorted = [...list].sort((a, b) => b.english - a.english)
-    sorted.forEach((r, i) => {
-      const key = `${r.date}|${r.ext}`
-      dedup[key].rank = i + 1
+    const sortedEn = [...list].filter(r => r.english > 0).sort((a, b) => b.english - a.english)
+    sortedEn.forEach((r, i) => {
+      dedup[`${r.date}|${r.ext}`].rankEn = i + 1
     })
+
+    if (teamInfo?.hasSp) {
+      const sortedSp = [...list].filter(r => r.spanish > 0).sort((a, b) => b.spanish - a.spanish)
+      sortedSp.forEach((r, i) => {
+        dedup[`${r.date}|${r.ext}`].rankSp = i + 1
+      })
+    }
+  })
+
+  Object.values(dedup).forEach(r => {
+    const valid = [r.rankEn, teamInfo?.hasSp ? r.rankSp : null].filter(v => Number.isFinite(v))
+    r.rank = valid.length ? Math.min(...valid) : null
   })
 
   return Object.values(dedup).sort((a,b) => a.date.localeCompare(b.date))
@@ -420,13 +433,13 @@ async function loadAgentData(ext) {
     fetchWeeklySheetAgents(teamInfo.id),
   ])
 
-  const mergedTeam = mergeRecordsWithRanks([...(remoteRecords || []), ...(weeklyRecords || [])])
+  const mergedTeam = mergeRecordsWithRanks([...(remoteRecords || []), ...(weeklyRecords || [])], teamInfo)
   const agentRecords = mergedTeam.filter(r => String(r.ext) === String(ext))
   const existingDates = new Set(agentRecords.map(r => r.date))
 
   if (teamInfo.id === 'asia') {
     const legacy = await loadLegacyAsiaHistory(ext, existingDates)
-    return mergeRecordsWithRanks([...mergedTeam, ...legacy]).filter(r => String(r.ext) === String(ext))
+    return mergeRecordsWithRanks([...mergedTeam, ...legacy], teamInfo).filter(r => String(r.ext) === String(ext))
   }
 
   return agentRecords
