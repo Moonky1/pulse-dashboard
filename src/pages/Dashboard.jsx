@@ -432,230 +432,307 @@ const E = {goal:'/emojis/goal.webp',goal1:'/emojis/goal1.webp',goal3:'/emojis/go
 const Img = ({src,size=18}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
 const MEDALS = [E.medal1, E.medal2, E.medal3]
 const todayKey     = () => new Date().toISOString().slice(0,10)
-const colombiaHour = () => (new Date().getUTCHours()-5+24)%24
+const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
 const includeOT    = () => colombiaHour() >= 18 || colombiaHour() < 6
-const cellUpper    = (v) => (v||'').toString().toUpperCase().trim()
-function parseTeamSheet(rows, config) {
-  const { id, extStart, hasSp, colEn, colSp } = config
-  if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 } }
-  }
-  const includeOTNow = includeOT()
-  if (id === 'colombia') return parseColombiaSheet_(rows, config, includeOTNow)
-  if (id === 'central') return parseCentralSheet_(rows, config, includeOTNow)
-  if (id === 'venezuela') return parseVenezuelaSheet_(rows, config, includeOTNow)
-  const agentMap = {}
-  let inOT = false
-  let afterMainFooter = false
-  let mainFooter = null
-  let otFooter = null
-  const rowText = (row, limit = 6) => row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
-  const isOTHeader = (row) => {
-    const txt = rowText(row, 6)
-    return txt.includes('OT TAKERS') || txt.includes('PHILIPPINES OT') || txt.startsWith('OT ') || txt.includes(' OT ')
-  }
-  const isFooterRow = (row) => {
-    const txt = rowText(row, 6)
-    return txt.includes('LOGGED IN') || txt.includes('TOTAL TRANSFERS')
-  }
-  const isHardSkip = (txt) =>
-    txt.includes('THIS HOUR') || txt.includes('HOURLY') || txt.includes('ON SITE') || txt.includes('WEEKLY') ||
-    txt.includes('OUR GOAL') || txt.includes('GOAL +') || txt.includes('GOAL+') || txt.includes('SUPERVISOR') ||
-    txt.includes('CAMPAIGN') || txt.includes('MANAGEMENT')
-  const getFooterTotals = (row) => {
-    const en = safeInt(row[colEn])
-    const sp = colSp != null ? safeInt(row[colSp]) : 0
-    const totalCol = colSp != null ? colSp + 1 : colEn + 1
-    const tot = safeInt(row[totalCol]) || (en + sp)
-    return { english: en, spanish: sp, total: tot }
-  }
-  const SKIP = new Set(['USER','USERS','AGENT NAME','AGENTS','NEW AGENT','NEW AGENTS','SUPERVISOR','MANAGER','GENERAL MANAGER','EXTENSION','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS','OPENERS','CAMPAIGN','PER AGENT','LEXNER','ARWIN'])
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]
-    if (!Array.isArray(row)) continue
-    const c0 = String(row[0] || '').trim()
-    const c0U = cellUpper(c0)
-    const txt = rowText(row, 6)
-    if (!inOT && isOTHeader(row)) {
-      if (!includeOTNow) break
-      inOT = true
-      afterMainFooter = false
-      continue
-    }
-    if (isFooterRow(row)) {
-      const ft = getFooterTotals(row)
-      if (!inOT && !mainFooter && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
-        mainFooter = ft
-        if (!includeOTNow) break
-        afterMainFooter = true
-        continue
-      }
-      if (inOT && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
-        otFooter = ft
-        break
-      }
-    }
-    if (afterMainFooter && !inOT) continue
-    if (isHardSkip(txt) || SKIP.has(c0U) || c0.length < 2) continue
-    const rawExt = String(row[1] || '').replace(/,/g, '').trim()
-    const extNum = parseInt(rawExt, 10)
-    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
-    if (!rawExt.startsWith(extStart)) continue
-    const en = safeInt(row[colEn])
-    const sp = colSp != null ? safeInt(row[colSp]) : 0
-    const tot = en + sp
-    if (agentMap[rawExt]) {
-      agentMap[rawExt].english += en
-      agentMap[rawExt].spanish += sp
-      agentMap[rawExt].total = agentMap[rawExt].english + agentMap[rawExt].spanish
-      if (inOT) agentMap[rawExt]._fromOT = true
-    } else {
-      agentMap[rawExt] = { name: c0, ext: rawExt, english: en, spanish: sp, total: tot, _fromOT: inOT }
-    }
-  }
-  const allAgents = Object.values(agentMap)
-  const mainAgents = allAgents.filter(a => !a._fromOT)
-  const otAgents = allAgents.filter(a => a._fromOT)
-  const mainAgentEn = mainAgents.reduce((s, a) => s + a.english, 0)
-  const mainAgentSp = mainAgents.reduce((s, a) => s + a.spanish, 0)
-  const otAgentEn = otAgents.reduce((s, a) => s + a.english, 0)
-  const mainEn = mainFooter ? Math.max(mainFooter.english, mainAgentEn) : mainAgentEn
-  const mainSp = mainFooter ? Math.max(mainFooter.spanish, mainAgentSp) : mainAgentSp
-  const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otAgentEn) : otAgentEn) : 0
-  const agents = includeOTNow ? allAgents.map(({ _fromOT, ...rest }) => rest) : mainAgents.map(({ _fromOT, ...rest }) => rest)
-  const english = mainEn + extraOtEn
-  const spanish = mainSp
-  return { agents, totals: { english, spanish, total: english + spanish, activeAgents: agents.length } }
-}
-function parseAsiaSheet(rows) {
-  if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return { agents: [], totals: { spanish: 0, english: 0, total: 0, activeAgents: 0 } }
-  }
-  const COL_EXT = 1
-  const COL_SP = 2
-  const COL_EN = 3
-  const includeOTNow = includeOT()
-  const agentMap = {}
-  let inOT = false
-  let afterMainFooter = false
-  let mainFooter = null
-  let otFooter = null
-  const rowText = (row, limit = 6) => row.slice(0, limit).map(v => cellUpper(v)).join(' | ')
-  const isOTHeader = (row) => {
-    const txt = rowText(row, 6)
-    return txt.includes('OT TAKERS') || txt.startsWith('OT ') || txt.includes(' OT ')
-  }
-  const isFooterRow = (row) => {
-    const txt = rowText(row, 6)
-    return txt.includes('LOGGED IN') || txt.includes('TOTAL TRANSFERS')
-  }
-  const getFooterTotals = (row) => {
-    const sp = safeInt(row[COL_SP])
-    const en = safeInt(row[COL_EN])
-    const tot = safeInt(row[COL_EN + 1]) || (sp + en)
-    return { spanish: sp, english: en, total: tot }
-  }
-  const SKIP = new Set(['ASIA','MANAGEMENT','LEXNER','GENERAL MANAGER','USER','USERS','SUPERVISOR','AGENT NAME','ARWIN','ENGLISH','SPANISH','TOTAL','TRANSFER','TRANSFERS','AGENTS'])
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]
-    if (!Array.isArray(row)) continue
-    const c0 = String(row[0] || '').trim()
-    const c0U = cellUpper(c0)
-    if (!inOT && isOTHeader(row)) {
-      if (!includeOTNow) break
-      inOT = true
-      afterMainFooter = false
-      continue
-    }
-    if (isFooterRow(row)) {
-      const ft = getFooterTotals(row)
-      if (!inOT && !mainFooter && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
-        mainFooter = ft
-        if (!includeOTNow) break
-        afterMainFooter = true
-        continue
-      }
-      if (inOT && (ft.english > 0 || ft.spanish > 0 || ft.total > 0)) {
-        otFooter = ft
-        break
-      }
-    }
-    if (afterMainFooter && !inOT) continue
-    if (SKIP.has(c0U) || c0.length < 2) continue
-    const extRaw = String(row[COL_EXT] || '').replace(/,/g, '').trim()
-    const ext = parseInt(extRaw, 10)
-    if (isNaN(ext) || ext < 1000 || ext > 9999) continue
-    const sp = safeInt(row[COL_SP])
-    const en = safeInt(row[COL_EN])
-    if (agentMap[extRaw]) {
-      agentMap[extRaw].english += en
-      agentMap[extRaw].spanish += sp
-      agentMap[extRaw].total = agentMap[extRaw].english + agentMap[extRaw].spanish
-      if (inOT) agentMap[extRaw]._fromOT = true
-    } else {
-      agentMap[extRaw] = { name: c0, ext: extRaw, spanish: sp, english: en, total: sp + en, _fromOT: inOT }
-    }
-  }
-  const allAgents = Object.values(agentMap)
-  const mainAgents = allAgents.filter(a => !a._fromOT)
-  const otAgents = allAgents.filter(a => a._fromOT)
-  const mainEnAgents = mainAgents.reduce((s, a) => s + a.english, 0)
-  const mainSpAgents = mainAgents.reduce((s, a) => s + a.spanish, 0)
-  const otEnAgents = otAgents.reduce((s, a) => s + a.english, 0)
-  const otSpAgents = otAgents.reduce((s, a) => s + a.spanish, 0)
-  const mainEn = mainFooter ? Math.max(mainFooter.english, mainEnAgents) : mainEnAgents
-  const mainSp = mainFooter ? Math.max(mainFooter.spanish, mainSpAgents) : mainSpAgents
-  const extraOtEn = includeOTNow ? (otFooter ? Math.max(otFooter.english, otEnAgents) : otEnAgents) : 0
-  const extraOtSp = includeOTNow ? (otFooter ? Math.max(otFooter.spanish, otSpAgents) : otSpAgents) : 0
-  const agents = includeOTNow ? allAgents.map(({ _fromOT, ...rest }) => rest) : mainAgents.map(({ _fromOT, ...rest }) => rest)
-  const english = mainEn + extraOtEn
-  const spanish = mainSp + extraOtSp
-  return { agents, totals: { spanish, english, total: spanish + english, activeAgents: agents.length } }
-}
-function parseVenezuelaLiveTotals(rows) {
-  if (!Array.isArray(rows) || rows.length === 0) return { english: 0, spanish: 0, total: 0 }
+const cellUpper    = (v) => (v || '').toString().toUpperCase().trim()
 
-  const includeOTNow = includeOT()
-  let main = { english: 0, spanish: 0, total: 0 }
-  let ot = { english: 0, spanish: 0, total: 0 }
-  let inOT = false
+function rowText(row, limit = 8) {
+  return (row || []).slice(0, limit).map(v => cellUpper(v)).join(' | ')
+}
+
+function isNumericExtForTeam(ext, extStart) {
+  const clean = String(ext || '').replace(/,/g, '').trim()
+  if (!/^\d{4}$/.test(clean)) return false
+  return clean.startsWith(String(extStart))
+}
+
+function isAgentNameCell(cell) {
+  const c = cellUpper(cell)
+  if (!c) return false
+  if (
+    c.includes('AGENT') ||
+    c.includes('USER') ||
+    c.includes('OPENERS') ||
+    c.includes('CAMPAIGN') ||
+    c.includes('SUPERVISOR') ||
+    c.includes('MANAGEMENT') ||
+    c.includes('TOTAL') ||
+    c.includes('LOGGED IN') ||
+    c.includes('HOURLY GOAL') ||
+    c.includes('THIS HOUR GOAL') ||
+    c.includes('OUR GOAL')
+  ) return false
+  return true
+}
+
+function buildAgent(name, ext, english, spanish, extra = {}) {
+  const en = safeInt(english)
+  const sp = safeInt(spanish)
+  return {
+    name: String(name || '').trim(),
+    ext: String(ext || '').replace(/,/g, '').trim(),
+    english: en,
+    spanish: sp,
+    total: en + sp,
+    ...extra
+  }
+}
+
+function parseBasicTeamSheet_(rows, config) {
+  const { extStart, hasSp, colEn, colSp } = config
+  const agents = []
+  let footer = { english: 0, spanish: 0, total: 0 }
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
-    const c0 = cellUpper(row[0] || '')
-    const txt = row.slice(0, 8).map(v => cellUpper(v)).join(' | ')
+    const c0 = String(row[0] || '').trim()
+    const txt = rowText(row)
 
-    if (!inOT && (txt.includes('OT AW GARRET VENEZUELA') || txt.includes('VENEZUELA OT'))) {
+    if (txt.includes('LOGGED IN')) {
+      const en = safeInt(row[colEn])
+      const sp = hasSp && colSp !== null ? safeInt(row[colSp]) : 0
+      const total = hasSp && colSp !== null
+        ? (safeInt(row[colSp + 1]) || (en + sp))
+        : (en || safeInt(row[colEn]))
+      footer = { english: en, spanish: sp, total }
+      continue
+    }
+
+    const ext = row[1]
+    if (!isNumericExtForTeam(ext, extStart)) continue
+    if (!isAgentNameCell(c0)) continue
+
+    const en = safeInt(row[colEn])
+    const sp = hasSp && colSp !== null ? safeInt(row[colSp]) : 0
+    agents.push(buildAgent(c0, ext, en, sp))
+  }
+
+  const english = footer.english || agents.reduce((s, a) => s + a.english, 0)
+  const spanish = footer.spanish || agents.reduce((s, a) => s + a.spanish, 0)
+  const total = footer.total || (english + spanish)
+
+  return {
+    agents,
+    totals: {
+      english,
+      spanish,
+      total,
+      activeAgents: agents.length
+    }
+  }
+}
+
+function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
+  const { extStart, colEn, colSp } = config
+  const otHeaderIncludes = opts.otHeaderIncludes || []
+
+  const mainAgents = new Map()
+  const otAgents = new Map()
+
+  let inOT = false
+  let mainFooter = null
+  let otFooter = null
+
+  const isOTHeader = (row) => {
+    const txt = rowText(row, 10)
+    return otHeaderIncludes.some(k => txt.includes(cellUpper(k)))
+  }
+
+  const isMainFooter = (row) => {
+    const txt = rowText(row, 10)
+    return txt.includes('LOGGED IN')
+  }
+
+  const isOTFooter = (row) => {
+    const txt = rowText(row, 10)
+    return txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const c0 = String(row[0] || '').trim()
+
+    if (!inOT && isOTHeader(row)) {
       if (!includeOTNow) break
       inOT = true
       continue
     }
 
-    if (c0.includes('LOGGED IN')) {
-      const t = {
-        english: safeInt(row[3]),
-        spanish: safeInt(row[4]),
-        total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4]))
-      }
-      if (!inOT) main = t
+    if (!inOT && isMainFooter(row)) {
+      const en = safeInt(row[colEn])
+      const sp = safeInt(row[colSp])
+      const total = safeInt(row[colSp + 1]) || (en + sp)
+      mainFooter = { english: en, spanish: sp, total }
+      continue
+    }
+
+    if (inOT && isOTFooter(row)) {
+      const en = safeInt(row[colEn])
+      const sp = safeInt(row[colSp])
+      const total = en + sp
+      otFooter = { english: en, spanish: sp, total }
+      break
+    }
+
+    const ext = row[1]
+    if (!isNumericExtForTeam(ext, extStart)) continue
+    if (!isAgentNameCell(c0)) continue
+
+    const agent = buildAgent(c0, ext, row[colEn], row[colSp], { _fromOT: inOT })
+
+    if (!inOT) {
+      mainAgents.set(agent.ext, agent)
+    } else if (includeOTNow) {
+      const prev = otAgents.get(agent.ext)
+      if (!prev) otAgents.set(agent.ext, agent)
       else {
-        ot = t
-        break
+        otAgents.set(agent.ext, {
+          ...prev,
+          english: prev.english + agent.english,
+          spanish: prev.spanish + agent.spanish,
+          total: prev.total + agent.total
+        })
       }
     }
   }
 
-  if (!includeOTNow) return main
+  const mainList = [...mainAgents.values()]
+  const otList = [...otAgents.values()]
+
+  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((s, a) => s + a.english, 0)
+  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((s, a) => s + a.spanish, 0)
+
+  const otEnglish = includeOTNow
+    ? (otFooter ? Math.max(otFooter.english, otList.reduce((s, a) => s + a.english, 0)) : otList.reduce((s, a) => s + a.english, 0))
+    : 0
+
+  const otSpanish = includeOTNow
+    ? (otFooter ? Math.max(otFooter.spanish, otList.reduce((s, a) => s + a.spanish, 0)) : otList.reduce((s, a) => s + a.spanish, 0))
+    : 0
+
+  const merged = new Map()
+  mainList.forEach(a => merged.set(a.ext, { ...a }))
+
+  if (includeOTNow) {
+    otList.forEach(a => {
+      const prev = merged.get(a.ext)
+      if (!prev) {
+        merged.set(a.ext, { ...a })
+      } else {
+        merged.set(a.ext, {
+          ...prev,
+          english: prev.english + a.english,
+          spanish: prev.spanish + a.spanish,
+          total: prev.total + a.total
+        })
+      }
+    })
+  }
+
+  const agents = [...merged.values()].sort((a, b) => {
+    if (b.english !== a.english) return b.english - a.english
+    if (b.total !== a.total) return b.total - a.total
+    return a.name.localeCompare(b.name)
+  })
+
+  const english = mainEnglish + otEnglish
+  const spanish = mainSpanish + otSpanish
+  const total = english + spanish
+
   return {
-    english: main.english + ot.english,
-    spanish: main.spanish + ot.spanish,
-    total: main.total + ot.total
+    agents,
+    totals: {
+      english,
+      spanish,
+      total,
+      activeAgents: agents.length
+    }
   }
 }
 
+function parseColombiaSheet_(rows, config, includeOTNow) {
+  return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
+    otHeaderIncludes: ['OT TAKERS', 'COLOMBIA OT', 'OT COLOMBIA']
+  })
+}
+
+function parseCentralSheet_(rows, config, includeOTNow) {
+  return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
+    otHeaderIncludes: ['OT TAKERS', 'OT CENTRAL', 'CENTRAL AMERICA', 'CENTRAL OT']
+  })
+}
+
+function parseVenezuelaSheet_(rows, config, includeOTNow) {
+  return parseOTSheetEnglishSpanish_(rows, config, includeOTNow, {
+    otHeaderIncludes: ['OT TAKERS', 'OT AW GARRET VENEZUELA', 'VENEZUELA OT']
+  })
+}
+
+function parseTotalOnlyLiveTotals_(rows, config) {
+  const { colEn } = config
+  let total = 0
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const txt = rowText(row, 10)
+
+    if (
+      txt.includes('LOGGED IN') ||
+      txt.includes('AGENTS LOG IN') ||
+      txt.includes('AGENTS LOGGED IN') ||
+      txt.includes('TOTAL TRANSFERS')
+    ) {
+      const maybe = safeInt(row[colEn])
+      if (maybe > 0) total = maybe
+    }
+  }
+
+  return { english: total, spanish: 0, total }
+}
+
+function parseVenezuelaLiveTotals(rows, config) {
+  return parseVenezuelaSheet_(rows, config, includeOT()).totals
+}
+
+function parseColombiaLiveTotals(rows, config) {
+  return parseColombiaSheet_(rows, config, includeOT()).totals
+}
+
+function parseCentralLiveTotals(rows, config) {
+  return parseCentralSheet_(rows, config, includeOT()).totals
+}
+
+function parseMexicoLiveTotals(rows, config) {
+  return parseTotalOnlyLiveTotals_(rows, config)
+}
+
+function parsePhilippinesLiveTotals(rows, config) {
+  return parseTotalOnlyLiveTotals_(rows, config)
+}
+
+function parseTeamSheet(rows, config) {
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 } }
+  }
+
+  if (config.id === 'colombia') return parseColombiaSheet_(rows, config, includeOT())
+  if (config.id === 'central') return parseCentralSheet_(rows, config, includeOT())
+  if (config.id === 'venezuela') return parseVenezuelaSheet_(rows, config, includeOT())
+
+  return parseBasicTeamSheet_(rows, config)
+}
+
 function getLiveCardTotals(teamId, rawRows, fallbackTotals) {
-  if (teamId === 'venezuela') return parseVenezuelaLiveTotals(rawRows)
-  return fallbackTotals
+  const cfg = TEAM_SHEETS.find(t => t.id === teamId)
+  if (!cfg) return fallbackTotals || { english: 0, spanish: 0, total: 0 }
+
+  if (teamId === 'colombia') return parseColombiaLiveTotals(rawRows, cfg)
+  if (teamId === 'central') return parseCentralLiveTotals(rawRows, cfg)
+  if (teamId === 'venezuela') return parseVenezuelaLiveTotals(rawRows, cfg)
+  if (teamId === 'mexico') return parseMexicoLiveTotals(rawRows, cfg)
+  if (teamId === 'philippines') return parsePhilippinesLiveTotals(rawRows, cfg)
+
+  return fallbackTotals || { english: 0, spanish: 0, total: 0 }
 }
 
 function parseColombiaSheet_(rows, config, includeOTNow) {
