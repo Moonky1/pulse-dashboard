@@ -5,6 +5,7 @@ import './profile.css'
 
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
 const SCRIPT_URL       = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
+const USERS_SHEET_ID_PROFILE = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 
 const HISTORY_DATES = [
   { isoDate:'2026-03-14', tab:'14032026' },
@@ -17,10 +18,50 @@ const HISTORY_DATES = [
   { isoDate:'2026-03-23', tab:'23032026' },
 ]
 
+const WEEKLY_SHEETS_PROFILE = {
+  asia:        { id:'1GHj5MCxNJLUBtBAAM9nS1WqIkahbaAMg7NLCDE57LQw', type:'eng_spa',    startDate:'2026-03-23' },
+  philippines: { id:'15GCXWZnrJjI_9LJfqnoIvjavN8R8NWwaplr8d5Jjl_8', type:'total_only', startDate:'2026-03-23' },
+  colombia:    { id:'1eFCPK-i4fAtMfeAUKpZ45md0CPiFp2h16MrlLWYl7M0', type:'eng_spa',    startDate:'2026-03-23' },
+  central:     { id:'1f6dFWRTe4vmXi0q-qw6fLKNo45RnSWFUMOQ8FyHYnZY', type:'eng_spa',    startDate:'2026-03-23' },
+  mexico:      { id:'1YHNJIFlTjtVwbWi1W6aCWbt89HEF12JXMwPgbR6qqcg', type:'total_only', startDate:'2026-03-23' },
+  venezuela:   { id:'1H9rfZUp5T3rvAu6C5mJZF3zXfQychNJopGYE8_LHt4k', type:'eng_spa',    startDate:'2026-03-30' },
+}
+
+const FLAG_LOCAL = {
+  ph: '/flags/philippines.png',
+  co: '/flags/colombia.png',
+  mx: '/flags/mexico.png',
+  ve: '/flags/venezuela.png',
+  cn: '/flags/asia.png',
+  hn: null,
+}
+
+const MONTH_MAP = {JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12}
+
+const E = {
+  medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp', medal3:'/emojis/web3.webp',
+  goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp',
+  zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
+}
+
+const Img = ({src, size=20}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
+const MedalImg = ({rank}) => {
+  if(rank===1) return <Img src={E.medal1} size={22}/>
+  if(rank===2) return <Img src={E.medal2} size={22}/>
+  if(rank===3) return <Img src={E.medal3} size={22}/>
+  return <span style={{color:'#6b7280',fontSize:12}}>#{rank}</span>
+}
+
+function TeamFlag({ flag, size = 16 }) {
+  const src = FLAG_LOCAL[flag]
+  if (!src) return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>🌎</span>
+  return <img src={src} alt="" width={size} height={Math.round(size * 0.7)} style={{ borderRadius: 2, objectFit: 'cover', verticalAlign: 'middle' }}/>
+}
+
 const csvUrl = (sheetId, sheet) =>
   `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}&t=${Date.now()}`
 
-async function fetchWithTimeout(url, options = {}, timeout = 7000) {
+async function fetchWithTimeout(url, options = {}, timeout = 12000) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeout)
   try {
@@ -44,7 +85,7 @@ function parseCSV(text) {
 }
 
 async function fetchSheet(sheetId, name) {
-  const res  = await fetchWithTimeout(csvUrl(sheetId, name), {}, 7000)
+  const res  = await fetchWithTimeout(csvUrl(sheetId, name), {}, 12000)
   const text = await res.text()
   return parseCSV(text)
 }
@@ -66,22 +107,6 @@ const normalizeDate = (raw) => {
 
 const isValidIsoDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))
 
-// Local flag images
-const FLAG_LOCAL = {
-  ph: '/flags/philippines.png',
-  co: '/flags/colombia.png',
-  mx: '/flags/mexico.png',
-  ve: '/flags/venezuela.png',
-  cn: '/flags/asia.png',
-  hn: null,
-}
-
-function TeamFlag({ flag, size = 16 }) {
-  const src = FLAG_LOCAL[flag]
-  if (!src) return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>🌎</span>
-  return <img src={src} alt="" width={size} height={Math.round(size * 0.7)} style={{ borderRadius: 2, objectFit: 'cover', verticalAlign: 'middle' }}/>
-}
-
 async function loadUserPhotoFromSheets(userName) {
   try {
     const url  = `${SCRIPT_URL}?action=getUserPhoto&userName=${encodeURIComponent(userName)}`
@@ -96,16 +121,9 @@ async function loadUserPhotoFromSheets(userName) {
 }
 
 async function loadDailyTotals() {
-  const CACHE_KEY = 'pulse_daily_totals_cache'
-  const CACHE_DURATION = 0
   try {
-    const cached = localStorage.getItem(CACHE_KEY)
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached)
-      if (Date.now() - timestamp < CACHE_DURATION) return data
-    }
-    const url  = `${SCRIPT_URL}?action=getDailyTotals`
-    const res  = await fetchWithTimeout(url, {}, 7000)
+    const url  = `${SCRIPT_URL}?action=getDailyTotals&t=${Date.now()}`
+    const res  = await fetchWithTimeout(url, {}, 10000)
     const apiData = await res.json()
     if (!Array.isArray(apiData)) return {}
     const map = {}
@@ -113,318 +131,305 @@ async function loadDailyTotals() {
       const date = normalizeDate(entry.date)
       if (!date || !Array.isArray(entry.teams)) return
       map[date] = {}
-      entry.teams.forEach(t => { if (t.id) map[date][t.id] = t.english || 0 })
+      entry.teams.forEach(t => {
+        if (t.id) map[date][t.id] = t.english || 0
+      })
     })
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ data: map, timestamp: Date.now() }))
     return map
   } catch(e) { return {} }
 }
 
-const E = {
-  medal1:'/emojis/medal1.webp', medal2:'/emojis/medal2.webp', medal3:'/emojis/web3.webp',
-  goal:'/emojis/goal.webp', goal1:'/emojis/goal1.webp',
-  zero:'/emojis/zero.webp', firework:'/emojis/firework.webp',
-}
-const Img = ({src, size=20}) => <img src={src} width={size} height={size} style={{display:'inline-block',verticalAlign:'middle',objectFit:'contain'}}/>
-const MedalImg = ({rank}) => {
-  if(rank===1) return <Img src={E.medal1} size={22}/>
-  if(rank===2) return <Img src={E.medal2} size={22}/>
-  if(rank===3) return <Img src={E.medal3} size={22}/>
-  return <span style={{color:'#6b7280',fontSize:12}}>#{rank}</span>
-}
-
 const getTeamFromExt = (ext) => {
   const e = String(ext)
-  if (e.startsWith('1')) return { id:'philippines', name:'Philippines',     flag:'ph', hasSp:false, goal:10, colEn:2, colSp:-1 }
-  if (e.startsWith('2')) return { id:'colombia',    name:'Colombia',        flag:'co', hasSp:true,  goal:10, colEn:3, colSp:4  }
-  if (e.startsWith('3')) return { id:'asia',        name:'Asia',            flag:'cn', hasSp:true,  goal:20, colEn:3, colSp:2  }
-  if (e.startsWith('4')) return { id:'central',     name:'Central America', flag:'hn', hasSp:true,  goal:10, colEn:3, colSp:4  }
-  if (e.startsWith('5')) return { id:'mexico',      name:'Mexico Baja',     flag:'mx', hasSp:false, goal:10, colEn:3, colSp:-1 }
-  if (e.startsWith('6')) return { id:'venezuela',   name:'Venezuela',       flag:'ve', hasSp:true,  goal:10, colEn:3, colSp:4  }
-  return { id:'unknown', name:'Unknown', flag:'un', hasSp:false, goal:10, colEn:2, colSp:-1 }
+  if (e.startsWith('1')) return { id:'philippines', name:'Philippines',     flag:'ph', hasSp:false, goal:10 }
+  if (e.startsWith('2')) return { id:'colombia',    name:'Colombia',        flag:'co', hasSp:true,  goal:10 }
+  if (e.startsWith('3')) return { id:'asia',        name:'Asia',            flag:'cn', hasSp:true,  goal:20 }
+  if (e.startsWith('4')) return { id:'central',     name:'Central America', flag:'hn', hasSp:true,  goal:10 }
+  if (e.startsWith('5')) return { id:'mexico',      name:'Mexico Baja',     flag:'mx', hasSp:false, goal:10 }
+  if (e.startsWith('6')) return { id:'venezuela',   name:'Venezuela',       flag:'ve', hasSp:true,  goal:10 }
+  return { id:'unknown', name:'Unknown', flag:'hn', hasSp:false, goal:10 }
 }
 
-function calcRankFromRows(rows, ext, teamInfo) {
-  const agents = []
-  const isAsia = teamInfo.id === 'asia'
-  for (const row of rows) {
-    const cell0  = (row[0]||'').toString().trim()
-    const cell0U = cell0.toUpperCase()
-    if (cell0U.includes('AGENT') && (cell0U.includes('LOGGED')||cell0U.includes('LOG IN'))) break
-    if (cell0U.includes('OT ') || cell0U.endsWith(' OT')) break
-    const rawExt = (row[1]||'').toString().replace(/,/g,'').trim()
-    const extNum = parseInt(rawExt)
-    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
-    if (cell0.length < 2) continue
-    const en = isAsia ? safeInt(row[3]) : safeInt(row[teamInfo.colEn])
-    agents.push({ ext: String(extNum), english: en })
-  }
-  agents.sort((a,b) => b.english - a.english)
-  const idx = agents.findIndex(a => a.ext === String(ext))
-  return idx >= 0 ? idx + 1 : null
+function formatDate(iso) {
+  const d = normalizeDate(iso)
+  if (!d) return '—'
+  const [y,m,dd] = d.split('-')
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+  const dayName = days[new Date(`${d}T12:00:00`).getDay()]
+  return `${dayName} ${dd}/${m}`
 }
 
-function findAgentInHistoryRows(rows, ext) {
-  const agents = []
-  for(let i=0;i<rows.length;i++){
-    const row=rows[i], cell0=(row[0]||'').trim(), cell0U=cell0.toUpperCase()
-    if(cell0U.includes('AGENT')&&cell0U.includes('LOGGED'))break
-    if(cell0U.includes('MANAGEMENT')||cell0U.includes('LEXNER')||cell0U.includes('GENERAL')||cell0.length<=1)continue
-    const extNum=safeInt(row[1]);if(extNum<1000||extNum>9999)continue
-    agents.push({ext:String(extNum),english:safeInt(row[3])})
-  }
-  agents.sort((a,b)=>b.english-a.english)
-  for(let i=0;i<rows.length;i++){
-    const row=rows[i],cell0=(row[0]||'').trim(),cell0U=cell0.toUpperCase()
-    if(cell0U.includes('AGENT')&&cell0U.includes('LOGGED'))break
-    if(safeInt(row[1])!==parseInt(ext))continue
-    if(cell0.length<=1)continue
-    const sp=safeInt(row[2]),en=safeInt(row[3])
-    const rankIdx=agents.findIndex(a=>a.ext===String(ext))
-    return { name:cell0, ext:String(ext), english:en, spanish:sp, total:sp+en, rank:rankIdx>=0?rankIdx+1:null }
-  }
-  return null
-}
-
-// ── Source 1: this device's localStorage ─────────────────────────────────
-function loadAgentDataFromLocal(ext) {
-  const records  = []
-  const teamInfo = getTeamFromExt(ext)
-  for(let i=0;i<localStorage.length;i++){
-    const k=localStorage.key(i)
-    if(!k?.startsWith('pulse_snap_'))continue
-    try{
-      const date=normalizeDate(k.replace('pulse_snap_',''))
-      if(!date)continue
-      const data=JSON.parse(localStorage.getItem(k))
-      let sourceRows=[]
-      if(teamInfo.id==='asia')sourceRows=Array.isArray(data.asiaData)?data.asiaData:[]
-      else sourceRows=Array.isArray(data.teams?.[teamInfo.id])?data.teams[teamInfo.id]:[]
-      if(sourceRows.length===0)continue
-      for(const row of sourceRows){
-        const rawExt=(row[1]||'').toString().replace(/,/g,'').trim()
-        if(rawExt!==String(ext))continue
-        const cell0=(row[0]||'').trim()
-        if(cell0.length<=1)continue
-        if(cell0.toUpperCase().includes('AGENT')&&cell0.toUpperCase().includes('LOGGED'))break
-        let en, sp
-        if(teamInfo.id==='asia'){sp=safeInt(row[2]);en=safeInt(row[3])}
-        else if(teamInfo.colSp>=0){en=safeInt(row[teamInfo.colEn]);sp=safeInt(row[teamInfo.colSp])}
-        else{en=safeInt(row[teamInfo.colEn]);sp=0}
-        const rank=calcRankFromRows(sourceRows,ext,teamInfo)
-        records.push({date,name:cell0,english:en,spanish:sp,total:en+sp,rank,source:'local'})
-        break
-      }
-    }catch(e){}
-  }
-  return records
-}
-
-// ── Source 2: AGENT_SNAPSHOTS sheet read directly via CSV ────────────────────
-// Same approach as how Dashboard reads "Slacks" tab — no endpoint needed.
-// Populated by the backfill when Simon opens the dashboard.
-const USERS_SHEET_ID_PROFILE = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
-
-async function loadAgentSnapshotsFromCSV(ext) {
-  try {
-    const url = `https://docs.google.com/spreadsheets/d/${USERS_SHEET_ID_PROFILE}/gviz/tq?tqx=out:csv&sheet=AGENT_SNAPSHOTS&t=${Date.now()}`
-    const res = await fetchWithTimeout(url, {}, 12000)
-    const text = await res.text()
-    if (!text || text.trim().startsWith('<!') || text.trim().length < 20) return []
-    const rows = parseCSV(text)
-    if (rows.length <= 1) return []
-    // Headers: date, ext, name, english, spanish, total, savedAt
-    const byDate = {}
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i]
-      if (!row || !row[1]) continue
-      if (String(row[1]).trim() !== String(ext).trim()) continue
-      const date = normalizeDate(row[0])
-      if (!date || !isValidIsoDate(date)) continue
-      const rawTeam = String(row[6]||'').trim()
-      const VTEAMS  = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
-      const extStr2 = String(ext)
-      byDate[date] = {
-        date,
-        name:    row[2] || `Agent #${ext}`,
-        english: parseInt(row[3]) || 0,
-        spanish: parseInt(row[4]) || 0,
-        total:   parseInt(row[5]) || 0,
-        team:    VTEAMS.has(rawTeam) ? rawTeam : (
-          extStr2.startsWith('1')?'philippines':extStr2.startsWith('2')?'colombia':
-          extStr2.startsWith('3')?'asia':extStr2.startsWith('4')?'central':
-          extStr2.startsWith('5')?'mexico':extStr2.startsWith('6')?'venezuela':'asia'
-        ),
-        rank:    null,
-        source:  'csv'
-      }
-    }
-    return Object.values(byDate).sort((a,b) => a.date.localeCompare(b.date))
-  } catch(e) { return [] }
-}
-
-// ── Source 3: getAgentSnapshots endpoint (fallback) ──────────────────────────
-async function loadAgentSnapshotsFromEndpoint(ext) {
-  try{
-    const url=`${SCRIPT_URL}?action=getAgentSnapshots&ext=${encodeURIComponent(ext)}`
-    const res=await fetchWithTimeout(url,{},10000)
-    const data=await res.json()
-    if(!Array.isArray(data)||data.length===0)return[]
-    return data.map(d=>({
-      date:    normalizeDate(d.date),
-      name:    d.name||`Agent #${ext}`,
-      english: Number(d.english)||0,
-      spanish: Number(d.spanish)||0,
-      total:   Number(d.total)||0,
-      rank:    null,
-      source:  'endpoint'
-    })).filter(r=>r.date&&isValidIsoDate(r.date))
-  }catch(e){return[]}
-}
-
-// ── Main loader — all sources in parallel + local raw snapshot scan ──────────
-async function loadAgentData(ext) {
-  const [localRecords, csvRecords, endpointRecords] = await Promise.all([
-    Promise.resolve(loadAgentDataFromLocal(ext)),
-    loadAgentSnapshotsFromCSV(ext),
-    loadAgentSnapshotsFromEndpoint(ext),
-  ])
-
-  // Merge all sources — local wins, then CSV, then endpoint
-  const merged = [...localRecords]
-  const knownDates = new Set(localRecords.map(r => r.date))
-
-  for (const r of [...csvRecords, ...endpointRecords]) {
-    const d = normalizeDate(r.date)
-    if (d && isValidIsoDate(d) && !knownDates.has(d)) {
-      merged.push({ ...r, date: d })
-      knownDates.add(d)
-    }
-  }
-
-  // Source 3: weekly sheets for Asia, Philippines, Venezuela
-  // Only skip weeks already covered by LOCAL data (not CSV/endpoint data)
-  // This ensures cross-device visibility via weekly sheets
-  const knownDatesForWeekly = new Set(
-    merged.filter(r => r.source === 'local').map(r => r.date).filter(Boolean)
-  )
-  const extStr = String(ext)
-  let weeklyTeam = null
-  if (extStr.startsWith('3')) weeklyTeam = 'asia'
-  else if (extStr.startsWith('1')) weeklyTeam = 'philippines'
-  else if (extStr.startsWith('6')) weeklyTeam = 'venezuela'
-
-  if (weeklyTeam) {
-    try {
-      // Pass ALL known dates (local + CSV + endpoint) so weekly only fills gaps
-      const weeklyRecs = await fetchWeeklyForAgent(ext, weeklyTeam, knownDatesForWeekly)
-      let added = 0
-      weeklyRecs.forEach(r => {
-        const d = normalizeDate(r.date)
-        if (d && isValidIsoDate(d) && !knownDatesForWeekly.has(d)) {
-          merged.push({ ...r, date: d, source: 'weekly' })
-          knownDatesForWeekly.add(d)
-          added++
-        }
-      })
-    } catch(e) {}
-  }
-
-  return merged
-    .map(r => ({ ...r, date: normalizeDate(r.date) }))
-    .filter(r => r.date && isValidIsoDate(r.date))
-    .filter((r, i, arr) => arr.findIndex(x => x.date === r.date) === i)
-    .sort((a, b) => a.date.localeCompare(b.date))
-}
-
-// ── Extra: parse raw local snapshots for dates not covered by AGENT_SNAPSHOTS ──
-// This ensures all data from this device's localStorage appears in profile.
-function loadRawSnapshotsForAgent(ext) {
-  const extStr = String(ext)
-  const records = []
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i)
-    if (!k?.startsWith('pulse_snap_')) continue
-    try {
-      const date = k.replace('pulse_snap_', '')
-      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
-      const snap = JSON.parse(localStorage.getItem(k))
-      if (!snap) continue
-
-      // Search all teams for this ext
-      let en = 0, sp = 0, team = null
-      const checkAgents = (agents, tid) => {
-        if (!Array.isArray(agents)) return
-        const a = agents.find(x => String(x.ext) === extStr)
-        if (a) { en = a.english || 0; sp = a.spanish || 0; team = tid }
-      }
-
-      // Try teams
-      if (snap.teams) {
-        const TIDS = ['philippines','colombia','central','mexico','venezuela']
-        for (const tid of TIDS) {
-          if (!snap.teams[tid]?.length) continue
-          // Quick scan: look for ext in raw rows
-          for (const row of snap.teams[tid]) {
-            if (Array.isArray(row) && String(row[1]).replace(/,/g,'') === extStr) {
-              en = parseInt((row[3]||'').toString().replace(/,/g,'')) || 0
-              sp = parseInt((row[4]||'').toString().replace(/,/g,'')) || 0
-              team = tid; break
-            }
-          }
-          if (team) break
-        }
-      }
-      // Try Asia raw rows
-      if (!team && snap.asiaData?.length) {
-        for (const row of snap.asiaData) {
-          if (Array.isArray(row) && String(row[1]).replace(/,/g,'') === extStr) {
-            sp = parseInt((row[2]||'').toString().replace(/,/g,'')) || 0
-            en = parseInt((row[3]||'').toString().replace(/,/g,'')) || 0
-            team = 'asia'; break
-          }
-        }
-      }
-
-      if ((en > 0 || sp > 0) && team) {
-        records.push({ date, ext: extStr, english: en, spanish: sp, total: en + sp, team })
-      }
-    } catch(e) {}
-  }
-  return records
-}
-
-
-async function loadAsiaHistoryData(ext) {
-  const jobs = HISTORY_DATES.map(async(hd)=>{
-    try{
-      const rows=await fetchSheet(HISTORY_SHEET_ID,hd.tab)
-      const agent=findAgentInHistoryRows(rows,ext)
-      return agent?{date:hd.isoDate,...agent,source:'history'}:null
-    }catch(e){return null}
-  })
-  const results=await Promise.allSettled(jobs)
-  return results.filter(r=>r.status==='fulfilled'&&r.value).map(r=>r.value)
-}
-
-const getShareColor = (pct) => {
+function getShareColor(pct) {
   if (pct >= 20) return '#f87171'
   if (pct >= 12) return '#fb923c'
-  if (pct >= 6)  return '#a78bfa'
+  if (pct >= 6) return '#a78bfa'
   return '#6b7280'
 }
-const getShareLabel = (pct) => {
+
+function getShareLabel(pct) {
   if (pct >= 20) return '🔥 Franchise'
   if (pct >= 12) return '⭐ Key Player'
   if (pct >= 6)  return 'Contributor'
   return 'Support'
 }
-const formatDate = (d) => {
-  const iso=normalizeDate(d); if(!iso)return'—'
-  const[y,m,dd]=iso.split('-')
-  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-  const dayName=days[new Date(`${iso}T12:00:00`).getDay()]
-  return`${dayName} ${dd}/${m}`
+
+function parseWeekTabDate(tabName) {
+  const s = tabName.trim().toUpperCase()
+  const m = s.match(/^([A-Z]+)\s+(\d+)\s*[-\u2013]\s*[A-Z]+\s+\d+\s+(\d{4})/)
+  if (!m) return null
+  const month = MONTH_MAP[m[1]], day = parseInt(m[2], 10), year = parseInt(m[3], 10)
+  if (!month) return null
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+}
+
+function genWeekTabs(weeksBack=14) {
+  const MONS=['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER']
+  const tabs=[], now=new Date()
+  const d=now.getDay()
+  const mon=new Date(now); mon.setDate(now.getDate()-(d===0?6:d-1))
+  for(let w=0;w<weeksBack;w++){
+    const s=new Date(mon); s.setDate(mon.getDate()-w*7)
+    const e=new Date(s); e.setDate(s.getDate()+5)
+    const sm=MONS[s.getMonth()],sd1=String(s.getDate()).padStart(2,'0'),sd2=String(s.getDate())
+    const em=MONS[e.getMonth()],ed1=String(e.getDate()).padStart(2,'0'),ed2=String(e.getDate())
+    const yr=s.getFullYear()
+    tabs.push(`${sm} ${sd1} - ${em} ${ed1} ${yr}`)
+    tabs.push(`${sm} ${sd1} - ${em} ${ed2} ${yr}`)
+    tabs.push(`${sm} ${sd2} - ${em} ${ed1} ${yr}`)
+    tabs.push(`${sm} ${sd2} - ${em} ${ed2} ${yr}`)
+  }
+  return [...new Set(tabs)]
+}
+
+async function fetchWeeklySheetAgents(teamId) {
+  const cfg = WEEKLY_SHEETS_PROFILE[teamId]
+  if (!cfg) return []
+  const results = []
+  const tabs = genWeekTabs(14)
+
+  for (const tab of tabs) {
+    const startDate = parseWeekTabDate(tab)
+    if (!startDate) continue
+    if (cfg.startDate && startDate < cfg.startDate) continue
+
+    const weekDates = Array.from({length:6},(_,i)=>{
+      const d=new Date(startDate+'T12:00:00')
+      d.setDate(d.getDate()+i)
+      return d.toISOString().slice(0,10)
+    })
+
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}&t=${Date.now()}`
+      const res = await fetchWithTimeout(url, {}, 12000)
+      const text = await res.text()
+      if (!text || text.trim().startsWith('<!') || text.trim().length < 20) continue
+
+      const rows = parseCSV(text)
+      if (rows.length < 4) continue
+
+      const titleRow = (rows[0]?.[0] || rows[1]?.[0] || '').toUpperCase()
+      const expectedMonth = new Date(startDate+'T12:00:00').toLocaleString('en-US',{month:'long'}).toUpperCase()
+      const expectedYear  = startDate.slice(0,4)
+      if (!titleRow.includes(expectedMonth) && !titleRow.includes(expectedYear)) continue
+
+      let hRow = []
+      let dataStartRow = 3
+      for (let ri = 0; ri <= Math.min(4, rows.length - 1); ri++) {
+        const row = rows[ri] || []
+        if (row.some(h => (h||'').toUpperCase().trim() === 'ENG' || (h||'').toUpperCase().includes('TOTAL XFER'))) {
+          hRow = row
+          dataStartRow = ri + 1
+          break
+        }
+      }
+      if (!hRow.length) hRow = rows[2] || []
+
+      if (cfg.type === 'total_only') {
+        const totalCols = []
+        hRow.forEach((h,i) => { if ((h||'').toUpperCase().includes('TOTAL XFER')) totalCols.push(i) })
+        const dayColStart = totalCols.length >= 1 ? totalCols[0] : 3
+
+        for (let di = 0; di < 6; di++) {
+          const date = weekDates[di]
+          const dayRows = []
+          for (let ri = dataStartRow; ri < rows.length; ri++) {
+            const row = rows[ri]
+            const name = String(row[0]||'').trim()
+            const ext  = String(row[1]||'').replace(/,/g,'').trim()
+            if (!name || !ext || isNaN(parseInt(ext,10))) continue
+            if (name.toUpperCase().includes('TOTAL')) continue
+            const english = parseInt(String(row[dayColStart + di]||'').replace(/,/g,''),10) || 0
+            dayRows.push({ date, ext, name, english, spanish:0, total:english, team:teamId })
+          }
+          const ranked = dayRows.filter(r => r.english > 0).sort((a,b) => b.english - a.english)
+          ranked.forEach((r, i) => results.push({ ...r, rank: i + 1 }))
+        }
+      } else {
+        const engIdx = hRow.findIndex(h => (h||'').toUpperCase().trim() === 'ENG')
+        const dayColStart = engIdx >= 0 ? engIdx : 2
+
+        for (let di = 0; di < 6; di++) {
+          const date = weekDates[di]
+          const dayRows = []
+          for (let ri = dataStartRow; ri < rows.length; ri++) {
+            const row = rows[ri]
+            const name = String(row[0]||'').trim()
+            const ext  = String(row[1]||'').replace(/,/g,'').trim()
+            if (!name || !ext || isNaN(parseInt(ext,10))) continue
+            if (name.toUpperCase().includes('TOTAL')) continue
+            const english = parseInt(String(row[dayColStart + di*3]||'').replace(/,/g,''),10) || 0
+            const spanish = parseInt(String(row[dayColStart + di*3 + 1]||'').replace(/,/g,''),10) || 0
+            dayRows.push({ date, ext, name, english, spanish, total:english+spanish, team:teamId })
+          }
+          const ranked = dayRows.filter(r => r.english > 0).sort((a,b) => b.english - a.english)
+          ranked.forEach((r, i) => results.push({ ...r, rank: i + 1 }))
+        }
+      }
+    } catch(e) {}
+  }
+  return results
+}
+
+async function loadAgentSnapshotsRemoteForTeam(teamId) {
+  const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
+  let sheetNames = ['AGENT_SNAPSHOTS']
+
+  try {
+    const namesRes = await fetchWithTimeout(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`, {}, 8000)
+    const namesData = await namesRes.json()
+    if (namesData?.ok && Array.isArray(namesData.sheets) && namesData.sheets.length > 0) {
+      sheetNames = namesData.sheets
+    }
+  } catch(e) {}
+
+  const merged = {}
+  for (const shName of sheetNames) {
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${USERS_SHEET_ID_PROFILE}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`
+      const res = await fetchWithTimeout(url, {}, 15000)
+      const text = await res.text()
+      if (!text || text.trim().startsWith('<!') || text.trim().length < 20) continue
+      const rows = parseCSV(text).slice(1)
+      rows.forEach(r => {
+        if (!r[0] || !r[1]) return
+        const date = normalizeDate(r[0])
+        if (!date || !isValidIsoDate(date)) return
+        const ext = String(r[1]).trim()
+        const rawTeam = String(r[6] || '').trim()
+        const team = VALID_TEAMS.has(rawTeam)
+          ? rawTeam
+          : (ext.startsWith('1') ? 'philippines' : ext.startsWith('2') ? 'colombia' : ext.startsWith('3') ? 'asia' : ext.startsWith('4') ? 'central' : ext.startsWith('5') ? 'mexico' : ext.startsWith('6') ? 'venezuela' : 'asia')
+        if (team !== teamId) return
+        const english = Number(r[3]) || 0
+        const spanish = Number(r[4]) || 0
+        const total = Number(r[5]) || (english + spanish)
+        const key = `${date}|${ext}`
+        if (!merged[key] || total > merged[key].total || english > merged[key].english) {
+          merged[key] = { date, ext, name: r[2] || '', english, spanish, total, team, rank: null }
+        }
+      })
+    } catch(e) {}
+  }
+  return Object.values(merged)
+}
+
+function findAgentInHistoryRows(rows, ext) {
+  const agents = []
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    const cell0 = String(row[0] || '').trim()
+    const cell0U = cell0.toUpperCase()
+    if (cell0U.includes('AGENT') && cell0U.includes('LOGGED')) break
+    if (cell0U.includes('MANAGEMENT') || cell0U.includes('LEXNER') || cell0U.includes('GENERAL') || cell0.length <= 1) continue
+    const extNum = safeInt(row[1])
+    if (extNum < 1000 || extNum > 9999) continue
+    agents.push({ ext:String(extNum), english:safeInt(row[3]) })
+  }
+  agents.sort((a,b)=>b.english-a.english)
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    const cell0 = String(row[0] || '').trim()
+    const cell0U = cell0.toUpperCase()
+    if (cell0U.includes('AGENT') && cell0U.includes('LOGGED')) break
+    if (safeInt(row[1]) !== parseInt(ext, 10)) continue
+    if (cell0.length <= 1) continue
+    const rankIdx = agents.findIndex(a => a.ext === String(ext))
+    const spanish = safeInt(row[2])
+    const english = safeInt(row[3])
+    return { name:cell0, ext:String(ext), english, spanish, total:english+spanish, rank:rankIdx >= 0 ? rankIdx + 1 : null }
+  }
+  return null
+}
+
+async function loadLegacyAsiaHistory(ext, existingDates) {
+  const jobs = HISTORY_DATES.map(async hd => {
+    if (existingDates.has(hd.isoDate)) return null
+    try {
+      const rows = await fetchSheet(HISTORY_SHEET_ID, hd.tab)
+      const agent = findAgentInHistoryRows(rows, ext)
+      return agent ? { date: hd.isoDate, ...agent, team:'asia' } : null
+    } catch(e) { return null }
+  })
+  const results = await Promise.allSettled(jobs)
+  return results.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value)
+}
+
+function mergeRecordsWithRanks(records) {
+  const dedup = {}
+  records.forEach(r => {
+    const date = normalizeDate(r.date)
+    if (!date || !r.ext) return
+    const key = `${date}|${String(r.ext).trim()}`
+    const total = Number(r.total) || ((Number(r.english) || 0) + (Number(r.spanish) || 0))
+    if (!dedup[key] || total > (dedup[key].total || 0) || (Number(r.english) || 0) > (dedup[key].english || 0)) {
+      dedup[key] = {
+        date,
+        ext: String(r.ext).trim(),
+        name: r.name || `Agent #${r.ext}`,
+        english: Number(r.english) || 0,
+        spanish: Number(r.spanish) || 0,
+        total,
+        team: r.team,
+        rank: r.rank ?? null,
+      }
+    }
+  })
+
+  const byDate = {}
+  Object.values(dedup).forEach(r => {
+    if (!byDate[r.date]) byDate[r.date] = []
+    byDate[r.date].push(r)
+  })
+
+  Object.values(byDate).forEach(list => {
+    const sorted = [...list].sort((a, b) => b.english - a.english)
+    sorted.forEach((r, i) => {
+      const key = `${r.date}|${r.ext}`
+      dedup[key].rank = i + 1
+    })
+  })
+
+  return Object.values(dedup).sort((a,b) => a.date.localeCompare(b.date))
+}
+
+async function loadAgentData(ext) {
+  const teamInfo = getTeamFromExt(ext)
+  const [remoteRecords, weeklyRecords] = await Promise.all([
+    loadAgentSnapshotsRemoteForTeam(teamInfo.id),
+    fetchWeeklySheetAgents(teamInfo.id),
+  ])
+
+  const mergedTeam = mergeRecordsWithRanks([...(remoteRecords || []), ...(weeklyRecords || [])])
+  const agentRecords = mergedTeam.filter(r => String(r.ext) === String(ext))
+  const existingDates = new Set(agentRecords.map(r => r.date))
+
+  if (teamInfo.id === 'asia') {
+    const legacy = await loadLegacyAsiaHistory(ext, existingDates)
+    return mergeRecordsWithRanks([...mergedTeam, ...legacy]).filter(r => String(r.ext) === String(ext))
+  }
+
+  return agentRecords
 }
 
 export default function Profile() {
@@ -441,7 +446,6 @@ export default function Profile() {
   const [userPhoto,  setUserPhoto]  = useState(localStorage.getItem('pulse_user_photo')||'')
   const [teamTotals, setTeamTotals] = useState({})
 
-  // Cursor trail
   useEffect(()=>{
     const canvas=canvasRef.current;if(!canvas)return
     const ctx=canvas.getContext('2d');canvas.width=window.innerWidth;canvas.height=window.innerHeight
@@ -460,48 +464,39 @@ export default function Profile() {
     if(!user)return
     let cancelled=false
     setLoading(true)
+
     loadUserPhotoFromSheets(user.name).then(p=>{if(!cancelled&&p)setUserPhoto(p)})
-    Promise.all([loadAgentData(ext), Promise.resolve(loadRawSnapshotsForAgent(ext))])
-      .then(([recs, rawRecs]) => {
-        const knownDates = new Set(recs.map(r => r.date))
-        rawRecs.forEach(r => { if (r.date && !knownDates.has(r.date)) { recs.push(r); knownDates.add(r.date) } })
-        return recs.sort((a,b) => a.date.localeCompare(b.date))
-      })
-      .then(recs=>{
+    loadAgentData(ext).then(recs=>{
       if(cancelled)return
-      const finalRecs=Array.isArray(recs)?recs:[]
+      const finalRecs = Array.isArray(recs) ? recs.filter(r => r.date && isValidIsoDate(r.date)).sort((a,b)=>a.date.localeCompare(b.date)) : []
       setRecords(finalRecs)
-      const named=finalRecs.filter(r=>r.name&&r.name.length>1)
-      if(named.length>0)setAgentName(named[named.length-1].name)
+      const named = finalRecs.filter(r => r.name && r.name.length > 1)
+      if(named.length > 0) setAgentName(named[named.length - 1].name)
       setLoading(false)
-      if(teamInfo.id==='asia'){
-        loadAsiaHistoryData(ext).then(historyRows=>{
-          if(cancelled||!Array.isArray(historyRows)||historyRows.length===0)return
-          setRecords(prev=>{
-            const merged=[...prev]
-            historyRows.forEach(r=>{const date=normalizeDate(r.date);if(!date)return;if(!merged.find(x=>x.date===date))merged.push({...r,date})})
-            return merged.sort((a,b)=>a.date.localeCompare(b.date))
-          })
-        }).catch(()=>{})
-      }
-    }).catch(()=>{if(!cancelled){setRecords([]);setLoading(false)}})
+    }).catch(()=>{ if(!cancelled){ setRecords([]); setLoading(false) } })
+
     loadDailyTotals().then(totalsMap=>{
       if(cancelled)return
       const teamMap={}
       Object.entries(totalsMap||{}).forEach(([date,teams])=>{
-        const normalized=normalizeDate(date);if(!normalized)return
-        if(teams?.[teamInfo.id]!==undefined)teamMap[normalized]=teams[teamInfo.id]
+        const normalized=normalizeDate(date)
+        if(!normalized)return
+        if(teams?.[teamInfo.id]!==undefined) teamMap[normalized]=teams[teamInfo.id]
       })
       setTeamTotals(teamMap)
     }).catch(()=>{})
+
     return()=>{cancelled=true}
   },[ext,user,teamInfo.id])
 
   const cleanRecords = useMemo(()=>{
-    return records.map(r=>({...r,date:normalizeDate(r.date)})).filter(r=>r.date&&isValidIsoDate(r.date)).filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i).sort((a,b)=>a.date.localeCompare(b.date))
+    return records
+      .map(r=>({...r,date:normalizeDate(r.date)}))
+      .filter(r=>r.date&&isValidIsoDate(r.date))
+      .filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i)
+      .sort((a,b)=>a.date.localeCompare(b.date))
   },[records])
 
-  // Not logged in
   if (!user) {
     return (
       <div className="profile-root">
@@ -524,8 +519,10 @@ export default function Profile() {
 
   const stats = (() => {
     if(cleanRecords.length===0)return null
-    const withData=cleanRecords.filter(r=>r.total>0);if(withData.length===0)return null
-    const totalEn=cleanRecords.reduce((s,r)=>s+r.english,0),totalSp=cleanRecords.reduce((s,r)=>s+r.spanish,0)
+    const withData=cleanRecords.filter(r=>r.total>0)
+    if(withData.length===0)return null
+    const totalEn=cleanRecords.reduce((s,r)=>s+r.english,0)
+    const totalSp=cleanRecords.reduce((s,r)=>s+r.spanish,0)
     const avgEn=Math.round(totalEn/cleanRecords.length)
     const bestDay=[...withData].sort((a,b)=>b.english-a.english)[0]
     const worstDay=[...withData].sort((a,b)=>a.english-b.english)[0]
@@ -538,21 +535,18 @@ export default function Profile() {
     return{totalEn,totalSp,avgEn,bestDay,worstDay,activeDays:withData.length,zeroDays:cleanRecords.length-withData.length,daysTracked:cleanRecords.length,top3Days:top3Days.length,top1Days:top1Days.length,bestShareDay,bestSharePct,avgShare}
   })()
 
-  const maxEnglish     = Math.max(...cleanRecords.map(r=>r.english),1)
+  const maxEnglish = Math.max(...cleanRecords.map(r=>r.english),1)
   const timelineMinWidth = Math.max(cleanRecords.length * 84, 1100)
 
   return (
     <div className="profile-root">
       <canvas ref={canvasRef} className="profile-trail-canvas"/>
-
-      {/* ── Shared Navbar ── */}
       <Navbar />
 
       {loading ? (
         <div className="profile-loading"><div className="profile-spinner"/><p>Loading agent history...</p></div>
       ) : (
         <div className="profile-body">
-          {/* ── Hero ── */}
           <div className="profile-hero">
             <div className="profile-hero-inner">
               <div className="profile-avatar-ring">
@@ -702,121 +696,4 @@ export default function Profile() {
       )}
     </div>
   )
-}const WEEKLY_SHEETS_PROFILE = {
-  asia:        { id:'1GHj5MCxNJLUBtBAAM9nS1WqIkahbaAMg7NLCDE57LQw', type:'eng_spa',    startDate:'2026-03-23' },
-  philippines: { id:'15GCXWZnrJjI_9LJfqnoIvjavN8R8NWwaplr8d5Jjl_8', type:'total_only', startDate:'2026-03-23' },
-  venezuela:   { id:'1H9rfZUp5T3rvAu6C5mJZF3zXfQychNJopGYE8_LHt4k', type:'eng_spa',    startDate:'2026-03-30' },
-}
-const MONTH_MAP = {JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12}
-
-function parseWeekTabDate(tabName) {
-  const s = tabName.trim().toUpperCase()
-  const m = s.match(/^([A-Z]+)\s+(\d+)\s*[-\u2013]\s*[A-Z]+\s+\d+\s+(\d{4})/)
-  if (!m) return null
-  const month = MONTH_MAP[m[1]], day = parseInt(m[2]), year = parseInt(m[3])
-  if (!month) return null
-  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`
-}
-
-function genWeekTabs(weeksBack=14) {
-  const MONS=['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER']
-  const tabs=[], now=new Date()
-  const d=now.getDay()
-  const mon=new Date(now); mon.setDate(now.getDate()-(d===0?6:d-1))
-  for(let w=0;w<weeksBack;w++){
-    const s=new Date(mon); s.setDate(mon.getDate()-w*7)
-    const e=new Date(s); e.setDate(s.getDate()+5)
-    const sm=MONS[s.getMonth()],sd1=String(s.getDate()).padStart(2,'0'),sd2=String(s.getDate())
-    const em=MONS[e.getMonth()],ed1=String(e.getDate()).padStart(2,'0'),ed2=String(e.getDate())
-    const yr=s.getFullYear()
-    tabs.push(`${sm} ${sd1} - ${em} ${ed1} ${yr}`)
-    tabs.push(`${sm} ${sd1} - ${em} ${ed2} ${yr}`)
-    tabs.push(`${sm} ${sd2} - ${em} ${ed1} ${yr}`)
-    tabs.push(`${sm} ${sd2} - ${em} ${ed2} ${yr}`)
-  }
-  return [...new Set(tabs)]
-}
-
-async function fetchWeeklyForAgent(ext, teamId, existingDates) {
-  const cfg = WEEKLY_SHEETS_PROFILE[teamId]
-  if (!cfg) return []
-  const extStr = String(ext), results = []
-  const tabs = genWeekTabs(14)
-
-  for (const tab of tabs) {
-    const startDate = parseWeekTabDate(tab)
-    if (!startDate) continue
-    // Skip weeks before this sheet's data starts
-    if (cfg.startDate && startDate < cfg.startDate) continue
-    const weekDates = Array.from({length:6},(_,i)=>{
-      const d=new Date(startDate+'T12:00:00'); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10)
-    })
-    // Skip week if all days already covered
-    if (weekDates.every(d => existingDates.has(d))) continue
-
-    try {
-      const url = `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}&t=${Date.now()}`
-      const res = await fetch(url)
-      const text = await res.text()
-      if (!text || text.trim().startsWith('<!') || text.length < 20) continue
-
-      // Validate title row matches expected week (prevents using wrong tab when tab not found)
-      const firstLine = text.trim().split('\n')[0].toUpperCase()
-      const expMonth = new Date(startDate+'T12:00:00').toLocaleString('en-US',{month:'long'}).toUpperCase()
-      const expYear  = startDate.slice(0,4)
-      if (!firstLine.includes(expMonth) && !firstLine.includes(expYear)) continue
-
-      const rows = text.trim().split('\n').map(row => {
-        const result=[]; let cur=''; let inQ=false
-        for(let i=0;i<row.length;i++){if(row[i]==='"'){inQ=!inQ;continue}if(row[i]===','&&!inQ){result.push(cur.trim());cur='';continue}cur+=row[i]}
-        result.push(cur.trim()); return result
-      })
-      if (rows.length < 4) continue
-
-      // Find the ENG/SPA header row dynamically (usually row 2 or 3)
-      let hRow = [], dataStartRow = 3
-      for (let ri = 0; ri <= Math.min(4, rows.length-1); ri++) {
-        const row = rows[ri] || []
-        if (row.some(h => (h||'').toUpperCase().trim() === 'ENG')) {
-          hRow = row; dataStartRow = ri + 1; break
-        }
-      }
-      if (!hRow.length) hRow = rows[2] || []
-
-      if (cfg.type === 'total_only') {
-        const totalCols = []
-        hRow.forEach((h,i) => { if((h||'').toUpperCase().includes('TOTAL XFER'))totalCols.push(i) })
-        const dayColStart = totalCols.length >= 1 ? totalCols[0] : 3
-        for (let ri = dataStartRow; ri < rows.length; ri++) {
-          const row = rows[ri]
-          const rowExt = (row[1]||'').toString().replace(/,/g,'').trim()
-          if (rowExt !== extStr) continue
-          for (let di = 0; di < 6; di++) {
-            const date = weekDates[di]
-            if (existingDates.has(date)) continue
-            const xf = parseInt((row[dayColStart+di]||'').replace(/,/g,''))||0
-            if (xf > 0) results.push({date,ext:extStr,english:xf,spanish:0,total:xf,team:teamId})
-          }
-          break
-        }
-      } else {
-        const engIdx = hRow.findIndex(h=>(h||'').toUpperCase().trim()==='ENG')
-        const dayColStart = engIdx >= 0 ? engIdx : 2
-        for (let ri = dataStartRow; ri < rows.length; ri++) {
-          const row = rows[ri]
-          const rowExt = (row[1]||'').toString().replace(/,/g,'').trim()
-          if (rowExt !== extStr) continue
-          for (let di = 0; di < 6; di++) {
-            const date = weekDates[di]
-            if (existingDates.has(date)) continue
-            const en = parseInt((row[dayColStart+di*3]||'').replace(/,/g,''))||0
-            const sp = parseInt((row[dayColStart+di*3+1]||'').replace(/,/g,''))||0
-            if (en > 0 || sp > 0) results.push({date,ext:extStr,english:en,spanish:sp,total:en+sp,team:teamId})
-          }
-          break
-        }
-      }
-    } catch(e) {}
-  }
-  return results
 }
