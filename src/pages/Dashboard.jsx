@@ -1420,106 +1420,99 @@ function TeamRankingsSection({ snapshots, remoteDailyTotals }) {
 
 // ── MVP Section ──────────────────────────────────────────────────────────────
 function MVPSection({ snapshots, navigate, agentSnapshotsRemote }) {
-  const data = useMemo(() => {
-    const enMap = {}, spMap = {}
+const data = useMemo(() => {
+  const enMap = {}
+  const spMap = {}
 
-    const processSnapshot = (agents, teamId) => {
-      const actEN = agents.filter(a => a.english > 0)
-      const actSP = agents.filter(a => (a.spanish||0) > 0)
-      const sortedEN = [...actEN].sort((a,b) => b.english - a.english)
-      const sortedSP = [...actSP].sort((a,b) => (b.spanish||0) - (a.spanish||0))
+  const processSnapshot = (agents, teamId) => {
+    const actEN = agents.filter(a => (a.english || 0) > 0)
+    const actSP = agents.filter(a => (a.spanish || 0) > 0)
 
-      const reg = (map, a, isTop1, isTop3, lang) => {
-        if (!map[a.ext]) map[a.ext] = { name:a.name, team:teamId, ext:a.ext, top1:0, top3:0, total:0, days:0 }
-        map[a.ext].total += lang === 'en' ? a.english : (a.spanish||0)
-        map[a.ext].days  += 1
-        if (isTop1) map[a.ext].top1 += 1
-        if (isTop3) map[a.ext].top3 += 1
+    const sortedEN = [...actEN].sort((a, b) => b.english - a.english)
+    const sortedSP = [...actSP].sort((a, b) => (b.spanish || 0) - (a.spanish || 0))
+
+    const reg = (map, a, isTop1, isTop3, lang) => {
+      if (!map[a.ext]) {
+        map[a.ext] = {
+          name: a.name,
+          team: teamId,
+          ext: a.ext,
+          top1: 0,
+          top3: 0,
+          total: 0,
+          days: 0
+        }
       }
 
-      sortedEN.forEach((a,i) => reg(enMap, a, i===0, i<3, 'en'))
-      sortedSP.forEach((a,i) => reg(spMap, a, i===0, i<3, 'sp'))
+      map[a.ext].total += lang === 'en' ? (a.english || 0) : (a.spanish || 0)
+      map[a.ext].days += 1
+      if (isTop1) map[a.ext].top1 += 1
+      if (isTop3) map[a.ext].top3 += 1
     }
 
-    const mergedByDate = {}
+    sortedEN.forEach((a, i) => reg(enMap, a, i === 0, i < 3, 'en'))
+    sortedSP.forEach((a, i) => reg(spMap, a, i === 0, i < 3, 'sp'))
+  }
 
-    snapshots.forEach(snap => {
-      if (!mergedByDate[snap.date]) mergedByDate[snap.date] = {}
-      const day = mergedByDate[snap.date]
+  const mergedByDate = {}
 
-      if (snap.asiaData?.length) {
-        const { agents } = parseAsiaSheet(snap.asiaData)
-        agents.forEach(a => {
-          const cur = day[a.ext]
-          if (!cur || a.english > cur.english)
-            day[a.ext] = { name:a.name, english:a.english, spanish:a.spanish||0, team:'asia' }
-        })
+  // REMOTE ONLY for rankings
+  if (Array.isArray(agentSnapshotsRemote)) {
+    agentSnapshotsRemote.forEach(a => {
+      if (!a.date || !a.ext) return
+
+      const d = normalizeDate(a.date)
+      if (!d) return
+
+      const ext = String(a.ext).trim()
+      const en = Number(a.english) || 0
+      const sp = Number(a.spanish) || 0
+      const total = en + sp
+      if (total === 0) return
+
+      if (!mergedByDate[d]) mergedByDate[d] = {}
+
+      if (
+        !mergedByDate[d][ext] ||
+        total > ((mergedByDate[d][ext].english || 0) + (mergedByDate[d][ext].spanish || 0)) ||
+        en > (mergedByDate[d][ext].english || 0)
+      ) {
+        mergedByDate[d][ext] = {
+          name: a.name || ext,
+          english: en,
+          spanish: sp,
+          team: a.team || 'asia'
+        }
       }
-      TEAM_SHEETS.forEach(t => {
-        const raw = snap.teams?.[t.id]; if (!raw?.length) return
-        const { agents } = parseTeamSheet(raw, t)
-        agents.forEach(a => {
-          const cur = day[a.ext]
-          if (!cur || a.english > cur.english)
-            day[a.ext] = { name:a.name, english:a.english, spanish:a.spanish||0, team:t.id }
-        })
+    })
+  }
+
+  Object.values(mergedByDate).forEach(day => {
+    const byTeam = {}
+
+    Object.entries(day).forEach(([ext, a]) => {
+      if (!byTeam[a.team]) byTeam[a.team] = []
+      byTeam[a.team].push({
+        ext,
+        name: a.name,
+        english: a.english,
+        spanish: a.spanish,
+        total: a.english + (a.spanish || 0)
       })
     })
 
-    const localKeys = new Set()
-    Object.entries(mergedByDate).forEach(([date, agents]) => {
-      Object.keys(agents).forEach(ext => localKeys.add(`${date}|${ext}`))
-    })
+    Object.entries(byTeam).forEach(([tid, agts]) => processSnapshot(agts, tid))
+  })
 
-    if (Array.isArray(agentSnapshotsRemote)) {
-      const snapRecords   = agentSnapshotsRemote.filter(a => !a.fromWeekly)
-      const weeklyRecords = agentSnapshotsRemote.filter(a => a.fromWeekly)
+  const sortFn = list => [...list].sort((a, b) => b.top1 - a.top1 || b.top3 - a.top3 || b.total - a.total)
 
-      const snapKeys = new Set()
+  const enList = sortFn(Object.values(enMap)).slice(0, 8)
+  const spList = sortFn(Object.values(spMap)).slice(0, 8)
+  const goatEN = Object.values(enMap).sort((a, b) => b.total - a.total)[0] || null
+  const goatSP = Object.values(spMap).sort((a, b) => b.total - a.total)[0] || null
 
-      snapRecords.forEach(a => {
-        if (!a.date || !a.ext) return
-        const d = normalizeDate(a.date); if (!d) return
-        const key = `${d}|${String(a.ext).trim()}`
-        if (localKeys.has(key)) { snapKeys.add(key); return }
-        const en = Number(a.english)||0, sp = Number(a.spanish)||0
-        if (!mergedByDate[d]) mergedByDate[d] = {}
-        if (!mergedByDate[d][a.ext] || en > (mergedByDate[d][a.ext].english||0))
-          mergedByDate[d][a.ext] = { name:a.name||String(a.ext), english:en, spanish:sp, team:a.team||'asia' }
-        snapKeys.add(key)
-      })
-
-      weeklyRecords.forEach(a => {
-        if (!a.date || !a.ext) return
-        const d = normalizeDate(a.date); if (!d) return
-        const key = `${d}|${String(a.ext).trim()}`
-        if (localKeys.has(key)) return
-        if (snapKeys.has(key)) return
-        const en = Number(a.english)||0, sp = Number(a.spanish)||0
-        if (en === 0 && sp === 0) return
-        if (!mergedByDate[d]) mergedByDate[d] = {}
-        if (!mergedByDate[d][a.ext] || en > (mergedByDate[d][a.ext].english||0))
-          mergedByDate[d][a.ext] = { name:a.name||String(a.ext), english:en, spanish:sp, team:a.team||'asia' }
-      })
-    }
-
-    Object.values(mergedByDate).forEach(day => {
-      const byTeam = {}
-      Object.entries(day).forEach(([ext, a]) => {
-        if (!byTeam[a.team]) byTeam[a.team] = []
-        byTeam[a.team].push({ ext, name:a.name, english:a.english, spanish:a.spanish, total:a.english+(a.spanish||0) })
-      })
-      Object.entries(byTeam).forEach(([tid, agts]) => processSnapshot(agts, tid))
-    })
-
-    const sortFn = list => [...list].sort((a,b) => b.top1-a.top1 || b.top3-a.top3 || b.total-a.total)
-    const enList = sortFn(Object.values(enMap)).slice(0,8)
-    const spList = sortFn(Object.values(spMap)).slice(0,8)
-    const goatEN = Object.values(enMap).sort((a,b)=>b.total-a.total)[0]||null
-    const goatSP = Object.values(spMap).sort((a,b)=>b.total-a.total)[0]||null
-
-    return { enList, spList, goatEN, goatSP }
-  }, [snapshots, agentSnapshotsRemote])
+  return { enList, spList, goatEN, goatSP }
+}, [agentSnapshotsRemote])
 
   if (!data.enList.length) return null
 
@@ -1635,68 +1628,86 @@ export default function Dashboard() {
     loadDailyTotals()
     loadData().then(()=>backfillHistoricalDataToSheets())
     const USERS_SID='1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
-    const loadAllRemoteAgents = async () => {
-      let agents = []
-      // Source 1: AGENT_SNAPSHOTS (from backfill) — fetch all sheets
+const loadAllRemoteAgents = async () => {
+  let agents = []
+
+  // Source 1: AGENT_SNAPSHOTS only (source of truth)
+  try {
+    let sheetNames = ['AGENT_SNAPSHOTS']
+
+    try {
+      const namesRes = await fetch(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`)
+      const namesData = await namesRes.json()
+      if (namesData?.ok && Array.isArray(namesData.sheets) && namesData.sheets.length > 0) {
+        sheetNames = namesData.sheets
+      }
+    } catch (e) {}
+
+    const mergedRemote = {}
+
+    for (const shName of sheetNames) {
       try {
-        // First try to get sheet names from Apps Script
-        let sheetNames = ['AGENT_SNAPSHOTS']
-        try {
-          const namesRes = await fetch(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`)
-          const namesData = await namesRes.json()
-          if (namesData?.ok && Array.isArray(namesData.sheets) && namesData.sheets.length > 0) {
-            sheetNames = namesData.sheets
-          }
-        } catch(e) {}
+        const res = await fetch(
+          `https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`
+        )
+        const text = await res.text()
 
-        for (const shName of sheetNames) {
-          try {
-            const res  = await fetch(`https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`)
-            const text = await res.text()
-            if (text && !text.startsWith('<!')) {
-              const rows = parseCSV(text).slice(1)
-              const snapDedup = {}
-              const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
-              rows.forEach(r => {
-                if (!r[0] || !r[1]) return
-                const d = normalizeDate(r[0]); if (!d) return
-                const key = `${d}|${String(r[1]).trim()}`
-                const en = Number(r[3])||0, sp = Number(r[4])||0
-                const rawTeam = String(r[6]||'').trim()
-                const ext1 = String(r[1]).trim()
-                let team = VALID_TEAMS.has(rawTeam) ? rawTeam : (
-                  ext1.startsWith('1')?'philippines':ext1.startsWith('2')?'colombia':
-                  ext1.startsWith('3')?'asia':ext1.startsWith('4')?'central':
-                  ext1.startsWith('5')?'mexico':ext1.startsWith('6')?'venezuela':'asia'
+        if (text && !text.startsWith('<!')) {
+          const rows = parseCSV(text).slice(1)
+          const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
+
+          rows.forEach(r => {
+            if (!r[0] || !r[1]) return
+
+            const d = normalizeDate(r[0])
+            if (!d) return
+
+            const ext = String(r[1]).trim()
+            const key = `${d}|${ext}`
+            const en = Number(r[3]) || 0
+            const sp = Number(r[4]) || 0
+            const rawTeam = String(r[6] || '').trim()
+
+            let team = VALID_TEAMS.has(rawTeam)
+              ? rawTeam
+              : (
+                  ext.startsWith('1') ? 'philippines' :
+                  ext.startsWith('2') ? 'colombia' :
+                  ext.startsWith('3') ? 'asia' :
+                  ext.startsWith('4') ? 'central' :
+                  ext.startsWith('5') ? 'mexico' :
+                  ext.startsWith('6') ? 'venezuela' :
+                  'asia'
                 )
-                if (!snapDedup[key] || en > (snapDedup[key].english||0))
-                  snapDedup[key] = {date:d, ext:ext1, name:r[2]||'', english:en, spanish:sp, total:en+sp, team}
-              })
-              agents = agents.concat(Object.values(snapDedup))
+
+            const total = en + sp
+
+            // Keep best remote record for same date/ext
+            if (
+              !mergedRemote[key] ||
+              total > (mergedRemote[key].total || 0) ||
+              en > (mergedRemote[key].english || 0)
+            ) {
+              mergedRemote[key] = {
+                date: d,
+                ext,
+                name: r[2] || '',
+                english: en,
+                spanish: sp,
+                total,
+                team
+              }
             }
-          } catch(e) {}
+          })
         }
-      } catch(e) {}
-
-      // Source 2: Weekly transfer sheets
-      const localSnaps  = loadAllSnapshots()
-      const localOnlyDates = new Set(localSnaps.map(s => s.date))
-
-      const weeklyResults = await Promise.allSettled([
-        fetchWeeklySheetAgents('asia',        localOnlyDates),
-        fetchWeeklySheetAgents('philippines', localOnlyDates),
-        fetchWeeklySheetAgents('colombia',    localOnlyDates),
-        fetchWeeklySheetAgents('central',     localOnlyDates),
-        fetchWeeklySheetAgents('mexico',      localOnlyDates),
-        fetchWeeklySheetAgents('venezuela',   localOnlyDates),
-      ])
-      weeklyResults.forEach(r => {
-        if(r.status==='fulfilled') {
-          agents = agents.concat(r.value.map(a => ({...a, fromWeekly: true})))
-        }
-      })
-      setAgentSnapshotsRemote(agents)
+      } catch (e) {}
     }
+
+    agents = Object.values(mergedRemote)
+  } catch (e) {}
+
+  setAgentSnapshotsRemote(agents)
+}
     loadAllRemoteAgents().catch(()=>{})
     const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000)
     return()=>{clearInterval(fullIv);clearInterval(fastIv)}
