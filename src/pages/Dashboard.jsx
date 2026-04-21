@@ -1601,9 +1601,12 @@ export default function Dashboard() {
 
   setAgentSnapshotsRemote(agents)
 }
-    const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000)
-    return()=>{clearInterval(fullIv);clearInterval(fastIv)}
-  },[])
+
+loadAllRemoteAgents().catch(()=>{})
+
+const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000)
+return()=>{clearInterval(fullIv);clearInterval(fastIv)}
+},[])
   useEffect(()=>{if(!isHistDate||!histMeta||histCache[selectedDate])return;setHistLoading(true);fetchSheet(HISTORY_SHEET_ID,histMeta.tab).then(rows=>setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)}))).catch(()=>{}).finally(()=>setHistLoading(false))},[selectedDate])
   useEffect(()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)},[selectedDate])
   const playIntroChime=useCallback(()=>{try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;const ctx=new AudioCtx();const makeTone=(freq,start,duration,gainValue)=>{const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(freq,start);gain.gain.setValueAtTime(0.0001,start);gain.gain.exponentialRampToValueAtTime(gainValue,start+0.02);gain.gain.exponentialRampToValueAtTime(0.0001,start+duration);osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(start+duration+0.02)};const now=ctx.currentTime;makeTone(392,now,0.22,0.07);makeTone(523.25,now+0.11,0.28,0.06);makeTone(659.25,now+0.24,0.38,0.05);setTimeout(()=>{try{ctx.close()}catch{}},1200)}catch{}},[])
