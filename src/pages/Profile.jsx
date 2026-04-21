@@ -18,6 +18,7 @@ const HISTORY_DATES = [
   { isoDate:'2026-03-23', tab:'23032026' },
 ]
 
+// ── PATCHED: All 3 sheet IDs updated to native Google Sheets ──
 const WEEKLY_SHEETS_PROFILE = {
   asia:        { id:'1AF-1K2Ir2po7FPeISMLCgG-Dphn4F6sXkkyfne5G_1c', type:'eng_spa',    startDate:'2026-03-23' },
   philippines: { id:'1ihKH07WKnmaD_-2lm4Ivq-s7lRIB2VbTi3zI1FE_G40', type:'total_only', startDate:'2026-03-23' },
@@ -106,12 +107,6 @@ const normalizeDate = (raw) => {
 }
 
 const isValidIsoDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))
-const PROFILE_START_DATE = '2026-04-01'
-
-function keepProfileDate(date) {
-  const d = normalizeDate(date)
-  return !!d && d >= PROFILE_START_DATE
-}
 
 async function loadUserPhotoFromSheets(userName) {
   try {
@@ -381,7 +376,7 @@ async function loadLegacyAsiaHistory(ext, existingDates) {
   return results.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value)
 }
 
-function mergeRecordsWithRanks(records, teamInfo = null) {
+function mergeRecordsWithRanks(records) {
   const dedup = {}
   records.forEach(r => {
     const date = normalizeDate(r.date)
@@ -398,8 +393,6 @@ function mergeRecordsWithRanks(records, teamInfo = null) {
         total,
         team: r.team,
         rank: r.rank ?? null,
-        rankEn: null,
-        rankSp: null,
       }
     }
   })
@@ -411,22 +404,11 @@ function mergeRecordsWithRanks(records, teamInfo = null) {
   })
 
   Object.values(byDate).forEach(list => {
-    const sortedEn = [...list].filter(r => r.english > 0).sort((a, b) => b.english - a.english)
-    sortedEn.forEach((r, i) => {
-      dedup[`${r.date}|${r.ext}`].rankEn = i + 1
+    const sorted = [...list].sort((a, b) => b.english - a.english)
+    sorted.forEach((r, i) => {
+      const key = `${r.date}|${r.ext}`
+      dedup[key].rank = i + 1
     })
-
-    if (teamInfo?.hasSp) {
-      const sortedSp = [...list].filter(r => r.spanish > 0).sort((a, b) => b.spanish - a.spanish)
-      sortedSp.forEach((r, i) => {
-        dedup[`${r.date}|${r.ext}`].rankSp = i + 1
-      })
-    }
-  })
-
-  Object.values(dedup).forEach(r => {
-    const valid = [r.rankEn, teamInfo?.hasSp ? r.rankSp : null].filter(v => Number.isFinite(v))
-    r.rank = valid.length ? Math.min(...valid) : null
   })
 
   return Object.values(dedup).sort((a,b) => a.date.localeCompare(b.date))
@@ -439,20 +421,16 @@ async function loadAgentData(ext) {
     fetchWeeklySheetAgents(teamInfo.id),
   ])
 
-const mergedTeam = mergeRecordsWithRanks([...(remoteRecords || []), ...(weeklyRecords || [])])
-  .filter(r => keepProfileDate(r.date))
+  const mergedTeam = mergeRecordsWithRanks([...(remoteRecords || []), ...(weeklyRecords || [])])
+  const agentRecords = mergedTeam.filter(r => String(r.ext) === String(ext))
+  const existingDates = new Set(agentRecords.map(r => r.date))
 
-const agentRecords = mergedTeam.filter(r => String(r.ext) === String(ext))
-const existingDates = new Set(agentRecords.map(r => r.date))
+  if (teamInfo.id === 'asia') {
+    const legacy = await loadLegacyAsiaHistory(ext, existingDates)
+    return mergeRecordsWithRanks([...mergedTeam, ...legacy]).filter(r => String(r.ext) === String(ext))
+  }
 
-if (teamInfo.id === 'asia') {
-  const legacy = await loadLegacyAsiaHistory(ext, existingDates)
-  return mergeRecordsWithRanks([...(mergedTeam), ...legacy])
-    .filter(r => String(r.ext) === String(ext))
-    .filter(r => keepProfileDate(r.date))
-}
-
-return agentRecords.filter(r => keepProfileDate(r.date))
+  return agentRecords
 }
 
 export default function Profile() {
@@ -491,12 +469,7 @@ export default function Profile() {
     loadUserPhotoFromSheets(user.name).then(p=>{if(!cancelled&&p)setUserPhoto(p)})
     loadAgentData(ext).then(recs=>{
       if(cancelled)return
-      const finalRecs = Array.isArray(recs)
-  ? recs
-      .filter(r => r.date && isValidIsoDate(r.date))
-      .filter(r => keepProfileDate(r.date))
-      .sort((a,b)=>a.date.localeCompare(b.date))
-  : []
+      const finalRecs = Array.isArray(recs) ? recs.filter(r => r.date && isValidIsoDate(r.date)).sort((a,b)=>a.date.localeCompare(b.date)) : []
       setRecords(finalRecs)
       const named = finalRecs.filter(r => r.name && r.name.length > 1)
       if(named.length > 0) setAgentName(named[named.length - 1].name)
@@ -517,14 +490,13 @@ export default function Profile() {
     return()=>{cancelled=true}
   },[ext,user,teamInfo.id])
 
-const cleanRecords = useMemo(()=>{
-  return records
-    .map(r=>({...r,date:normalizeDate(r.date)}))
-    .filter(r=>r.date&&isValidIsoDate(r.date))
-    .filter(r=>keepProfileDate(r.date))
-    .filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i)
-    .sort((a,b)=>a.date.localeCompare(b.date))
-},[records])
+  const cleanRecords = useMemo(()=>{
+    return records
+      .map(r=>({...r,date:normalizeDate(r.date)}))
+      .filter(r=>r.date&&isValidIsoDate(r.date))
+      .filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i)
+      .sort((a,b)=>a.date.localeCompare(b.date))
+  },[records])
 
   if (!user) {
     return (
