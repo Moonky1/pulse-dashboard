@@ -65,12 +65,6 @@ function normalizeDate(raw) {
     const y = d.getUTCFullYear(), m = String(d.getUTCMonth()+1).padStart(2,'0'), day = String(d.getUTCDate()).padStart(2,'0')
     return `${y}-${m}-${day}`
   } catch(e) { return null }
-  const RANKING_START_DATE = '2026-04-01'
-
-function keepRankingDate(date) {
-  const d = normalizeDate(date)
-  return !!d && d >= RANKING_START_DATE
-}
 }
 // ── Weekly sheet parser ────────────────────────────────────────────────────
 const MONTH_NUMS = {JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12}
@@ -1479,140 +1473,79 @@ export default function Dashboard() {
     loadDailyTotals()
     loadData().then(()=>backfillHistoricalDataToSheets())
     const USERS_SID='1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
- const loadAllRemoteAgents = async () => {
-  let agents = []
-
-  try {
-    let sheetNames = ['AGENT_SNAPSHOTS']
-
-    try {
-      const namesRes = await fetch(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`)
-      const namesData = await namesRes.json()
-      if (namesData?.ok && Array.isArray(namesData.sheets) && namesData.sheets.length > 0) {
-        sheetNames = namesData.sheets
-      }
-    } catch (e) {}
-
-    const mergedByKey = {}
-    const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
-
-    // Source 1: AGENT_SNAPSHOTS
-    for (const shName of sheetNames) {
+    const loadAllRemoteAgents = async () => {
+      let agents = []
       try {
-        const res = await fetch(
-          `https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`
-        )
-        const csv = await res.text()
-        if (!csv || csv.startsWith('<!')) continue
-
-        const rows = parseCSV(csv).slice(1)
-
-        rows.forEach(r => {
-          if (!r[0] || !r[1]) return
-
-          const d = normalizeDate(r[0])
-          if (!d) return
-
-          const ext = String(r[1]).trim()
-          if (!ext) return
-
-          const en = Number(r[3]) || 0
-          const sp = Number(r[4]) || 0
-          const total = Number(r[5]) || (en + sp)
-
-          if (total <= 0) return
-
-          const rawTeam = String(r[6] || '').trim()
-          const team = VALID_TEAMS.has(rawTeam)
-            ? rawTeam
-            : (
+        let sheetNames = ['AGENT_SNAPSHOTS']
+        try {
+          const namesRes = await fetch(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`)
+          const namesData = await namesRes.json()
+          if (namesData?.ok && Array.isArray(namesData.sheets) && namesData.sheets.length > 0) {
+            sheetNames = namesData.sheets
+          }
+        } catch (e) {}
+        const mergedRemote = {}
+        for (const shName of sheetNames) {
+          try {
+            const res = await fetch(`https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`)
+            const csv = await res.text()
+            if (!csv || csv.startsWith('<!')) continue
+            const rows = parseCSV(csv).slice(1)
+            const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
+            rows.forEach(r => {
+              if (!r[0] || !r[1]) return
+              const d = normalizeDate(r[0])
+              if (!d) return
+              const ext = String(r[1]).trim()
+              const key = `${d}|${ext}`
+              const en = Number(r[3]) || 0
+              const sp = Number(r[4]) || 0
+              const total = en + sp
+              const rawTeam = String(r[6] || '').trim()
+              const team = VALID_TEAMS.has(rawTeam) ? rawTeam : (
                 ext.startsWith('1') ? 'philippines' :
                 ext.startsWith('2') ? 'colombia' :
                 ext.startsWith('3') ? 'asia' :
                 ext.startsWith('4') ? 'central' :
                 ext.startsWith('5') ? 'mexico' :
-                ext.startsWith('6') ? 'venezuela' :
-                'asia'
+                ext.startsWith('6') ? 'venezuela' : 'asia'
               )
-
-          const key = `${d}|${ext}`
-
-          if (
-            !mergedByKey[key] ||
-            total > (mergedByKey[key].total || 0) ||
-            en > (mergedByKey[key].english || 0)
-          ) {
-            mergedByKey[key] = {
-              date: d,
-              ext,
-              name: r[2] || '',
-              english: en,
-              spanish: sp,
-              total,
-              team,
-              fromWeekly: false
-            }
+              if (!mergedRemote[key] || total > (mergedRemote[key].total || 0) || en > (mergedRemote[key].english || 0)) {
+                mergedRemote[key] = {
+                  date: d,
+                  ext,
+                  name: r[2] || '',
+                  english: en,
+                  spanish: sp,
+                  total,
+                  team
+                }
+              }
+            })
+          } catch (e) {}
+        }
+        agents = Object.values(mergedRemote)
+        const remoteDates = new Set(agents.map(a => a.date).filter(Boolean))
+        const weeklyResults = await Promise.allSettled([
+          fetchWeeklySheetAgents('asia', remoteDates),
+          fetchWeeklySheetAgents('philippines', remoteDates),
+          fetchWeeklySheetAgents('colombia', remoteDates),
+          fetchWeeklySheetAgents('central', remoteDates),
+          fetchWeeklySheetAgents('mexico', remoteDates),
+          fetchWeeklySheetAgents('venezuela', remoteDates),
+        ])
+        weeklyResults.forEach(r => {
+          if (r.status === 'fulfilled') {
+            agents = agents.concat(r.value.map(a => ({ ...a, fromWeekly: true })))
           }
         })
       } catch (e) {}
+      setAgentSnapshotsRemote(agents)
     }
-
-    // Source 2: Weekly sheets
-    const weeklyResults = await Promise.allSettled([
-      fetchWeeklySheetAgents('asia', new Set()),
-      fetchWeeklySheetAgents('philippines', new Set()),
-      fetchWeeklySheetAgents('colombia', new Set()),
-      fetchWeeklySheetAgents('central', new Set()),
-      fetchWeeklySheetAgents('mexico', new Set()),
-      fetchWeeklySheetAgents('venezuela', new Set()),
-    ])
-
-    weeklyResults.forEach(result => {
-      if (result.status !== 'fulfilled' || !Array.isArray(result.value)) return
-
-      result.value.forEach(a => {
-        const d = normalizeDate(a.date)
-        if (!d || !a.ext) return
-
-        const ext = String(a.ext).trim()
-        const en = Number(a.english) || 0
-        const sp = Number(a.spanish) || 0
-        const total = Number(a.total) || (en + sp)
-
-        if (total <= 0) return
-
-        const key = `${d}|${ext}`
-
-        if (
-          !mergedByKey[key] ||
-          total > (mergedByKey[key].total || 0) ||
-          en > (mergedByKey[key].english || 0)
-        ) {
-          mergedByKey[key] = {
-            date: d,
-            ext,
-            name: a.name || '',
-            english: en,
-            spanish: sp,
-            total,
-            team: a.team,
-            fromWeekly: true
-          }
-        }
-      })
-    })
-
-    agents = Object.values(mergedByKey).filter(a => keepRankingDate(a.date))
-  } catch (e) {}
-
-  setAgentSnapshotsRemote(agents)
-}
-
-loadAllRemoteAgents().catch(()=>{})
-
-const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000)
-return()=>{clearInterval(fullIv);clearInterval(fastIv)}
-},[])
+    loadAllRemoteAgents().catch(()=>{})
+    const fullIv=setInterval(loadData,60_000),fastIv=setInterval(loadTeamsOnly,5_000)
+    return()=>{clearInterval(fullIv);clearInterval(fastIv)}
+  },[])
   useEffect(()=>{if(!isHistDate||!histMeta||histCache[selectedDate])return;setHistLoading(true);fetchSheet(HISTORY_SHEET_ID,histMeta.tab).then(rows=>setHistCache(c=>({...c,[selectedDate]:parseHistorySheet(rows)}))).catch(()=>{}).finally(()=>setHistLoading(false))},[selectedDate])
   useEffect(()=>{setBulkEditMode(false);setBulkEdits({});setBulkTotalsEdit(null);setEditMenuOpen(false)},[selectedDate])
   const playIntroChime=useCallback(()=>{try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;const ctx=new AudioCtx();const makeTone=(freq,start,duration,gainValue)=>{const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(freq,start);gain.gain.setValueAtTime(0.0001,start);gain.gain.exponentialRampToValueAtTime(gainValue,start+0.02);gain.gain.exponentialRampToValueAtTime(0.0001,start+duration);osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(start+duration+0.02)};const now=ctx.currentTime;makeTone(392,now,0.22,0.07);makeTone(523.25,now+0.11,0.28,0.06);makeTone(659.25,now+0.24,0.38,0.05);setTimeout(()=>{try{ctx.close()}catch{}},1200)}catch{}},[])

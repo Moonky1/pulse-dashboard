@@ -7,6 +7,12 @@ const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
 const SCRIPT_URL       = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 const USERS_SHEET_ID_PROFILE = '1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
 
+// ── Cortamos histórico aquí para evitar la data corrupta anterior ──
+const PROFILE_START_DATE = '2026-04-01'
+const MAX_REASONABLE_ENGLISH = 300
+const MAX_REASONABLE_SPANISH = 300
+const MAX_REASONABLE_TOTAL   = 600
+
 const HISTORY_DATES = [
   { isoDate:'2026-03-14', tab:'14032026' },
   { isoDate:'2026-03-16', tab:'16032026' },
@@ -18,7 +24,6 @@ const HISTORY_DATES = [
   { isoDate:'2026-03-23', tab:'23032026' },
 ]
 
-// ── PATCHED: All 3 sheet IDs updated to native Google Sheets ──
 const WEEKLY_SHEETS_PROFILE = {
   asia:        { id:'1AF-1K2Ir2po7FPeISMLCgG-Dphn4F6sXkkyfne5G_1c', type:'eng_spa',    startDate:'2026-03-23' },
   philippines: { id:'1ihKH07WKnmaD_-2lm4Ivq-s7lRIB2VbTi3zI1FE_G40', type:'total_only', startDate:'2026-03-23' },
@@ -91,7 +96,7 @@ async function fetchSheet(sheetId, name) {
   return parseCSV(text)
 }
 
-const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,'')) || 0
+const safeInt = (val) => parseInt((val||'').toString().replace(/,/g,''), 10) || 0
 
 const normalizeDate = (raw) => {
   if (!raw) return null
@@ -107,6 +112,66 @@ const normalizeDate = (raw) => {
 }
 
 const isValidIsoDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))
+
+function keepProfileDate(date) {
+  const d = normalizeDate(date)
+  return !!d && d >= PROFILE_START_DATE
+}
+
+function recordKey(date, ext) {
+  return `${normalizeDate(date)}|${String(ext || '').trim()}`
+}
+
+function normalizeExt(ext) {
+  return String(ext || '').replace(/,/g, '').trim()
+}
+
+function sanitizeRecord(rec) {
+  const date = normalizeDate(rec?.date)
+  const ext = normalizeExt(rec?.ext)
+  const english = Number(rec?.english) || 0
+  const spanish = Number(rec?.spanish) || 0
+  const total = Number(rec?.total) || (english + spanish)
+  const name = String(rec?.name || '').trim()
+  const team = String(rec?.team || '').trim()
+  const rank = rec?.rank ?? null
+
+  if (!date || !isValidIsoDate(date) || !ext) return null
+  if (!keepProfileDate(date)) return null
+  if (english < 0 || spanish < 0 || total < 0) return null
+  if (english > MAX_REASONABLE_ENGLISH) return null
+  if (spanish > MAX_REASONABLE_SPANISH) return null
+  if (total > MAX_REASONABLE_TOTAL) return null
+
+  return {
+    date,
+    ext,
+    name: name || `Agent #${ext}`,
+    english,
+    spanish,
+    total,
+    team,
+    rank,
+  }
+}
+
+function dedupByDateForSingleAgent(records) {
+  const map = {}
+  records.forEach(r => {
+    const clean = sanitizeRecord(r)
+    if (!clean) return
+    const key = clean.date
+    const prev = map[key]
+    if (!prev) {
+      map[key] = clean
+      return
+    }
+    if (clean.total > prev.total || clean.english > prev.english) {
+      map[key] = clean
+    }
+  })
+  return Object.values(map).sort((a,b) => a.date.localeCompare(b.date))
+}
 
 async function loadUserPhotoFromSheets(userName) {
   try {
@@ -252,17 +317,22 @@ async function fetchWeeklySheetAgents(teamId) {
 
         for (let di = 0; di < 6; di++) {
           const date = weekDates[di]
+          if (!keepProfileDate(date)) continue
           const dayRows = []
+
           for (let ri = dataStartRow; ri < rows.length; ri++) {
             const row = rows[ri]
             const name = String(row[0]||'').trim()
-            const ext  = String(row[1]||'').replace(/,/g,'').trim()
+            const ext  = normalizeExt(row[1])
             if (!name || !ext || isNaN(parseInt(ext,10))) continue
             if (name.toUpperCase().includes('TOTAL')) continue
             const english = parseInt(String(row[dayColStart + di]||'').replace(/,/g,''),10) || 0
-            dayRows.push({ date, ext, name, english, spanish:0, total:english, team:teamId })
+
+            const clean = sanitizeRecord({ date, ext, name, english, spanish:0, total:english, team:teamId })
+            if (clean) dayRows.push(clean)
           }
-          const ranked = dayRows.filter(r => r.english > 0).sort((a,b) => b.english - a.english)
+
+          const ranked = dayRows.filter(r => r.english > 0).sort((a,b) => b.english - a.english || b.total - a.total)
           ranked.forEach((r, i) => results.push({ ...r, rank: i + 1 }))
         }
       } else {
@@ -271,23 +341,30 @@ async function fetchWeeklySheetAgents(teamId) {
 
         for (let di = 0; di < 6; di++) {
           const date = weekDates[di]
+          if (!keepProfileDate(date)) continue
           const dayRows = []
+
           for (let ri = dataStartRow; ri < rows.length; ri++) {
             const row = rows[ri]
             const name = String(row[0]||'').trim()
-            const ext  = String(row[1]||'').replace(/,/g,'').trim()
+            const ext  = normalizeExt(row[1])
             if (!name || !ext || isNaN(parseInt(ext,10))) continue
             if (name.toUpperCase().includes('TOTAL')) continue
+
             const english = parseInt(String(row[dayColStart + di*3]||'').replace(/,/g,''),10) || 0
             const spanish = parseInt(String(row[dayColStart + di*3 + 1]||'').replace(/,/g,''),10) || 0
-            dayRows.push({ date, ext, name, english, spanish, total:english+spanish, team:teamId })
+
+            const clean = sanitizeRecord({ date, ext, name, english, spanish, total:english+spanish, team:teamId })
+            if (clean) dayRows.push(clean)
           }
-          const ranked = dayRows.filter(r => r.english > 0).sort((a,b) => b.english - a.english)
+
+          const ranked = dayRows.filter(r => r.english > 0).sort((a,b) => b.english - a.english || b.total - a.total)
           ranked.forEach((r, i) => results.push({ ...r, rank: i + 1 }))
         }
       }
     } catch(e) {}
   }
+
   return results
 }
 
@@ -304,33 +381,56 @@ async function loadAgentSnapshotsRemoteForTeam(teamId) {
   } catch(e) {}
 
   const merged = {}
+
   for (const shName of sheetNames) {
     try {
       const url = `https://docs.google.com/spreadsheets/d/${USERS_SHEET_ID_PROFILE}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`
       const res = await fetchWithTimeout(url, {}, 15000)
       const text = await res.text()
       if (!text || text.trim().startsWith('<!') || text.trim().length < 20) continue
+
       const rows = parseCSV(text).slice(1)
+
       rows.forEach(r => {
         if (!r[0] || !r[1]) return
-        const date = normalizeDate(r[0])
-        if (!date || !isValidIsoDate(date)) return
-        const ext = String(r[1]).trim()
+
+        const ext = normalizeExt(r[1])
         const rawTeam = String(r[6] || '').trim()
         const team = VALID_TEAMS.has(rawTeam)
           ? rawTeam
-          : (ext.startsWith('1') ? 'philippines' : ext.startsWith('2') ? 'colombia' : ext.startsWith('3') ? 'asia' : ext.startsWith('4') ? 'central' : ext.startsWith('5') ? 'mexico' : ext.startsWith('6') ? 'venezuela' : 'asia')
+          : (
+              ext.startsWith('1') ? 'philippines' :
+              ext.startsWith('2') ? 'colombia' :
+              ext.startsWith('3') ? 'asia' :
+              ext.startsWith('4') ? 'central' :
+              ext.startsWith('5') ? 'mexico' :
+              ext.startsWith('6') ? 'venezuela' :
+              'asia'
+            )
+
         if (team !== teamId) return
-        const english = Number(r[3]) || 0
-        const spanish = Number(r[4]) || 0
-        const total = Number(r[5]) || (english + spanish)
-        const key = `${date}|${ext}`
-        if (!merged[key] || total > merged[key].total || english > merged[key].english) {
-          merged[key] = { date, ext, name: r[2] || '', english, spanish, total, team, rank: null }
+
+        const clean = sanitizeRecord({
+          date: r[0],
+          ext,
+          name: r[2] || '',
+          english: Number(r[3]) || 0,
+          spanish: Number(r[4]) || 0,
+          total: Number(r[5]) || ((Number(r[3]) || 0) + (Number(r[4]) || 0)),
+          team,
+          rank: null,
+        })
+
+        if (!clean) return
+
+        const key = recordKey(clean.date, clean.ext)
+        if (!merged[key] || clean.total > merged[key].total || clean.english > merged[key].english) {
+          merged[key] = clean
         }
       })
     } catch(e) {}
   }
+
   return Object.values(merged)
 }
 
@@ -358,79 +458,128 @@ function findAgentInHistoryRows(rows, ext) {
     const rankIdx = agents.findIndex(a => a.ext === String(ext))
     const spanish = safeInt(row[2])
     const english = safeInt(row[3])
-    return { name:cell0, ext:String(ext), english, spanish, total:english+spanish, rank:rankIdx >= 0 ? rankIdx + 1 : null }
+
+    const clean = sanitizeRecord({
+      date: null,
+      ext: String(ext),
+      name: cell0,
+      english,
+      spanish,
+      total: english + spanish,
+      team: 'asia',
+      rank: rankIdx >= 0 ? rankIdx + 1 : null,
+    })
+
+    if (!clean) {
+      return {
+        name: cell0,
+        ext: String(ext),
+        english,
+        spanish,
+        total: english + spanish,
+        rank: rankIdx >= 0 ? rankIdx + 1 : null
+      }
+    }
+
+    return clean
   }
   return null
 }
 
 async function loadLegacyAsiaHistory(ext, existingDates) {
   const jobs = HISTORY_DATES.map(async hd => {
+    if (!keepProfileDate(hd.isoDate)) return null
     if (existingDates.has(hd.isoDate)) return null
+
     try {
       const rows = await fetchSheet(HISTORY_SHEET_ID, hd.tab)
       const agent = findAgentInHistoryRows(rows, ext)
-      return agent ? { date: hd.isoDate, ...agent, team:'asia' } : null
-    } catch(e) { return null }
+      if (!agent) return null
+
+      const clean = sanitizeRecord({
+        ...agent,
+        date: hd.isoDate,
+        team: 'asia',
+      })
+
+      return clean || null
+    } catch(e) {
+      return null
+    }
   })
+
   const results = await Promise.allSettled(jobs)
   return results.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value)
 }
 
-function mergeRecordsWithRanks(records) {
-  const dedup = {}
+function applyDailyRanks(records) {
+  const byDate = {}
+
   records.forEach(r => {
-    const date = normalizeDate(r.date)
-    if (!date || !r.ext) return
-    const key = `${date}|${String(r.ext).trim()}`
-    const total = Number(r.total) || ((Number(r.english) || 0) + (Number(r.spanish) || 0))
-    if (!dedup[key] || total > (dedup[key].total || 0) || (Number(r.english) || 0) > (dedup[key].english || 0)) {
-      dedup[key] = {
-        date,
-        ext: String(r.ext).trim(),
-        name: r.name || `Agent #${r.ext}`,
-        english: Number(r.english) || 0,
-        spanish: Number(r.spanish) || 0,
-        total,
-        team: r.team,
-        rank: r.rank ?? null,
-      }
-    }
+    const clean = sanitizeRecord(r)
+    if (!clean) return
+    if (!byDate[clean.date]) byDate[clean.date] = []
+    byDate[clean.date].push(clean)
   })
 
-  const byDate = {}
-  Object.values(dedup).forEach(r => {
-    if (!byDate[r.date]) byDate[r.date] = []
-    byDate[r.date].push(r)
-  })
+  const out = []
 
   Object.values(byDate).forEach(list => {
-    const sorted = [...list].sort((a, b) => b.english - a.english)
+    const sorted = [...list].sort((a, b) => {
+      if (b.english !== a.english) return b.english - a.english
+      if (b.total !== a.total) return b.total - a.total
+      return a.ext.localeCompare(b.ext)
+    })
+
     sorted.forEach((r, i) => {
-      const key = `${r.date}|${r.ext}`
-      dedup[key].rank = i + 1
+      out.push({ ...r, rank: i + 1 })
     })
   })
 
-  return Object.values(dedup).sort((a,b) => a.date.localeCompare(b.date))
+  return out.sort((a,b) => a.date.localeCompare(b.date))
+}
+
+async function buildCanonicalTeamHistory(teamId) {
+  const [remoteRecords, weeklyRecords] = await Promise.all([
+    loadAgentSnapshotsRemoteForTeam(teamId),
+    fetchWeeklySheetAgents(teamId),
+  ])
+
+  const map = {}
+
+  // Remote = source of truth
+  ;(remoteRecords || []).forEach(r => {
+    const clean = sanitizeRecord(r)
+    if (!clean) return
+    map[recordKey(clean.date, clean.ext)] = clean
+  })
+
+  // Weekly = fallback only if remote missing that date/ext
+  ;(weeklyRecords || []).forEach(r => {
+    const clean = sanitizeRecord(r)
+    if (!clean) return
+    const key = recordKey(clean.date, clean.ext)
+    if (!map[key]) map[key] = clean
+  })
+
+  return applyDailyRanks(Object.values(map))
 }
 
 async function loadAgentData(ext) {
   const teamInfo = getTeamFromExt(ext)
-  const [remoteRecords, weeklyRecords] = await Promise.all([
-    loadAgentSnapshotsRemoteForTeam(teamInfo.id),
-    fetchWeeklySheetAgents(teamInfo.id),
-  ])
+  const canonicalTeam = await buildCanonicalTeamHistory(teamInfo.id)
 
-  const mergedTeam = mergeRecordsWithRanks([...(remoteRecords || []), ...(weeklyRecords || [])])
-  const agentRecords = mergedTeam.filter(r => String(r.ext) === String(ext))
+  let agentRecords = canonicalTeam.filter(r => String(r.ext) === String(ext))
   const existingDates = new Set(agentRecords.map(r => r.date))
 
   if (teamInfo.id === 'asia') {
     const legacy = await loadLegacyAsiaHistory(ext, existingDates)
-    return mergeRecordsWithRanks([...mergedTeam, ...legacy]).filter(r => String(r.ext) === String(ext))
+    agentRecords = dedupByDateForSingleAgent([...(agentRecords || []), ...(legacy || [])])
+  } else {
+    agentRecords = dedupByDateForSingleAgent(agentRecords)
   }
 
-  return agentRecords
+  return agentRecords.filter(r => keepProfileDate(r.date))
 }
 
 export default function Profile() {
@@ -467,14 +616,29 @@ export default function Profile() {
     setLoading(true)
 
     loadUserPhotoFromSheets(user.name).then(p=>{if(!cancelled&&p)setUserPhoto(p)})
+
     loadAgentData(ext).then(recs=>{
       if(cancelled)return
-      const finalRecs = Array.isArray(recs) ? recs.filter(r => r.date && isValidIsoDate(r.date)).sort((a,b)=>a.date.localeCompare(b.date)) : []
+
+      const finalRecs = Array.isArray(recs)
+        ? recs
+            .filter(r => r.date && isValidIsoDate(r.date))
+            .filter(r => keepProfileDate(r.date))
+            .sort((a,b)=>a.date.localeCompare(b.date))
+        : []
+
       setRecords(finalRecs)
+
       const named = finalRecs.filter(r => r.name && r.name.length > 1)
       if(named.length > 0) setAgentName(named[named.length - 1].name)
+
       setLoading(false)
-    }).catch(()=>{ if(!cancelled){ setRecords([]); setLoading(false) } })
+    }).catch(()=>{
+      if(!cancelled){
+        setRecords([])
+        setLoading(false)
+      }
+    })
 
     loadDailyTotals().then(totalsMap=>{
       if(cancelled)return
@@ -491,11 +655,18 @@ export default function Profile() {
   },[ext,user,teamInfo.id])
 
   const cleanRecords = useMemo(()=>{
-    return records
+    const map = {}
+    records
       .map(r=>({...r,date:normalizeDate(r.date)}))
       .filter(r=>r.date&&isValidIsoDate(r.date))
-      .filter((r,i,arr)=>arr.findIndex(x=>x.date===r.date)===i)
-      .sort((a,b)=>a.date.localeCompare(b.date))
+      .filter(r=>keepProfileDate(r.date))
+      .forEach(r => {
+        const prev = map[r.date]
+        if (!prev || r.total > prev.total || r.english > prev.english) {
+          map[r.date] = r
+        }
+      })
+    return Object.values(map).sort((a,b)=>a.date.localeCompare(b.date))
   },[records])
 
   if (!user) {
@@ -522,6 +693,7 @@ export default function Profile() {
     if(cleanRecords.length===0)return null
     const withData=cleanRecords.filter(r=>r.total>0)
     if(withData.length===0)return null
+
     const totalEn=cleanRecords.reduce((s,r)=>s+r.english,0)
     const totalSp=cleanRecords.reduce((s,r)=>s+r.spanish,0)
     const avgEn=Math.round(totalEn/cleanRecords.length)
@@ -533,7 +705,22 @@ export default function Profile() {
     const bestShareDay=withShare.length>0?[...withShare].sort((a,b)=>(b.english/(teamTotals[b.date]||1))-(a.english/(teamTotals[a.date]||1)))[0]:null
     const bestSharePct=bestShareDay?((bestShareDay.english/teamTotals[bestShareDay.date])*100).toFixed(1):null
     const avgShare=withShare.length>0?(withShare.reduce((s,r)=>s+(r.english/(teamTotals[r.date]||1)),0)/withShare.length*100).toFixed(1):null
-    return{totalEn,totalSp,avgEn,bestDay,worstDay,activeDays:withData.length,zeroDays:cleanRecords.length-withData.length,daysTracked:cleanRecords.length,top3Days:top3Days.length,top1Days:top1Days.length,bestShareDay,bestSharePct,avgShare}
+
+    return {
+      totalEn,
+      totalSp,
+      avgEn,
+      bestDay,
+      worstDay,
+      activeDays:withData.length,
+      zeroDays:cleanRecords.length-withData.length,
+      daysTracked:cleanRecords.length,
+      top3Days:top3Days.length,
+      top1Days:top1Days.length,
+      bestShareDay,
+      bestSharePct,
+      avgShare
+    }
   })()
 
   const maxEnglish = Math.max(...cleanRecords.map(r=>r.english),1)
