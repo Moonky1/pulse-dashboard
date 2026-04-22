@@ -520,48 +520,65 @@ function buildAgent(name, ext, english, spanish, extra = {}) {
   }
 }
 
-function parseBasicTeamSheet_(rows, config) {
-  const { extStart, hasSp, colEn, colSp } = config
+function parseAsiaSheet(rows) {
   const agents = []
-  let footer = { english: 0, spanish: 0, total: 0 }
+  let totals = { english: 0, spanish: 0, total: 0, activeAgents: 0 }
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
-    const c0 = String(row[0] || '').trim()
-    const txt = rowText(row)
+    const cell0 = String(row[0] || '').trim()
+    const cell0U = cellUpper(cell0)
 
-    if (txt.includes('LOGGED IN')) {
-      const en = safeInt(row[colEn])
-      const sp = hasSp && colSp !== null ? safeInt(row[colSp]) : 0
-      const total = hasSp && colSp !== null
-        ? (safeInt(row[colSp + 1]) || (en + sp))
-        : (en || safeInt(row[colEn]))
-      footer = { english: en, spanish: sp, total }
-      continue
+    if (cell0U.includes('AGENT') && cell0U.includes('LOGGED')) {
+      const spanish = safeInt(row[2])
+      const english = safeInt(row[3])
+      totals = {
+        spanish,
+        english,
+        total: spanish + english,
+        activeAgents: agents.length,
+      }
+      break
     }
 
-    const ext = row[1]
-    if (!isNumericExtForTeam(ext, extStart)) continue
-    if (!isAgentNameCell(c0)) continue
+    if (
+      cell0U.includes('MANAGEMENT') ||
+      cell0U.includes('CALL') ||
+      cell0U.includes('TRANSFER') ||
+      cell0U.includes('LEXNER') ||
+      cell0U.includes('GENERAL') ||
+      cell0.length <= 1
+    ) continue
 
-    const en = safeInt(row[colEn])
-    const sp = hasSp && colSp !== null ? safeInt(row[colSp]) : 0
-    agents.push(buildAgent(c0, ext, en, sp))
-  }
+    const rawExt = String(row[1] || '').replace(/,/g, '').trim()
+    const extNum = parseInt(rawExt, 10)
+    if (isNaN(extNum) || extNum < 1000 || extNum > 9999) continue
+    if (!rawExt.startsWith('3')) continue
 
-  const english = footer.english || agents.reduce((s, a) => s + a.english, 0)
-  const spanish = footer.spanish || agents.reduce((s, a) => s + a.spanish, 0)
-  const total = footer.total || (english + spanish)
+    const spanish = safeInt(row[2])
+    const english = safeInt(row[3])
 
-  return {
-    agents,
-    totals: {
-      english,
+    agents.push({
+      name: cell0,
+      ext: rawExt,
       spanish,
-      total,
-      activeAgents: agents.length
+      english,
+      total: spanish + english,
+    })
+  }
+
+  if (!totals.total) {
+    const spanish = agents.reduce((s, a) => s + a.spanish, 0)
+    const english = agents.reduce((s, a) => s + a.english, 0)
+    totals = {
+      spanish,
+      english,
+      total: spanish + english,
+      activeAgents: agents.length,
     }
   }
+
+  return { agents, totals }
 }
 
 function parseOTSheetEnglishSpanish_(rows, config, includeOTNow, opts = {}) {
