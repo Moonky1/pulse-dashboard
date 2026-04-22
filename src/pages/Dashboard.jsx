@@ -791,17 +791,32 @@ function parseTeamSheet(rows, config) {
 
 function getLiveCardTotals(teamId, rawRows, fallbackTotals) {
   if (teamId === 'asia') {
-    return parseAsiaSheet(rawRows || []).totals
+    const asiaTotals = parseAsiaSheet(rawRows || []).totals
+    if (asiaTotals.total > 0) return asiaTotals
+    return fallbackTotals || { english: 0, spanish: 0, total: 0, activeAgents: 0 }
   }
 
   const cfg = TEAM_SHEETS.find(t => t.id === teamId)
-  if (!cfg) return fallbackTotals || { english: 0, spanish: 0, total: 0, activeAgents: 0 }
+  if (!cfg) {
+    return fallbackTotals || { english: 0, spanish: 0, total: 0, activeAgents: 0 }
+  }
 
-  if (teamId === 'colombia') return parseColombiaLiveTotals(rawRows, cfg)
-  if (teamId === 'central') return parseCentralLiveTotals(rawRows, cfg)
-  if (teamId === 'venezuela') return parseVenezuelaLiveTotals(rawRows, cfg)
-  if (teamId === 'mexico') return parseMexicoLiveTotals(rawRows, cfg)
-  if (teamId === 'philippines') return parsePhilippinesLiveTotals(rawRows, cfg)
+  let parsed = null
+
+  if (teamId === 'colombia') parsed = parseColombiaLiveTotals(rawRows, cfg)
+  else if (teamId === 'central') parsed = parseCentralLiveTotals(rawRows, cfg)
+  else if (teamId === 'venezuela') parsed = parseVenezuelaLiveTotals(rawRows, cfg)
+  else if (teamId === 'mexico') parsed = parseMexicoLiveTotals(rawRows, cfg)
+  else if (teamId === 'philippines') parsed = parsePhilippinesLiveTotals(rawRows, cfg)
+
+  if (parsed && parsed.total > 0) {
+    return {
+      english: parsed.english || 0,
+      spanish: parsed.spanish || 0,
+      total: parsed.total || 0,
+      activeAgents: parsed.activeAgents || fallbackTotals?.activeAgents || 0,
+    }
+  }
 
   return fallbackTotals || { english: 0, spanish: 0, total: 0, activeAgents: 0 }
 }
@@ -1507,7 +1522,7 @@ export default function Dashboard() {
   const loadRemoteTeamAgents=useCallback(async(date,teamId)=>{const key=`${date}_${teamId}`;if(remoteTeamAgents[key]!==undefined)return;setLoadingRemoteTeam(true);try{const data=await scriptCall({action:'getTeamSnapshot',date,teamId});setRemoteTeamAgents(prev=>({...prev,[key]:data?.ok&&Array.isArray(data.agents)?data.agents:[]}))}catch(e){setRemoteTeamAgents(prev=>({...prev,[`${date}_${teamId}`]:[]}))};setLoadingRemoteTeam(false)},[remoteTeamAgents])
   useEffect(()=>{if(isToday||isHistDate)return;const teamId=TEAM_SHEETS.find(t=>t.id===activeTab)?.id;if(!teamId||activeSnap?.teams?.[teamId]?.length>0)return;const key=`${selectedDate}_${teamId}`;if(remoteTeamAgents[key]!==undefined)return;loadRemoteTeamAgents(selectedDate,teamId)},[activeTab,selectedDate,isToday,isHistDate,activeSnap])
   const loadData=async()=>{try{const[general,asia,slacks]=await Promise.all([fetchSheet(SHEET_ID,"WELL'S REPORT"),fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),fetchSheet(USERS_SHEET_ID,'Slacks')]);setLiveGeneral(general);setLiveAsia(asia);setLastUpdate(new Date());setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]));const results=await Promise.allSettled(TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName)));const newTeams={},allAgents=[];TEAM_SHEETS.forEach((t,i)=>{if(results[i].status==='fulfilled'){newTeams[t.id]=results[i].value;const{agents}=parseTeamSheet(results[i].value,t);agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}));saveTeamSnapshotToSheets(todayKey(),t.id,agents)}});setLiveTeams(newTeams);const{agents:asiaAgentsLive}=parseAsiaSheet(asia);asiaAgentsLive.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:'asia'}));saveLocalSnapshot(general,asia,newTeams);setSnapshots(loadAllSnapshots());saveAgentSnapshotsToSheets(todayKey(),allAgents);await saveAllWeeklySheetsLive(todayKey(), asia, newTeams)}catch(e){}finally{setLoading(false)}}
-  const loadTeamsOnly = async () => {
+const loadTeamsOnly = async () => {
   try {
     const asiaPromise = fetchSheet(SHEET_ID, 'AW GARRET ASIA LEXNER')
     const teamPromises = TEAM_SHEETS.map(t =>
@@ -1521,27 +1536,39 @@ export default function Dashboard() {
       ...teamPromises,
     ])
 
-    const newTeams = {}
-
     if (asiaResult.status === 'fulfilled') {
       setLiveAsia(asiaResult.value)
     }
 
-    TEAM_SHEETS.forEach((t, i) => {
-      newTeams[t.id] =
-        teamResults[i]?.status === 'fulfilled'
-          ? teamResults[i].value
-          : (liveTeams[t.id] || [])
+    setLiveTeams(prev => {
+      const next = { ...prev }
+
+      TEAM_SHEETS.forEach((t, i) => {
+        if (teamResults[i]?.status === 'fulfilled' && Array.isArray(teamResults[i].value)) {
+          next[t.id] = teamResults[i].value
+        }
+      })
+
+      return next
     })
 
-    setLiveTeams(newTeams)
     setLastUpdate(new Date())
 
-    await saveAllWeeklySheetsLive(
-      todayKey(),
-      asiaResult.status === 'fulfilled' ? asiaResult.value : liveAsia,
-      newTeams
-    )
+    const safeAsiaRows =
+      asiaResult.status === 'fulfilled'
+        ? asiaResult.value
+        : liveAsia
+
+    const nextTeamsForSave = {}
+    TEAM_SHEETS.forEach((t, i) => {
+      if (teamResults[i]?.status === 'fulfilled' && Array.isArray(teamResults[i].value)) {
+        nextTeamsForSave[t.id] = teamResults[i].value
+      } else {
+        nextTeamsForSave[t.id] = liveTeams[t.id] || []
+      }
+    })
+
+    await saveAllWeeklySheetsLive(todayKey(), safeAsiaRows, nextTeamsForSave)
   } catch (e) {}
 }
   useEffect(()=>{
