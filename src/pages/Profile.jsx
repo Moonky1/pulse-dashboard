@@ -547,15 +547,15 @@ async function buildCanonicalTeamHistory(teamId) {
 
   const map = {}
 
-  // Remote = source of truth
-  ;(remoteRecords || []).forEach(r => {
+  // Weekly sheets = source of truth for persisted history
+  ;(weeklyRecords || []).forEach(r => {
     const clean = sanitizeRecord(r)
     if (!clean) return
     map[recordKey(clean.date, clean.ext)] = clean
   })
 
-  // Weekly = fallback only if remote missing that date/ext
-  ;(weeklyRecords || []).forEach(r => {
+  // Remote snapshots = fallback only if weekly is missing that date/ext
+  ;(remoteRecords || []).forEach(r => {
     const clean = sanitizeRecord(r)
     if (!clean) return
     const key = recordKey(clean.date, clean.ext)

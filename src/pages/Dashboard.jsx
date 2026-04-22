@@ -66,6 +66,48 @@ function normalizeDate(raw) {
     return `${y}-${m}-${day}`
   } catch(e) { return null }
 }
+const RANKING_START_DATE = '2026-04-01'
+const MAX_REASONABLE_ENGLISH = 300
+const MAX_REASONABLE_SPANISH = 300
+const MAX_REASONABLE_TOTAL   = 600
+
+function inferTeamIdFromExt(ext) {
+  const clean = String(ext || '').trim()
+  if (clean.startsWith('1')) return 'philippines'
+  if (clean.startsWith('2')) return 'colombia'
+  if (clean.startsWith('3')) return 'asia'
+  if (clean.startsWith('4')) return 'central'
+  if (clean.startsWith('5')) return 'mexico'
+  if (clean.startsWith('6')) return 'venezuela'
+  return 'asia'
+}
+
+function cleanRankingRecord(rec) {
+  const date = normalizeDate(rec?.date)
+  const ext = String(rec?.ext || '').replace(/,/g, '').trim()
+  const english = Number(rec?.english) || 0
+  const spanish = Number(rec?.spanish) || 0
+  const rawTotal = Number(rec?.total)
+  const total = Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : (english + spanish)
+  const name = String(rec?.name || '').trim()
+  const team = String(rec?.team || '').trim() || inferTeamIdFromExt(ext)
+
+  if (!date || date < RANKING_START_DATE || !ext) return null
+  if (english < 0 || spanish < 0 || total < 0) return null
+  if (english > MAX_REASONABLE_ENGLISH) return null
+  if (spanish > MAX_REASONABLE_SPANISH) return null
+  if (total > MAX_REASONABLE_TOTAL) return null
+
+  return {
+    date,
+    ext,
+    name: name || `Agent #${ext}`,
+    english,
+    spanish,
+    total,
+    team,
+  }
+}
 // ── Weekly sheet parser ────────────────────────────────────────────────────
 const MONTH_NUMS = {JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12}
 function parseTabStartDate(tabName) {
@@ -861,37 +903,56 @@ const saveLocalSnapshot=(generalData,asiaData,teamsData={})=>{
 }
 const loadAllSnapshots=()=>{const snaps=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k?.startsWith('pulse_snap_')){try{const date=k.replace('pulse_snap_','');const data=JSON.parse(localStorage.getItem(k));snaps.push({date,generalData:Array.isArray(data.generalData)?data.generalData:[],asiaData:Array.isArray(data.asiaData)?data.asiaData:[],teams:data.teams||{},savedAt:data.savedAt})}catch(e){}}}return snaps.sort((a,b)=>b.date.localeCompare(a.date))}
 const formatDateLabel=(dateStr)=>{const today=todayKey(),yest=new Date();yest.setDate(yest.getDate()-1);const yKey=yest.toISOString().slice(0,10);if(dateStr===today)return'Today';if(dateStr===yKey)return'Yesterday';const[y,m,d]=dateStr.split('-');return`${d}/${m}/${y}`}
-function csvEscape_(value) {
-  const s = String(value ?? '')
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
-  return s
+function excelEscapeHtml_(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/\n/g, '<br/>')
 }
+
 function slugify_(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'team'
 }
+
 function downloadTeamDayCsv_({ config, selectedDate, dateLabel, goal, totalEn, totalSp, totalXf, agents }) {
-  const CSV_DELIMITER = ';'
-  const sorted = [...(agents || [])].sort((a, b) => (b.english || 0) - (a.english || 0))
-  const rows = []
+  const sorted = [...(agents || [])].sort((a, b) => {
+    if ((b.english || 0) !== (a.english || 0)) return (b.english || 0) - (a.english || 0)
+    if ((b.total || 0) !== (a.total || 0)) return (b.total || 0) - (a.total || 0)
+    return String(a.name || '').localeCompare(String(b.name || ''))
+  })
 
-  rows.push(['Pulse Export'])
-  rows.push(['Team', config.label])
-  rows.push(['Date', selectedDate])
-  rows.push(['Label', dateLabel])
-  rows.push(['Goal EN', goal])
-  rows.push(['Total English', totalEn])
-  if (config.hasSp) rows.push(['Total Spanish', totalSp])
-  rows.push(['Total Xfers', totalXf])
-  rows.push([])
-  rows.push(['Rank', 'Agent', 'Ext', 'English', ...(config.hasSp ? ['Spanish'] : []), 'Total', 'Goal Status', 'Share %'])
+  const summaryRows = [
+    ['Pulse Export', ''],
+    ['Team', config.label],
+    ['Date', selectedDate],
+    ['Label', dateLabel],
+    ['Goal EN', goal],
+    ['Total English', totalEn],
+    ...(config.hasSp ? [['Total Spanish', totalSp]] : []),
+    ['Total Xfers', totalXf],
+  ]
 
-  sorted.forEach((a, i) => {
+  const headerCells = [
+    'Rank',
+    'Agent',
+    'Ext',
+    'English',
+    ...(config.hasSp ? ['Spanish'] : []),
+    'Total',
+    'Goal Status',
+    'Share %',
+  ]
+
+  const dataRows = sorted.map((a, i) => {
     const english = Number(a.english) || 0
     const spanish = Number(a.spanish) || 0
     const total = Number(a.total) || (english + spanish)
     const share = totalEn > 0 ? `${((english / totalEn) * 100).toFixed(1)}%` : '—'
     const goalStatus = english >= goal ? 'Goal' : `${Math.max(goal - english, 0)} left`
-    rows.push([
+
+    return [
       `#${i + 1}`,
       a.name || '',
       a.ext || '',
@@ -900,15 +961,127 @@ function downloadTeamDayCsv_({ config, selectedDate, dateLabel, goal, totalEn, t
       total,
       goalStatus,
       share,
-    ])
+    ]
   })
 
-  const csv = '\uFEFF' + rows.map(row => row.map(csvEscape_).join(CSV_DELIMITER)).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const colWidths = config.hasSp
+    ? ['70', '280', '90', '95', '95', '95', '130', '95']
+    : ['70', '280', '90', '95', '95', '130', '95']
+
+  const summaryHtml = `
+    <table>
+      <colgroup>
+        <col style="width:180px" />
+        <col style="width:220px" />
+      </colgroup>
+      ${summaryRows.map((row, idx) => `
+        <tr>
+          <td class="${idx === 0 ? 'title-cell' : 'meta-label'}">${excelEscapeHtml_(row[0])}</td>
+          <td class="${idx === 0 ? 'title-cell-empty' : 'meta-value'}">${excelEscapeHtml_(row[1])}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `
+
+  const tableHtml = `
+    <table>
+      <colgroup>
+        ${colWidths.map(w => `<col style="width:${w}px" />`).join('')}
+      </colgroup>
+      <thead>
+        <tr>
+          ${headerCells.map(cell => `<th>${excelEscapeHtml_(cell)}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${dataRows.map(row => `
+          <tr>
+            ${row.map((cell, cellIndex) => {
+              const cls = cellIndex === 1
+                ? 'text-cell'
+                : cellIndex === 2
+                  ? 'ext-cell'
+                  : 'num-cell'
+              return `<td class="${cls}">${excelEscapeHtml_(cell)}</td>`
+            }).join('')}
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `
+
+  const html = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8" />
+        <!--[if gte mso 9]>
+        <xml>
+          <x:ExcelWorkbook>
+            <x:ExcelWorksheets>
+              <x:ExcelWorksheet>
+                <x:Name>${excelEscapeHtml_(config.label)}</x:Name>
+                <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+              </x:ExcelWorksheet>
+            </x:ExcelWorksheets>
+          </x:ExcelWorkbook>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: Calibri, Arial, sans-serif; padding: 18px; }
+          table { border-collapse: collapse; table-layout: fixed; margin-bottom: 18px; }
+          th, td {
+            border: 1px solid #cfd4dc;
+            padding: 8px 10px;
+            font-size: 11pt;
+            vertical-align: middle;
+            white-space: normal;
+            word-break: break-word;
+          }
+          th {
+            background: #1f2937;
+            color: #ffffff;
+            font-weight: 700;
+            text-align: center;
+          }
+          .title-cell {
+            background: #f97316;
+            color: #ffffff;
+            font-weight: 700;
+          }
+          .title-cell-empty {
+            background: #fff7ed;
+          }
+          .meta-label {
+            background: #f3f4f6;
+            font-weight: 700;
+          }
+          .meta-value {
+            background: #ffffff;
+          }
+          .text-cell {
+            text-align: left;
+          }
+          .ext-cell {
+            text-align: center;
+            mso-number-format: "\\@";
+          }
+          .num-cell {
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        ${summaryHtml}
+        ${tableHtml}
+      </body>
+    </html>
+  `
+
+  const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `pulse-${slugify_(config.label)}-${selectedDate}.csv`
+  link.download = `pulse-${slugify_(config.label)}-${selectedDate}.xls`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -1335,28 +1508,13 @@ function GlobalTopAgentsSection({ navigate, agentSnapshotsRemote }) {
     const agentsMap = {}
     const daysByTeam = {}
 
-    ;(agentSnapshotsRemote || []).forEach(rec => {
-      const date = normalizeDate(rec?.date)
-      const ext = String(rec?.ext || '').trim()
-      if (!date || !ext) return
+    ;(agentSnapshotsRemote || []).forEach(raw => {
+      const rec = cleanRankingRecord(raw)
+      if (!rec || rec.total <= 0) return
 
-      const english = Number(rec.english) || 0
-      const spanish = Number(rec.spanish) || 0
-      const total = Number(rec.total) || (english + spanish)
-      if (total <= 0) return
-
-      const team = rec.team || (
-        ext.startsWith('1') ? 'philippines' :
-        ext.startsWith('2') ? 'colombia' :
-        ext.startsWith('3') ? 'asia' :
-        ext.startsWith('4') ? 'central' :
-        ext.startsWith('5') ? 'mexico' :
-        ext.startsWith('6') ? 'venezuela' : 'asia'
-      )
-
-      const key = `${date}|${ext}`
-      if (!dedup[key] || total > dedup[key].total || english > dedup[key].english) {
-        dedup[key] = { date, ext, name: rec.name || `Agent #${ext}`, english, spanish, total, team }
+      const key = `${rec.date}|${rec.ext}`
+      if (!dedup[key] || rec.total > dedup[key].total || rec.english > dedup[key].english) {
+        dedup[key] = rec
       }
     })
 
@@ -1377,6 +1535,7 @@ function GlobalTopAgentsSection({ navigate, agentSnapshotsRemote }) {
           _top3Keys: new Set(),
         }
       }
+
       const agent = agentsMap[rec.ext]
       agent.name = rec.name || agent.name
       agent.team = rec.team || agent.team
@@ -1384,26 +1543,26 @@ function GlobalTopAgentsSection({ navigate, agentSnapshotsRemote }) {
       agent.totalSpanish += rec.spanish || 0
       agent.totalXfers += rec.total || 0
       agent._activeDates.add(rec.date)
+
       const dayTeamKey = `${rec.date}|${rec.team}`
       if (!daysByTeam[dayTeamKey]) daysByTeam[dayTeamKey] = []
       daysByTeam[dayTeamKey].push(rec)
     })
 
     Object.entries(daysByTeam).forEach(([dayTeamKey, recs]) => {
-      const sortedEN = [...recs].filter(r => (r.english || 0) > 0).sort((a, b) => (b.english || 0) - (a.english || 0))
-      const sortedSP = [...recs].filter(r => (r.spanish || 0) > 0).sort((a, b) => (b.spanish || 0) - (a.spanish || 0))
+      const sorted = [...recs]
+        .filter(r => (r.english || 0) > 0)
+        .sort((a, b) =>
+          (b.english || 0) - (a.english || 0) ||
+          (b.total || 0) - (a.total || 0) ||
+          String(a.ext).localeCompare(String(b.ext))
+        )
 
-      sortedEN.slice(0, 3).forEach((r, index) => {
+      sorted.slice(0, 3).forEach((r, index) => {
         const agent = agentsMap[r.ext]
         if (!agent) return
         agent._top3Keys.add(dayTeamKey)
-        if (index === 0) agent._top1Keys.add(`${dayTeamKey}|EN`)
-      })
-      sortedSP.slice(0, 3).forEach((r, index) => {
-        const agent = agentsMap[r.ext]
-        if (!agent) return
-        agent._top3Keys.add(dayTeamKey)
-        if (index === 0) agent._top1Keys.add(`${dayTeamKey}|SP`)
+        if (index === 0) agent._top1Keys.add(dayTeamKey)
       })
     })
 
@@ -1419,22 +1578,22 @@ function GlobalTopAgentsSection({ navigate, agentSnapshotsRemote }) {
       activeDays: agent._activeDates.size,
     }))
 
-    const english = [...allAgents].sort((a, b) => b.totalEnglish - a.totalEnglish || b.top1Days - a.top1Days || b.top3Days - a.top3Days || b.totalXfers - a.totalXfers).slice(0, 10)
-    const spanish = [...allAgents].filter(a => a.totalSpanish > 0).sort((a, b) => b.totalSpanish - a.totalSpanish || b.top1Days - a.top1Days || b.top3Days - a.top3Days || b.totalXfers - a.totalXfers).slice(0, 10)
-    const top1 = [...allAgents].filter(a => a.top1Days > 0).sort((a, b) => b.top1Days - a.top1Days || b.top3Days - a.top3Days || b.totalEnglish - a.totalEnglish || b.totalSpanish - a.totalSpanish).slice(0, 10)
+    const english = [...allAgents]
+      .sort((a, b) => b.totalEnglish - a.totalEnglish || b.top1Days - a.top1Days || b.top3Days - a.top3Days || b.totalXfers - a.totalXfers)
+      .slice(0, 10)
+
+    const spanish = [...allAgents]
+      .filter(a => a.totalSpanish > 0)
+      .sort((a, b) => b.totalSpanish - a.totalSpanish || b.top1Days - a.top1Days || b.top3Days - a.top3Days || b.totalXfers - a.totalXfers)
+      .slice(0, 10)
+
+    const top1 = [...allAgents]
+      .filter(a => a.top1Days > 0)
+      .sort((a, b) => b.top1Days - a.top1Days || b.top3Days - a.top3Days || b.totalEnglish - a.totalEnglish || b.totalSpanish - a.totalSpanish)
+      .slice(0, 10)
 
     return { english, spanish, top1 }
   }, [agentSnapshotsRemote])
-
-  const teamColors = { asia:'#f97316', philippines:'#3b82f6', colombia:'#f59e0b', central:'#8b5cf6', mexico:'#10b981', venezuela:'#ef4444' }
-  const teamLabels = { ...TEAM_DISPLAY_NAMES, asia:'Asia' }
-  const options = {
-    english: { label:'English Xfers', accent:'#60a5fa', valueKey:'totalEnglish' },
-    spanish: { label:'Spanish Xfers', accent:'#34d399', valueKey:'totalSpanish' },
-    top1: { label:'#1 Appearances', accent:'#fbbf24', valueKey:'top1Days' },
-  }
-
-  const current = options[metric]
   const rows = data[metric] || []
   if (!rows.length) return null
 
@@ -1550,10 +1709,12 @@ export default function Dashboard() {
     loadDailyTotals()
     loadData().then(()=>backfillHistoricalDataToSheets())
     const USERS_SID='1d6j3FEPnFzE-fAl0K6O43apdbNvB0NzbLSJLEJF-TxI'
-    const loadAllRemoteAgents = async () => {
+        const loadAllRemoteAgents = async () => {
       let agents = []
+
       try {
         let sheetNames = ['AGENT_SNAPSHOTS']
+
         try {
           const namesRes = await fetch(`${SCRIPT_URL}?action=getAgentSnapshotSheetNames&t=${Date.now()}`)
           const namesData = await namesRes.json()
@@ -1561,62 +1722,68 @@ export default function Dashboard() {
             sheetNames = namesData.sheets
           }
         } catch (e) {}
+
         const mergedRemote = {}
+
         for (const shName of sheetNames) {
           try {
             const res = await fetch(`https://docs.google.com/spreadsheets/d/${USERS_SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(shName)}&t=${Date.now()}`)
             const csv = await res.text()
             if (!csv || csv.startsWith('<!')) continue
+
             const rows = parseCSV(csv).slice(1)
-            const VALID_TEAMS = new Set(['asia','philippines','colombia','central','mexico','venezuela'])
+
             rows.forEach(r => {
               if (!r[0] || !r[1]) return
-              const d = normalizeDate(r[0])
-              if (!d) return
-              const ext = String(r[1]).trim()
-              const key = `${d}|${ext}`
-              const en = Number(r[3]) || 0
-              const sp = Number(r[4]) || 0
-              const total = en + sp
-              const rawTeam = String(r[6] || '').trim()
-              const team = VALID_TEAMS.has(rawTeam) ? rawTeam : (
-                ext.startsWith('1') ? 'philippines' :
-                ext.startsWith('2') ? 'colombia' :
-                ext.startsWith('3') ? 'asia' :
-                ext.startsWith('4') ? 'central' :
-                ext.startsWith('5') ? 'mexico' :
-                ext.startsWith('6') ? 'venezuela' : 'asia'
-              )
-              if (!mergedRemote[key] || total > (mergedRemote[key].total || 0) || en > (mergedRemote[key].english || 0)) {
-                mergedRemote[key] = {
-                  date: d,
-                  ext,
-                  name: r[2] || '',
-                  english: en,
-                  spanish: sp,
-                  total,
-                  team
-                }
+
+              const clean = cleanRankingRecord({
+                date: r[0],
+                ext: r[1],
+                name: r[2] || '',
+                english: Number(r[3]) || 0,
+                spanish: Number(r[4]) || 0,
+                total: Number(r[5]) || ((Number(r[3]) || 0) + (Number(r[4]) || 0)),
+                team: String(r[6] || '').trim(),
+              })
+
+              if (!clean) return
+
+              const key = `${clean.date}|${clean.ext}`
+              if (!mergedRemote[key] || clean.total > (mergedRemote[key].total || 0) || clean.english > (mergedRemote[key].english || 0)) {
+                mergedRemote[key] = clean
               }
             })
           } catch (e) {}
         }
-        agents = Object.values(mergedRemote)
-        const remoteDates = new Set(agents.map(a => a.date).filter(Boolean))
+
         const weeklyResults = await Promise.allSettled([
-          fetchWeeklySheetAgents('asia', remoteDates),
-          fetchWeeklySheetAgents('philippines', remoteDates),
-          fetchWeeklySheetAgents('colombia', remoteDates),
-          fetchWeeklySheetAgents('central', remoteDates),
-          fetchWeeklySheetAgents('mexico', remoteDates),
-          fetchWeeklySheetAgents('venezuela', remoteDates),
+          fetchWeeklySheetAgents('asia', new Set()),
+          fetchWeeklySheetAgents('philippines', new Set()),
+          fetchWeeklySheetAgents('colombia', new Set()),
+          fetchWeeklySheetAgents('central', new Set()),
+          fetchWeeklySheetAgents('mexico', new Set()),
+          fetchWeeklySheetAgents('venezuela', new Set()),
         ])
-        weeklyResults.forEach(r => {
-          if (r.status === 'fulfilled') {
-            agents = agents.concat(r.value.map(a => ({ ...a, fromWeekly: true })))
-          }
+
+        const canonicalMap = {}
+
+        weeklyResults.forEach(result => {
+          if (result.status !== 'fulfilled') return
+          ;(result.value || []).forEach(rec => {
+            const clean = cleanRankingRecord(rec)
+            if (!clean) return
+            canonicalMap[`${clean.date}|${clean.ext}`] = clean
+          })
         })
+
+        Object.values(mergedRemote).forEach(rec => {
+          const key = `${rec.date}|${rec.ext}`
+          if (!canonicalMap[key]) canonicalMap[key] = rec
+        })
+
+        agents = Object.values(canonicalMap)
       } catch (e) {}
+
       setAgentSnapshotsRemote(agents)
     }
     loadAllRemoteAgents().catch(()=>{})
