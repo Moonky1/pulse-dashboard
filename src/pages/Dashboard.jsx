@@ -750,7 +750,7 @@ function parseTotalOnlyLiveTotals_(rows, config) {
     }
   }
 
-  return { english: total, spanish: 0, total }
+  return { english: total, spanish: 0, total, activeAgents: 0 }
 }
 
 function parseVenezuelaLiveTotals(rows, config) {
@@ -766,11 +766,15 @@ function parseCentralLiveTotals(rows, config) {
 }
 
 function parseMexicoLiveTotals(rows, config) {
-  return parseTotalOnlyLiveTotals_(rows, config)
+  const totals = parseTotalOnlyLiveTotals_(rows, config)
+  const agents = parseBasicTeamSheet_(rows, config).agents
+  return { ...totals, activeAgents: agents.length }
 }
 
 function parsePhilippinesLiveTotals(rows, config) {
-  return parseTotalOnlyLiveTotals_(rows, config)
+  const totals = parseTotalOnlyLiveTotals_(rows, config)
+  const agents = parseBasicTeamSheet_(rows, config).agents
+  return { ...totals, activeAgents: agents.length }
 }
 
 function parseTeamSheet(rows, config) {
@@ -791,7 +795,7 @@ function getLiveCardTotals(teamId, rawRows, fallbackTotals) {
   }
 
   const cfg = TEAM_SHEETS.find(t => t.id === teamId)
-  if (!cfg) return fallbackTotals || { english: 0, spanish: 0, total: 0 }
+  if (!cfg) return fallbackTotals || { english: 0, spanish: 0, total: 0, activeAgents: 0 }
 
   if (teamId === 'colombia') return parseColombiaLiveTotals(rawRows, cfg)
   if (teamId === 'central') return parseCentralLiveTotals(rawRows, cfg)
@@ -799,7 +803,7 @@ function getLiveCardTotals(teamId, rawRows, fallbackTotals) {
   if (teamId === 'mexico') return parseMexicoLiveTotals(rawRows, cfg)
   if (teamId === 'philippines') return parsePhilippinesLiveTotals(rawRows, cfg)
 
-  return fallbackTotals || { english: 0, spanish: 0, total: 0 }
+  return fallbackTotals || { english: 0, spanish: 0, total: 0, activeAgents: 0 }
 }
 const TEAMS_ORDER=['PHILIPPINES','VENEZUELA','COLOMBIA','MEXICO BAJA','CENTRAL AMERICA','ASIA']
 const RANGES=[{label:'0',min:0,max:0,color:'#f87171'},{label:'1-4',min:1,max:4,color:'#fb923c'},{label:'5-9',min:5,max:9,color:'#fbbf24'},{label:'10-14',min:10,max:14,color:'#a3e635'},{label:'15-19',min:15,max:19,color:'#34d399'},{label:'20+',min:20,max:9999,color:'#22c55e'}]
@@ -1503,7 +1507,43 @@ export default function Dashboard() {
   const loadRemoteTeamAgents=useCallback(async(date,teamId)=>{const key=`${date}_${teamId}`;if(remoteTeamAgents[key]!==undefined)return;setLoadingRemoteTeam(true);try{const data=await scriptCall({action:'getTeamSnapshot',date,teamId});setRemoteTeamAgents(prev=>({...prev,[key]:data?.ok&&Array.isArray(data.agents)?data.agents:[]}))}catch(e){setRemoteTeamAgents(prev=>({...prev,[`${date}_${teamId}`]:[]}))};setLoadingRemoteTeam(false)},[remoteTeamAgents])
   useEffect(()=>{if(isToday||isHistDate)return;const teamId=TEAM_SHEETS.find(t=>t.id===activeTab)?.id;if(!teamId||activeSnap?.teams?.[teamId]?.length>0)return;const key=`${selectedDate}_${teamId}`;if(remoteTeamAgents[key]!==undefined)return;loadRemoteTeamAgents(selectedDate,teamId)},[activeTab,selectedDate,isToday,isHistDate,activeSnap])
   const loadData=async()=>{try{const[general,asia,slacks]=await Promise.all([fetchSheet(SHEET_ID,"WELL'S REPORT"),fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),fetchSheet(USERS_SHEET_ID,'Slacks')]);setLiveGeneral(general);setLiveAsia(asia);setLastUpdate(new Date());setSlacksData(slacks.slice(1).filter(r=>r[0]&&r[1]));const results=await Promise.allSettled(TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName)));const newTeams={},allAgents=[];TEAM_SHEETS.forEach((t,i)=>{if(results[i].status==='fulfilled'){newTeams[t.id]=results[i].value;const{agents}=parseTeamSheet(results[i].value,t);agents.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:t.id}));saveTeamSnapshotToSheets(todayKey(),t.id,agents)}});setLiveTeams(newTeams);const{agents:asiaAgentsLive}=parseAsiaSheet(asia);asiaAgentsLive.forEach(a=>allAgents.push({ext:a.ext,name:a.name,english:a.english,spanish:a.spanish||0,total:a.total,team:'asia'}));saveLocalSnapshot(general,asia,newTeams);setSnapshots(loadAllSnapshots());saveAgentSnapshotsToSheets(todayKey(),allAgents);await saveAllWeeklySheetsLive(todayKey(), asia, newTeams)}catch(e){}finally{setLoading(false)}}
-  const loadTeamsOnly=async()=>{try{const[asiaResult,...teamResults]=await Promise.allSettled([fetchSheet(SHEET_ID,'AW GARRET ASIA LEXNER'),...TEAM_SHEETS.map(t=>t.protected?fetchSheetViaScript(SHEET_ID,t.sheetName):fetchSheet(SHEET_ID,t.sheetName))]);if(asiaResult.status==='fulfilled')setLiveAsia(asiaResult.value);const newTeams={};TEAM_SHEETS.forEach((t,i)=>{newTeams[t.id]=teamResults[i].status==='fulfilled'?teamResults[i].value:(liveTeams[t.id]||[])});setLiveTeams(newTeams);setLastUpdate(new Date());await saveAllWeeklySheetsLive(todayKey(), asiaResult.status==='fulfilled'?asiaResult.value:liveAsia, newTeams)}catch(e){}}
+  const loadTeamsOnly = async () => {
+  try {
+    const asiaPromise = fetchSheet(SHEET_ID, 'AW GARRET ASIA LEXNER')
+    const teamPromises = TEAM_SHEETS.map(t =>
+      t.protected
+        ? fetchSheetViaScript(SHEET_ID, t.sheetName)
+        : fetchSheet(SHEET_ID, t.sheetName)
+    )
+
+    const [asiaResult, ...teamResults] = await Promise.allSettled([
+      asiaPromise,
+      ...teamPromises,
+    ])
+
+    const newTeams = {}
+
+    if (asiaResult.status === 'fulfilled') {
+      setLiveAsia(asiaResult.value)
+    }
+
+    TEAM_SHEETS.forEach((t, i) => {
+      newTeams[t.id] =
+        teamResults[i]?.status === 'fulfilled'
+          ? teamResults[i].value
+          : (liveTeams[t.id] || [])
+    })
+
+    setLiveTeams(newTeams)
+    setLastUpdate(new Date())
+
+    await saveAllWeeklySheetsLive(
+      todayKey(),
+      asiaResult.status === 'fulfilled' ? asiaResult.value : liveAsia,
+      newTeams
+    )
+  } catch (e) {}
+}
   useEffect(()=>{
     loadRemoteOverrides().then(()=>setOverridesTick(t=>t+1))
     if(user?.name)loadUserPhotoFromSheets(user.name).then(()=>{})
