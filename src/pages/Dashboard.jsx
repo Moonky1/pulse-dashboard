@@ -8,19 +8,70 @@ const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const CLEAN_START_DATE = '2026-04-23'
 const POLL_MS = 30000
 
-const SHEETS = {
-  asia: { id: 'asia', label: 'Asia', sheetName: 'AW GARRET ASIA LEXNER', flag: '/flags/asia.png', extPrefix: '3', hasSpanish: true },
-  colombia: { id: 'colombia', label: 'Colombia', sheetName: 'AW GARRET COLOMBIA JUAN GARCIA', flag: '/flags/colombia.png', extPrefix: '2', hasSpanish: true },
+const EMOJIS = {
+  top1: '/emojis/goal1.webp',
+  top2: '/emojis/goal3.webp',
+  top3: '/emojis/goal4.webp',
+}
+
+const TEAMS = {
+  asia: {
+    id: 'asia',
+    label: 'Asia',
+    short: 'Asia',
+    sheetName: 'AW GARRET ASIA LEXNER',
+    flag: '/flags/asia.png',
+    extPrefix: '3',
+    hasSpanish: true,
+    live: true,
+  },
+  colombia: {
+    id: 'colombia',
+    label: 'Colombia',
+    short: 'Colombia',
+    sheetName: 'AW GARRET COLOMBIA JUAN GARCIA',
+    flag: '/flags/colombia.png',
+    extPrefix: '2',
+    hasSpanish: true,
+    live: true,
+  },
+  philippines: {
+    id: 'philippines',
+    label: 'Philippines',
+    short: 'Philippines',
+    flag: '/flags/philippines.png',
+    live: false,
+  },
+  central: {
+    id: 'central',
+    label: 'Central America',
+    short: 'Central',
+    live: false,
+  },
+  mexico: {
+    id: 'mexico',
+    label: 'Mexico Baja',
+    short: 'Mexico',
+    flag: '/flags/mexico.png',
+    live: false,
+  },
+  venezuela: {
+    id: 'venezuela',
+    label: 'Venezuela',
+    short: 'Venezuela',
+    flag: '/flags/venezuela.png',
+    live: false,
+  },
 }
 
 const TEAM_TABS = [
-  { id: 'all', label: 'All Teams', emoji: null, live: true },
-  { id: 'asia', label: 'Asia', emoji: '🇨🇳', live: true },
-  { id: 'philippines', label: 'Philippines', emoji: '🇵🇭', live: false },
-  { id: 'colombia', label: 'Colombia', emoji: '🇨🇴', live: true },
-  { id: 'central', label: 'Central', emoji: '🌎', live: false },
-  { id: 'mexico', label: 'Mexico', emoji: '🇲🇽', live: false },
-  { id: 'venezuela', label: 'Venezuela', emoji: '🇻🇪', live: false },
+  { id: 'all', label: 'All Teams' },
+  { id: 'asia', label: 'Asia' },
+  { id: 'philippines', label: 'Philippines' },
+  { id: 'colombia', label: 'Colombia' },
+  { id: 'central', label: 'Central' },
+  { id: 'mexico', label: 'Mexico' },
+  { id: 'venezuela', label: 'Venezuela' },
 ]
 
 const safeInt = (val) => parseInt(String(val ?? '').replace(/,/g, '').trim(), 10) || 0
@@ -62,11 +113,14 @@ function isAgentRow(nameCell, extCell, prefix) {
   const ext = String(extCell || '').replace(/,/g, '').trim()
   if (!new RegExp(`^${prefix}\\d{3}$`).test(ext)) return false
   if (!name) return false
+
   const banned = [
     'MANAGEMENT', 'USER', 'SUPERVISOR', 'EXTENSION', 'OPENERS', 'TRANSFERS', 'SPANISH', 'ENGLISH', 'TOTAL',
     'LEXNER', 'GENERAL MANAGER', 'PACIFIC STANDARD TIME', 'BREAK', 'LUNCH', 'DAILY TARGET', 'XFER PER HOUR',
-    'THIS HOUR GOAL', 'GOAL+', 'AGENT LOGGED IN', 'AGENTS LOGGED IN', 'COLOMBIA OT', 'JUAN GARCIA', 'ASIA', 'OT TAKERS'
+    'THIS HOUR GOAL', 'GOAL+', 'AGENT LOGGED IN', 'AGENTS LOGGED IN', 'COLOMBIA OT', 'JUAN GARCIA', 'ASIA',
+    'OT TAKERS', 'REF!', 'COLOMBIA', 'OUR GOAL'
   ]
+
   return !banned.some(word => name.includes(word))
 }
 
@@ -120,6 +174,7 @@ function parseAsiaRows(rows, withOT) {
   const mainList = [...mainAgents.values()]
   const otList = withOT ? [...otAgents.values()] : []
   const merged = new Map()
+
   mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
   otList.forEach(agent => {
     const prev = merged.get(agent.ext)
@@ -179,14 +234,11 @@ function parseColombiaRows(rows, withOT) {
         spanish: safeInt(row[4]),
         total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4]))
       }
-      // if footer row is broken, ignore it and use sums below
       if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) mainFooter = footer
       continue
     }
 
     if (!isAgentRow(name, ext, '2')) continue
-
-    // Main Colombia block uses D/E = English/Spanish. OT block also uses D/E but footer is broken.
     const english = safeInt(row[3])
     const spanish = safeInt(row[4])
     const agent = buildAgent(name, ext, spanish, english)
@@ -209,6 +261,7 @@ function parseColombiaRows(rows, withOT) {
   const mainList = [...mainAgents.values()]
   const otList = withOT && sawOTSection ? [...otAgents.values()] : []
   const merged = new Map()
+
   mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
   otList.forEach(agent => {
     const prev = merged.get(agent.ext)
@@ -278,7 +331,7 @@ async function persistTeamSnapshot(date, teamId, parsed) {
   const totalsPayload = JSON.stringify([
     {
       id: teamId,
-      name: SHEETS[teamId].label,
+      name: TEAMS[teamId].label,
       english: parsed.totals.english,
       spanish: parsed.totals.spanish,
       total: parsed.totals.total,
@@ -318,6 +371,29 @@ function formatDateLabel(date) {
   return `${day} ${dd}/${mm}`
 }
 
+function formatMetricLabel(metric) {
+  if (metric === 'english') return 'English Xfers'
+  if (metric === 'spanish') return 'Spanish Xfers'
+  return 'Total Xfers'
+}
+
+function TeamTabIcon({ teamId, size = 16 }) {
+  if (teamId === 'all') return null
+  const team = TEAMS[teamId]
+  if (team?.flag) {
+    return (
+      <img
+        src={team.flag}
+        alt=""
+        width={size}
+        height={Math.round(size * 0.72)}
+        style={{ borderRadius: 3, objectFit: 'cover', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}
+      />
+    )
+  }
+  return <span style={{ fontSize: size * 0.95, lineHeight: 1 }}>🌎</span>
+}
+
 function TeamTabs({ selectedTeam, onChange }) {
   return (
     <div style={{
@@ -349,7 +425,7 @@ function TeamTabs({ selectedTeam, onChange }) {
               gap: 8,
             }}
           >
-            {tab.emoji ? <span>{tab.emoji}</span> : null}
+            <TeamTabIcon teamId={tab.id} size={16} />
             <span>{tab.label}</span>
           </button>
         )
@@ -395,7 +471,28 @@ function DatesPanel({ dateTabs, selectedDate, onSelect }) {
   )
 }
 
-function TeamCard({ team, active, onClick }) {
+function StatMini({ label, value, color }) {
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 800, color }}>{Number(value || 0).toLocaleString()}</div>
+    </div>
+  )
+}
+
+function RankBadge({ rank }) {
+  const src = rank === 0 ? EMOJIS.top1 : rank === 1 ? EMOJIS.top2 : EMOJIS.top3
+  return <img src={src} alt="" width="24" height="24" style={{ objectFit: 'contain' }} />
+}
+
+function TeamCard({ team, rank, metric, active, onClick }) {
+  const metricLabel = formatMetricLabel(metric)
+  const metricValue = metric === 'english'
+    ? team.data.totals.english
+    : metric === 'spanish'
+      ? team.data.totals.spanish
+      : team.data.totals.total
+
   return (
     <button
       onClick={onClick}
@@ -406,32 +503,42 @@ function TeamCard({ team, active, onClick }) {
         padding: 24,
         textAlign: 'left',
         cursor: 'pointer',
-        color: '#fff'
+        color: '#fff',
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <img src={team.flag} alt={team.label} width="32" height="22" style={{ borderRadius: 4 }} />
-        <div>
-          <div style={{ fontSize: 26, fontWeight: 900 }}>{team.label}</div>
-          <div style={{ color: '#94a3b8', fontSize: 14 }}>{team.data.totals.activeAgents} active agents</div>
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(circle at top, rgba(249,115,22,0.16), transparent 60%)',
+        pointerEvents: 'none'
+      }} />
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12, position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {rank <= 2 ? <RankBadge rank={rank} /> : <div style={{ fontWeight: 900, color: '#94a3b8' }}>#{rank + 1}</div>}
+          {team.flag ? <img src={team.flag} alt={team.label} width="32" height="22" style={{ borderRadius: 4 }} /> : <span style={{ fontSize: 26 }}>🌎</span>}
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 900 }}>{team.label}</div>
+            <div style={{ color: '#94a3b8', fontSize: 14 }}>{team.data.totals.activeAgents} active agents</div>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>{metricLabel}</div>
+          <div style={{ fontSize: 28, fontWeight: 900, color: metric === 'spanish' ? '#34d399' : metric === 'english' ? '#60a5fa' : '#f59e0b' }}>
+            {Number(metricValue || 0).toLocaleString()}
+          </div>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14, position: 'relative' }}>
         <StatMini label="English" value={team.data.totals.english} color="#60a5fa" />
         <StatMini label="Spanish" value={team.data.totals.spanish} color="#34d399" />
         <StatMini label="Total" value={team.data.totals.total} color="#f59e0b" />
         <StatMini label="OT total" value={team.data.otTotals?.total || 0} color="#c084fc" />
       </div>
     </button>
-  )
-}
-
-function StatMini({ label, value, color }) {
-  return (
-    <div>
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color }}>{Number(value || 0).toLocaleString()}</div>
-    </div>
   )
 }
 
@@ -494,19 +601,53 @@ function AgentTable({ agents, navigate }) {
   )
 }
 
-function ComingSoonCard({ label }) {
+function ComingSoonCard({ team }) {
   return (
     <div style={{
       background: 'rgba(255,255,255,0.03)',
       border: '1px solid rgba(255,255,255,0.06)',
       borderRadius: 20,
-      padding: '36px 24px',
-      textAlign: 'center',
+      padding: '24px 22px',
       color: '#94a3b8'
     }}>
-      <div style={{ fontSize: 32, marginBottom: 10 }}>🚧</div>
-      <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 14 }}>This team tab is visible already, but live reading is not enabled yet.</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        {team.flag ? <img src={team.flag} alt={team.label} width="18" height="13" style={{ borderRadius: 3 }} /> : <span>🌎</span>}
+        <div style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{team.label}</div>
+      </div>
+      <div style={{ fontSize: 14 }}>Live reading is not enabled yet for this team.</div>
+    </div>
+  )
+}
+
+function SortTabs({ sortMetric, onChange }) {
+  const options = [
+    { id: 'english', label: 'English Xfers' },
+    { id: 'spanish', label: 'Spanish Xfers' },
+    { id: 'total', label: 'Total Xfers' },
+  ]
+
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+      {options.map(option => {
+        const active = sortMetric === option.id
+        return (
+          <button
+            key={option.id}
+            onClick={() => onChange(option.id)}
+            style={{
+              border: active ? '1px solid #f97316' : '1px solid rgba(255,255,255,0.08)',
+              background: active ? 'rgba(249,115,22,0.12)' : 'rgba(255,255,255,0.03)',
+              color: active ? '#fff' : '#cbd5e1',
+              borderRadius: 12,
+              padding: '10px 14px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            {option.label}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -531,6 +672,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState(todayKey())
   const [selectedTeam, setSelectedTeam] = useState('all')
+  const [sortMetric, setSortMetric] = useState('english')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [liveData, setLiveData] = useState({ asia: null, colombia: null })
@@ -552,8 +694,8 @@ export default function Dashboard() {
   const loadLive = useCallback(async () => {
     setError('')
     const [asiaRows, colombiaRows] = await Promise.all([
-      fetchSheetViaScript(SHEETS.asia.sheetName),
-      fetchSheetViaScript(SHEETS.colombia.sheetName),
+      fetchSheetViaScript(TEAMS.asia.sheetName),
+      fetchSheetViaScript(TEAMS.colombia.sheetName),
     ])
 
     const parsedAsia = parseLiveSheet('asia', asiaRows)
@@ -642,15 +784,28 @@ export default function Dashboard() {
   }, [remoteDates])
 
   const currentData = isToday ? liveData : historicalData
-  const visibleTeams = useMemo(() => {
-    const list = [
-      { ...SHEETS.asia, data: currentData.asia },
-      { ...SHEETS.colombia, data: currentData.colombia },
-    ].filter(team => team.data)
 
-    if (selectedTeam === 'all') return list
-    return list.filter(team => team.id === selectedTeam)
-  }, [currentData, selectedTeam])
+  const liveTeams = useMemo(() => {
+    return [
+      { ...TEAMS.asia, data: currentData.asia },
+      { ...TEAMS.colombia, data: currentData.colombia },
+    ].filter(team => team.data)
+  }, [currentData])
+
+  const sortedTeams = useMemo(() => {
+    const getMetricValue = (team) => {
+      if (sortMetric === 'english') return team.data?.totals?.english || 0
+      if (sortMetric === 'spanish') return team.data?.totals?.spanish || 0
+      return team.data?.totals?.total || 0
+    }
+
+    return [...liveTeams].sort((a, b) => {
+      const av = getMetricValue(a)
+      const bv = getMetricValue(b)
+      if (bv !== av) return bv - av
+      return (b.data?.totals?.total || 0) - (a.data?.totals?.total || 0)
+    })
+  }, [liveTeams, sortMetric])
 
   const selectedTeamData = useMemo(() => {
     if (selectedTeam === 'all') return null
@@ -672,10 +827,19 @@ export default function Dashboard() {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900 }}>Pulse</h1>
+              <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900 }}>AutoWarrantyGarrett</h1>
+              <span style={{
+                background: '#f97316',
+                color: '#fff',
+                borderRadius: 999,
+                padding: '4px 10px',
+                fontSize: 12,
+                fontWeight: 900,
+                letterSpacing: '0.04em'
+              }}>LIVE</span>
             </div>
             <div style={{ marginTop: 8, color: '#94a3b8', fontSize: 14 }}>
-              Clean start from {CLEAN_START_DATE}. For now, only Asia and Colombia are reading live. Other teams stay visible while we add them safely.
+              Live now: Asia and Colombia. Other teams stay visible while we add them slowly and safely.
             </div>
           </div>
           <div style={{ color: '#94a3b8', fontSize: 13 }}>
@@ -716,14 +880,28 @@ export default function Dashboard() {
             ) : (
               <>
                 {selectedTeam === 'all' ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 18 }}>
-                    {visibleTeams.map(team => (
-                      <TeamCard key={team.id} team={team} active={false} onClick={() => setSelectedTeam(team.id)} />
-                    ))}
-                    {TEAM_TABS.filter(t => !['all', 'asia', 'colombia'].includes(t.id)).map(tab => (
-                      <ComingSoonCard key={tab.id} label={tab.label} />
-                    ))}
-                  </div>
+                  <>
+                    <SortTabs sortMetric={sortMetric} onChange={setSortMetric} />
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 18 }}>
+                      {sortedTeams.map((team, index) => (
+                        <TeamCard
+                          key={team.id}
+                          team={team}
+                          rank={index}
+                          metric={sortMetric}
+                          active={false}
+                          onClick={() => setSelectedTeam(team.id)}
+                        />
+                      ))}
+
+                      {TEAM_TABS
+                        .filter(tab => !['all', ...sortedTeams.map(team => team.id)].includes(tab.id))
+                        .map(tab => (
+                          <ComingSoonCard key={tab.id} team={TEAMS[tab.id]} />
+                        ))}
+                    </div>
+                  </>
                 ) : selectedTeamData ? (
                   <>
                     <div style={{
@@ -731,14 +909,29 @@ export default function Dashboard() {
                       border: '1px solid rgba(255,255,255,0.08)',
                       borderRadius: 24,
                       padding: 24,
-                      marginBottom: 18
+                      marginBottom: 18,
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: -30,
+                        left: -20,
+                        width: 180,
+                        height: 180,
+                        background: 'radial-gradient(circle, rgba(249,115,22,0.18), transparent 65%)',
+                        pointerEvents: 'none'
+                      }} />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
                         <div>
                           <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>{formatDateLabel(selectedDate)}</div>
                           <div style={{ fontSize: 30, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <img src={SHEETS[selectedTeam].flag} alt={SHEETS[selectedTeam].label} width="32" height="22" style={{ borderRadius: 4 }} />
-                            {SHEETS[selectedTeam].label}
+                            {TEAMS[selectedTeam].flag ? (
+                              <img src={TEAMS[selectedTeam].flag} alt={TEAMS[selectedTeam].label} width="24" height="17" style={{ borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.35)' }} />
+                            ) : (
+                              <span style={{ fontSize: 24 }}>🌎</span>
+                            )}
+                            {TEAMS[selectedTeam].label}
                           </div>
                           <div style={{ marginTop: 6, color: '#94a3b8', fontSize: 14 }}>
                             {selectedTeamData.totals.activeAgents} active agents
@@ -757,7 +950,7 @@ export default function Dashboard() {
                     <AgentTable agents={selectedTeamData.agents} navigate={navigate} />
                   </>
                 ) : (
-                  <ComingSoonCard label={TEAM_TABS.find(t => t.id === selectedTeam)?.label || 'Team'} />
+                  <ComingSoonCard team={TEAMS[selectedTeam]} />
                 )}
               </>
             )}
