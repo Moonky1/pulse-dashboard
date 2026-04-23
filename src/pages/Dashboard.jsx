@@ -7,6 +7,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBl
 const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const CLEAN_START_DATE = '2026-04-23'
 const POLL_MS = 45000
+const LIVE_CACHE_KEY = 'pulse_live_cache_v4'
 
 const E = {
   goal1: '/emojis/goal1.webp',
@@ -280,8 +281,10 @@ function parsePhilippinesRows(rows, withOT) {
     if (!isAgentRow(name, ext, '1', banned)) continue
     const agent = buildAgent(name, ext, row[2], 0)
 
-    if (!inOT) mainAgents.set(agent.ext, agent)
-    else {
+    if (!inOT) {
+      const prev = mainAgents.get(agent.ext)
+      if (!prev || agent.total > prev.total || agent.english > prev.english) mainAgents.set(agent.ext, agent)
+    } else {
       const prev = otAgents.get(agent.ext)
       if (!prev) otAgents.set(agent.ext, agent)
       else {
@@ -432,6 +435,28 @@ function parseMexicoRows(rows, withOT) {
   let mainFooter = 0
   let otFooter = 0
 
+  const keepBestAgent = (map, agent) => {
+    if (!agent?.ext) return
+    const prev = map.get(agent.ext)
+    if (!prev || agent.total > prev.total || agent.english > prev.english) {
+      map.set(agent.ext, agent)
+    }
+  }
+
+  const addOtAgent = (map, agent) => {
+    if (!agent?.ext || agent.total <= 0) return
+    const prev = map.get(agent.ext)
+    if (!prev) {
+      map.set(agent.ext, agent)
+      return
+    }
+    map.set(agent.ext, {
+      ...prev,
+      english: prev.english + agent.english,
+      total: prev.total + agent.total,
+    })
+  }
+
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
     const txt = rowText(row)
@@ -455,20 +480,14 @@ function parseMexicoRows(rows, withOT) {
     }
 
     if (!isAgentRow(name, ext, '5', banned)) continue
-    const agent = buildAgent(name, ext, row[3], 0)
 
-    if (!inOT) mainAgents.set(agent.ext, agent)
-    else {
-      const prev = otAgents.get(agent.ext)
-      if (!prev) otAgents.set(agent.ext, agent)
-      else {
-        otAgents.set(agent.ext, {
-          ...prev,
-          english: prev.english + agent.english,
-          total: prev.total + agent.total,
-        })
-      }
-    }
+    // Mexico main layout: A name, B ext, C campaign, D total xfers.
+    // Some blank/template duplicate rows can appear later, so we keep the strongest row per extension.
+    const english = safeInt(row[3])
+    const agent = buildAgent(name, ext, english, 0)
+
+    if (!inOT) keepBestAgent(mainAgents, agent)
+    else addOtAgent(otAgents, agent)
   }
 
   const mainList = [...mainAgents.values()]
@@ -879,17 +898,39 @@ const tdStyle = {
   color: '#e5e7eb'
 }
 
+function readLiveCache() {
+  try {
+    const raw = localStorage.getItem(LIVE_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed || !parsed.data) return null
+    return parsed
+  } catch (error) {
+    return null
+  }
+}
+
+function writeLiveCache(data) {
+  try {
+    localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({
+      updatedAt: new Date().toISOString(),
+      data,
+    }))
+  } catch (error) {}
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
+  const cachedLive = useMemo(() => readLiveCache(), [])
   const [selectedDate, setSelectedDate] = useState(todayKey())
   const [selectedTeam, setSelectedTeam] = useState('all')
   const [sortMetric, setSortMetric] = useState('english')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!cachedLive?.data)
   const [error, setError] = useState('')
-  const [liveData, setLiveData] = useState({ asia: null, philippines: null, colombia: null, mexico: null })
+  const [liveData, setLiveData] = useState(() => cachedLive?.data || { asia: null, philippines: null, colombia: null, mexico: null })
   const [historicalData, setHistoricalData] = useState({ asia: null, philippines: null, colombia: null, mexico: null })
   const [remoteDates, setRemoteDates] = useState([])
-  const [lastUpdate, setLastUpdate] = useState(null)
+  const [lastUpdate, setLastUpdate] = useState(() => cachedLive?.updatedAt ? new Date(cachedLive.updatedAt) : null)
 
   const liveTeamIds = useMemo(() => TEAM_ORDER.filter(teamId => TEAMS[teamId].live), [])
   const isToday = selectedDate === todayKey()
@@ -918,8 +959,13 @@ export default function Dashboard() {
 
     if (!Object.keys(next).length) throw new Error('Failed to read live team sheets')
 
-    setLiveData(prev => ({ ...prev, ...next }))
-    setLastUpdate(new Date())
+    const updatedAt = new Date()
+    setLiveData(prev => {
+      const merged = { ...prev, ...next }
+      writeLiveCache(merged)
+      return merged
+    })
+    setLastUpdate(updatedAt)
     await persistSnapshots(todayKey(), next)
     await loadRemoteDates()
   }, [liveTeamIds, loadRemoteDates])
