@@ -9,6 +9,7 @@ const CLEAN_START_DATE = '2026-04-23'
 const POLL_MS = 30000
 
 const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
+const TEAM_RANK_EMOJIS = ['/emojis/goal1.webp', '/emojis/goal3.webp', '/emojis/goal4.webp']
 
 const TEAMS = {
   asia: {
@@ -537,11 +538,20 @@ function SummaryCard({ title, value, color, subtitle }) {
   )
 }
 
-function TeamOverviewCard({ team, parsed, sortMetric, onOpen }) {
+function TeamOverviewCard({ team, parsed, sortMetric, onOpen, rankIndex = 0 }) {
   const topThree = sortAgentsByMetric(parsed.agents, sortMetric).slice(0, 3)
+  const teamRankIcon = TEAM_RANK_EMOJIS[rankIndex] || null
   return (
     <div className="pulse-team-card" onClick={() => onOpen(team.id)}>
       <div className="pulse-team-card-top">
+        <div className="pulse-team-rank-badge">
+          {teamRankIcon ? (
+            <img src={teamRankIcon} alt={`#${rankIndex + 1}`} width={28} height={28} style={{ objectFit: 'contain' }} />
+          ) : (
+            <span className="pulse-team-rank-text">#{rankIndex + 1}</span>
+          )}
+        </div>
+
         <div className="pulse-team-title-wrap">
           <FlagImg src={team.flag} size={24} alt="" />
           <div>
@@ -929,9 +939,9 @@ export default function Dashboard() {
               <>
                 <SortTabs sortMetric={sortMetric} onChange={setSortMetric} />
                 <div className="pulse-overview-grid">
-                  {allTeamCards.map(({ team, parsed }) => (
+                  {allTeamCards.map(({ team, parsed }, index) => (
                     parsed
-                      ? <TeamOverviewCard key={team.id} team={team} parsed={parsed} sortMetric={sortMetric} onOpen={setSelectedTeam} />
+                      ? <TeamOverviewCard key={team.id} team={team} parsed={parsed} sortMetric={sortMetric} onOpen={setSelectedTeam} rankIndex={index} />
                       : <TeamComingSoonCard key={team.id} team={team} />
                   ))}
                 </div>
