@@ -11,6 +11,16 @@ const POLL_MS = 30000
 
 const FLAG_ASIA = '/flags/asia.png'
 
+const TEAM_TABS = [
+  { id: 'all', label: 'All Teams', emoji: null },
+  { id: 'asia', label: 'Asia', emoji: '🇨🇳' },
+  { id: 'philippines', label: 'Philippines', emoji: '🇵🇭' },
+  { id: 'colombia', label: 'Colombia', emoji: '🇨🇴' },
+  { id: 'central', label: 'Central', emoji: '🌎' },
+  { id: 'mexico', label: 'Mexico', emoji: '🇲🇽' },
+  { id: 'venezuela', label: 'Venezuela', emoji: '🇻🇪' },
+]
+
 const safeInt = (val) => parseInt(String(val ?? '').replace(/,/g, '').trim(), 10) || 0
 const cellUpper = (val) => String(val || '').trim().toUpperCase()
 const normalizeDate = (raw) => {
@@ -229,6 +239,68 @@ function AsiaSummaryCard({ title, value, color, subtitle }) {
   )
 }
 
+
+function TeamTabs({ selectedTeam, onChange }) {
+  return (
+    <div style={{
+      display: 'flex',
+      gap: 10,
+      flexWrap: 'wrap',
+      padding: 8,
+      borderRadius: 999,
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      marginBottom: 22
+    }}>
+      {TEAM_TABS.map(tab => {
+        const active = selectedTeam === tab.id
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            style={{
+              border: active ? '1px solid rgba(249,115,22,0.55)' : '1px solid transparent',
+              background: active ? 'rgba(249,115,22,0.18)' : 'transparent',
+              color: active ? '#fff' : '#cbd5e1',
+              borderRadius: 999,
+              padding: '12px 16px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 15
+            }}
+          >
+            {tab.emoji ? <span>{tab.emoji}</span> : null}
+            <span>{tab.label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function TeamPlaceholder({ teamId }) {
+  const tab = TEAM_TABS.find(t => t.id === teamId)
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 24,
+      padding: '42px 24px',
+      textAlign: 'center',
+      color: '#94a3b8'
+    }}>
+      <div style={{ fontSize: 42, marginBottom: 10 }}>{tab?.emoji || '📊'}</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: '#f8fafc' }}>{tab?.label || 'Team'}</div>
+      <div style={{ marginTop: 10, fontSize: 14 }}>
+        This team tab is visible already, but for now Pulse is reading live data only from Asia.
+      </div>
+    </div>
+  )
+}
+
 function AgentTable({ agents, navigate }) {
   return (
     <div style={{
@@ -292,6 +364,7 @@ const tdStyle = {
 export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState(todayKey())
+  const [selectedTeam, setSelectedTeam] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [asiaRows, setAsiaRows] = useState([])
@@ -407,8 +480,7 @@ export default function Dashboard() {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src={FLAG_ASIA} alt="Asia" width="30" height="22" style={{ borderRadius: 4 }} />
-              <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900 }}>Pulse — Asia only</h1>
+              <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900 }}>Pulse</h1>
               <span style={{ background: '#f97316', color: '#fff', padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 800 }}>RESET</span>
             </div>
             <div style={{ marginTop: 8, color: '#94a3b8', fontSize: 14 }}>
@@ -420,6 +492,8 @@ export default function Dashboard() {
             {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : 'Waiting for first load...'}
           </div>
         </div>
+
+        <TeamTabs selectedTeam={selectedTeam} onChange={setSelectedTeam} />
 
         <div style={{
           display: 'grid',
@@ -451,56 +525,58 @@ export default function Dashboard() {
               </div>
             ) : asiaData ? (
               <>
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(249,115,22,0.12), rgba(59,130,246,0.06))',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 24,
-                  padding: 24,
-                  marginBottom: 18
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>{formatDateLabel(selectedDate)}</div>
-                      <div style={{ fontSize: 30, fontWeight: 900 }}>Asia</div>
-                      <div style={{ marginTop: 6, color: '#94a3b8', fontSize: 14 }}>
-                        {asiaData.totals.activeAgents} active agents • OT {asiaData.includesOT ? 'included' : 'not included yet'}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#f59e0b' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 999, background: asiaData.includesOT ? '#22c55e' : '#f59e0b', display: 'inline-block' }} />
-                      {asiaData.includesOT ? 'After 6 pm Colombia — OT is counted' : 'Before 6 pm Colombia — main block only'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
-                  <AsiaSummaryCard title="English" value={asiaData.totals.english} color="#60a5fa" subtitle={asiaData.mainTotals ? `Main: ${asiaData.mainTotals.english}` : ''} />
-                  <AsiaSummaryCard title="Spanish" value={asiaData.totals.spanish} color="#34d399" subtitle={asiaData.mainTotals ? `Main: ${asiaData.mainTotals.spanish}` : ''} />
-                  <AsiaSummaryCard title="Total" value={asiaData.totals.total} color="#f59e0b" subtitle={asiaData.otTotals && asiaData.includesOT ? `OT: ${asiaData.otTotals.total}` : ''} />
-                  <AsiaSummaryCard title="Active agents" value={asiaData.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 14, marginTop: 18 }}>
-                  {topThree.map((agent, index) => (
-                    <div key={agent.ext} style={{
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      borderRadius: 16,
-                      padding: '18px 20px'
+                {(selectedTeam === 'all' || selectedTeam === 'asia') ? (
+                  <>
+                    <div style={{
+                      background: 'linear-gradient(135deg, rgba(249,115,22,0.12), rgba(59,130,246,0.06))',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 24,
+                      padding: 24,
+                      marginBottom: 18
                     }}>
-                      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>Top #{index + 1}</div>
-                      <div style={{ fontSize: 24, fontWeight: 900, color: '#f8fafc' }}>{agent.name}</div>
-                      <div style={{ marginTop: 6, color: '#94a3b8', fontSize: 13 }}>#{agent.ext}</div>
-                      <div style={{ display: 'flex', gap: 14, marginTop: 14 }}>
-                        <span style={{ color: '#34d399', fontWeight: 800 }}>SP {agent.spanish}</span>
-                        <span style={{ color: '#60a5fa', fontWeight: 800 }}>EN {agent.english}</span>
-                        <span style={{ color: '#f59e0b', fontWeight: 900 }}>TOT {agent.total}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>{formatDateLabel(selectedDate)}</div>
+                          <div style={{ fontSize: 30, fontWeight: 900 }}>Asia</div>
+                          <div style={{ marginTop: 6, color: '#94a3b8', fontSize: 14 }}>
+                            {asiaData.totals.activeAgents} active agents
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                <AgentTable agents={asiaData.agents} navigate={navigate} />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
+                      <AsiaSummaryCard title="English" value={asiaData.totals.english} color="#60a5fa" subtitle={asiaData.mainTotals ? `Main: ${asiaData.mainTotals.english}` : ''} />
+                      <AsiaSummaryCard title="Spanish" value={asiaData.totals.spanish} color="#34d399" subtitle={asiaData.mainTotals ? `Main: ${asiaData.mainTotals.spanish}` : ''} />
+                      <AsiaSummaryCard title="Total" value={asiaData.totals.total} color="#f59e0b" subtitle={asiaData.otTotals && asiaData.includesOT ? `OT: ${asiaData.otTotals.total}` : ''} />
+                      <AsiaSummaryCard title="Active agents" value={asiaData.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 14, marginTop: 18 }}>
+                      {topThree.map((agent, index) => (
+                        <div key={agent.ext} style={{
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          borderRadius: 16,
+                          padding: '18px 20px'
+                        }}>
+                          <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>Top #{index + 1}</div>
+                          <div style={{ fontSize: 24, fontWeight: 900, color: '#f8fafc' }}>{agent.name}</div>
+                          <div style={{ marginTop: 6, color: '#94a3b8', fontSize: 13 }}>#{agent.ext}</div>
+                          <div style={{ display: 'flex', gap: 14, marginTop: 14 }}>
+                            <span style={{ color: '#34d399', fontWeight: 800 }}>SP {agent.spanish}</span>
+                            <span style={{ color: '#60a5fa', fontWeight: 800 }}>EN {agent.english}</span>
+                            <span style={{ color: '#f59e0b', fontWeight: 900 }}>TOT {agent.total}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <AgentTable agents={asiaData.agents} navigate={navigate} />
+                  </>
+                ) : (
+                  <TeamPlaceholder teamId={selectedTeam} />
+                )}
               </>
             ) : null}
           </div>
