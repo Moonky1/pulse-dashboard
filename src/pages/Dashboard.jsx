@@ -8,11 +8,7 @@ const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const CLEAN_START_DATE = '2026-04-23'
 const POLL_MS = 30000
 
-const EMOJIS = {
-  top1: '/emojis/goal1.webp',
-  top2: '/emojis/goal3.webp',
-  top3: '/emojis/goal4.webp',
-}
+const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
 
 const TEAMS = {
   asia: {
@@ -25,6 +21,16 @@ const TEAMS = {
     hasSpanish: true,
     live: true,
   },
+  philippines: {
+    id: 'philippines',
+    label: 'Philippines',
+    short: 'Philippines',
+    sheetName: 'AW GARRET PHILIPPINES ',
+    flag: '/flags/philippines.png',
+    extPrefix: '1',
+    hasSpanish: false,
+    live: true,
+  },
   colombia: {
     id: 'colombia',
     label: 'Colombia',
@@ -35,17 +41,13 @@ const TEAMS = {
     hasSpanish: true,
     live: true,
   },
-  philippines: {
-    id: 'philippines',
-    label: 'Philippines',
-    short: 'Philippines',
-    flag: '/flags/philippines.png',
-    live: false,
-  },
   central: {
     id: 'central',
     label: 'Central America',
     short: 'Central',
+    flag: null,
+    extPrefix: '4',
+    hasSpanish: true,
     live: false,
   },
   mexico: {
@@ -53,6 +55,8 @@ const TEAMS = {
     label: 'Mexico Baja',
     short: 'Mexico',
     flag: '/flags/mexico.png',
+    extPrefix: '5',
+    hasSpanish: false,
     live: false,
   },
   venezuela: {
@@ -60,18 +64,17 @@ const TEAMS = {
     label: 'Venezuela',
     short: 'Venezuela',
     flag: '/flags/venezuela.png',
+    extPrefix: '6',
+    hasSpanish: true,
     live: false,
   },
 }
 
-const TEAM_TABS = [
-  { id: 'all', label: 'All Teams' },
-  { id: 'asia', label: 'Asia' },
-  { id: 'philippines', label: 'Philippines' },
-  { id: 'colombia', label: 'Colombia' },
-  { id: 'central', label: 'Central' },
-  { id: 'mexico', label: 'Mexico' },
-  { id: 'venezuela', label: 'Venezuela' },
+const TEAM_ORDER = ['asia', 'philippines', 'colombia', 'central', 'mexico', 'venezuela']
+const SORT_OPTIONS = [
+  { id: 'english', label: 'English Xfers' },
+  { id: 'spanish', label: 'Spanish Xfers' },
+  { id: 'total', label: 'Total Xfers' },
 ]
 
 const safeInt = (val) => parseInt(String(val ?? '').replace(/,/g, '').trim(), 10) || 0
@@ -113,15 +116,22 @@ function isAgentRow(nameCell, extCell, prefix) {
   const ext = String(extCell || '').replace(/,/g, '').trim()
   if (!new RegExp(`^${prefix}\\d{3}$`).test(ext)) return false
   if (!name) return false
-
   const banned = [
-    'MANAGEMENT', 'USER', 'SUPERVISOR', 'EXTENSION', 'OPENERS', 'TRANSFERS', 'SPANISH', 'ENGLISH', 'TOTAL',
+    'MANAGEMENT', 'USER', 'USERS', 'SUPERVISOR', 'EXTENSION', 'OPENERS', 'TRANSFERS', 'TRANSFER', 'SPANISH', 'ENGLISH', 'TOTAL',
     'LEXNER', 'GENERAL MANAGER', 'PACIFIC STANDARD TIME', 'BREAK', 'LUNCH', 'DAILY TARGET', 'XFER PER HOUR',
-    'THIS HOUR GOAL', 'GOAL+', 'AGENT LOGGED IN', 'AGENTS LOGGED IN', 'COLOMBIA OT', 'JUAN GARCIA', 'ASIA',
-    'OT TAKERS', 'REF!', 'COLOMBIA', 'OUR GOAL'
+    'THIS HOUR GOAL', 'GOAL+', 'AGENT LOGGED IN', 'AGENTS LOGGED IN', 'COLOMBIA OT', 'JUAN GARCIA', 'ASIA', 'PHILIPPINES',
+    'OT TAKERS', 'PHILIPPINES OT', 'AW PHIL', 'ARWIN', 'SUPERVISOR', 'PER AGENT'
   ]
-
   return !banned.some(word => name.includes(word))
+}
+
+function sortAgentsByMetric(agents, metric) {
+  return [...(agents || [])].sort((a, b) => {
+    if ((b?.[metric] || 0) !== (a?.[metric] || 0)) return (b?.[metric] || 0) - (a?.[metric] || 0)
+    if ((b?.total || 0) !== (a?.total || 0)) return (b?.total || 0) - (a?.total || 0)
+    if ((b?.english || 0) !== (a?.english || 0)) return (b?.english || 0) - (a?.english || 0)
+    return String(a?.name || '').localeCompare(String(b?.name || ''))
+  })
 }
 
 function parseAsiaRows(rows, withOT) {
@@ -174,7 +184,6 @@ function parseAsiaRows(rows, withOT) {
   const mainList = [...mainAgents.values()]
   const otList = withOT ? [...otAgents.values()] : []
   const merged = new Map()
-
   mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
   otList.forEach(agent => {
     const prev = merged.get(agent.ext)
@@ -189,7 +198,7 @@ function parseAsiaRows(rows, withOT) {
     }
   })
 
-  const agents = [...merged.values()].sort((a, b) => b.total - a.total || b.english - a.english || a.name.localeCompare(b.name))
+  const agents = sortAgentsByMetric([...merged.values()], 'total')
   const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
   const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
   const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
@@ -239,6 +248,7 @@ function parseColombiaRows(rows, withOT) {
     }
 
     if (!isAgentRow(name, ext, '2')) continue
+
     const english = safeInt(row[3])
     const spanish = safeInt(row[4])
     const agent = buildAgent(name, ext, spanish, english)
@@ -261,7 +271,6 @@ function parseColombiaRows(rows, withOT) {
   const mainList = [...mainAgents.values()]
   const otList = withOT && sawOTSection ? [...otAgents.values()] : []
   const merged = new Map()
-
   mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
   otList.forEach(agent => {
     const prev = merged.get(agent.ext)
@@ -276,7 +285,7 @@ function parseColombiaRows(rows, withOT) {
     }
   })
 
-  const agents = [...merged.values()].sort((a, b) => b.total - a.total || b.english - a.english || a.name.localeCompare(b.name))
+  const agents = sortAgentsByMetric([...merged.values()], 'total')
   const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
   const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
   const otEnglish = withOT ? otList.reduce((sum, a) => sum + a.english, 0) : 0
@@ -296,9 +305,97 @@ function parseColombiaRows(rows, withOT) {
   }
 }
 
+function parsePhilippinesRows(rows, withOT) {
+  const mainAgents = new Map()
+  const otAgents = new Map()
+  let inOT = false
+  let mainFooter = 0
+  let otFooter = 0
+  let sawOTSection = false
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const txt = rowText(row)
+    const name = String(row[0] || '').trim()
+    const ext = String(row[1] || '').replace(/,/g, '').trim()
+
+    if (txt.includes('PHILIPPINES OT')) {
+      sawOTSection = true
+      inOT = true
+      continue
+    }
+
+    if (!inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN'))) {
+      // Main footer is column C in current sheet layout.
+      mainFooter = Math.max(mainFooter, safeInt(row[2]), safeInt(row[3]))
+      continue
+    }
+
+    if (inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN'))) {
+      // OT footer is column C in the OT block. Ignore until after 6pm Colombia.
+      otFooter = Math.max(otFooter, safeInt(row[2]), safeInt(row[3]))
+      continue
+    }
+
+    if (!isAgentRow(name, ext, '1')) continue
+
+    if (!inOT) {
+      const english = safeInt(row[2])
+      const agent = buildAgent(name, ext, 0, english)
+      mainAgents.set(agent.ext, agent)
+    } else {
+      const english = safeInt(row[2])
+      const agent = buildAgent(name, ext, 0, english)
+      const prev = otAgents.get(agent.ext)
+      if (!prev) otAgents.set(agent.ext, agent)
+      else {
+        otAgents.set(agent.ext, {
+          ...prev,
+          english: prev.english + agent.english,
+          total: prev.total + agent.total,
+        })
+      }
+    }
+  }
+
+  const mainList = [...mainAgents.values()]
+  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
+  const merged = new Map()
+  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
+  otList.forEach(agent => {
+    const prev = merged.get(agent.ext)
+    if (!prev) merged.set(agent.ext, { ...agent })
+    else {
+      merged.set(agent.ext, {
+        ...prev,
+        english: prev.english + agent.english,
+        total: prev.total + agent.total,
+      })
+    }
+  })
+
+  const agents = sortAgentsByMetric([...merged.values()], 'total')
+  const mainEnglish = Math.max(mainFooter, mainList.reduce((sum, a) => sum + a.english, 0))
+  const otEnglish = withOT ? Math.max(otFooter, otList.reduce((sum, a) => sum + a.english, 0)) : 0
+
+  return {
+    agents,
+    totals: {
+      english: mainEnglish + otEnglish,
+      spanish: 0,
+      total: mainEnglish + otEnglish,
+      activeAgents: agents.length,
+    },
+    mainTotals: { english: mainEnglish, spanish: 0, total: mainEnglish },
+    otTotals: { english: otEnglish, spanish: 0, total: otEnglish },
+    includesOT: withOT,
+  }
+}
+
 function parseLiveSheet(teamId, rows) {
   if (teamId === 'asia') return parseAsiaRows(rows, includeOT())
   if (teamId === 'colombia') return parseColombiaRows(rows, includeOT())
+  if (teamId === 'philippines') return parsePhilippinesRows(rows, includeOT())
   return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 }, mainTotals: null, otTotals: null, includesOT: false }
 }
 
@@ -311,122 +408,102 @@ async function fetchSheetViaScript(sheetName) {
 }
 
 async function scriptCall(params) {
-  try {
-    const url = `${SCRIPT_URL}?${new URLSearchParams(params)}&t=${Date.now()}`
-    const res = await fetch(url)
-    return await res.json()
-  } catch (error) {
-    return { ok: false, error: String(error) }
-  }
+  const url = `${SCRIPT_URL}?${new URLSearchParams(params)}&t=${Date.now()}`
+  const res = await fetch(url)
+  return res.json()
 }
 
 async function scriptPost(params) {
-  try {
-    const body = new URLSearchParams(params)
-    await fetch(SCRIPT_URL, { method: 'POST', body, mode: 'no-cors' })
-  } catch (error) {}
+  const body = new URLSearchParams(params)
+  await fetch(SCRIPT_URL, { method: 'POST', body, mode: 'no-cors' })
 }
 
-async function persistTeamSnapshot(date, teamId, parsed) {
-  const totalsPayload = JSON.stringify([
-    {
+async function persistSnapshots(date, teamDataMap) {
+  const totalsPayload = []
+  const allAgents = []
+
+  for (const teamId of Object.keys(teamDataMap || {})) {
+    const parsed = teamDataMap[teamId]
+    if (!parsed) continue
+
+    totalsPayload.push({
       id: teamId,
-      name: TEAMS[teamId].label,
+      name: TEAMS[teamId]?.label || teamId,
       english: parsed.totals.english,
       spanish: parsed.totals.spanish,
       total: parsed.totals.total,
       agents: parsed.totals.activeAgents,
-      noSpanish: false,
-    }
-  ])
+      noSpanish: !TEAMS[teamId]?.hasSpanish,
+    })
 
-  const agentsPayload = JSON.stringify(
-    parsed.agents.map(agent => ({
-      ext: agent.ext,
-      name: agent.name,
-      english: agent.english,
-      spanish: agent.spanish,
-      total: agent.total,
+    parsed.agents.forEach(agent => {
+      allAgents.push({
+        ext: agent.ext,
+        name: agent.name,
+        english: agent.english,
+        spanish: agent.spanish,
+        total: agent.total,
+        team: teamId,
+      })
+    })
+
+    await scriptPost({
+      action: 'saveTeamSnapshot',
+      date,
+      teamId,
+      agents: JSON.stringify(parsed.agents),
+    })
+
+    await scriptPost({
+      action: 'saveToWeeklySheet',
+      date,
       team: teamId,
-    }))
-  )
+      agents: JSON.stringify(parsed.agents),
+    })
+  }
 
-  const saveKey = `pulse_${teamId}_saved_${date}_${parsed.totals.total}_${parsed.totals.activeAgents}_${parsed.includesOT ? 'ot' : 'main'}`
-  if (sessionStorage.getItem(saveKey)) return
-  sessionStorage.setItem(saveKey, '1')
+  await scriptPost({
+    action: 'saveDailyTotals',
+    date,
+    teams: JSON.stringify(totalsPayload),
+  })
 
-  await scriptPost({ action: 'saveDailyTotals', date, teams: totalsPayload })
-  await scriptPost({ action: 'saveTeamSnapshot', date, teamId, agents: agentsPayload })
-  await scriptPost({ action: 'saveAgentSnapshots', date, snapshots: agentsPayload })
-  await scriptPost({ action: 'saveToWeeklySheet', date, team: teamId, agents: agentsPayload })
+  await scriptPost({
+    action: 'saveAgentSnapshots',
+    date,
+    snapshots: JSON.stringify(allAgents),
+  })
 }
 
 function formatDateLabel(date) {
-  const today = todayKey()
-  if (date === today) return 'Today — LIVE'
-  const d = new Date(`${date}T12:00:00`)
-  const day = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  return `${day} ${dd}/${mm}`
+  if (date === todayKey()) return 'Today — LIVE'
+  const [y, m, d] = date.split('-')
+  return `${d}/${m}/${y}`
 }
 
-function formatMetricLabel(metric) {
-  if (metric === 'english') return 'English Xfers'
-  if (metric === 'spanish') return 'Spanish Xfers'
-  return 'Total Xfers'
+function FlagImg({ src, size = 18, alt = '' }) {
+  if (!src) return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>🌎</span>
+  return <img src={src} alt={alt} width={size} height={Math.round(size * 0.72)} style={{ borderRadius: 3, objectFit: 'cover', display: 'inline-block' }} />
 }
 
-function TeamTabIcon({ teamId, size = 16 }) {
-  if (teamId === 'all') return null
-  const team = TEAMS[teamId]
-  if (team?.flag) {
-    return (
-      <img
-        src={team.flag}
-        alt=""
-        width={size}
-        height={Math.round(size * 0.72)}
-        style={{ borderRadius: 3, objectFit: 'cover', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}
-      />
-    )
-  }
-  return <span style={{ fontSize: size * 0.95, lineHeight: 1 }}>🌎</span>
+function Medal({ index, size = 18 }) {
+  return <img src={MEDALS[index]} alt="" width={size} height={size} style={{ objectFit: 'contain' }} />
 }
 
 function TeamTabs({ selectedTeam, onChange }) {
   return (
-    <div style={{
-      display: 'flex',
-      gap: 10,
-      flexWrap: 'wrap',
-      padding: 8,
-      borderRadius: 999,
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      marginBottom: 22
-    }}>
-      {TEAM_TABS.map(tab => {
-        const active = selectedTeam === tab.id
+    <div className="pulse-tabs-grid">
+      <button className={`pulse-tab ${selectedTeam === 'all' ? 'active' : ''}`} onClick={() => onChange('all')}>
+        <span>All Teams</span>
+      </button>
+
+      {TEAM_ORDER.map(teamId => {
+        const team = TEAMS[teamId]
+        const active = selectedTeam === teamId
         return (
-          <button
-            key={tab.id}
-            onClick={() => onChange(tab.id)}
-            style={{
-              border: active ? '1px solid rgba(249,115,22,0.9)' : '1px solid transparent',
-              background: active ? 'rgba(249,115,22,0.18)' : 'transparent',
-              color: active ? '#fff' : '#cbd5e1',
-              borderRadius: 999,
-              padding: '11px 16px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <TeamTabIcon teamId={tab.id} size={16} />
-            <span>{tab.label}</span>
+          <button key={teamId} className={`pulse-tab ${active ? 'active' : ''}`} onClick={() => onChange(teamId)}>
+            <FlagImg src={team.flag} size={18} alt="" />
+            <span>{team.short}</span>
           </button>
         )
       })}
@@ -434,164 +511,127 @@ function TeamTabs({ selectedTeam, onChange }) {
   )
 }
 
-function DatesPanel({ dateTabs, selectedDate, onSelect }) {
+function SortTabs({ sortMetric, onChange }) {
   return (
-    <div style={{
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      borderRadius: 20,
-      padding: 16,
-      position: 'sticky',
-      top: 86
-    }}>
-      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 12, fontWeight: 800, letterSpacing: '0.08em' }}>DATES</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 10 }}>
-        {dateTabs.map(date => {
-          const active = date === selectedDate
-          return (
-            <button
-              key={date}
-              onClick={() => onSelect(date)}
-              style={{
-                border: active ? '1px solid #f97316' : '1px solid rgba(255,255,255,0.08)',
-                background: active ? 'rgba(249,115,22,0.12)' : 'rgba(255,255,255,0.02)',
-                color: active ? '#fff' : '#cbd5e1',
-                borderRadius: 14,
-                padding: '12px 10px',
-                fontWeight: 800,
-                cursor: 'pointer'
-              }}
-            >
-              {formatDateLabel(date)}
-            </button>
-          )
-        })}
-      </div>
+    <div className="pulse-sort-tabs">
+      {SORT_OPTIONS.map(option => (
+        <button
+          key={option.id}
+          className={`pulse-sort-tab ${sortMetric === option.id ? 'active' : ''}`}
+          onClick={() => onChange(option.id)}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
-  )
-}
-
-function StatMini({ label, value, color }) {
-  return (
-    <div>
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color }}>{Number(value || 0).toLocaleString()}</div>
-    </div>
-  )
-}
-
-function RankBadge({ rank }) {
-  const src = rank === 0 ? EMOJIS.top1 : rank === 1 ? EMOJIS.top2 : EMOJIS.top3
-  return <img src={src} alt="" width="24" height="24" style={{ objectFit: 'contain' }} />
-}
-
-function TeamCard({ team, rank, metric, active, onClick }) {
-  const metricLabel = formatMetricLabel(metric)
-  const metricValue = metric === 'english'
-    ? team.data.totals.english
-    : metric === 'spanish'
-      ? team.data.totals.spanish
-      : team.data.totals.total
-
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: active ? 'linear-gradient(135deg, rgba(249,115,22,0.12), rgba(59,130,246,0.06))' : 'rgba(255,255,255,0.03)',
-        border: active ? '1px solid rgba(249,115,22,0.25)' : '1px solid rgba(255,255,255,0.06)',
-        borderRadius: 24,
-        padding: 24,
-        textAlign: 'left',
-        cursor: 'pointer',
-        color: '#fff',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
-    >
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'radial-gradient(circle at top, rgba(249,115,22,0.16), transparent 60%)',
-        pointerEvents: 'none'
-      }} />
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12, position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {rank <= 2 ? <RankBadge rank={rank} /> : <div style={{ fontWeight: 900, color: '#94a3b8' }}>#{rank + 1}</div>}
-          {team.flag ? <img src={team.flag} alt={team.label} width="32" height="22" style={{ borderRadius: 4 }} /> : <span style={{ fontSize: 26 }}>🌎</span>}
-          <div>
-            <div style={{ fontSize: 26, fontWeight: 900 }}>{team.label}</div>
-            <div style={{ color: '#94a3b8', fontSize: 14 }}>{team.data.totals.activeAgents} active agents</div>
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>{metricLabel}</div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: metric === 'spanish' ? '#34d399' : metric === 'english' ? '#60a5fa' : '#f59e0b' }}>
-            {Number(metricValue || 0).toLocaleString()}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14, position: 'relative' }}>
-        <StatMini label="English" value={team.data.totals.english} color="#60a5fa" />
-        <StatMini label="Spanish" value={team.data.totals.spanish} color="#34d399" />
-        <StatMini label="Total" value={team.data.totals.total} color="#f59e0b" />
-        <StatMini label="OT total" value={team.data.otTotals?.total || 0} color="#c084fc" />
-      </div>
-    </button>
   )
 }
 
 function SummaryCard({ title, value, color, subtitle }) {
   return (
-    <div style={{
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      borderRadius: 16,
-      padding: '18px 20px'
-    }}>
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>{title}</div>
-      <div style={{ fontSize: 34, fontWeight: 800, color }}>{Number(value || 0).toLocaleString()}</div>
-      {subtitle ? <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>{subtitle}</div> : null}
+    <div className="pulse-summary-card">
+      <div className="pulse-summary-title">{title}</div>
+      <div className="pulse-summary-value" style={{ color }}>{Number(value || 0).toLocaleString()}</div>
+      <div className="pulse-summary-subtitle">{subtitle || ''}</div>
     </div>
   )
 }
 
-function AgentTable({ agents, navigate }) {
+function TeamOverviewCard({ team, parsed, sortMetric, onOpen }) {
+  const topThree = sortAgentsByMetric(parsed.agents, sortMetric).slice(0, 3)
   return (
-    <div style={{
-      marginTop: 18,
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      borderRadius: 18,
-      overflow: 'hidden'
-    }}>
-      <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: 24, fontWeight: 900 }}>
-        Agents
+    <div className="pulse-team-card" onClick={() => onOpen(team.id)}>
+      <div className="pulse-team-card-top">
+        <div className="pulse-team-title-wrap">
+          <FlagImg src={team.flag} size={24} alt="" />
+          <div>
+            <div className="pulse-team-name">{team.label}</div>
+            <div className="pulse-team-sub">{parsed.totals.activeAgents} active agents</div>
+          </div>
+        </div>
+
+        <div className="pulse-team-metric">
+          <div className="pulse-team-metric-label">{SORT_OPTIONS.find(opt => opt.id === sortMetric)?.label}</div>
+          <div className="pulse-team-metric-value">{Number(parsed.totals[sortMetric] || 0).toLocaleString()}</div>
+        </div>
       </div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+
+      <div className="pulse-team-stats-grid">
+        <div><span className="stat-k">English</span><span className="stat-v blue">{parsed.totals.english.toLocaleString()}</span></div>
+        <div><span className="stat-k">Spanish</span><span className="stat-v green">{parsed.totals.spanish.toLocaleString()}</span></div>
+        <div><span className="stat-k">Total</span><span className="stat-v orange">{parsed.totals.total.toLocaleString()}</span></div>
+        <div><span className="stat-k">OT total</span><span className="stat-v purple">{parsed.otTotals?.total?.toLocaleString() || 0}</span></div>
+      </div>
+
+      <div className="pulse-top3-list">
+        {topThree.map((agent, index) => (
+          <div key={`${team.id}-${agent.ext}`} className="pulse-top3-item">
+            <Medal index={index} size={17} />
+            <span className="pulse-top3-name">{agent.name}</span>
+            <span className="pulse-top3-val">{agent[sortMetric]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function TeamComingSoonCard({ team }) {
+  return (
+    <div className="pulse-team-card pulse-coming-soon">
+      <div className="pulse-team-title-wrap">
+        <FlagImg src={team.flag} size={24} alt="" />
+        <div>
+          <div className="pulse-team-name">{team.label}</div>
+          <div className="pulse-team-sub">Live reading is not enabled yet for this team.</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TopRow({ title, metric, agents }) {
+  const top = sortAgentsByMetric(agents, metric).slice(0, 3)
+  return (
+    <div className="pulse-top-block">
+      <div className="pulse-top-block-title">{title}</div>
+      {top.map((agent, index) => (
+        <div key={`${metric}-${agent.ext}`} className="pulse-top-block-item">
+          <Medal index={index} size={19} />
+          <span className="pulse-top-block-name">{agent.name}</span>
+          <span className="pulse-top-block-ext">#{agent.ext}</span>
+          <span className="pulse-top-block-value">{agent[metric]}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AgentTable({ team, agents, navigate }) {
+  return (
+    <div className="pulse-table-wrap">
+      <div className="pulse-table-title">{team.label} agents</div>
+      <div className="pulse-table-scroll">
+        <table className="pulse-table">
           <thead>
             <tr>
-              <th style={thStyle}>#</th>
-              <th style={thStyle}>Agent</th>
-              <th style={thStyle}>Ext</th>
-              <th style={thStyle}>Spanish</th>
-              <th style={thStyle}>English</th>
-              <th style={thStyle}>Total</th>
+              <th>#</th>
+              <th>Agent</th>
+              <th>Ext</th>
+              <th>Spanish</th>
+              <th>English</th>
+              <th>Total</th>
             </tr>
           </thead>
           <tbody>
             {agents.map((agent, index) => (
-              <tr key={agent.ext} style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                <td style={tdStyle}>{index + 1}</td>
-                <td style={{ ...tdStyle, fontWeight: 700, color: '#f8fafc', cursor: 'pointer' }} onClick={() => navigate(`/profile/${agent.ext}`)}>
-                  {agent.name}
-                </td>
-                <td style={{ ...tdStyle, color: '#94a3b8' }}>#{agent.ext}</td>
-                <td style={{ ...tdStyle, color: '#34d399', fontWeight: 700 }}>{agent.spanish}</td>
-                <td style={{ ...tdStyle, color: '#60a5fa', fontWeight: 700 }}>{agent.english}</td>
-                <td style={{ ...tdStyle, color: '#f59e0b', fontWeight: 800 }}>{agent.total}</td>
+              <tr key={agent.ext}>
+                <td>{index + 1}</td>
+                <td className="linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
+                <td>#{agent.ext}</td>
+                <td className="green">{agent.spanish}</td>
+                <td className="blue">{agent.english}</td>
+                <td className="orange">{agent.total}</td>
               </tr>
             ))}
           </tbody>
@@ -601,71 +641,37 @@ function AgentTable({ agents, navigate }) {
   )
 }
 
-function ComingSoonCard({ team }) {
+function TeamDetail({ team, parsed, selectedDate, navigate }) {
+  const showOT = parsed.includesOT && (parsed.otTotals?.total || 0) > 0
   return (
-    <div style={{
-      background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      borderRadius: 20,
-      padding: '24px 22px',
-      color: '#94a3b8'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        {team.flag ? <img src={team.flag} alt={team.label} width="18" height="13" style={{ borderRadius: 3 }} /> : <span>🌎</span>}
-        <div style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{team.label}</div>
+    <>
+      <div className="pulse-hero-card">
+        <div>
+          <div className="pulse-hero-date">{formatDateLabel(selectedDate)}</div>
+          <div className="pulse-hero-title-row">
+            <FlagImg src={team.flag} size={28} alt="" />
+            <div className="pulse-hero-title">{team.label}</div>
+          </div>
+          <div className="pulse-hero-sub">{parsed.totals.activeAgents} active agents{showOT ? ' • OT included' : ''}</div>
+        </div>
       </div>
-      <div style={{ fontSize: 14 }}>Live reading is not enabled yet for this team.</div>
-    </div>
+
+      <div className="pulse-summary-grid">
+        <SummaryCard title="English" value={parsed.totals.english} color="#60a5fa" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.english}` : ''} />
+        <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />
+        <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : ''} />
+        <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
+      </div>
+
+      <div className="pulse-top-blocks-grid">
+        <TopRow title="Top English" metric="english" agents={parsed.agents} />
+        <TopRow title="Top Spanish" metric="spanish" agents={parsed.agents} />
+        <TopRow title="Top Total" metric="total" agents={parsed.agents} />
+      </div>
+
+      <AgentTable team={team} agents={parsed.agents} navigate={navigate} />
+    </>
   )
-}
-
-function SortTabs({ sortMetric, onChange }) {
-  const options = [
-    { id: 'english', label: 'English Xfers' },
-    { id: 'spanish', label: 'Spanish Xfers' },
-    { id: 'total', label: 'Total Xfers' },
-  ]
-
-  return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
-      {options.map(option => {
-        const active = sortMetric === option.id
-        return (
-          <button
-            key={option.id}
-            onClick={() => onChange(option.id)}
-            style={{
-              border: active ? '1px solid #f97316' : '1px solid rgba(255,255,255,0.08)',
-              background: active ? 'rgba(249,115,22,0.12)' : 'rgba(255,255,255,0.03)',
-              color: active ? '#fff' : '#cbd5e1',
-              borderRadius: 12,
-              padding: '10px 14px',
-              fontWeight: 800,
-              cursor: 'pointer'
-            }}
-          >
-            {option.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-const thStyle = {
-  textAlign: 'left',
-  fontSize: 12,
-  color: '#94a3b8',
-  padding: '12px 16px',
-  fontWeight: 700,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase'
-}
-
-const tdStyle = {
-  padding: '12px 16px',
-  fontSize: 14,
-  color: '#e5e7eb'
 }
 
 export default function Dashboard() {
@@ -675,11 +681,11 @@ export default function Dashboard() {
   const [sortMetric, setSortMetric] = useState('english')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [liveData, setLiveData] = useState({ asia: null, colombia: null })
-  const [historicalData, setHistoricalData] = useState({ asia: null, colombia: null })
+  const [teamData, setTeamData] = useState({})
   const [remoteDates, setRemoteDates] = useState([])
   const [lastUpdate, setLastUpdate] = useState(null)
 
+  const liveTeamIds = useMemo(() => TEAM_ORDER.filter(teamId => TEAMS[teamId].live), [])
   const isToday = selectedDate === todayKey()
 
   const loadRemoteDates = useCallback(async () => {
@@ -691,272 +697,265 @@ export default function Dashboard() {
     setRemoteDates([...new Set(dates)].sort((a, b) => b.localeCompare(a)))
   }, [])
 
-  const loadLive = useCallback(async () => {
+  const loadLiveTeams = useCallback(async () => {
     setError('')
-    const [asiaRows, colombiaRows] = await Promise.all([
-      fetchSheetViaScript(TEAMS.asia.sheetName),
-      fetchSheetViaScript(TEAMS.colombia.sheetName),
-    ])
+    const results = await Promise.allSettled(
+      liveTeamIds.map(teamId => fetchSheetViaScript(TEAMS[teamId].sheetName))
+    )
 
-    const parsedAsia = parseLiveSheet('asia', asiaRows)
-    const parsedColombia = parseLiveSheet('colombia', colombiaRows)
-    const date = todayKey()
+    const next = {}
+    liveTeamIds.forEach((teamId, index) => {
+      if (results[index].status === 'fulfilled') {
+        next[teamId] = parseLiveSheet(teamId, results[index].value)
+      }
+    })
 
-    setLiveData({ asia: parsedAsia, colombia: parsedColombia })
+    if (!Object.keys(next).length) throw new Error('Failed to read live team sheets')
+
+    setTeamData(next)
     setLastUpdate(new Date())
-
-    await Promise.all([
-      persistTeamSnapshot(date, 'asia', parsedAsia),
-      persistTeamSnapshot(date, 'colombia', parsedColombia),
-    ])
+    await persistSnapshots(todayKey(), next)
     await loadRemoteDates()
-  }, [loadRemoteDates])
+  }, [liveTeamIds, loadRemoteDates])
 
-  const loadHistorical = useCallback(async (date) => {
+  const loadHistoricalTeams = useCallback(async (date) => {
     setError('')
-    const [asiaSnap, colombiaSnap, totals] = await Promise.all([
-      scriptCall({ action: 'getTeamSnapshot', date, teamId: 'asia' }),
-      scriptCall({ action: 'getTeamSnapshot', date, teamId: 'colombia' }),
+    const [teamSnapshots, totals] = await Promise.all([
+      Promise.all(liveTeamIds.map(teamId => scriptCall({ action: 'getTeamSnapshot', date, teamId }))),
       scriptCall({ action: 'getDailyTotals' }),
     ])
 
-    const dailyEntry = Array.isArray(totals) ? totals.find(entry => normalizeDate(entry.date) === date) : null
-    const getTotalsFor = (teamId) => {
-      const t = Array.isArray(dailyEntry?.teams) ? dailyEntry.teams.find(team => String(team.id) === teamId) : null
-      return {
-        english: Number(t?.english) || 0,
-        spanish: Number(t?.spanish) || 0,
-        total: Number(t?.total) || ((Number(t?.english) || 0) + (Number(t?.spanish) || 0)),
-        activeAgents: Number(t?.agents) || 0,
-      }
-    }
+    const dailyEntry = Array.isArray(totals)
+      ? totals.find(entry => normalizeDate(entry.date) === date)
+      : null
 
-    setHistoricalData({
-      asia: {
-        agents: [...(asiaSnap?.ok && Array.isArray(asiaSnap.agents) ? asiaSnap.agents : [])].sort((a, b) => b.total - a.total || b.english - a.english),
-        totals: getTotalsFor('asia'),
-        mainTotals: null,
-        otTotals: null,
-        includesOT: false,
-      },
-      colombia: {
-        agents: [...(colombiaSnap?.ok && Array.isArray(colombiaSnap.agents) ? colombiaSnap.agents : [])].sort((a, b) => b.total - a.total || b.english - a.english),
-        totals: getTotalsFor('colombia'),
+    const next = {}
+    liveTeamIds.forEach((teamId, index) => {
+      const snap = teamSnapshots[index]
+      const agents = snap?.ok && Array.isArray(snap.agents) ? snap.agents : []
+      const totalsRow = Array.isArray(dailyEntry?.teams)
+        ? dailyEntry.teams.find(team => String(team.id) === teamId)
+        : null
+
+      next[teamId] = {
+        agents: sortAgentsByMetric(agents, 'total'),
+        totals: {
+          english: Number(totalsRow?.english) || agents.reduce((sum, agent) => sum + (agent.english || 0), 0),
+          spanish: Number(totalsRow?.spanish) || agents.reduce((sum, agent) => sum + (agent.spanish || 0), 0),
+          total: Number(totalsRow?.total) || agents.reduce((sum, agent) => sum + (agent.total || 0), 0),
+          activeAgents: Number(totalsRow?.agents) || agents.length,
+        },
         mainTotals: null,
         otTotals: null,
         includesOT: false,
       }
     })
-  }, [])
+
+    setTeamData(next)
+  }, [liveTeamIds])
 
   useEffect(() => {
     let cancelled = false
+
     const run = async () => {
       setLoading(true)
       try {
-        if (isToday) await loadLive()
-        else await loadHistorical(selectedDate)
+        if (isToday) await loadLiveTeams()
+        else await loadHistoricalTeams(selectedDate)
       } catch (err) {
         if (!cancelled) setError(String(err?.message || err || 'Failed to load dashboard data'))
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
+
     run()
     return () => { cancelled = true }
-  }, [selectedDate, isToday, loadLive, loadHistorical])
+  }, [selectedDate, isToday, loadLiveTeams, loadHistoricalTeams])
 
   useEffect(() => {
-    loadRemoteDates()
+    loadRemoteDates().catch(() => {})
   }, [loadRemoteDates])
 
   useEffect(() => {
     if (!isToday) return
     const timer = setInterval(() => {
-      loadLive().catch(() => {})
+      loadLiveTeams().catch(() => {})
     }, POLL_MS)
     return () => clearInterval(timer)
-  }, [isToday, loadLive])
+  }, [isToday, loadLiveTeams])
 
   const dateTabs = useMemo(() => {
     const set = new Set([todayKey(), ...remoteDates])
     return [...set].filter(date => date >= CLEAN_START_DATE).sort((a, b) => b.localeCompare(a))
   }, [remoteDates])
 
-  const currentData = isToday ? liveData : historicalData
+  const allTeamCards = useMemo(() => {
+    const liveCards = liveTeamIds
+      .filter(teamId => teamData[teamId])
+      .map(teamId => ({ team: TEAMS[teamId], parsed: teamData[teamId] }))
+      .sort((a, b) => {
+        const diff = (b.parsed?.totals?.[sortMetric] || 0) - (a.parsed?.totals?.[sortMetric] || 0)
+        if (diff !== 0) return diff
+        return (b.parsed?.totals?.total || 0) - (a.parsed?.totals?.total || 0)
+      })
 
-  const liveTeams = useMemo(() => {
-    return [
-      { ...TEAMS.asia, data: currentData.asia },
-      { ...TEAMS.colombia, data: currentData.colombia },
-    ].filter(team => team.data)
-  }, [currentData])
+    const placeholders = TEAM_ORDER
+      .filter(teamId => !TEAMS[teamId].live)
+      .map(teamId => ({ team: TEAMS[teamId], parsed: null }))
 
-  const sortedTeams = useMemo(() => {
-    const getMetricValue = (team) => {
-      if (sortMetric === 'english') return team.data?.totals?.english || 0
-      if (sortMetric === 'spanish') return team.data?.totals?.spanish || 0
-      return team.data?.totals?.total || 0
-    }
+    return [...liveCards, ...placeholders]
+  }, [liveTeamIds, sortMetric, teamData])
 
-    return [...liveTeams].sort((a, b) => {
-      const av = getMetricValue(a)
-      const bv = getMetricValue(b)
-      if (bv !== av) return bv - av
-      return (b.data?.totals?.total || 0) - (a.data?.totals?.total || 0)
-    })
-  }, [liveTeams, sortMetric])
-
-  const selectedTeamData = useMemo(() => {
-    if (selectedTeam === 'all') return null
-    return currentData[selectedTeam] || null
-  }, [currentData, selectedTeam])
+  const selectedParsed = selectedTeam !== 'all' ? teamData[selectedTeam] : null
+  const selectedTeamMeta = selectedTeam !== 'all' ? TEAMS[selectedTeam] : null
 
   return (
     <div style={{ minHeight: '100vh', background: '#040812', color: '#fff' }}>
       <Navbar />
 
-      <div style={{ maxWidth: 1380, margin: '0 auto', padding: '26px 20px 60px' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-          flexWrap: 'wrap',
-          marginBottom: 18
-        }}>
+      <style>{`
+        .pulse-page{max-width:1320px;margin:0 auto;padding:26px 20px 60px}
+        .pulse-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+        .pulse-title{margin:0;font-size:32px;font-weight:900;color:#f8fafc}
+        .pulse-subtext{margin-top:8px;color:#94a3b8;font-size:14px;line-height:1.5}
+        .pulse-updated{color:#94a3b8;font-size:13px}
+        .pulse-tabs-grid{display:flex;flex-wrap:wrap;gap:10px;padding:16px;border-radius:28px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);margin-bottom:18px}
+        .pulse-tab{border:1px solid transparent;background:transparent;color:#cbd5e1;border-radius:999px;padding:12px 16px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px}
+        .pulse-tab.active{border-color:rgba(249,115,22,0.55);background:rgba(249,115,22,0.18);color:#fff}
+        .pulse-sort-tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+        .pulse-sort-tab{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#cbd5e1;border-radius:16px;padding:12px 16px;font-weight:800;cursor:pointer;font-size:14px}
+        .pulse-sort-tab.active{border-color:#f97316;background:rgba(249,115,22,0.12);color:#fff}
+        .pulse-content-grid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
+        .pulse-sidebar{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:16px;position:sticky;top:86px}
+        .pulse-sidebar-title{font-size:12px;color:#94a3b8;margin-bottom:12px;font-weight:800;letter-spacing:0.08em}
+        .pulse-dates-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .pulse-date-btn{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#cbd5e1;border-radius:14px;padding:12px 10px;font-weight:800;cursor:pointer}
+        .pulse-date-btn.active{border-color:#f97316;background:rgba(249,115,22,0.12);color:#fff}
+        .pulse-overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+        .pulse-team-card{background:linear-gradient(135deg,rgba(249,115,22,0.10),rgba(59,130,246,0.05));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:20px;cursor:pointer;min-height:220px}
+        .pulse-coming-soon{background:rgba(255,255,255,0.03);min-height:130px;cursor:default}
+        .pulse-team-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+        .pulse-team-title-wrap{display:flex;align-items:center;gap:12px}
+        .pulse-team-name{font-size:20px;font-weight:900;color:#f8fafc}
+        .pulse-team-sub{margin-top:4px;font-size:13px;color:#94a3b8;line-height:1.45}
+        .pulse-team-metric{text-align:right}
+        .pulse-team-metric-label{font-size:12px;color:#94a3b8}
+        .pulse-team-metric-value{margin-top:4px;font-size:22px;font-weight:900;color:#60a5fa}
+        .pulse-team-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
+        .stat-k{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}
+        .stat-v{display:block;font-size:18px;font-weight:900}
+        .blue{color:#60a5fa}.green{color:#34d399}.orange{color:#f59e0b}.purple{color:#c084fc}
+        .pulse-top3-list{display:grid;gap:8px;margin-top:18px}
+        .pulse-top3-item{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:8px;align-items:center}
+        .pulse-top3-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e5e7eb;font-size:13px}
+        .pulse-top3-val{font-weight:900;color:#f8fafc;font-size:13px}
+        .pulse-hero-card{background:linear-gradient(135deg,rgba(249,115,22,0.12),rgba(59,130,246,0.06));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:24px;margin-bottom:18px}
+        .pulse-hero-date{font-size:13px;color:#94a3b8;margin-bottom:6px}
+        .pulse-hero-title-row{display:flex;align-items:center;gap:12px}
+        .pulse-hero-title{font-size:30px;font-weight:900}
+        .pulse-hero-sub{margin-top:6px;color:#94a3b8;font-size:14px}
+        .pulse-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+        .pulse-summary-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px}
+        .pulse-summary-title{font-size:13px;color:#94a3b8;margin-bottom:10px}
+        .pulse-summary-value{font-size:42px;font-weight:900;line-height:1}
+        .pulse-summary-subtitle{margin-top:10px;color:#94a3b8;font-size:13px;min-height:18px}
+        .pulse-top-blocks-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
+        .pulse-top-block{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px}
+        .pulse-top-block-title{font-size:14px;font-weight:800;color:#f8fafc;margin-bottom:12px}
+        .pulse-top-block-item{display:grid;grid-template-columns:20px minmax(0,1fr) auto auto;gap:8px;align-items:center;margin-top:8px}
+        .pulse-top-block-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;color:#f8fafc}
+        .pulse-top-block-ext{font-size:12px;color:#94a3b8}
+        .pulse-top-block-value{font-size:14px;font-weight:900;color:#f59e0b}
+        .pulse-table-wrap{margin-top:18px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;overflow:hidden}
+        .pulse-table-title{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:800;color:#e5e7eb}
+        .pulse-table-scroll{overflow-x:auto}
+        .pulse-table{width:100%;border-collapse:collapse}
+        .pulse-table th{padding:12px 16px;text-align:left;font-size:12px;color:#94a3b8;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,0.02)}
+        .pulse-table td{padding:12px 16px;font-size:14px;color:#e5e7eb;border-top:1px solid rgba(255,255,255,0.04)}
+        .pulse-table .linkish{font-weight:700;color:#f8fafc;cursor:pointer}
+        .pulse-loading,.pulse-error{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:48px 24px;text-align:center;color:#94a3b8}
+        .pulse-error{background:rgba(127,29,29,0.18);border-color:rgba(248,113,113,0.35);color:#fecaca}
+        @media (max-width: 1100px){
+          .pulse-content-grid{grid-template-columns:1fr}
+          .pulse-sidebar{position:static}
+          .pulse-overview-grid{grid-template-columns:1fr 1fr}
+        }
+        @media (max-width: 860px){
+          .pulse-overview-grid,.pulse-summary-grid,.pulse-top-blocks-grid{grid-template-columns:1fr}
+          .pulse-team-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .pulse-title{font-size:28px}
+          .pulse-hero-title{font-size:26px}
+          .pulse-summary-value{font-size:34px}
+        }
+        @media (max-width: 640px){
+          .pulse-page{padding:18px 14px 44px}
+          .pulse-tabs-grid{padding:12px;border-radius:22px}
+          .pulse-tab{padding:10px 12px;font-size:14px}
+          .pulse-sort-tab{padding:10px 12px;font-size:13px}
+          .pulse-dates-grid{grid-template-columns:1fr}
+          .pulse-team-card{padding:16px;min-height:auto}
+          .pulse-team-card-top{display:block}
+          .pulse-team-metric{text-align:left;margin-top:12px}
+          .pulse-top-block-item{grid-template-columns:20px minmax(0,1fr) auto}
+          .pulse-top-block-ext{display:none}
+          .pulse-team-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        }
+      `}</style>
+
+      <div className="pulse-page">
+        <div className="pulse-topbar">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900 }}>AutoWarrantyGarrett</h1>
-              <span style={{
-                background: '#f97316',
-                color: '#fff',
-                borderRadius: 999,
-                padding: '4px 10px',
-                fontSize: 12,
-                fontWeight: 900,
-                letterSpacing: '0.04em'
-              }}>LIVE</span>
-            </div>
-            <div style={{ marginTop: 8, color: '#94a3b8', fontSize: 14 }}>
-              Live now: Asia and Colombia. Other teams stay visible while we add them slowly and safely.
+            <h1 className="pulse-title">AutoWarrantyGarrett</h1>
+            <div className="pulse-subtext">
+              Live now: Asia, Philippines and Colombia. Other teams stay visible while we add them slowly and safely.
             </div>
           </div>
-          <div style={{ color: '#94a3b8', fontSize: 13 }}>
+
+          <div className="pulse-updated">
             {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : 'Waiting for first load...'}
           </div>
         </div>
 
         <TeamTabs selectedTeam={selectedTeam} onChange={setSelectedTeam} />
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 280px',
-          gap: 18,
-          alignItems: 'start'
-        }}>
+        <div className="pulse-content-grid">
           <div>
             {loading ? (
-              <div style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: 20,
-                padding: '48px 24px',
-                textAlign: 'center',
-                color: '#94a3b8'
-              }}>
-                Loading dashboard data...
-              </div>
+              <div className="pulse-loading">Loading live team data...</div>
             ) : error ? (
-              <div style={{
-                background: 'rgba(127,29,29,0.18)',
-                border: '1px solid rgba(248,113,113,0.35)',
-                borderRadius: 20,
-                padding: '20px 22px',
-                color: '#fecaca'
-              }}>
-                {error}
-              </div>
-            ) : (
+              <div className="pulse-error">{error}</div>
+            ) : selectedTeam === 'all' ? (
               <>
-                {selectedTeam === 'all' ? (
-                  <>
-                    <SortTabs sortMetric={sortMetric} onChange={setSortMetric} />
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 18 }}>
-                      {sortedTeams.map((team, index) => (
-                        <TeamCard
-                          key={team.id}
-                          team={team}
-                          rank={index}
-                          metric={sortMetric}
-                          active={false}
-                          onClick={() => setSelectedTeam(team.id)}
-                        />
-                      ))}
-
-                      {TEAM_TABS
-                        .filter(tab => !['all', ...sortedTeams.map(team => team.id)].includes(tab.id))
-                        .map(tab => (
-                          <ComingSoonCard key={tab.id} team={TEAMS[tab.id]} />
-                        ))}
-                    </div>
-                  </>
-                ) : selectedTeamData ? (
-                  <>
-                    <div style={{
-                      background: 'linear-gradient(135deg, rgba(249,115,22,0.12), rgba(59,130,246,0.06))',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: 24,
-                      padding: 24,
-                      marginBottom: 18,
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: -30,
-                        left: -20,
-                        width: 180,
-                        height: 180,
-                        background: 'radial-gradient(circle, rgba(249,115,22,0.18), transparent 65%)',
-                        pointerEvents: 'none'
-                      }} />
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
-                        <div>
-                          <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>{formatDateLabel(selectedDate)}</div>
-                          <div style={{ fontSize: 30, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 12 }}>
-                            {TEAMS[selectedTeam].flag ? (
-                              <img src={TEAMS[selectedTeam].flag} alt={TEAMS[selectedTeam].label} width="24" height="17" style={{ borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.35)' }} />
-                            ) : (
-                              <span style={{ fontSize: 24 }}>🌎</span>
-                            )}
-                            {TEAMS[selectedTeam].label}
-                          </div>
-                          <div style={{ marginTop: 6, color: '#94a3b8', fontSize: 14 }}>
-                            {selectedTeamData.totals.activeAgents} active agents
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
-                      <SummaryCard title="English" value={selectedTeamData.totals.english} color="#60a5fa" subtitle={selectedTeamData.mainTotals ? `Main: ${selectedTeamData.mainTotals.english}` : ''} />
-                      <SummaryCard title="Spanish" value={selectedTeamData.totals.spanish} color="#34d399" subtitle={selectedTeamData.mainTotals ? `Main: ${selectedTeamData.mainTotals.spanish}` : ''} />
-                      <SummaryCard title="Total" value={selectedTeamData.totals.total} color="#f59e0b" subtitle={selectedTeamData.otTotals && selectedTeamData.includesOT ? `OT: ${selectedTeamData.otTotals.total}` : ''} />
-                      <SummaryCard title="Active agents" value={selectedTeamData.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
-                    </div>
-
-                    <AgentTable agents={selectedTeamData.agents} navigate={navigate} />
-                  </>
-                ) : (
-                  <ComingSoonCard team={TEAMS[selectedTeam]} />
-                )}
+                <SortTabs sortMetric={sortMetric} onChange={setSortMetric} />
+                <div className="pulse-overview-grid">
+                  {allTeamCards.map(({ team, parsed }) => (
+                    parsed
+                      ? <TeamOverviewCard key={team.id} team={team} parsed={parsed} sortMetric={sortMetric} onOpen={setSelectedTeam} />
+                      : <TeamComingSoonCard key={team.id} team={team} />
+                  ))}
+                </div>
               </>
+            ) : selectedParsed && selectedTeamMeta ? (
+              <TeamDetail team={selectedTeamMeta} parsed={selectedParsed} selectedDate={selectedDate} navigate={navigate} />
+            ) : (
+              <TeamComingSoonCard team={TEAMS[selectedTeam]} />
             )}
           </div>
 
-          <DatesPanel dateTabs={dateTabs} selectedDate={selectedDate} onSelect={setSelectedDate} />
+          <div className="pulse-sidebar">
+            <div className="pulse-sidebar-title">DATES</div>
+            <div className="pulse-dates-grid">
+              {dateTabs.map(date => {
+                const active = date === selectedDate
+                return (
+                  <button key={date} className={`pulse-date-btn ${active ? 'active' : ''}`} onClick={() => setSelectedDate(date)}>
+                    {formatDateLabel(date)}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>
