@@ -5,8 +5,8 @@ import './dashboard.css'
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
+const CLEAN_START_DATE = '2026-04-23'
 const POLL_MS = 30000
-const CACHE_KEY = 'pulse_dashboard_live_cache_v4'
 
 const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
 const TEAM_RANK_EMOJIS = ['/emojis/goal1.webp', '/emojis/goal3.webp', '/emojis/goal4.webp']
@@ -21,7 +21,6 @@ const TEAMS = {
     extPrefix: '3',
     hasSpanish: true,
     live: true,
-    type: 'asia',
   },
   philippines: {
     id: 'philippines',
@@ -32,7 +31,6 @@ const TEAMS = {
     extPrefix: '1',
     hasSpanish: false,
     live: true,
-    type: 'philippines',
   },
   colombia: {
     id: 'colombia',
@@ -43,7 +41,15 @@ const TEAMS = {
     extPrefix: '2',
     hasSpanish: true,
     live: true,
-    type: 'colombia',
+  },
+  central: {
+    id: 'central',
+    label: 'Central America',
+    short: 'Central',
+    flag: null,
+    extPrefix: '4',
+    hasSpanish: true,
+    live: false,
   },
   mexico: {
     id: 'mexico',
@@ -54,17 +60,6 @@ const TEAMS = {
     extPrefix: '5',
     hasSpanish: false,
     live: true,
-    type: 'mexico',
-  },
-  central: {
-    id: 'central',
-    label: 'Central America',
-    short: 'Central',
-    flag: null,
-    extPrefix: '4',
-    hasSpanish: true,
-    live: false,
-    type: 'coming',
   },
   venezuela: {
     id: 'venezuela',
@@ -74,99 +69,47 @@ const TEAMS = {
     extPrefix: '6',
     hasSpanish: true,
     live: false,
-    type: 'coming',
   },
 }
 
-const TEAM_ORDER = ['asia', 'philippines', 'colombia', 'mexico', 'central', 'venezuela']
+const TEAM_ORDER = ['asia', 'philippines', 'colombia', 'central', 'mexico', 'venezuela']
 const SORT_OPTIONS = [
   { id: 'english', label: 'English Xfers' },
   { id: 'spanish', label: 'Spanish Xfers' },
   { id: 'total', label: 'Total Xfers' },
 ]
 
-const safeInt = (val) => {
-  const cleaned = String(val ?? '').replace(/[$,]/g, '').trim()
-  const n = parseInt(cleaned, 10)
-  return Number.isFinite(n) ? n : 0
-}
+const safeInt = (val) => parseInt(String(val ?? '').replace(/,/g, '').trim(), 10) || 0
 const cellUpper = (val) => String(val ?? '').trim().toUpperCase()
-const rowText = (row, limit = 10) => (row || []).slice(0, limit).map(cellUpper).join(' | ')
 const todayKey = () => new Date().toISOString().slice(0, 10)
 const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
 const includeOT = () => colombiaHour() >= 18 || colombiaHour() < 6
 
-const glassButtonBase = {
-  appearance: 'none',
-  WebkitAppearance: 'none',
-  border: '1px solid rgba(255,255,255,0.08)',
-  background: 'rgba(255,255,255,0.03)',
-  color: '#cbd5e1',
-  borderRadius: 999,
-  padding: '12px 16px',
-  fontWeight: 800,
-  cursor: 'pointer',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 8,
-  fontSize: 15,
-  lineHeight: 1,
-  boxShadow: 'none',
-  fontFamily: "'Sora', system-ui, sans-serif",
+function normalizeDate(raw) {
+  if (!raw) return null
+  const s = String(raw).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return null
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
-function tabStyle(active) {
-  return active
-    ? {
-        ...glassButtonBase,
-        borderColor: 'rgba(249,115,22,0.65)',
-        background: 'linear-gradient(135deg, rgba(249,115,22,0.25), rgba(249,115,22,0.08))',
-        color: '#fff',
-      }
-    : glassButtonBase
+function rowText(row, limit = 10) {
+  return (row || []).slice(0, limit).map(cellUpper).join(' | ')
 }
 
-function sortButtonStyle(active) {
-  return active
-    ? {
-        ...glassButtonBase,
-        borderRadius: 14,
-        borderColor: '#f97316',
-        background: 'rgba(249,115,22,0.15)',
-        color: '#fff',
-      }
-    : { ...glassButtonBase, borderRadius: 14 }
-}
-
-function dateButtonStyle(active) {
-  return active
-    ? {
-        ...glassButtonBase,
-        width: '100%',
-        borderRadius: 14,
-        borderColor: '#f97316',
-        background: 'rgba(249,115,22,0.15)',
-        color: '#fff',
-        padding: '13px 10px',
-      }
-    : {
-        ...glassButtonBase,
-        width: '100%',
-        borderRadius: 14,
-        padding: '13px 10px',
-      }
-}
-
-function normalizeAgent(name, ext, english, spanish = 0) {
-  const en = safeInt(english)
+function buildAgent(name, ext, spanish, english) {
   const sp = safeInt(spanish)
+  const en = safeInt(english)
   return {
     name: String(name || '').trim(),
     ext: String(ext || '').replace(/,/g, '').trim(),
-    english: en,
     spanish: sp,
-    total: en + sp,
+    english: en,
+    total: sp + en,
   }
 }
 
@@ -175,61 +118,33 @@ function isAgentRow(nameCell, extCell, prefix) {
   const ext = String(extCell || '').replace(/,/g, '').trim()
   if (!new RegExp(`^${prefix}\\d{3}$`).test(ext)) return false
   if (!name) return false
-
   const banned = [
-    'MANAGEMENT', 'USER', 'USERS', 'SUPERVISOR', 'EXTENSION', 'OPENERS', 'TRANSFERS', 'TRANSFER',
-    'SPANISH', 'ENGLISH', 'TOTAL', 'TOTAL XFER', 'TOTAL XFERS', 'LEXNER', 'GENERAL MANAGER',
-    'PACIFIC STANDARD TIME', 'BREAK', 'LUNCH', 'DAILY TARGET', 'XFER PER HOUR', 'THIS HOUR GOAL',
-    'GOAL+', 'AGENT LOGGED IN', 'AGENTS LOGGED IN', 'LOG IN', 'LOGGED IN', 'COLOMBIA OT',
-    'PHILIPPINES OT', 'MEXICO OT', 'JUAN GARCIA', 'ASIA', 'PHILIPPINES', 'MEXICO TEAM',
-    'OT TAKERS', 'AW PHIL', 'ARWIN', 'PER AGENT', 'A U T O W A R R A N T Y',
+    'MANAGEMENT', 'USER', 'USERS', 'SUPERVISOR', 'EXTENSION', 'OPENERS', 'TRANSFERS', 'TRANSFER', 'SPANISH', 'ENGLISH', 'TOTAL',
+    'LEXNER', 'GENERAL MANAGER', 'PACIFIC STANDARD TIME', 'BREAK', 'LUNCH', 'DAILY TARGET', 'XFER PER HOUR',
+    'THIS HOUR GOAL', 'GOAL+', 'AGENT LOGGED IN', 'AGENTS LOGGED IN', 'COLOMBIA OT', 'JUAN GARCIA', 'ASIA', 'PHILIPPINES',
+    'OT TAKERS', 'PHILIPPINES OT', 'AW PHIL', 'ARWIN', 'SUPERVISOR', 'PER AGENT'
   ]
-
   return !banned.some(word => name.includes(word))
 }
 
 function sortAgentsByMetric(agents, metric) {
   return [...(agents || [])].sort((a, b) => {
-    const diff = (b?.[metric] || 0) - (a?.[metric] || 0)
-    if (diff !== 0) return diff
-    const totalDiff = (b?.total || 0) - (a?.total || 0)
-    if (totalDiff !== 0) return totalDiff
-    const englishDiff = (b?.english || 0) - (a?.english || 0)
-    if (englishDiff !== 0) return englishDiff
+    if ((b?.[metric] || 0) !== (a?.[metric] || 0)) return (b?.[metric] || 0) - (a?.[metric] || 0)
+    if ((b?.total || 0) !== (a?.total || 0)) return (b?.total || 0) - (a?.total || 0)
+    if ((b?.english || 0) !== (a?.english || 0)) return (b?.english || 0) - (a?.english || 0)
     return String(a?.name || '').localeCompare(String(b?.name || ''))
   })
 }
 
-function mergeAgentMaps(mainMap, otMap, allowOT) {
-  const merged = new Map()
-  mainMap.forEach(agent => merged.set(agent.ext, { ...agent }))
-
-  if (allowOT) {
-    otMap.forEach(agent => {
-      const prev = merged.get(agent.ext)
-      if (!prev) merged.set(agent.ext, { ...agent })
-      else {
-        merged.set(agent.ext, {
-          ...prev,
-          english: prev.english + agent.english,
-          spanish: prev.spanish + agent.spanish,
-          total: prev.total + agent.total,
-        })
-      }
-    })
-  }
-
-  return merged
-}
-
 function parseAsiaRows(rows, withOT) {
-  const main = new Map()
-  const ot = new Map()
+  const mainAgents = new Map()
+  const otAgents = new Map()
   let inOT = false
   let mainFooter = null
   let otFooter = null
 
-  for (const row of rows || []) {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
     const txt = rowText(row)
     const name = String(row[0] || '').trim()
     const ext = String(row[1] || '').replace(/,/g, '').trim()
@@ -243,7 +158,7 @@ function parseAsiaRows(rows, withOT) {
       const footer = {
         spanish: safeInt(row[2]),
         english: safeInt(row[3]),
-        total: safeInt(row[4]) || safeInt(row[2]) + safeInt(row[3]),
+        total: safeInt(row[4]) || (safeInt(row[2]) + safeInt(row[3]))
       }
       if (!inOT) mainFooter = footer
       else otFooter = footer
@@ -251,28 +166,75 @@ function parseAsiaRows(rows, withOT) {
     }
 
     if (!isAgentRow(name, ext, '3')) continue
-    const agent = normalizeAgent(name, ext, row[3], row[2])
-    const target = inOT ? ot : main
-    const prev = target.get(agent.ext)
-    if (!prev) target.set(agent.ext, agent)
-    else target.set(agent.ext, { ...prev, english: prev.english + agent.english, spanish: prev.spanish + agent.spanish, total: prev.total + agent.total })
+    const agent = buildAgent(name, ext, row[2], row[3])
+
+    if (!inOT) mainAgents.set(agent.ext, agent)
+    else {
+      const prev = otAgents.get(agent.ext)
+      if (!prev) otAgents.set(agent.ext, agent)
+      else {
+        otAgents.set(agent.ext, {
+          ...prev,
+          english: prev.english + agent.english,
+          spanish: prev.spanish + agent.spanish,
+          total: prev.total + agent.total,
+        })
+      }
+    }
   }
 
-  return buildParsedTeam(main, ot, withOT, mainFooter, otFooter, true)
+  const mainList = [...mainAgents.values()]
+  const otList = withOT ? [...otAgents.values()] : []
+  const merged = new Map()
+  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
+  otList.forEach(agent => {
+    const prev = merged.get(agent.ext)
+    if (!prev) merged.set(agent.ext, { ...agent })
+    else {
+      merged.set(agent.ext, {
+        ...prev,
+        english: prev.english + agent.english,
+        spanish: prev.spanish + agent.spanish,
+        total: prev.total + agent.total,
+      })
+    }
+  })
+
+  const agents = sortAgentsByMetric([...merged.values()], 'total')
+  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
+  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
+  const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
+  const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
+
+  return {
+    agents,
+    totals: {
+      spanish: mainSpanish + otSpanish,
+      english: mainEnglish + otEnglish,
+      total: mainSpanish + mainEnglish + otSpanish + otEnglish,
+      activeAgents: agents.length,
+    },
+    mainTotals: { spanish: mainSpanish, english: mainEnglish, total: mainSpanish + mainEnglish },
+    otTotals: { spanish: otSpanish, english: otEnglish, total: otSpanish + otEnglish },
+    includesOT: withOT,
+  }
 }
 
 function parseColombiaRows(rows, withOT) {
-  const main = new Map()
-  const ot = new Map()
+  const mainAgents = new Map()
+  const otAgents = new Map()
   let inOT = false
+  let sawOTSection = false
   let mainFooter = null
 
-  for (const row of rows || []) {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
     const txt = rowText(row)
     const name = String(row[0] || '').trim()
     const ext = String(row[1] || '').replace(/,/g, '').trim()
 
     if (txt.includes('COLOMBIA OT')) {
+      sawOTSection = true
       inOT = true
       continue
     }
@@ -281,108 +243,55 @@ function parseColombiaRows(rows, withOT) {
       const footer = {
         english: safeInt(row[3]),
         spanish: safeInt(row[4]),
-        total: safeInt(row[5]) || safeInt(row[3]) + safeInt(row[4]),
+        total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4]))
       }
-      if (footer.english || footer.spanish || footer.total) mainFooter = footer
+      if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) mainFooter = footer
       continue
     }
 
     if (!isAgentRow(name, ext, '2')) continue
-    const agent = normalizeAgent(name, ext, row[3], row[4])
-    const target = inOT ? ot : main
-    const prev = target.get(agent.ext)
-    if (!prev) target.set(agent.ext, agent)
-    else target.set(agent.ext, { ...prev, english: prev.english + agent.english, spanish: prev.spanish + agent.spanish, total: prev.total + agent.total })
+
+    const english = safeInt(row[3])
+    const spanish = safeInt(row[4])
+    const agent = buildAgent(name, ext, spanish, english)
+
+    if (!inOT) mainAgents.set(agent.ext, agent)
+    else {
+      const prev = otAgents.get(agent.ext)
+      if (!prev) otAgents.set(agent.ext, agent)
+      else {
+        otAgents.set(agent.ext, {
+          ...prev,
+          english: prev.english + agent.english,
+          spanish: prev.spanish + agent.spanish,
+          total: prev.total + agent.total,
+        })
+      }
+    }
   }
 
-  return buildParsedTeam(main, ot, withOT, mainFooter, null, true)
-}
-
-function parsePhilippinesRows(rows, withOT) {
-  const main = new Map()
-  const ot = new Map()
-  let inOT = false
-  let mainFooter = null
-  let otFooter = null
-
-  for (const row of rows || []) {
-    const txt = rowText(row)
-    const name = String(row[0] || '').trim()
-    const ext = String(row[1] || '').replace(/,/g, '').trim()
-
-    if (txt.includes('PHILIPPINES OT')) {
-      inOT = true
-      continue
+  const mainList = [...mainAgents.values()]
+  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
+  const merged = new Map()
+  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
+  otList.forEach(agent => {
+    const prev = merged.get(agent.ext)
+    if (!prev) merged.set(agent.ext, { ...agent })
+    else {
+      merged.set(agent.ext, {
+        ...prev,
+        english: prev.english + agent.english,
+        spanish: prev.spanish + agent.spanish,
+        total: prev.total + agent.total,
+      })
     }
+  })
 
-    if (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
-      const value = Math.max(safeInt(row[2]), safeInt(row[3]), safeInt(row[4]))
-      if (!inOT) mainFooter = { english: value, spanish: 0, total: value }
-      else otFooter = { english: value, spanish: 0, total: value }
-      continue
-    }
-
-    if (!isAgentRow(name, ext, '1')) continue
-    const agent = normalizeAgent(name, ext, row[2], 0)
-    const target = inOT ? ot : main
-    const prev = target.get(agent.ext)
-    if (!prev) target.set(agent.ext, agent)
-    else target.set(agent.ext, { ...prev, english: prev.english + agent.english, total: prev.total + agent.total })
-  }
-
-  return buildParsedTeam(main, ot, withOT, mainFooter, otFooter, false)
-}
-
-function parseMexicoRows(rows, withOT) {
-  const main = new Map()
-  const ot = new Map()
-  let inOT = false
-  let mainFooter = null
-  let otFooter = null
-
-  for (const row of rows || []) {
-    const txt = rowText(row)
-    const name = String(row[0] || '').trim()
-    const ext = String(row[1] || '').replace(/,/g, '').trim()
-
-    if (txt.includes('MEXICO OT')) {
-      inOT = true
-      continue
-    }
-
-    if (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('AGENTS LOG IN') || txt.includes('TOTAL TRANSFERS')) {
-      const value = Math.max(safeInt(row[3]), safeInt(row[4]), safeInt(row[5]), safeInt(row[2]))
-      if (!inOT) mainFooter = { english: value, spanish: 0, total: value }
-      else otFooter = { english: value, spanish: 0, total: value }
-      continue
-    }
-
-    if (!isAgentRow(name, ext, '5')) continue
-    const agent = normalizeAgent(name, ext, row[3], 0)
-    const target = inOT ? ot : main
-    const prev = target.get(agent.ext)
-    if (!prev) target.set(agent.ext, agent)
-    else target.set(agent.ext, { ...prev, english: prev.english + agent.english, total: prev.total + agent.total })
-  }
-
-  return buildParsedTeam(main, ot, withOT, mainFooter, otFooter, false)
-}
-
-function buildParsedTeam(mainMap, otMap, withOT, mainFooter, otFooter, hasSpanish) {
-  const mainList = [...mainMap.values()]
-  const otList = withOT ? [...otMap.values()] : []
-  const merged = mergeAgentMaps(mainMap, otMap, withOT)
   const agents = sortAgentsByMetric([...merged.values()], 'total')
-
-  const mainEnglishSum = mainList.reduce((sum, a) => sum + a.english, 0)
-  const mainSpanishSum = mainList.reduce((sum, a) => sum + a.spanish, 0)
-  const otEnglishSum = otList.reduce((sum, a) => sum + a.english, 0)
-  const otSpanishSum = otList.reduce((sum, a) => sum + a.spanish, 0)
-
-  const mainEnglish = Math.max(mainFooter?.english || 0, mainEnglishSum)
-  const mainSpanish = hasSpanish ? Math.max(mainFooter?.spanish || 0, mainSpanishSum) : 0
-  const otEnglish = withOT ? Math.max(otFooter?.english || 0, otEnglishSum) : 0
-  const otSpanish = hasSpanish && withOT ? Math.max(otFooter?.spanish || 0, otSpanishSum) : 0
+  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
+  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
+  const otEnglish = withOT ? otList.reduce((sum, a) => sum + a.english, 0) : 0
+  const otSpanish = withOT ? otList.reduce((sum, a) => sum + a.spanish, 0) : 0
 
   return {
     agents,
@@ -398,10 +307,191 @@ function buildParsedTeam(mainMap, otMap, withOT, mainFooter, otFooter, hasSpanis
   }
 }
 
+function parsePhilippinesRows(rows, withOT) {
+  const mainAgents = new Map()
+  const otAgents = new Map()
+  let inOT = false
+  let mainFooter = 0
+  let otFooter = 0
+  let sawOTSection = false
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const txt = rowText(row)
+    const name = String(row[0] || '').trim()
+    const ext = String(row[1] || '').replace(/,/g, '').trim()
+
+    if (txt.includes('PHILIPPINES OT')) {
+      sawOTSection = true
+      inOT = true
+      continue
+    }
+
+    if (!inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN'))) {
+      // Main footer is column C in current sheet layout.
+      mainFooter = Math.max(mainFooter, safeInt(row[2]), safeInt(row[3]))
+      continue
+    }
+
+    if (inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN'))) {
+      // OT footer is column C in the OT block. Ignore until after 6pm Colombia.
+      otFooter = Math.max(otFooter, safeInt(row[2]), safeInt(row[3]))
+      continue
+    }
+
+    if (!isAgentRow(name, ext, '1')) continue
+
+    if (!inOT) {
+      const english = safeInt(row[2])
+      const agent = buildAgent(name, ext, 0, english)
+      mainAgents.set(agent.ext, agent)
+    } else {
+      const english = safeInt(row[2])
+      const agent = buildAgent(name, ext, 0, english)
+      const prev = otAgents.get(agent.ext)
+      if (!prev) otAgents.set(agent.ext, agent)
+      else {
+        otAgents.set(agent.ext, {
+          ...prev,
+          english: prev.english + agent.english,
+          total: prev.total + agent.total,
+        })
+      }
+    }
+  }
+
+  const mainList = [...mainAgents.values()]
+  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
+  const merged = new Map()
+  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
+  otList.forEach(agent => {
+    const prev = merged.get(agent.ext)
+    if (!prev) merged.set(agent.ext, { ...agent })
+    else {
+      merged.set(agent.ext, {
+        ...prev,
+        english: prev.english + agent.english,
+        total: prev.total + agent.total,
+      })
+    }
+  })
+
+  const agents = sortAgentsByMetric([...merged.values()], 'total')
+  const mainEnglish = Math.max(mainFooter, mainList.reduce((sum, a) => sum + a.english, 0))
+  const otEnglish = withOT ? Math.max(otFooter, otList.reduce((sum, a) => sum + a.english, 0)) : 0
+
+  return {
+    agents,
+    totals: {
+      english: mainEnglish + otEnglish,
+      spanish: 0,
+      total: mainEnglish + otEnglish,
+      activeAgents: agents.length,
+    },
+    mainTotals: { english: mainEnglish, spanish: 0, total: mainEnglish },
+    otTotals: { english: otEnglish, spanish: 0, total: otEnglish },
+    includesOT: withOT,
+  }
+}
+
+
+function parseMexicoRows(rows, withOT) {
+  const mainAgents = new Map()
+  const otAgents = new Map()
+  let inOT = false
+  let sawOTSection = false
+  let mainFooter = 0
+  let otFooter = 0
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const txt = rowText(row)
+    const name = String(row[0] || '').trim()
+    const ext = String(row[1] || '').replace(/,/g, '').trim()
+
+    if (txt.includes('MEXICO OT') || txt.includes('MEXICO BAJA OT')) {
+      sawOTSection = true
+      inOT = true
+      continue
+    }
+
+    // Main Mexico footer uses column D for transfers.
+    // Do NOT scan money columns E/F; that is what caused 1,008 to show as xfers.
+    if (!inOT && (txt.includes('AGENTS LOG IN') || txt.includes('AGENT LOG IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
+      const direct = safeInt(row[3])
+      if (direct > 0) mainFooter = direct
+      continue
+    }
+
+    // Mexico OT footer also uses column D for total xfers, and only counts after 6pm Colombia.
+    if (inOT && (txt.includes('AGENTS LOG IN') || txt.includes('AGENT LOG IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
+      const direct = safeInt(row[3])
+      if (direct > 0) otFooter = direct
+      continue
+    }
+
+    if (!isAgentRow(name, ext, '5', ['AUTOWARRANTY', 'MEXICO TEAM', 'MEXICO OT'])) continue
+
+    const english = safeInt(row[3])
+    const agent = buildAgent(name, ext, 0, english)
+
+    if (!inOT) {
+      const prev = mainAgents.get(agent.ext)
+      if (!prev || agent.english > prev.english) mainAgents.set(agent.ext, agent)
+    } else {
+      const prev = otAgents.get(agent.ext)
+      if (!prev) otAgents.set(agent.ext, agent)
+      else {
+        otAgents.set(agent.ext, {
+          ...prev,
+          english: prev.english + agent.english,
+          total: prev.total + agent.total,
+        })
+      }
+    }
+  }
+
+  const mainList = [...mainAgents.values()]
+  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
+
+  const merged = new Map()
+  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
+  otList.forEach(agent => {
+    const prev = merged.get(agent.ext)
+    if (!prev) merged.set(agent.ext, { ...agent })
+    else {
+      merged.set(agent.ext, {
+        ...prev,
+        english: prev.english + agent.english,
+        total: prev.total + agent.total,
+      })
+    }
+  })
+
+  const agents = sortAgentsByMetric([...merged.values()], 'total')
+  const mainSum = mainList.reduce((sum, agent) => sum + agent.english, 0)
+  const otSum = otList.reduce((sum, agent) => sum + agent.english, 0)
+  const mainEnglish = mainFooter > 0 ? mainFooter : mainSum
+  const otEnglish = withOT ? (otFooter > 0 ? otFooter : otSum) : 0
+
+  return {
+    agents,
+    totals: {
+      english: mainEnglish + otEnglish,
+      spanish: 0,
+      total: mainEnglish + otEnglish,
+      activeAgents: agents.length,
+    },
+    mainTotals: { english: mainEnglish, spanish: 0, total: mainEnglish },
+    otTotals: { english: otEnglish, spanish: 0, total: otEnglish },
+    includesOT: withOT,
+  }
+}
+
 function parseLiveSheet(teamId, rows) {
   if (teamId === 'asia') return parseAsiaRows(rows, includeOT())
-  if (teamId === 'philippines') return parsePhilippinesRows(rows, includeOT())
   if (teamId === 'colombia') return parseColombiaRows(rows, includeOT())
+  if (teamId === 'philippines') return parsePhilippinesRows(rows, includeOT())
   if (teamId === 'mexico') return parseMexicoRows(rows, includeOT())
   return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 }, mainTotals: null, otTotals: null, includesOT: false }
 }
@@ -412,6 +502,12 @@ async function fetchSheetViaScript(sheetName) {
   const data = await res.json()
   if (!Array.isArray(data)) throw new Error(`getSheet failed: ${sheetName}`)
   return data.map(row => row.map(cell => String(cell ?? '')))
+}
+
+async function scriptCall(params) {
+  const url = `${SCRIPT_URL}?${new URLSearchParams(params)}&t=${Date.now()}`
+  const res = await fetch(url)
+  return res.json()
 }
 
 async function scriptPost(params) {
@@ -425,17 +521,16 @@ async function persistSnapshots(date, teamDataMap) {
 
   for (const teamId of Object.keys(teamDataMap || {})) {
     const parsed = teamDataMap[teamId]
-    const team = TEAMS[teamId]
-    if (!parsed || !team) continue
+    if (!parsed) continue
 
     totalsPayload.push({
       id: teamId,
-      name: team.label,
+      name: TEAMS[teamId]?.label || teamId,
       english: parsed.totals.english,
       spanish: parsed.totals.spanish,
       total: parsed.totals.total,
       agents: parsed.totals.activeAgents,
-      noSpanish: !team.hasSpanish,
+      noSpanish: !TEAMS[teamId]?.hasSpanish,
     })
 
     parsed.agents.forEach(agent => {
@@ -449,12 +544,32 @@ async function persistSnapshots(date, teamDataMap) {
       })
     })
 
-    await scriptPost({ action: 'saveTeamSnapshot', date, teamId, agents: JSON.stringify(parsed.agents) })
-    await scriptPost({ action: 'saveToWeeklySheet', date, team: teamId, agents: JSON.stringify(parsed.agents) })
+    await scriptPost({
+      action: 'saveTeamSnapshot',
+      date,
+      teamId,
+      agents: JSON.stringify(parsed.agents),
+    })
+
+    await scriptPost({
+      action: 'saveToWeeklySheet',
+      date,
+      team: teamId,
+      agents: JSON.stringify(parsed.agents),
+    })
   }
 
-  await scriptPost({ action: 'saveDailyTotals', date, teams: JSON.stringify(totalsPayload) })
-  await scriptPost({ action: 'saveAgentSnapshots', date, snapshots: JSON.stringify(allAgents) })
+  await scriptPost({
+    action: 'saveDailyTotals',
+    date,
+    teams: JSON.stringify(totalsPayload),
+  })
+
+  await scriptPost({
+    action: 'saveAgentSnapshots',
+    date,
+    snapshots: JSON.stringify(allAgents),
+  })
 }
 
 function formatDateLabel(date) {
@@ -475,7 +590,7 @@ function Medal({ index, size = 18 }) {
 function TeamTabs({ selectedTeam, onChange }) {
   return (
     <div className="pulse-tabs-grid">
-      <button type="button" className={`pulse-tab ${selectedTeam === 'all' ? 'active' : ''}`} style={tabStyle(selectedTeam === 'all')} onClick={() => onChange('all')}>
+      <button className={`pulse-tab ${selectedTeam === 'all' ? 'active' : ''}`} onClick={() => onChange('all')}>
         <span>All Teams</span>
       </button>
 
@@ -483,7 +598,7 @@ function TeamTabs({ selectedTeam, onChange }) {
         const team = TEAMS[teamId]
         const active = selectedTeam === teamId
         return (
-          <button key={teamId} type="button" className={`pulse-tab ${active ? 'active' : ''}`} style={tabStyle(active)} onClick={() => onChange(teamId)}>
+          <button key={teamId} className={`pulse-tab ${active ? 'active' : ''}`} onClick={() => onChange(teamId)}>
             <FlagImg src={team.flag} size={18} alt="" />
             <span>{team.short}</span>
           </button>
@@ -497,7 +612,11 @@ function SortTabs({ sortMetric, onChange }) {
   return (
     <div className="pulse-sort-tabs">
       {SORT_OPTIONS.map(option => (
-        <button key={option.id} type="button" className={`pulse-sort-tab ${sortMetric === option.id ? 'active' : ''}`} style={sortButtonStyle(sortMetric === option.id)} onClick={() => onChange(option.id)}>
+        <button
+          key={option.id}
+          className={`pulse-sort-tab ${sortMetric === option.id ? 'active' : ''}`}
+          onClick={() => onChange(option.id)}
+        >
           {option.label}
         </button>
       ))}
@@ -518,8 +637,6 @@ function SummaryCard({ title, value, color, subtitle }) {
 function TeamOverviewCard({ team, parsed, sortMetric, onOpen, rankIndex = 0 }) {
   const topThree = sortAgentsByMetric(parsed.agents, sortMetric).slice(0, 3)
   const teamRankIcon = TEAM_RANK_EMOJIS[rankIndex] || null
-  const metricLabel = SORT_OPTIONS.find(opt => opt.id === sortMetric)?.label || 'Xfers'
-
   return (
     <div className="pulse-team-card" onClick={() => onOpen(team.id)}>
       <div className="pulse-team-card-top">
@@ -540,7 +657,7 @@ function TeamOverviewCard({ team, parsed, sortMetric, onOpen, rankIndex = 0 }) {
         </div>
 
         <div className="pulse-team-metric">
-          <div className="pulse-team-metric-label">{metricLabel}</div>
+          <div className="pulse-team-metric-label">{SORT_OPTIONS.find(opt => opt.id === sortMetric)?.label}</div>
           <div className="pulse-team-metric-value">{Number(parsed.totals[sortMetric] || 0).toLocaleString()}</div>
         </div>
       </div>
@@ -607,18 +724,18 @@ function AgentTable({ team, agents, navigate }) {
               <th>#</th>
               <th>Agent</th>
               <th>Ext</th>
-              {team.hasSpanish && <th>Spanish</th>}
+              <th>Spanish</th>
               <th>English</th>
               <th>Total</th>
             </tr>
           </thead>
           <tbody>
             {agents.map((agent, index) => (
-              <tr key={agent.ext || `${agent.name}-${index}`}>
+              <tr key={agent.ext}>
                 <td>{index + 1}</td>
                 <td className="linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
                 <td>#{agent.ext}</td>
-                {team.hasSpanish && <td className="green">{agent.spanish}</td>}
+                <td className="green">{agent.spanish}</td>
                 <td className="blue">{agent.english}</td>
                 <td className="orange">{agent.total}</td>
               </tr>
@@ -630,13 +747,13 @@ function AgentTable({ team, agents, navigate }) {
   )
 }
 
-function TeamDetail({ team, parsed, navigate }) {
+function TeamDetail({ team, parsed, selectedDate, navigate }) {
   const showOT = parsed.includesOT && (parsed.otTotals?.total || 0) > 0
   return (
     <>
       <div className="pulse-hero-card">
         <div>
-          <div className="pulse-hero-date">Today — LIVE</div>
+          <div className="pulse-hero-date">{formatDateLabel(selectedDate)}</div>
           <div className="pulse-hero-title-row">
             <FlagImg src={team.flag} size={28} alt="" />
             <div className="pulse-hero-title">{team.label}</div>
@@ -647,14 +764,14 @@ function TeamDetail({ team, parsed, navigate }) {
 
       <div className="pulse-summary-grid">
         <SummaryCard title="English" value={parsed.totals.english} color="#60a5fa" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.english}` : ''} />
-        {team.hasSpanish && <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />}
+        <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />
         <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : ''} />
-        <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" subtitle="Live snapshot" />
+        <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
       </div>
 
       <div className="pulse-top-blocks-grid">
         <TopRow title="Top English" metric="english" agents={parsed.agents} />
-        {team.hasSpanish && <TopRow title="Top Spanish" metric="spanish" agents={parsed.agents} />}
+        <TopRow title="Top Spanish" metric="spanish" agents={parsed.agents} />
         <TopRow title="Top Total" metric="total" agents={parsed.agents} />
       </div>
 
@@ -665,29 +782,29 @@ function TeamDetail({ team, parsed, navigate }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [selectedDate, setSelectedDate] = useState(todayKey())
   const [selectedTeam, setSelectedTeam] = useState('all')
   const [sortMetric, setSortMetric] = useState('english')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [teamData, setTeamData] = useState({})
+  const [remoteDates, setRemoteDates] = useState([])
   const [lastUpdate, setLastUpdate] = useState(null)
 
   const liveTeamIds = useMemo(() => TEAM_ORDER.filter(teamId => TEAMS[teamId].live), [])
+  const isToday = selectedDate === todayKey()
 
-  const loadCache = useCallback(() => {
-    try {
-      const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')
-      if (cached?.teamData) {
-        setTeamData(cached.teamData)
-        if (cached.lastUpdate) setLastUpdate(new Date(cached.lastUpdate))
-        setLoading(false)
-      }
-    } catch (e) {}
+  const loadRemoteDates = useCallback(async () => {
+    const data = await scriptCall({ action: 'getDailyTotals' })
+    if (!Array.isArray(data)) return
+    const dates = data
+      .map(entry => normalizeDate(entry.date))
+      .filter(date => date && date >= CLEAN_START_DATE)
+    setRemoteDates([...new Set(dates)].sort((a, b) => b.localeCompare(a)))
   }, [])
 
-  const loadLiveTeams = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setError('')
-
+  const loadLiveTeams = useCallback(async () => {
+    setError('')
     const results = await Promise.allSettled(
       liveTeamIds.map(teamId => fetchSheetViaScript(TEAMS[teamId].sheetName))
     )
@@ -701,23 +818,56 @@ export default function Dashboard() {
 
     if (!Object.keys(next).length) throw new Error('Failed to read live team sheets')
 
-    setTeamData(prev => {
-      const merged = { ...prev, ...next }
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ teamData: merged, lastUpdate: new Date().toISOString() }))
-      return merged
+    setTeamData(next)
+    setLastUpdate(new Date())
+    await persistSnapshots(todayKey(), next)
+    await loadRemoteDates()
+  }, [liveTeamIds, loadRemoteDates])
+
+  const loadHistoricalTeams = useCallback(async (date) => {
+    setError('')
+    const [teamSnapshots, totals] = await Promise.all([
+      Promise.all(liveTeamIds.map(teamId => scriptCall({ action: 'getTeamSnapshot', date, teamId }))),
+      scriptCall({ action: 'getDailyTotals' }),
+    ])
+
+    const dailyEntry = Array.isArray(totals)
+      ? totals.find(entry => normalizeDate(entry.date) === date)
+      : null
+
+    const next = {}
+    liveTeamIds.forEach((teamId, index) => {
+      const snap = teamSnapshots[index]
+      const agents = snap?.ok && Array.isArray(snap.agents) ? snap.agents : []
+      const totalsRow = Array.isArray(dailyEntry?.teams)
+        ? dailyEntry.teams.find(team => String(team.id) === teamId)
+        : null
+
+      next[teamId] = {
+        agents: sortAgentsByMetric(agents, 'total'),
+        totals: {
+          english: Number(totalsRow?.english) || agents.reduce((sum, agent) => sum + (agent.english || 0), 0),
+          spanish: Number(totalsRow?.spanish) || agents.reduce((sum, agent) => sum + (agent.spanish || 0), 0),
+          total: Number(totalsRow?.total) || agents.reduce((sum, agent) => sum + (agent.total || 0), 0),
+          activeAgents: Number(totalsRow?.agents) || agents.length,
+        },
+        mainTotals: null,
+        otTotals: null,
+        includesOT: false,
+      }
     })
 
-    setLastUpdate(new Date())
-    persistSnapshots(todayKey(), next).catch(() => {})
+    setTeamData(next)
   }, [liveTeamIds])
 
   useEffect(() => {
     let cancelled = false
-    loadCache()
 
     const run = async () => {
+      setLoading(true)
       try {
-        await loadLiveTeams({ silent: false })
+        if (isToday) await loadLiveTeams()
+        else await loadHistoricalTeams(selectedDate)
       } catch (err) {
         if (!cancelled) setError(String(err?.message || err || 'Failed to load dashboard data'))
       } finally {
@@ -727,14 +877,24 @@ export default function Dashboard() {
 
     run()
     return () => { cancelled = true }
-  }, [loadCache, loadLiveTeams])
+  }, [selectedDate, isToday, loadLiveTeams, loadHistoricalTeams])
 
   useEffect(() => {
+    loadRemoteDates().catch(() => {})
+  }, [loadRemoteDates])
+
+  useEffect(() => {
+    if (!isToday) return
     const timer = setInterval(() => {
-      loadLiveTeams({ silent: true }).catch(() => {})
+      loadLiveTeams().catch(() => {})
     }, POLL_MS)
     return () => clearInterval(timer)
-  }, [loadLiveTeams])
+  }, [isToday, loadLiveTeams])
+
+  const dateTabs = useMemo(() => {
+    const set = new Set([todayKey(), ...remoteDates])
+    return [...set].filter(date => date >= CLEAN_START_DATE).sort((a, b) => b.localeCompare(a))
+  }, [remoteDates])
 
   const allTeamCards = useMemo(() => {
     const liveCards = liveTeamIds
@@ -761,18 +921,23 @@ export default function Dashboard() {
       <Navbar />
 
       <style>{`
-        button{font-family:'Sora',system-ui,sans-serif}
         .pulse-page{max-width:1320px;margin:0 auto;padding:26px 20px 60px}
         .pulse-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
         .pulse-title{margin:0;font-size:32px;font-weight:900;color:#f8fafc}
         .pulse-subtext{margin-top:8px;color:#94a3b8;font-size:14px;line-height:1.5}
         .pulse-updated{color:#94a3b8;font-size:13px}
         .pulse-tabs-grid{display:flex;flex-wrap:wrap;gap:10px;padding:16px;border-radius:28px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);margin-bottom:18px}
+        .pulse-tab{border:1px solid transparent;background:transparent!important;color:#cbd5e1!important;border-radius:999px;padding:12px 16px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px}
+        .pulse-tab.active{border-color:rgba(249,115,22,0.55);background:rgba(249,115,22,0.18);color:#fff}
         .pulse-sort-tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+        .pulse-sort-tab{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)!important;color:#cbd5e1!important;border-radius:16px;padding:12px 16px;font-weight:800;cursor:pointer;font-size:14px}
+        .pulse-sort-tab.active{border-color:#f97316;background:rgba(249,115,22,0.12);color:#fff}
         .pulse-content-grid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
         .pulse-sidebar{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:16px;position:sticky;top:86px}
         .pulse-sidebar-title{font-size:12px;color:#94a3b8;margin-bottom:12px;font-weight:800;letter-spacing:0.08em}
-        .pulse-dates-grid{display:grid;grid-template-columns:1fr;gap:10px}
+        .pulse-dates-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .pulse-date-btn{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)!important;color:#cbd5e1!important;border-radius:14px;padding:12px 10px;font-weight:800;cursor:pointer}
+        .pulse-date-btn.active{border-color:#f97316;background:rgba(249,115,22,0.12);color:#fff}
         .pulse-overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
         .pulse-team-card{background:linear-gradient(135deg,rgba(249,115,22,0.10),rgba(59,130,246,0.05));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:20px;cursor:pointer;min-height:220px}
         .pulse-coming-soon{background:rgba(255,255,255,0.03);min-height:130px;cursor:default}
@@ -783,29 +948,79 @@ export default function Dashboard() {
         .pulse-team-metric{text-align:right}
         .pulse-team-metric-label{font-size:12px;color:#94a3b8}
         .pulse-team-metric-value{margin-top:4px;font-size:22px;font-weight:900;color:#60a5fa}
-        .pulse-team-rank-badge{min-width:28px;display:flex;align-items:center;justify-content:center}
-        .pulse-team-rank-text{font-weight:900;color:#94a3b8;font-size:14px}
         .pulse-team-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
-        .stat-k{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}.stat-v{display:block;font-size:18px;font-weight:900}
+        .stat-k{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}
+        .stat-v{display:block;font-size:18px;font-weight:900}
         .blue{color:#60a5fa}.green{color:#34d399}.orange{color:#f59e0b}.purple{color:#c084fc}
-        .pulse-top3-list{display:grid;gap:8px;margin-top:18px}.pulse-top3-item{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:8px;align-items:center}.pulse-top3-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e5e7eb;font-size:13px}.pulse-top3-val{font-weight:900;color:#f8fafc;font-size:13px}
-        .pulse-hero-card{background:linear-gradient(135deg,rgba(249,115,22,0.12),rgba(59,130,246,0.06));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:24px;margin-bottom:18px}.pulse-hero-date{font-size:13px;color:#94a3b8;margin-bottom:6px}.pulse-hero-title-row{display:flex;align-items:center;gap:12px}.pulse-hero-title{font-size:30px;font-weight:900}.pulse-hero-sub{margin-top:6px;color:#94a3b8;font-size:14px}
-        .pulse-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.pulse-summary-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px}.pulse-summary-title{font-size:13px;color:#94a3b8;margin-bottom:10px}.pulse-summary-value{font-size:42px;font-weight:900;line-height:1}.pulse-summary-subtitle{margin-top:10px;color:#94a3b8;font-size:13px;min-height:18px}
-        .pulse-top-blocks-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}.pulse-top-block{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px}.pulse-top-block-title{font-size:14px;font-weight:800;color:#f8fafc;margin-bottom:12px}.pulse-top-block-item{display:grid;grid-template-columns:20px minmax(0,1fr) auto auto;gap:8px;align-items:center;margin-top:8px}.pulse-top-block-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;color:#f8fafc}.pulse-top-block-ext{font-size:12px;color:#94a3b8}.pulse-top-block-value{font-size:14px;font-weight:900;color:#f59e0b}
-        .pulse-table-wrap{margin-top:18px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;overflow:hidden}.pulse-table-title{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:800;color:#e5e7eb}.pulse-table-scroll{overflow-x:auto}.pulse-table{width:100%;border-collapse:collapse}.pulse-table th{padding:12px 16px;text-align:left;font-size:12px;color:#94a3b8;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,0.02)}.pulse-table td{padding:12px 16px;font-size:14px;color:#e5e7eb;border-top:1px solid rgba(255,255,255,0.04)}.pulse-table .linkish{font-weight:700;color:#f8fafc;cursor:pointer}
-        .pulse-loading,.pulse-error{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:48px 24px;text-align:center;color:#94a3b8}.pulse-error{background:rgba(127,29,29,0.18);border-color:rgba(248,113,113,0.35);color:#fecaca}
-        @media (max-width:1100px){.pulse-content-grid{grid-template-columns:1fr}.pulse-sidebar{position:static}.pulse-overview-grid{grid-template-columns:1fr 1fr}}
-        @media (max-width:860px){.pulse-overview-grid,.pulse-summary-grid,.pulse-top-blocks-grid{grid-template-columns:1fr}.pulse-team-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr)}.pulse-title{font-size:28px}.pulse-hero-title{font-size:26px}.pulse-summary-value{font-size:34px}}
-        @media (max-width:640px){.pulse-page{padding:18px 14px 44px}.pulse-tabs-grid{padding:12px;border-radius:22px}.pulse-team-card{padding:16px;min-height:auto}.pulse-team-card-top{display:block}.pulse-team-metric{text-align:left;margin-top:12px}.pulse-top-block-item{grid-template-columns:20px minmax(0,1fr) auto}.pulse-top-block-ext{display:none}.pulse-team-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr)}}
+        .pulse-top3-list{display:grid;gap:8px;margin-top:18px}
+        .pulse-top3-item{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:8px;align-items:center}
+        .pulse-top3-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e5e7eb;font-size:13px}
+        .pulse-top3-val{font-weight:900;color:#f8fafc;font-size:13px}
+        .pulse-hero-card{background:linear-gradient(135deg,rgba(249,115,22,0.12),rgba(59,130,246,0.06));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:24px;margin-bottom:18px}
+        .pulse-hero-date{font-size:13px;color:#94a3b8;margin-bottom:6px}
+        .pulse-hero-title-row{display:flex;align-items:center;gap:12px}
+        .pulse-hero-title{font-size:30px;font-weight:900}
+        .pulse-hero-sub{margin-top:6px;color:#94a3b8;font-size:14px}
+        .pulse-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+        .pulse-summary-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px}
+        .pulse-summary-title{font-size:13px;color:#94a3b8;margin-bottom:10px}
+        .pulse-summary-value{font-size:42px;font-weight:900;line-height:1}
+        .pulse-summary-subtitle{margin-top:10px;color:#94a3b8;font-size:13px;min-height:18px}
+        .pulse-top-blocks-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
+        .pulse-top-block{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px}
+        .pulse-top-block-title{font-size:14px;font-weight:800;color:#f8fafc;margin-bottom:12px}
+        .pulse-top-block-item{display:grid;grid-template-columns:20px minmax(0,1fr) auto auto;gap:8px;align-items:center;margin-top:8px}
+        .pulse-top-block-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;color:#f8fafc}
+        .pulse-top-block-ext{font-size:12px;color:#94a3b8}
+        .pulse-top-block-value{font-size:14px;font-weight:900;color:#f59e0b}
+        .pulse-table-wrap{margin-top:18px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;overflow:hidden}
+        .pulse-table-title{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:800;color:#e5e7eb}
+        .pulse-table-scroll{overflow-x:auto}
+        .pulse-table{width:100%;border-collapse:collapse}
+        .pulse-table th{padding:12px 16px;text-align:left;font-size:12px;color:#94a3b8;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,0.02)}
+        .pulse-table td{padding:12px 16px;font-size:14px;color:#e5e7eb;border-top:1px solid rgba(255,255,255,0.04)}
+        .pulse-table .linkish{font-weight:700;color:#f8fafc;cursor:pointer}
+        .pulse-loading,.pulse-error{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:48px 24px;text-align:center;color:#94a3b8}
+        .pulse-error{background:rgba(127,29,29,0.18);border-color:rgba(248,113,113,0.35);color:#fecaca}
+        @media (max-width: 1100px){
+          .pulse-content-grid{grid-template-columns:1fr}
+          .pulse-sidebar{position:static}
+          .pulse-overview-grid{grid-template-columns:1fr 1fr}
+        }
+        @media (max-width: 860px){
+          .pulse-overview-grid,.pulse-summary-grid,.pulse-top-blocks-grid{grid-template-columns:1fr}
+          .pulse-team-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .pulse-title{font-size:28px}
+          .pulse-hero-title{font-size:26px}
+          .pulse-summary-value{font-size:34px}
+        }
+        @media (max-width: 640px){
+          .pulse-page{padding:18px 14px 44px}
+          .pulse-tabs-grid{padding:12px;border-radius:22px}
+          .pulse-tab{padding:10px 12px;font-size:14px}
+          .pulse-sort-tab{padding:10px 12px;font-size:13px}
+          .pulse-dates-grid{grid-template-columns:1fr}
+          .pulse-team-card{padding:16px;min-height:auto}
+          .pulse-team-card-top{display:block}
+          .pulse-team-metric{text-align:left;margin-top:12px}
+          .pulse-top-block-item{grid-template-columns:20px minmax(0,1fr) auto}
+          .pulse-top-block-ext{display:none}
+          .pulse-team-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        }
       `}</style>
 
       <div className="pulse-page">
         <div className="pulse-topbar">
           <div>
-            <h1 className="pulse-title">Pulse</h1>
-            <div className="pulse-subtext">Live now: Asia, Philippines, Colombia and Mexico. Other teams stay visible while we add them slowly and safely.</div>
+            <h1 className="pulse-title">AutoWarrantyGarrett</h1>
+            <div className="pulse-subtext">
+              Live now: Asia, Philippines, Colombia and Mexico. Other teams stay visible while we add them slowly and safely.
+            </div>
           </div>
-          <div className="pulse-updated">{lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : 'Waiting for first load...'}</div>
+
+          <div className="pulse-updated">
+            {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : 'Waiting for first load...'}
+          </div>
         </div>
 
         <TeamTabs selectedTeam={selectedTeam} onChange={setSelectedTeam} />
@@ -828,7 +1043,7 @@ export default function Dashboard() {
                 </div>
               </>
             ) : selectedParsed && selectedTeamMeta ? (
-              <TeamDetail team={selectedTeamMeta} parsed={selectedParsed} navigate={navigate} />
+              <TeamDetail team={selectedTeamMeta} parsed={selectedParsed} selectedDate={selectedDate} navigate={navigate} />
             ) : (
               <TeamComingSoonCard team={TEAMS[selectedTeam]} />
             )}
@@ -837,7 +1052,14 @@ export default function Dashboard() {
           <div className="pulse-sidebar">
             <div className="pulse-sidebar-title">DATES</div>
             <div className="pulse-dates-grid">
-              <button type="button" style={dateButtonStyle(true)}>Today — LIVE</button>
+              {dateTabs.map(date => {
+                const active = date === selectedDate
+                return (
+                  <button key={date} className={`pulse-date-btn ${active ? 'active' : ''}`} onClick={() => setSelectedDate(date)}>
+                    {formatDateLabel(date)}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
