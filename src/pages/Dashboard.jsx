@@ -5,6 +5,8 @@ import './dashboard.css'
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
+const ASIA_QA_SHEET_ID = '1EWdOANdyObLRYNoBIfIGG5YKVEvFiYVzDY_rDgXk4iY'
+const ASIA_QA_SHEET_NAME = 'Invalid Transfers ASIA'
 const CLEAN_START_DATE = '2026-04-23'
 const POLL_MS = 30000
 
@@ -55,11 +57,10 @@ const TEAMS = {
     id: 'mexico',
     label: 'Mexico Baja',
     short: 'Mexico',
-    sheetName: 'AW GARRET BAJA MX KEVIN',
     flag: '/flags/mexico.png',
     extPrefix: '5',
     hasSpanish: false,
-    live: true,
+    live: false,
   },
   venezuela: {
     id: 'venezuela',
@@ -78,6 +79,65 @@ const SORT_OPTIONS = [
   { id: 'spanish', label: 'Spanish Xfers' },
   { id: 'total', label: 'Total Xfers' },
 ]
+
+
+const QA_OPTIONS = [
+  'Good',
+  'Call Structure – Failure to stick to the script',
+  'Poor Call Control/Rebuttals',
+  'Low Issues With Call Control/Rebuttals',
+  'Language Barrier – Bad Pronunciation',
+  'Language Barrier – Bad Spanish',
+  'Language Barrier – Comprehension Skills',
+  'Call Handling – Incorrect or missing introduction',
+  'Call Handling – Poor active listening',
+  'Call Handling – Poor Handling of Busy Customer',
+  'Call Handling – Old script',
+  'Call Handling – Warm xfer window of time',
+  'Call Handling – Consent',
+  'Knowledge – Unable to answer basic questions',
+  'Knowledge – Lack of product knowledge',
+  'Knowledge – Communication with advisor',
+  'Raw Transfer',
+  'Transferred non-English speaker',
+  'Transferred non-decision maker',
+  'Transferred wrong language speaker',
+  'No Improvement Evidenced',
+  'Bad',
+  'Improving',
+  'Absent',
+  'Tech Issues – Internet problems',
+  'Tech issue – Timing / “Hangup both lines”',
+  'Support / administrative interactions',
+]
+
+const QA_IGNORED = new Set(['GOOD', 'IMPROVING', 'ABSENT'])
+const QA_SHORT_LABELS = {
+  'CALL STRUCTURE – FAILURE TO STICK TO THE SCRIPT': 'Script failure',
+  'POOR CALL CONTROL/REBUTTALS': 'Poor control',
+  'LOW ISSUES WITH CALL CONTROL/REBUTTALS': 'Low control issue',
+  'LANGUAGE BARRIER – BAD PRONUNCIATION': 'Bad pronunciation',
+  'LANGUAGE BARRIER – BAD SPANISH': 'Bad Spanish',
+  'LANGUAGE BARRIER – COMPREHENSION SKILLS': 'Comprehension',
+  'CALL HANDLING – INCORRECT OR MISSING INTRODUCTION': 'No intro',
+  'CALL HANDLING – POOR ACTIVE LISTENING': 'Poor listening',
+  'CALL HANDLING – POOR HANDLING OF BUSY CUSTOMER': 'Busy customer',
+  'CALL HANDLING – OLD SCRIPT': 'Old script',
+  'CALL HANDLING – WARM XFER WINDOW OF TIME': 'Warm xfer timing',
+  'CALL HANDLING – CONSENT': 'Consent',
+  'KNOWLEDGE – UNABLE TO ANSWER BASIC QUESTIONS': 'Basic questions',
+  'KNOWLEDGE – LACK OF PRODUCT KNOWLEDGE': 'Product knowledge',
+  'KNOWLEDGE – COMMUNICATION WITH ADVISOR': 'Advisor communication',
+  'RAW TRANSFER': 'Raw transfer',
+  'TRANSFERRED NON-ENGLISH SPEAKER': 'Non-English speaker',
+  'TRANSFERRED NON-DECISION MAKER': 'Non-decision maker',
+  'TRANSFERRED WRONG LANGUAGE SPEAKER': 'Wrong language',
+  'NO IMPROVEMENT EVIDENCED': 'No improvement',
+  'BAD': 'Bad',
+  'TECH ISSUES – INTERNET PROBLEMS': 'Internet issue',
+  'TECH ISSUE – TIMING / “HANGUP BOTH LINES”': 'Hangup timing',
+  'SUPPORT / ADMINISTRATIVE INTERACTIONS': 'Support/admin',
+}
 
 const safeInt = (val) => parseInt(String(val ?? '').replace(/,/g, '').trim(), 10) || 0
 const cellUpper = (val) => String(val ?? '').trim().toUpperCase()
@@ -395,96 +455,147 @@ function parsePhilippinesRows(rows, withOT) {
 }
 
 
-function parseMexicoRows(rows, withOT) {
-  const mainAgents = new Map()
-  const otAgents = new Map()
-  let inOT = false
-  let sawOTSection = false
-  let mainFooter = 0
-  let otFooter = 0
+function normalizeQaDate(raw) {
+  const s = String(raw ?? '').trim()
+  if (!s) return null
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (m) {
+    const month = String(m[1]).padStart(2, '0')
+    const day = String(m[2]).padStart(2, '0')
+    return `${m[3]}-${month}-${day}`
+  }
+  return normalizeDate(s)
+}
+
+function findQaOption(raw) {
+  const original = String(raw ?? '').trim()
+  if (!original) return null
+  const upper = cellUpper(original)
+
+  if (upper === 'INVALID TRANSFER' || upper.includes('INVALID TRANSFER')) {
+    return { key: 'INVALID TRANSFER', label: 'Invalid Transfer', short: 'Invalid transfer', invalidTag: true, ignored: false }
+  }
+
+  const exact = QA_OPTIONS.find(option => cellUpper(option) === upper)
+  if (exact) {
+    const key = cellUpper(exact)
+    return { key, label: exact, short: QA_SHORT_LABELS[key] || exact, invalidTag: false, ignored: QA_IGNORED.has(key) }
+  }
+
+  const partial = QA_OPTIONS.find(option => {
+    const key = cellUpper(option)
+    return key.length > 10 && (upper.startsWith(key.slice(0, 24)) || upper.includes(key.slice(0, 24)))
+  })
+  if (partial) {
+    const key = cellUpper(partial)
+    return { key, label: partial, short: QA_SHORT_LABELS[key] || partial, invalidTag: false, ignored: QA_IGNORED.has(key) }
+  }
+
+  return null
+}
+
+function parseAsiaInvalidTransfersRows(rows, targetDate = todayKey()) {
+  const byExt = {}
+  let current = null
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
-    const txt = rowText(row)
-    const name = String(row[0] || '').trim()
-    const ext = String(row[1] || '').replace(/,/g, '').trim()
+    const possibleName = String(row[0] || '').trim()
+    const possibleExt = String(row[1] || '').replace(/,/g, '').trim()
 
-    if (txt.includes('MEXICO OT') || txt.includes('MEXICO BAJA OT')) {
-      sawOTSection = true
-      inOT = true
-      continue
+    if (possibleName && /^3\d{3}$/.test(possibleExt)) {
+      current = { name: possibleName, ext: possibleExt }
+      if (!byExt[current.ext]) byExt[current.ext] = { name: current.name, ext: current.ext, calls: {} }
     }
 
-    // Main Mexico footer uses column D for transfers.
-    // Do NOT scan money columns E/F; that is what caused 1,008 to show as xfers.
-    if (!inOT && (txt.includes('AGENTS LOG IN') || txt.includes('AGENT LOG IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
-      const direct = safeInt(row[3])
-      if (direct > 0) mainFooter = direct
-      continue
-    }
+    if (!current) continue
+    if (!byExt[current.ext]) byExt[current.ext] = { name: current.name, ext: current.ext, calls: {} }
 
-    // Mexico OT footer also uses column D for total xfers, and only counts after 6pm Colombia.
-    if (inOT && (txt.includes('AGENTS LOG IN') || txt.includes('AGENT LOG IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
-      const direct = safeInt(row[3])
-      if (direct > 0) otFooter = direct
-      continue
-    }
+    for (let col = 2; col < row.length; col++) {
+      const cell = String(row[col] || '').trim()
+      if (!cell) continue
 
-    if (!isAgentRow(name, ext, '5', ['AUTOWARRANTY', 'MEXICO TEAM', 'MEXICO OT'])) continue
+      const qaDate = normalizeQaDate(cell)
+      const qa = findQaOption(cell)
+      if (!qaDate && !qa) continue
 
-    const english = safeInt(row[3])
-    const agent = buildAgent(name, ext, 0, english)
+      if (!byExt[current.ext].calls[col]) {
+        byExt[current.ext].calls[col] = { date: null, invalidTag: false, issueLabel: '', short: '' }
+      }
 
-    if (!inOT) {
-      const prev = mainAgents.get(agent.ext)
-      if (!prev || agent.english > prev.english) mainAgents.set(agent.ext, agent)
-    } else {
-      const prev = otAgents.get(agent.ext)
-      if (!prev) otAgents.set(agent.ext, agent)
-      else {
-        otAgents.set(agent.ext, {
-          ...prev,
-          english: prev.english + agent.english,
-          total: prev.total + agent.total,
-        })
+      const call = byExt[current.ext].calls[col]
+      if (qaDate) call.date = qaDate
+      if (qa?.invalidTag) call.invalidTag = true
+      if (qa && !qa.invalidTag && !qa.ignored) {
+        call.issueLabel = qa.label
+        call.short = qa.short
       }
     }
   }
 
-  const mainList = [...mainAgents.values()]
-  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
-
-  const merged = new Map()
-  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
-  otList.forEach(agent => {
-    const prev = merged.get(agent.ext)
-    if (!prev) merged.set(agent.ext, { ...agent })
-    else {
-      merged.set(agent.ext, {
-        ...prev,
-        english: prev.english + agent.english,
-        total: prev.total + agent.total,
+  const out = {}
+  Object.values(byExt).forEach(agent => {
+    const details = Object.values(agent.calls)
+      .filter(call => {
+        const isTodayOrUndated = !call.date || call.date === targetDate
+        const hasInvalid = call.invalidTag || !!call.issueLabel
+        return isTodayOrUndated && hasInvalid
       })
+      .map(call => ({
+        date: call.date || targetDate,
+        issue: call.issueLabel || 'Invalid Transfer',
+        short: call.short || 'Invalid transfer',
+      }))
+
+    out[agent.ext] = {
+      ext: agent.ext,
+      name: agent.name,
+      invalidTransfers: details.length,
+      lastInvalidIssue: details.length ? details[details.length - 1].short : '',
+      invalidDetails: details,
     }
   })
 
-  const agents = sortAgentsByMetric([...merged.values()], 'total')
-  const mainSum = mainList.reduce((sum, agent) => sum + agent.english, 0)
-  const otSum = otList.reduce((sum, agent) => sum + agent.english, 0)
-  const mainEnglish = mainFooter > 0 ? mainFooter : mainSum
-  const otEnglish = withOT ? (otFooter > 0 ? otFooter : otSum) : 0
+  return out
+}
+
+function applyAsiaInvalidTransfers(parsed, invalidRows, targetDate = todayKey()) {
+  if (!parsed) return parsed
+  const invalidMap = parseAsiaInvalidTransfersRows(invalidRows || [], targetDate)
+
+  const agents = (parsed.agents || []).map(agent => {
+    const invalid = invalidMap[agent.ext] || {}
+    return {
+      ...agent,
+      invalidTransfers: invalid.invalidTransfers || 0,
+      lastInvalidIssue: invalid.lastInvalidIssue || '',
+      invalidDetails: invalid.invalidDetails || [],
+    }
+  })
+
+  const agentsWithInvalidOnly = Object.values(invalidMap)
+    .filter(invalid => !agents.some(agent => agent.ext === invalid.ext) && invalid.invalidTransfers > 0)
+    .map(invalid => ({
+      name: invalid.name,
+      ext: invalid.ext,
+      spanish: 0,
+      english: 0,
+      total: 0,
+      invalidTransfers: invalid.invalidTransfers,
+      lastInvalidIssue: invalid.lastInvalidIssue,
+      invalidDetails: invalid.invalidDetails || [],
+    }))
+
+  const mergedAgents = [...agents, ...agentsWithInvalidOnly]
+  const invalidTotal = mergedAgents.reduce((sum, agent) => sum + (agent.invalidTransfers || 0), 0)
 
   return {
-    agents,
-    totals: {
-      english: mainEnglish + otEnglish,
-      spanish: 0,
-      total: mainEnglish + otEnglish,
-      activeAgents: agents.length,
+    ...parsed,
+    agents: mergedAgents,
+    invalidTotals: {
+      total: invalidTotal,
+      agents: mergedAgents.filter(agent => (agent.invalidTransfers || 0) > 0).length,
     },
-    mainTotals: { english: mainEnglish, spanish: 0, total: mainEnglish },
-    otTotals: { english: otEnglish, spanish: 0, total: otEnglish },
-    includesOT: withOT,
   }
 }
 
@@ -492,12 +603,11 @@ function parseLiveSheet(teamId, rows) {
   if (teamId === 'asia') return parseAsiaRows(rows, includeOT())
   if (teamId === 'colombia') return parseColombiaRows(rows, includeOT())
   if (teamId === 'philippines') return parsePhilippinesRows(rows, includeOT())
-  if (teamId === 'mexico') return parseMexicoRows(rows, includeOT())
   return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 }, mainTotals: null, otTotals: null, includesOT: false }
 }
 
-async function fetchSheetViaScript(sheetName) {
-  const url = `${SCRIPT_URL}?action=getSheet&sheetId=${encodeURIComponent(SHEET_ID)}&sheetName=${encodeURIComponent(sheetName)}&t=${Date.now()}`
+async function fetchSheetViaScript(sheetName, sheetId = SHEET_ID) {
+  const url = `${SCRIPT_URL}?action=getSheet&sheetId=${encodeURIComponent(sheetId)}&sheetName=${encodeURIComponent(sheetName)}&t=${Date.now()}`
   const res = await fetch(url)
   const data = await res.json()
   if (!Array.isArray(data)) throw new Error(`getSheet failed: ${sheetName}`)
@@ -714,6 +824,8 @@ function TopRow({ title, metric, agents }) {
 }
 
 function AgentTable({ team, agents, navigate }) {
+  const showInvalid = team.id === 'asia'
+
   return (
     <div className="pulse-table-wrap">
       <div className="pulse-table-title">{team.label} agents</div>
@@ -727,6 +839,8 @@ function AgentTable({ team, agents, navigate }) {
               <th>Spanish</th>
               <th>English</th>
               <th>Total</th>
+              {showInvalid && <th>Invalid xfers</th>}
+              {showInvalid && <th>Last QA issue</th>}
             </tr>
           </thead>
           <tbody>
@@ -738,11 +852,45 @@ function AgentTable({ team, agents, navigate }) {
                 <td className="green">{agent.spanish}</td>
                 <td className="blue">{agent.english}</td>
                 <td className="orange">{agent.total}</td>
+                {showInvalid && <td className={(agent.invalidTransfers || 0) > 0 ? 'red' : ''}>{agent.invalidTransfers || 0}</td>}
+                {showInvalid && <td className="qa-issue-cell">{agent.lastInvalidIssue || '—'}</td>}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+function AsiaInvalidTransfersPanel({ agents }) {
+  const invalidAgents = [...(agents || [])]
+    .filter(agent => (agent.invalidTransfers || 0) > 0)
+    .sort((a, b) => (b.invalidTransfers || 0) - (a.invalidTransfers || 0) || String(a.name || '').localeCompare(String(b.name || '')))
+    .slice(0, 8)
+
+  return (
+    <div className="pulse-invalid-panel">
+      <div>
+        <div className="pulse-invalid-title">Asia invalid transfers</div>
+        <div className="pulse-invalid-subtitle">QA issues from the Invalid Transfers ASIA sheet.</div>
+      </div>
+
+      {invalidAgents.length === 0 ? (
+        <div className="pulse-invalid-empty">No invalid transfers logged for today.</div>
+      ) : (
+        <div className="pulse-invalid-list">
+          {invalidAgents.map(agent => (
+            <div key={`invalid-${agent.ext}`} className="pulse-invalid-item">
+              <div>
+                <div className="pulse-invalid-agent">{agent.name}</div>
+                <div className="pulse-invalid-meta">#{agent.ext} · {agent.lastInvalidIssue || 'Invalid transfer'}</div>
+              </div>
+              <div className="pulse-invalid-count">{agent.invalidTransfers}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -767,6 +915,7 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
         <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />
         <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : ''} />
         <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
+        {team.id === 'asia' && <SummaryCard title="Invalid xfers" value={parsed.invalidTotals?.total || 0} color="#f87171" subtitle={parsed.invalidTotals?.agents ? `${parsed.invalidTotals.agents} agents flagged` : 'QA reports'} />}
       </div>
 
       <div className="pulse-top-blocks-grid">
@@ -774,6 +923,8 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
         <TopRow title="Top Spanish" metric="spanish" agents={parsed.agents} />
         <TopRow title="Top Total" metric="total" agents={parsed.agents} />
       </div>
+
+      {team.id === 'asia' && <AsiaInvalidTransfersPanel agents={parsed.agents} />}
 
       <AgentTable team={team} agents={parsed.agents} navigate={navigate} />
     </>
@@ -809,10 +960,16 @@ export default function Dashboard() {
       liveTeamIds.map(teamId => fetchSheetViaScript(TEAMS[teamId].sheetName))
     )
 
+    const invalidAsiaResult = liveTeamIds.includes('asia')
+      ? await fetchSheetViaScript(ASIA_QA_SHEET_NAME, ASIA_QA_SHEET_ID).then(rows => ({ ok: true, rows })).catch(() => ({ ok: false, rows: [] }))
+      : { ok: false, rows: [] }
+
     const next = {}
     liveTeamIds.forEach((teamId, index) => {
       if (results[index].status === 'fulfilled') {
-        next[teamId] = parseLiveSheet(teamId, results[index].value)
+        let parsed = parseLiveSheet(teamId, results[index].value)
+        if (teamId === 'asia') parsed = applyAsiaInvalidTransfers(parsed, invalidAsiaResult.rows, todayKey())
+        next[teamId] = parsed
       }
     })
 
@@ -927,16 +1084,16 @@ export default function Dashboard() {
         .pulse-subtext{margin-top:8px;color:#94a3b8;font-size:14px;line-height:1.5}
         .pulse-updated{color:#94a3b8;font-size:13px}
         .pulse-tabs-grid{display:flex;flex-wrap:wrap;gap:10px;padding:16px;border-radius:28px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);margin-bottom:18px}
-        .pulse-tab{border:1px solid transparent;background:transparent!important;color:#cbd5e1!important;border-radius:999px;padding:12px 16px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px}
+        .pulse-tab{border:1px solid transparent;background:transparent;color:#cbd5e1;border-radius:999px;padding:12px 16px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px}
         .pulse-tab.active{border-color:rgba(249,115,22,0.55);background:rgba(249,115,22,0.18);color:#fff}
         .pulse-sort-tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
-        .pulse-sort-tab{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)!important;color:#cbd5e1!important;border-radius:16px;padding:12px 16px;font-weight:800;cursor:pointer;font-size:14px}
+        .pulse-sort-tab{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#cbd5e1;border-radius:16px;padding:12px 16px;font-weight:800;cursor:pointer;font-size:14px}
         .pulse-sort-tab.active{border-color:#f97316;background:rgba(249,115,22,0.12);color:#fff}
         .pulse-content-grid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
         .pulse-sidebar{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:16px;position:sticky;top:86px}
         .pulse-sidebar-title{font-size:12px;color:#94a3b8;margin-bottom:12px;font-weight:800;letter-spacing:0.08em}
         .pulse-dates-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-        .pulse-date-btn{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)!important;color:#cbd5e1!important;border-radius:14px;padding:12px 10px;font-weight:800;cursor:pointer}
+        .pulse-date-btn{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#cbd5e1;border-radius:14px;padding:12px 10px;font-weight:800;cursor:pointer}
         .pulse-date-btn.active{border-color:#f97316;background:rgba(249,115,22,0.12);color:#fff}
         .pulse-overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
         .pulse-team-card{background:linear-gradient(135deg,rgba(249,115,22,0.10),rgba(59,130,246,0.05));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:20px;cursor:pointer;min-height:220px}
@@ -951,7 +1108,7 @@ export default function Dashboard() {
         .pulse-team-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
         .stat-k{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}
         .stat-v{display:block;font-size:18px;font-weight:900}
-        .blue{color:#60a5fa}.green{color:#34d399}.orange{color:#f59e0b}.purple{color:#c084fc}
+        .blue{color:#60a5fa}.green{color:#34d399}.orange{color:#f59e0b}.purple{color:#c084fc}.red{color:#f87171;font-weight:900}
         .pulse-top3-list{display:grid;gap:8px;margin-top:18px}
         .pulse-top3-item{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:8px;align-items:center}
         .pulse-top3-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e5e7eb;font-size:13px}
@@ -980,6 +1137,16 @@ export default function Dashboard() {
         .pulse-table th{padding:12px 16px;text-align:left;font-size:12px;color:#94a3b8;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,0.02)}
         .pulse-table td{padding:12px 16px;font-size:14px;color:#e5e7eb;border-top:1px solid rgba(255,255,255,0.04)}
         .pulse-table .linkish{font-weight:700;color:#f8fafc;cursor:pointer}
+        .qa-issue-cell{color:#cbd5e1;font-size:13px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .pulse-invalid-panel{margin-top:18px;background:rgba(127,29,29,0.12);border:1px solid rgba(248,113,113,0.22);border-radius:18px;padding:18px}
+        .pulse-invalid-title{font-size:16px;font-weight:900;color:#fecaca}
+        .pulse-invalid-subtitle{margin-top:4px;color:#94a3b8;font-size:13px}
+        .pulse-invalid-empty{margin-top:14px;color:#94a3b8;font-size:14px}
+        .pulse-invalid-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+        .pulse-invalid-item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:12px}
+        .pulse-invalid-agent{font-weight:900;color:#f8fafc;font-size:14px}
+        .pulse-invalid-meta{margin-top:3px;color:#94a3b8;font-size:12px}
+        .pulse-invalid-count{min-width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:rgba(248,113,113,0.16);color:#f87171;font-weight:900}
         .pulse-loading,.pulse-error{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:48px 24px;text-align:center;color:#94a3b8}
         .pulse-error{background:rgba(127,29,29,0.18);border-color:rgba(248,113,113,0.35);color:#fecaca}
         @media (max-width: 1100px){
@@ -1006,6 +1173,7 @@ export default function Dashboard() {
           .pulse-top-block-item{grid-template-columns:20px minmax(0,1fr) auto}
           .pulse-top-block-ext{display:none}
           .pulse-team-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .pulse-invalid-list{grid-template-columns:1fr}
         }
       `}</style>
 
@@ -1014,7 +1182,7 @@ export default function Dashboard() {
           <div>
             <h1 className="pulse-title">AutoWarrantyGarrett</h1>
             <div className="pulse-subtext">
-              Live now: Asia, Philippines, Colombia and Mexico. Other teams stay visible while we add them slowly and safely.
+              Live now: Asia, Philippines and Colombia. Other teams stay visible while we add them slowly and safely.
             </div>
           </div>
 
