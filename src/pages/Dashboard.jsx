@@ -57,19 +57,21 @@ const TEAMS = {
     id: 'mexico',
     label: 'Mexico Baja',
     short: 'Mexico',
+    sheetName: 'AW GARRET BAJA MX KEVIN',
     flag: '/flags/mexico.png',
     extPrefix: '5',
     hasSpanish: false,
-    live: false,
+    live: true,
   },
   venezuela: {
     id: 'venezuela',
     label: 'Venezuela',
     short: 'Venezuela',
+    sheetName: 'AW GARRET VENEZUELA PATRICIA ',
     flag: '/flags/venezuela.png',
     extPrefix: '6',
     hasSpanish: true,
-    live: false,
+    live: true,
   },
 }
 
@@ -182,7 +184,7 @@ function isAgentRow(nameCell, extCell, prefix) {
     'MANAGEMENT', 'USER', 'USERS', 'SUPERVISOR', 'EXTENSION', 'OPENERS', 'TRANSFERS', 'TRANSFER', 'SPANISH', 'ENGLISH', 'TOTAL',
     'LEXNER', 'GENERAL MANAGER', 'PACIFIC STANDARD TIME', 'BREAK', 'LUNCH', 'DAILY TARGET', 'XFER PER HOUR',
     'THIS HOUR GOAL', 'GOAL+', 'AGENT LOGGED IN', 'AGENTS LOGGED IN', 'COLOMBIA OT', 'JUAN GARCIA', 'ASIA', 'PHILIPPINES',
-    'OT TAKERS', 'PHILIPPINES OT', 'AW PHIL', 'ARWIN', 'SUPERVISOR', 'PER AGENT'
+    'OT TAKERS', 'PHILIPPINES OT', 'MEXICO OT', 'OT AW GARRET VENEZUELA', 'VENEZUELA OT', 'AW PHIL', 'ARWIN', 'SUPERVISOR', 'PER AGENT'
   ]
   return !banned.some(word => name.includes(word))
 }
@@ -455,6 +457,147 @@ function parsePhilippinesRows(rows, withOT) {
 }
 
 
+
+function parseMexicoRows(rows, withOT) {
+  const mainAgents = new Map()
+  const otAgents = new Map()
+  let inOT = false
+  let sawOTSection = false
+  let mainFooter = 0
+  let otFooter = 0
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const txt = rowText(row)
+    const name = String(row[0] || '').trim()
+    const ext = String(row[1] || '').replace(/,/g, '').trim()
+
+    if (txt.includes('MEXICO OT') || txt.includes('BAJA OT')) {
+      sawOTSection = true
+      inOT = true
+      continue
+    }
+
+    if (!inOT && (txt.includes('AGENT LOG IN') || txt.includes('AGENTS LOG IN') || txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
+      mainFooter = Math.max(mainFooter, safeInt(row[3]))
+      continue
+    }
+
+    if (inOT && (txt.includes('AGENT LOG IN') || txt.includes('AGENTS LOG IN') || txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
+      otFooter = Math.max(otFooter, safeInt(row[3]))
+      continue
+    }
+
+    if (!isAgentRow(name, ext, '5')) continue
+
+    const english = safeInt(row[3])
+    const agent = buildAgent(name, ext, 0, english)
+
+    if (!inOT) {
+      const prev = mainAgents.get(agent.ext)
+      if (!prev || agent.english > prev.english) mainAgents.set(agent.ext, agent)
+    } else {
+      const prev = otAgents.get(agent.ext)
+      if (!prev) otAgents.set(agent.ext, agent)
+      else otAgents.set(agent.ext, { ...prev, english: prev.english + agent.english, total: prev.total + agent.total })
+    }
+  }
+
+  const mainList = [...mainAgents.values()]
+  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
+  const merged = new Map()
+  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
+  otList.forEach(agent => {
+    const prev = merged.get(agent.ext)
+    if (!prev) merged.set(agent.ext, { ...agent })
+    else merged.set(agent.ext, { ...prev, english: prev.english + agent.english, total: prev.total + agent.total })
+  })
+
+  const agents = sortAgentsByMetric([...merged.values()], 'total')
+  const mainEnglish = Math.max(mainFooter, mainList.reduce((sum, a) => sum + a.english, 0))
+  const otEnglish = withOT ? Math.max(otFooter, otList.reduce((sum, a) => sum + a.english, 0)) : 0
+
+  return {
+    agents,
+    totals: { english: mainEnglish + otEnglish, spanish: 0, total: mainEnglish + otEnglish, activeAgents: agents.length },
+    mainTotals: { english: mainEnglish, spanish: 0, total: mainEnglish },
+    otTotals: { english: otEnglish, spanish: 0, total: otEnglish },
+    includesOT: withOT,
+  }
+}
+
+function parseVenezuelaRows(rows, withOT) {
+  const mainAgents = new Map()
+  const otAgents = new Map()
+  let inOT = false
+  let sawOTSection = false
+  let mainFooter = null
+  let otFooter = null
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const txt = rowText(row)
+    const name = String(row[0] || '').trim()
+    const ext = String(row[1] || '').replace(/,/g, '').trim()
+
+    if (txt.includes('OT AW GARRET VENEZUELA') || txt.includes('VENEZUELA OT')) {
+      sawOTSection = true
+      inOT = true
+      continue
+    }
+
+    if (txt.includes('AGENT LOG IN') || txt.includes('AGENTS LOG IN') || txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
+      const footer = {
+        english: safeInt(row[3]),
+        spanish: safeInt(row[4]),
+        total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4])),
+      }
+      if (!inOT) mainFooter = footer
+      else otFooter = footer
+      continue
+    }
+
+    if (!isAgentRow(name, ext, '6')) continue
+
+    const english = safeInt(row[3])
+    const spanish = safeInt(row[4])
+    const agent = buildAgent(name, ext, spanish, english)
+
+    if (!inOT) {
+      const prev = mainAgents.get(agent.ext)
+      if (!prev || agent.total > prev.total) mainAgents.set(agent.ext, agent)
+    } else {
+      const prev = otAgents.get(agent.ext)
+      if (!prev) otAgents.set(agent.ext, agent)
+      else otAgents.set(agent.ext, { ...prev, english: prev.english + agent.english, spanish: prev.spanish + agent.spanish, total: prev.total + agent.total })
+    }
+  }
+
+  const mainList = [...mainAgents.values()]
+  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
+  const merged = new Map()
+  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
+  otList.forEach(agent => {
+    const prev = merged.get(agent.ext)
+    if (!prev) merged.set(agent.ext, { ...agent })
+    else merged.set(agent.ext, { ...prev, english: prev.english + agent.english, spanish: prev.spanish + agent.spanish, total: prev.total + agent.total })
+  })
+
+  const agents = sortAgentsByMetric([...merged.values()], 'total')
+  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
+  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
+  const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
+  const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
+
+  return {
+    agents,
+    totals: { english: mainEnglish + otEnglish, spanish: mainSpanish + otSpanish, total: mainEnglish + mainSpanish + otEnglish + otSpanish, activeAgents: agents.length },
+    mainTotals: { english: mainEnglish, spanish: mainSpanish, total: mainEnglish + mainSpanish },
+    otTotals: { english: otEnglish, spanish: otSpanish, total: otEnglish + otSpanish },
+    includesOT: withOT,
+  }
+}
+
 function normalizeQaDate(raw) {
   const s = String(raw ?? '').trim()
   if (!s) return null
@@ -520,15 +663,15 @@ function parseAsiaInvalidTransfersRows(rows, targetDate = todayKey()) {
       if (!qaDate && !qa) continue
 
       if (!byExt[current.ext].calls[col]) {
-        byExt[current.ext].calls[col] = { date: null, invalidTag: false, issueLabel: '', short: '' }
+        byExt[current.ext].calls[col] = { date: null, invalidTag: false, issueLabels: [], shortLabels: [] }
       }
 
       const call = byExt[current.ext].calls[col]
       if (qaDate) call.date = qaDate
       if (qa?.invalidTag) call.invalidTag = true
       if (qa && !qa.invalidTag && !qa.ignored) {
-        call.issueLabel = qa.label
-        call.short = qa.short
+        if (!call.issueLabels.includes(qa.label)) call.issueLabels.push(qa.label)
+        if (!call.shortLabels.includes(qa.short)) call.shortLabels.push(qa.short)
       }
     }
   }
@@ -538,13 +681,13 @@ function parseAsiaInvalidTransfersRows(rows, targetDate = todayKey()) {
     const details = Object.values(agent.calls)
       .filter(call => {
         const isTodayOrUndated = !call.date || call.date === targetDate
-        const hasInvalid = call.invalidTag || !!call.issueLabel
+        const hasInvalid = call.invalidTag || (call.issueLabels || []).length > 0
         return isTodayOrUndated && hasInvalid
       })
       .map(call => ({
         date: call.date || targetDate,
-        issue: call.issueLabel || 'Invalid Transfer',
-        short: call.short || 'Invalid transfer',
+        issue: (call.issueLabels || []).length ? call.issueLabels.join(' • ') : 'Invalid Transfer',
+        short: (call.issueLabels || []).length ? call.issueLabels.join(' • ') : 'Invalid Transfer',
       }))
 
     out[agent.ext] = {
@@ -603,6 +746,8 @@ function parseLiveSheet(teamId, rows) {
   if (teamId === 'asia') return parseAsiaRows(rows, includeOT())
   if (teamId === 'colombia') return parseColombiaRows(rows, includeOT())
   if (teamId === 'philippines') return parsePhilippinesRows(rows, includeOT())
+  if (teamId === 'mexico') return parseMexicoRows(rows, includeOT())
+  if (teamId === 'venezuela') return parseVenezuelaRows(rows, includeOT())
   return { agents: [], totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 }, mainTotals: null, otTotals: null, includesOT: false }
 }
 
@@ -825,6 +970,7 @@ function TopRow({ title, metric, agents }) {
 
 function AgentTable({ team, agents, navigate }) {
   const showInvalid = team.id === 'asia'
+  const displayAgents = sortAgentsByMetric(agents, 'english')
 
   return (
     <div className="pulse-table-wrap">
@@ -844,7 +990,7 @@ function AgentTable({ team, agents, navigate }) {
             </tr>
           </thead>
           <tbody>
-            {agents.map((agent, index) => (
+            {displayAgents.map((agent, index) => (
               <tr key={agent.ext}>
                 <td>{index + 1}</td>
                 <td className="linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
@@ -852,8 +998,19 @@ function AgentTable({ team, agents, navigate }) {
                 <td className="green">{agent.spanish}</td>
                 <td className="blue">{agent.english}</td>
                 <td className="orange">{agent.total}</td>
-                {showInvalid && <td className={(agent.invalidTransfers || 0) > 0 ? 'red' : ''}>{agent.invalidTransfers || 0}</td>}
-                {showInvalid && <td className="qa-issue-cell">{agent.lastInvalidIssue || '—'}</td>}
+                {showInvalid && <td className={(agent.invalidTransfers || 0) > 0 ? 'red' : ''} title={(agent.invalidDetails || []).map(d => d.issue).join('\n')}>{agent.invalidTransfers || 0}</td>}
+                {showInvalid && (
+                  <td className="qa-issue-cell" title={(agent.invalidDetails || []).map(d => d.issue).join('\n')}>
+                    {(agent.invalidDetails || []).length ? (
+                      <div className="qa-chip-wrap">
+                        {(agent.invalidDetails || []).slice(0, 3).map((detail, i) => (
+                          <span key={`${agent.ext}-qa-${i}`} className="qa-chip">{detail.issue}</span>
+                        ))}
+                        {(agent.invalidDetails || []).length > 3 && <span className="qa-chip qa-chip-more">+{(agent.invalidDetails || []).length - 3}</span>}
+                      </div>
+                    ) : '—'}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -873,7 +1030,6 @@ function AsiaInvalidTransfersPanel({ agents }) {
     <div className="pulse-invalid-panel">
       <div>
         <div className="pulse-invalid-title">Asia invalid transfers</div>
-        <div className="pulse-invalid-subtitle">QA issues from the Invalid Transfers ASIA sheet.</div>
       </div>
 
       {invalidAgents.length === 0 ? (
@@ -881,10 +1037,16 @@ function AsiaInvalidTransfersPanel({ agents }) {
       ) : (
         <div className="pulse-invalid-list">
           {invalidAgents.map(agent => (
-            <div key={`invalid-${agent.ext}`} className="pulse-invalid-item">
+            <div key={`invalid-${agent.ext}`} className="pulse-invalid-item" title={(agent.invalidDetails || []).map(d => d.issue).join('\n')}>
               <div>
                 <div className="pulse-invalid-agent">{agent.name}</div>
-                <div className="pulse-invalid-meta">#{agent.ext} · {agent.lastInvalidIssue || 'Invalid transfer'}</div>
+                <div className="pulse-invalid-meta">#{agent.ext}</div>
+                <div className="qa-chip-wrap invalid-chip-wrap">
+                  {(agent.invalidDetails || []).slice(0, 4).map((detail, i) => (
+                    <span key={`${agent.ext}-invalid-${i}`} className="qa-chip">{detail.issue}</span>
+                  ))}
+                  {(agent.invalidDetails || []).length > 4 && <span className="qa-chip qa-chip-more">+{(agent.invalidDetails || []).length - 4}</span>}
+                </div>
               </div>
               <div className="pulse-invalid-count">{agent.invalidTransfers}</div>
             </div>
@@ -1001,7 +1163,7 @@ export default function Dashboard() {
         : null
 
       next[teamId] = {
-        agents: sortAgentsByMetric(agents, 'total'),
+        agents: sortAgentsByMetric(agents, 'english'),
         totals: {
           english: Number(totalsRow?.english) || agents.reduce((sum, agent) => sum + (agent.english || 0), 0),
           spanish: Number(totalsRow?.spanish) || agents.reduce((sum, agent) => sum + (agent.spanish || 0), 0),
@@ -1084,16 +1246,16 @@ export default function Dashboard() {
         .pulse-subtext{margin-top:8px;color:#94a3b8;font-size:14px;line-height:1.5}
         .pulse-updated{color:#94a3b8;font-size:13px}
         .pulse-tabs-grid{display:flex;flex-wrap:wrap;gap:10px;padding:16px;border-radius:28px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);margin-bottom:18px}
-        .pulse-tab{border:1px solid transparent;background:transparent;color:#cbd5e1;border-radius:999px;padding:12px 16px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px}
+        .pulse-tab{appearance:none;-webkit-appearance:none;border:1px solid transparent;background:transparent;color:#cbd5e1;border-radius:999px;padding:12px 16px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px;font-family:inherit;line-height:1}
         .pulse-tab.active{border-color:rgba(249,115,22,0.55);background:rgba(249,115,22,0.18);color:#fff}
         .pulse-sort-tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
-        .pulse-sort-tab{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#cbd5e1;border-radius:16px;padding:12px 16px;font-weight:800;cursor:pointer;font-size:14px}
+        .pulse-sort-tab{appearance:none;-webkit-appearance:none;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#cbd5e1;border-radius:16px;padding:12px 16px;font-weight:800;cursor:pointer;font-size:14px;font-family:inherit}
         .pulse-sort-tab.active{border-color:#f97316;background:rgba(249,115,22,0.12);color:#fff}
         .pulse-content-grid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
         .pulse-sidebar{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:16px;position:sticky;top:86px}
         .pulse-sidebar-title{font-size:12px;color:#94a3b8;margin-bottom:12px;font-weight:800;letter-spacing:0.08em}
         .pulse-dates-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-        .pulse-date-btn{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#cbd5e1;border-radius:14px;padding:12px 10px;font-weight:800;cursor:pointer}
+        .pulse-date-btn{appearance:none;-webkit-appearance:none;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#cbd5e1;border-radius:14px;padding:12px 10px;font-weight:800;cursor:pointer;font-family:inherit}
         .pulse-date-btn.active{border-color:#f97316;background:rgba(249,115,22,0.12);color:#fff}
         .pulse-overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
         .pulse-team-card{background:linear-gradient(135deg,rgba(249,115,22,0.10),rgba(59,130,246,0.05));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:20px;cursor:pointer;min-height:220px}
@@ -1149,10 +1311,17 @@ export default function Dashboard() {
         .pulse-invalid-count{min-width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:rgba(248,113,113,0.16);color:#f87171;font-weight:900}
         .pulse-loading,.pulse-error{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:48px 24px;text-align:center;color:#94a3b8}
         .pulse-error{background:rgba(127,29,29,0.18);border-color:rgba(248,113,113,0.35);color:#fecaca}
+
+        .red{color:#f87171}
+        .qa-issue-cell{min-width:220px;max-width:360px}
+        .qa-chip-wrap{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+        .qa-chip{display:inline-flex;align-items:center;max-width:240px;padding:4px 8px;border-radius:999px;background:rgba(248,113,113,0.14);border:1px solid rgba(248,113,113,0.26);color:#fecaca;font-size:11px;font-weight:800;line-height:1.15;white-space:normal}
+        .qa-chip-more{background:rgba(148,163,184,0.14);border-color:rgba(148,163,184,0.24);color:#cbd5e1}
+        .invalid-chip-wrap{margin-top:8px}
         @media (max-width: 1100px){
           .pulse-content-grid{grid-template-columns:1fr}
           .pulse-sidebar{position:static}
-          .pulse-overview-grid{grid-template-columns:1fr 1fr}
+          .pulse-overview-grid{grid-template-columns:1fr 1fr}.pulse-invalid-list{grid-template-columns:1fr}
         }
         @media (max-width: 860px){
           .pulse-overview-grid,.pulse-summary-grid,.pulse-top-blocks-grid{grid-template-columns:1fr}
@@ -1182,7 +1351,7 @@ export default function Dashboard() {
           <div>
             <h1 className="pulse-title">AutoWarrantyGarrett</h1>
             <div className="pulse-subtext">
-              Live now: Asia, Philippines and Colombia. Other teams stay visible while we add them slowly and safely.
+              Live now: Asia, Philippines, Colombia, Mexico and Venezuela. Central stays visible while we add it slowly and safely.
             </div>
           </div>
 
