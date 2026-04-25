@@ -911,17 +911,65 @@ function parseLiveSheet(teamId, rows) {
   return emptyParsedTeam()
 }
 
-function parseQAInvalidRows(rows, date) {
+function getDefaultQAConfig(sheetName = '') {
+  const upper = cellUpper(sheetName)
+
+  const validIndex = (
+    upper.includes('BETHANIE') ||
+    upper.includes('JAIRO') ||
+    upper.includes('PEDRO')
+  ) ? 6 : 7
+
+  return {
+    dateIndex: 0,
+    extIndex: 2,
+    dispositionIndex: 4,
+    validIndex,
+  }
+}
+
+function detectQAHeader(row, sheetName = '') {
+  const upper = (row || []).map(cellUpper)
+  const hasDate = upper.some(cell => cell === 'DATE')
+  const hasOpenerId = upper.some(cell => cell.includes('ID') && cell.includes('OPENER'))
+  const hasDisposition = upper.some(cell => cell.includes('DISPOSITION'))
+  const hasValidInvalid = upper.some(cell => cell.includes('VALID') && cell.includes('INVALID'))
+
+  if (!hasDate || !hasOpenerId || !hasDisposition || !hasValidInvalid) return null
+
+  const fallback = getDefaultQAConfig(sheetName)
+
+  const dateIndex = upper.findIndex(cell => cell === 'DATE')
+  const extIndex = upper.findIndex(cell => cell.includes('ID') && cell.includes('OPENER'))
+  const dispositionIndex = upper.findIndex(cell => cell.includes('DISPOSITION'))
+  const validIndex = upper.findIndex(cell => cell.includes('VALID') && cell.includes('INVALID'))
+
+  return {
+    dateIndex: dateIndex >= 0 ? dateIndex : fallback.dateIndex,
+    extIndex: extIndex >= 0 ? extIndex : fallback.extIndex,
+    dispositionIndex: dispositionIndex >= 0 ? dispositionIndex : fallback.dispositionIndex,
+    validIndex: validIndex >= 0 ? validIndex : fallback.validIndex,
+  }
+}
+
+function parseQAInvalidRows(rows, date, sheetName = '') {
   let total = 0
   const byExt = {}
+  let config = getDefaultQAConfig(sheetName)
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
+    const detectedHeader = detectQAHeader(row, sheetName)
 
-    const rowDate = normalizeDate(row[0])
-    const ext = String(row[2] || '').replace(/,/g, '').trim()
-    const disposition = cellUpper(row[4])
-    const validInvalid = cellUpper(row[7])
+    if (detectedHeader) {
+      config = detectedHeader
+      continue
+    }
+
+    const rowDate = normalizeDate(row[config.dateIndex])
+    const ext = String(row[config.extIndex] || '').replace(/,/g, '').trim()
+    const disposition = cellUpper(row[config.dispositionIndex])
+    const validInvalid = cellUpper(row[config.validIndex])
 
     if (rowDate !== date) continue
     if (!ext) continue
@@ -985,8 +1033,11 @@ async function fetchInvalidTransfersForDate(date) {
     )
 
     const parsedItems = reads
-      .filter(item => item.status === 'fulfilled')
-      .map(item => parseQAInvalidRows(item.value, date))
+      .map((item, index) => {
+        if (item.status !== 'fulfilled') return null
+        return parseQAInvalidRows(item.value, date, sheetNames[index])
+      })
+      .filter(Boolean)
 
     result[teamId] = mergeInvalidInfo(parsedItems)
   }
@@ -1130,10 +1181,10 @@ function SortTabs({ sortMetric, onChange }) {
   )
 }
 
-function SummaryCard({ title, value, color, subtitle }) {
+function SummaryCard({ title, value, color, subtitle, titleColor }) {
   return (
     <div className="pulse-summary-card">
-      <div className="pulse-summary-title">{title}</div>
+      <div className="pulse-summary-title" style={{ color: titleColor || undefined }}>{title}</div>
       <div className="pulse-summary-value" style={{ color }}>{Number(value || 0).toLocaleString()}</div>
       <div className="pulse-summary-subtitle">{subtitle || ''}</div>
     </div>
@@ -1170,10 +1221,10 @@ function TeamOverviewCard({ team, parsed, sortMetric, onOpen, rankIndex = 0 }) {
       </div>
 
       <div className="pulse-team-stats-grid">
-        <div><span className="stat-k">English</span><span className="stat-v blue">{parsed.totals.english.toLocaleString()}</span></div>
-        <div><span className="stat-k">Spanish</span><span className="stat-v green">{parsed.totals.spanish.toLocaleString()}</span></div>
-        <div><span className="stat-k">Invalid</span><span className="stat-v red">{Number(parsed.invalidTransfers || 0).toLocaleString()}</span></div>
-        <div><span className="stat-k">Total</span><span className="stat-v orange">{parsed.totals.total.toLocaleString()}</span></div>
+        <div><span className="stat-k blue">English</span><span className="stat-v blue">{parsed.totals.english.toLocaleString()}</span></div>
+        <div><span className="stat-k green">Spanish</span><span className="stat-v green">{parsed.totals.spanish.toLocaleString()}</span></div>
+        <div><span className="stat-k red">Invalid</span><span className="stat-v red">{Number(parsed.invalidTransfers || 0).toLocaleString()}</span></div>
+        <div><span className="stat-k orange">Total</span><span className="stat-v orange">{parsed.totals.total.toLocaleString()}</span></div>
       </div>
 
       <div className="pulse-top3-list">
@@ -1236,10 +1287,10 @@ function AgentTable({ team, agents, navigate }) {
               <th>#</th>
               <th>Agent</th>
               <th>Ext</th>
-              <th>Spanish</th>
-              <th>English</th>
-              <th>Invalid xfers</th>
-              <th>Total</th>
+              <th className="th-spanish">Spanish</th>
+              <th className="th-english">English</th>
+              <th className="th-invalid">Invalid xfers</th>
+              <th className="th-total">Total</th>
             </tr>
           </thead>
 
@@ -1286,12 +1337,12 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
       </div>
 
       <div className="pulse-summary-grid">
-        <SummaryCard title="English" value={parsed.totals.english} color="#60a5fa" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.english}` : ''} />
-        <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />
-        <SummaryCard title="Invalid xfers" value={invalidTransfers} color="#f87171" subtitle={QA_DISPLAY_BY_TEAM[team.id] || 'QA not connected yet'} />
-        <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : `Raw: ${parsed.totals.rawTotal || parsed.totals.total}`} />
-        <SummaryCard title="Reached target" value={reachedTarget} color="#22c55e" subtitle={`Goal: ${target} English`} />
-        <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
+        <SummaryCard title="English" value={parsed.totals.english} color="#60a5fa" titleColor="#60a5fa" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.english}` : ''} />
+        <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" titleColor="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />
+        <SummaryCard title="Invalid xfers" value={invalidTransfers} color="#f87171" titleColor="#f87171" subtitle={QA_DISPLAY_BY_TEAM[team.id] || 'QA not connected yet'} />
+        <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" titleColor="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : `Raw: ${parsed.totals.rawTotal || parsed.totals.total}`} />
+        <SummaryCard title="Reached target" value={reachedTarget} color="#22c55e" titleColor="#22c55e" subtitle={`Goal: ${target} English`} />
+        <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" titleColor="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
       </div>
 
       <div className="pulse-top-blocks-grid">
@@ -1511,9 +1562,9 @@ export default function Dashboard() {
         .pulse-team-metric-label{font-size:12px;color:#94a3b8}
         .pulse-team-metric-value{margin-top:4px;font-size:22px;font-weight:900;color:#60a5fa}
         .pulse-team-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
-        .stat-k{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}
+        .stat-k{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;font-weight:800}
         .stat-v{display:block;font-size:18px;font-weight:900}
-        .blue{color:#60a5fa}.green{color:#34d399}.orange{color:#f59e0b}.purple{color:#c084fc}.red{color:#f87171}
+        .blue{color:#60a5fa!important}.green{color:#34d399!important}.orange{color:#f59e0b!important}.purple{color:#c084fc!important}.red{color:#f87171!important}
         .pulse-top3-list{display:grid;gap:8px;margin-top:18px}
         .pulse-top3-item{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:8px;align-items:center}
         .pulse-top3-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e5e7eb;font-size:13px}
@@ -1525,7 +1576,7 @@ export default function Dashboard() {
         .pulse-hero-sub{margin-top:6px;color:#94a3b8;font-size:14px}
         .pulse-summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
         .pulse-summary-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px}
-        .pulse-summary-title{font-size:13px;color:#94a3b8;margin-bottom:10px}
+        .pulse-summary-title{font-size:13px;color:#94a3b8;margin-bottom:10px;font-weight:900}
         .pulse-summary-value{font-size:42px;font-weight:900;line-height:1}
         .pulse-summary-subtitle{margin-top:10px;color:#94a3b8;font-size:13px;min-height:18px}
         .pulse-top-blocks-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
@@ -1539,9 +1590,13 @@ export default function Dashboard() {
         .pulse-table-title{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:800;color:#e5e7eb}
         .pulse-table-scroll{overflow-x:auto}
         .pulse-table{width:100%;border-collapse:collapse}
-        .pulse-table th{padding:12px 16px;text-align:left;font-size:12px;color:#94a3b8;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,0.02)}
+        .pulse-table th{padding:12px 16px;text-align:left;font-size:12px;color:#94a3b8;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,0.02)}
         .pulse-table td{padding:12px 16px;font-size:14px;color:#e5e7eb;border-top:1px solid rgba(255,255,255,0.04)}
         .pulse-table .linkish{font-weight:700;color:#f8fafc;cursor:pointer}
+        .th-spanish{color:#34d399!important}
+        .th-english{color:#60a5fa!important}
+        .th-invalid{color:#f87171!important}
+        .th-total{color:#f59e0b!important}
         .pulse-loading,.pulse-error{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:48px 24px;text-align:center;color:#94a3b8}
         .pulse-error{background:rgba(127,29,29,0.18);border-color:rgba(248,113,113,0.35);color:#fecaca}
         @media (max-width: 1200px){
