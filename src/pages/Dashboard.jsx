@@ -23,6 +23,20 @@ const TEAM_TARGETS = {
 
 const QA_SHEETS_BY_TEAM = {
   asia: ['ASIA - VICTOR', 'ASIA - ANTONIO'],
+  philippines: ['PH - BETHANIE', 'PH - JAIRO'],
+  colombia: ['COL - JHONATHAN', 'COL - DARLING'],
+  central: ['CA - REYNALDO', 'CA - ANDRES'],
+  mexico: ['MXBJ - DAHR', 'MXBJ - MIGUEL'],
+  venezuela: ['VZ - PEDRO', 'VZ - MARTIN'],
+}
+
+const QA_DISPLAY_BY_TEAM = {
+  asia: 'QA: Victor + Antonio',
+  philippines: 'QA: Bethanie + Jairo',
+  colombia: 'QA: Jhonathan + Darling',
+  central: 'QA: Reynaldo + Andres',
+  mexico: 'QA: Dahr + Miguel',
+  venezuela: 'QA: Pedro + Martin',
 }
 
 const TEAMS = {
@@ -160,6 +174,18 @@ function rowText(row, limit = 10) {
   return (row || []).slice(0, limit).map(cellUpper).join(' | ')
 }
 
+function isFooterRow(txt) {
+  return (
+    txt.includes('AGENT LOGGED IN') ||
+    txt.includes('AGENTS LOGGED IN') ||
+    txt.includes('AGENT LOGGE IN') ||
+    txt.includes('AGENTS LOGGE IN') ||
+    txt.includes('AGENT LOG IN') ||
+    txt.includes('AGENTS LOG IN') ||
+    txt.includes('TOTAL TRANSFERS')
+  )
+}
+
 function buildAgent(name, ext, spanish, english) {
   const sp = safeInt(spanish)
   const en = safeInt(english)
@@ -215,6 +241,8 @@ function isAgentRow(nameCell, extCell, prefix) {
     'OUR GOAL',
     'AGENT LOGGED IN',
     'AGENTS LOGGED IN',
+    'AGENT LOGGE IN',
+    'AGENTS LOGGE IN',
     'AGENT LOG IN',
     'AGENTS LOG IN',
     'COLOMBIA OT',
@@ -315,7 +343,7 @@ function parseAsiaRows(rows, withOT) {
       continue
     }
 
-    if (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
+    if (isFooterRow(txt)) {
       const footer = {
         spanish: safeInt(row[2]),
         english: safeInt(row[3]),
@@ -390,12 +418,12 @@ function parsePhilippinesRows(rows, withOT) {
       continue
     }
 
-    if (!inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
+    if (!inOT && isFooterRow(txt)) {
       mainFooter = Math.max(mainFooter, safeInt(row[2]), safeInt(row[3]))
       continue
     }
 
-    if (inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
+    if (inOT && isFooterRow(txt)) {
       otFooter = Math.max(otFooter, safeInt(row[2]), safeInt(row[3]))
       continue
     }
@@ -460,7 +488,7 @@ function parseColombiaRows(rows, withOT) {
       continue
     }
 
-    if (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
+    if (isFooterRow(txt)) {
       const footer = {
         english: safeInt(row[3]),
         spanish: safeInt(row[4]),
@@ -540,13 +568,13 @@ function parseMexicoRows(rows, withOT) {
       continue
     }
 
-    if (!inOT && (txt.includes('AGENTS LOG IN') || txt.includes('AGENT LOG IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
+    if (!inOT && isFooterRow(txt)) {
       const direct = safeInt(row[3])
       if (direct > 0) mainFooter = direct
       continue
     }
 
-    if (inOT && (txt.includes('AGENTS LOG IN') || txt.includes('AGENT LOG IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
+    if (inOT && isFooterRow(txt)) {
       const direct = safeInt(row[3])
       if (direct > 0) otFooter = direct
       continue
@@ -615,7 +643,7 @@ function parseVenezuelaRows(rows, withOT) {
       continue
     }
 
-    if (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
+    if (isFooterRow(txt)) {
       const footer = {
         english: safeInt(row[3]),
         spanish: safeInt(row[4]),
@@ -700,7 +728,7 @@ function parseCentralRows(rows, withOT) {
       continue
     }
 
-    if (txt.includes('AGENTS LOGGED IN') || txt.includes('AGENT LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
+    if (isFooterRow(txt)) {
       const footer = {
         english: safeInt(row[3]),
         spanish: safeInt(row[4]),
@@ -1131,7 +1159,7 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
         <SummaryCard title="English" value={parsed.totals.english} color="#60a5fa" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.english}` : ''} />
         <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />
         <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : ''} />
-        <SummaryCard title="Invalid xfers" value={invalidTransfers} color="#f87171" subtitle={team.id === 'asia' ? 'QA: Victor + Antonio' : 'QA not connected yet'} />
+        <SummaryCard title="Invalid xfers" value={invalidTransfers} color="#f87171" subtitle={QA_DISPLAY_BY_TEAM[team.id] || 'QA not connected yet'} />
         <SummaryCard title="Reached target" value={reachedTarget} color="#22c55e" subtitle={`Goal: ${target} English`} />
         <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
       </div>
@@ -1197,10 +1225,18 @@ export default function Dashboard() {
           }
         } catch (err) {
           console.error(`Error parsing ${teamId}:`, err)
-          next[teamId] = emptyParsedTeam()
+          next[teamId] = {
+            ...emptyParsedTeam(),
+            invalidTransfers: Number(invalidCounts?.[teamId] || 0),
+          }
         }
       } else {
         console.warn(`Failed loading ${teamId}:`, sheetResults[index].reason)
+
+        next[teamId] = {
+          ...emptyParsedTeam(),
+          invalidTransfers: Number(invalidCounts?.[teamId] || 0),
+        }
       }
     })
 
@@ -1216,9 +1252,10 @@ export default function Dashboard() {
   const loadHistoricalTeams = useCallback(async (date) => {
     setError('')
 
-    const [teamSnapshots, totals] = await Promise.all([
+    const [teamSnapshots, totals, invalidCounts] = await Promise.all([
       Promise.all(liveTeamIds.map(teamId => scriptCall({ action: 'getTeamSnapshot', date, teamId }))),
       scriptCall({ action: 'getDailyTotals' }),
+      fetchInvalidTransfersForDate(date).catch(() => ({})),
     ])
 
     const dailyEntry = Array.isArray(totals)
@@ -1245,7 +1282,7 @@ export default function Dashboard() {
         mainTotals: null,
         otTotals: null,
         includesOT: false,
-        invalidTransfers: Number(totalsRow?.invalidTransfers || 0),
+        invalidTransfers: Number(invalidCounts?.[teamId] || totalsRow?.invalidTransfers || 0),
       }
     })
 
