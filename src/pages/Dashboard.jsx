@@ -128,6 +128,10 @@ const todayKey = () => colombiaDate().toISOString().slice(0, 10)
 const colombiaHour = () => colombiaDate().getUTCHours()
 const includeOT = () => colombiaHour() >= 18
 
+function monthKey(date) {
+  return String(date || '').slice(0, 7)
+}
+
 function normalizeDate(raw) {
   if (!raw) return null
 
@@ -184,6 +188,31 @@ function isFooterRow(txt) {
     txt.includes('AGENTS LOG IN') ||
     txt.includes('TOTAL TRANSFERS')
   )
+}
+
+function findFooterTotalsInRows(rows, startIndex, endIndex, englishIndex, spanishIndex, totalIndex) {
+  let footer = null
+  const end = Math.min(endIndex, rows.length)
+
+  for (let i = startIndex; i < end; i++) {
+    const row = rows[i] || []
+    const txt = rowText(row)
+    const colA = cellUpper(row[0])
+
+    const looksLikeFooter = isFooterRow(txt) || (colA.includes('AGENTS') && colA.includes('LOG'))
+
+    if (!looksLikeFooter) continue
+
+    const english = safeInt(row[englishIndex])
+    const spanish = safeInt(row[spanishIndex])
+    const total = safeInt(row[totalIndex]) || (english + spanish)
+
+    if (english > 0 || spanish > 0 || total > 0) {
+      footer = { english, spanish, total }
+    }
+  }
+
+  return footer
 }
 
 function buildAgent(name, ext, spanish, english) {
@@ -630,6 +659,7 @@ function parseVenezuelaRows(rows, withOT) {
   let sawOTSection = false
   let mainFooter = null
   let otFooter = null
+  let otStartIndex = rows.length
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
@@ -640,6 +670,7 @@ function parseVenezuelaRows(rows, withOT) {
     if (txt.includes('OT AW GARRET VENEZUELA') || txt.includes('VENEZUELA OT')) {
       sawOTSection = true
       inOT = true
+      otStartIndex = i
       continue
     }
 
@@ -668,6 +699,12 @@ function parseVenezuelaRows(rows, withOT) {
     if (!inOT) mergeAgentByExt(mainAgents, agent, 'max')
     else mergeAgentByExt(otAgents, agent, 'sum')
   }
+
+  const forcedMainFooter = findFooterTotalsInRows(rows, 0, otStartIndex, 3, 4, 5)
+  const forcedOTFooter = sawOTSection ? findFooterTotalsInRows(rows, otStartIndex, rows.length, 3, 4, 5) : null
+
+  if (forcedMainFooter) mainFooter = forcedMainFooter
+  if (forcedOTFooter) otFooter = forcedOTFooter
 
   const mainList = [...mainAgents.values()]
   const otList = withOT && sawOTSection ? [...otAgents.values()] : []
@@ -807,6 +844,7 @@ function parseLiveSheet(teamId, rows) {
 
 function parseQAInvalidRows(rows, date) {
   let count = 0
+  const selectedMonth = monthKey(date)
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
@@ -815,7 +853,8 @@ function parseQAInvalidRows(rows, date) {
     const disposition = cellUpper(row[4])
     const validInvalid = cellUpper(row[7])
 
-    if (rowDate !== date) continue
+    if (!rowDate) continue
+    if (selectedMonth && monthKey(rowDate) !== selectedMonth) continue
     if (!disposition.includes('TRANSFER')) continue
     if (!validInvalid.includes('INVALID')) continue
 
@@ -1225,6 +1264,7 @@ export default function Dashboard() {
           }
         } catch (err) {
           console.error(`Error parsing ${teamId}:`, err)
+
           next[teamId] = {
             ...emptyParsedTeam(),
             invalidTransfers: Number(invalidCounts?.[teamId] || 0),
