@@ -11,6 +11,15 @@ const POLL_MS = 30000
 const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
 const TEAM_RANK_EMOJIS = ['/emojis/goal1.webp', '/emojis/goal3.webp', '/emojis/goal4.webp']
 
+const TEAM_TARGETS = {
+  asia: 20,
+  philippines: 10,
+  colombia: 10,
+  central: 10,
+  mexico: 10,
+  venezuela: 10,
+}
+
 const TEAMS = {
   asia: {
     id: 'asia',
@@ -66,14 +75,16 @@ const TEAMS = {
     id: 'venezuela',
     label: 'Venezuela',
     short: 'Venezuela',
+    sheetName: 'AW GARRET VENEZUELA PATRICIA',
     flag: '/flags/venezuela.png',
     extPrefix: '6',
     hasSpanish: true,
-    live: false,
+    live: true,
   },
 }
 
 const TEAM_ORDER = ['asia', 'philippines', 'colombia', 'central', 'mexico', 'venezuela']
+
 const SORT_OPTIONS = [
   { id: 'english', label: 'English Xfers' },
   { id: 'spanish', label: 'Spanish Xfers' },
@@ -82,19 +93,27 @@ const SORT_OPTIONS = [
 
 const safeInt = (val) => parseInt(String(val ?? '').replace(/,/g, '').trim(), 10) || 0
 const cellUpper = (val) => String(val ?? '').trim().toUpperCase()
-const todayKey = () => new Date().toISOString().slice(0, 10)
-const colombiaHour = () => (new Date().getUTCHours() - 5 + 24) % 24
-const includeOT = () => colombiaHour() >= 18 || colombiaHour() < 6
+
+const colombiaDate = () => new Date(Date.now() - 5 * 60 * 60 * 1000)
+
+const todayKey = () => colombiaDate().toISOString().slice(0, 10)
+
+const colombiaHour = () => colombiaDate().getUTCHours()
+
+const includeOT = () => colombiaHour() >= 18
 
 function normalizeDate(raw) {
   if (!raw) return null
   const s = String(raw).trim()
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+
   const d = new Date(s)
   if (Number.isNaN(d.getTime())) return null
+
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
+
   return `${y}-${m}-${day}`
 }
 
@@ -105,6 +124,7 @@ function rowText(row, limit = 10) {
 function buildAgent(name, ext, spanish, english) {
   const sp = safeInt(spanish)
   const en = safeInt(english)
+
   return {
     name: String(name || '').trim(),
     ext: String(ext || '').replace(/,/g, '').trim(),
@@ -117,15 +137,51 @@ function buildAgent(name, ext, spanish, english) {
 function isAgentRow(nameCell, extCell, prefix) {
   const name = cellUpper(nameCell)
   const ext = String(extCell || '').replace(/,/g, '').trim()
+
   if (!new RegExp(`^${prefix}\\d{3}$`).test(ext)) return false
   if (!name) return false
 
   const banned = [
-    'MANAGEMENT', 'USER', 'USERS', 'SUPERVISOR', 'EXTENSION', 'OPENERS', 'TRANSFERS', 'TRANSFER', 'SPANISH', 'ENGLISH', 'TOTAL',
-    'LEXNER', 'GENERAL MANAGER', 'PACIFIC STANDARD TIME', 'BREAK', 'LUNCH', 'DAILY TARGET', 'XFER PER HOUR',
-    'THIS HOUR GOAL', 'GOAL+', 'AGENT LOGGED IN', 'AGENTS LOGGED IN', 'AGENT LOG IN', 'AGENTS LOG IN',
-    'COLOMBIA OT', 'JUAN GARCIA', 'ASIA', 'PHILIPPINES', 'CENTRAL AMERICA', 'CAROLINA', 'GERMAN',
-    'OT TAKERS', 'PHILIPPINES OT', 'AW PHIL', 'ARWIN', 'PER AGENT'
+    'MANAGEMENT',
+    'USER',
+    'USERS',
+    'SUPERVISOR',
+    'EXTENSION',
+    'OPENERS',
+    'TRANSFERS',
+    'TRANSFER',
+    'SPANISH',
+    'ENGLISH',
+    'TOTAL',
+    'LEXNER',
+    'GENERAL MANAGER',
+    'PACIFIC STANDARD TIME',
+    'BREAK',
+    'LUNCH',
+    'DAILY TARGET',
+    'XFER PER HOUR',
+    'THIS HOUR GOAL',
+    'GOAL+',
+    'OUR GOAL',
+    'AGENT LOGGED IN',
+    'AGENTS LOGGED IN',
+    'AGENT LOG IN',
+    'AGENTS LOG IN',
+    'COLOMBIA OT',
+    'VENEZUELA OT',
+    'OT AW GARRET VENEZUELA',
+    'JUAN GARCIA',
+    'ASIA',
+    'PHILIPPINES',
+    'CENTRAL AMERICA',
+    'CAROLINA',
+    'GERMAN',
+    'PATRICIA ASTORINO',
+    'OT TAKERS',
+    'PHILIPPINES OT',
+    'AW PHIL',
+    'ARWIN',
+    'PER AGENT',
   ]
 
   return !banned.some(word => name.includes(word))
@@ -140,9 +196,60 @@ function sortAgentsByMetric(agents, metric) {
   })
 }
 
+function mergeAgentByExt(map, agent, mode = 'sum') {
+  const prev = map.get(agent.ext)
+
+  if (!prev) {
+    map.set(agent.ext, { ...agent })
+    return
+  }
+
+  if (mode === 'max') {
+    if (agent.total > prev.total) map.set(agent.ext, { ...agent })
+    return
+  }
+
+  map.set(agent.ext, {
+    ...prev,
+    english: prev.english + agent.english,
+    spanish: prev.spanish + agent.spanish,
+    total: prev.total + agent.total,
+  })
+}
+
+function mergeMainAndOT(mainList, otList) {
+  const merged = new Map()
+
+  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
+
+  otList.forEach(agent => {
+    const prev = merged.get(agent.ext)
+
+    if (!prev) {
+      merged.set(agent.ext, { ...agent })
+      return
+    }
+
+    merged.set(agent.ext, {
+      ...prev,
+      english: prev.english + agent.english,
+      spanish: prev.spanish + agent.spanish,
+      total: prev.total + agent.total,
+    })
+  })
+
+  return [...merged.values()]
+}
+
+function countReachedTarget(teamId, agents) {
+  const target = TEAM_TARGETS[teamId] || 10
+  return (agents || []).filter(agent => Number(agent.english || 0) >= target).length
+}
+
 function parseAsiaRows(rows, withOT) {
   const mainAgents = new Map()
   const otAgents = new Map()
+
   let inOT = false
   let mainFooter = null
   let otFooter = null
@@ -162,52 +269,30 @@ function parseAsiaRows(rows, withOT) {
       const footer = {
         spanish: safeInt(row[2]),
         english: safeInt(row[3]),
-        total: safeInt(row[4]) || (safeInt(row[2]) + safeInt(row[3]))
+        total: safeInt(row[4]) || (safeInt(row[2]) + safeInt(row[3])),
       }
+
       if (!inOT) mainFooter = footer
       else otFooter = footer
+
       continue
     }
 
     if (!isAgentRow(name, ext, '3')) continue
+
     const agent = buildAgent(name, ext, row[2], row[3])
 
-    if (!inOT) mainAgents.set(agent.ext, agent)
-    else {
-      const prev = otAgents.get(agent.ext)
-      if (!prev) otAgents.set(agent.ext, agent)
-      else {
-        otAgents.set(agent.ext, {
-          ...prev,
-          english: prev.english + agent.english,
-          spanish: prev.spanish + agent.spanish,
-          total: prev.total + agent.total,
-        })
-      }
-    }
+    if (!inOT) mergeAgentByExt(mainAgents, agent, 'max')
+    else mergeAgentByExt(otAgents, agent, 'sum')
   }
 
   const mainList = [...mainAgents.values()]
   const otList = withOT ? [...otAgents.values()] : []
-  const merged = new Map()
+  const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
 
-  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
-  otList.forEach(agent => {
-    const prev = merged.get(agent.ext)
-    if (!prev) merged.set(agent.ext, { ...agent })
-    else {
-      merged.set(agent.ext, {
-        ...prev,
-        english: prev.english + agent.english,
-        spanish: prev.spanish + agent.spanish,
-        total: prev.total + agent.total,
-      })
-    }
-  })
-
-  const agents = sortAgentsByMetric([...merged.values()], 'total')
   const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
   const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
+
   const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
   const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
 
@@ -219,96 +304,16 @@ function parseAsiaRows(rows, withOT) {
       total: mainSpanish + mainEnglish + otSpanish + otEnglish,
       activeAgents: agents.length,
     },
-    mainTotals: { spanish: mainSpanish, english: mainEnglish, total: mainSpanish + mainEnglish },
-    otTotals: { spanish: otSpanish, english: otEnglish, total: otSpanish + otEnglish },
-    includesOT: withOT,
-  }
-}
-
-function parseColombiaRows(rows, withOT) {
-  const mainAgents = new Map()
-  const otAgents = new Map()
-  let inOT = false
-  let sawOTSection = false
-  let mainFooter = null
-
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i] || []
-    const txt = rowText(row)
-    const name = String(row[0] || '').trim()
-    const ext = String(row[1] || '').replace(/,/g, '').trim()
-
-    if (txt.includes('COLOMBIA OT')) {
-      sawOTSection = true
-      inOT = true
-      continue
-    }
-
-    if (!inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
-      const footer = {
-        english: safeInt(row[3]),
-        spanish: safeInt(row[4]),
-        total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4]))
-      }
-      if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) mainFooter = footer
-      continue
-    }
-
-    if (!isAgentRow(name, ext, '2')) continue
-
-    const english = safeInt(row[3])
-    const spanish = safeInt(row[4])
-    const agent = buildAgent(name, ext, spanish, english)
-
-    if (!inOT) mainAgents.set(agent.ext, agent)
-    else {
-      const prev = otAgents.get(agent.ext)
-      if (!prev) otAgents.set(agent.ext, agent)
-      else {
-        otAgents.set(agent.ext, {
-          ...prev,
-          english: prev.english + agent.english,
-          spanish: prev.spanish + agent.spanish,
-          total: prev.total + agent.total,
-        })
-      }
-    }
-  }
-
-  const mainList = [...mainAgents.values()]
-  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
-  const merged = new Map()
-
-  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
-  otList.forEach(agent => {
-    const prev = merged.get(agent.ext)
-    if (!prev) merged.set(agent.ext, { ...agent })
-    else {
-      merged.set(agent.ext, {
-        ...prev,
-        english: prev.english + agent.english,
-        spanish: prev.spanish + agent.spanish,
-        total: prev.total + agent.total,
-      })
-    }
-  })
-
-  const agents = sortAgentsByMetric([...merged.values()], 'total')
-  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
-  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
-  const otEnglish = withOT ? otList.reduce((sum, a) => sum + a.english, 0) : 0
-  const otSpanish = withOT ? otList.reduce((sum, a) => sum + a.spanish, 0) : 0
-
-  return {
-    agents,
-    totals: {
-      english: mainEnglish + otEnglish,
-      spanish: mainSpanish + otSpanish,
-      total: mainEnglish + mainSpanish + otEnglish + otSpanish,
-      activeAgents: agents.length,
+    mainTotals: {
+      spanish: mainSpanish,
+      english: mainEnglish,
+      total: mainSpanish + mainEnglish,
     },
-    mainTotals: { english: mainEnglish, spanish: mainSpanish, total: mainEnglish + mainSpanish },
-    otTotals: { english: otEnglish, spanish: otSpanish, total: otEnglish + otSpanish },
+    otTotals: {
+      spanish: otSpanish,
+      english: otEnglish,
+      total: otSpanish + otEnglish,
+    },
     includesOT: withOT,
   }
 }
@@ -316,10 +321,11 @@ function parseColombiaRows(rows, withOT) {
 function parsePhilippinesRows(rows, withOT) {
   const mainAgents = new Map()
   const otAgents = new Map()
+
   let inOT = false
+  let sawOTSection = false
   let mainFooter = 0
   let otFooter = 0
-  let sawOTSection = false
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
@@ -333,12 +339,12 @@ function parsePhilippinesRows(rows, withOT) {
       continue
     }
 
-    if (!inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN'))) {
+    if (!inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
       mainFooter = Math.max(mainFooter, safeInt(row[2]), safeInt(row[3]))
       continue
     }
 
-    if (inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN'))) {
+    if (inOT && (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS'))) {
       otFooter = Math.max(otFooter, safeInt(row[2]), safeInt(row[3]))
       continue
     }
@@ -348,41 +354,16 @@ function parsePhilippinesRows(rows, withOT) {
     const english = safeInt(row[2])
     const agent = buildAgent(name, ext, 0, english)
 
-    if (!inOT) {
-      mainAgents.set(agent.ext, agent)
-    } else {
-      const prev = otAgents.get(agent.ext)
-      if (!prev) otAgents.set(agent.ext, agent)
-      else {
-        otAgents.set(agent.ext, {
-          ...prev,
-          english: prev.english + agent.english,
-          total: prev.total + agent.total,
-        })
-      }
-    }
+    if (!inOT) mergeAgentByExt(mainAgents, agent, 'max')
+    else mergeAgentByExt(otAgents, agent, 'sum')
   }
 
   const mainList = [...mainAgents.values()]
   const otList = withOT && sawOTSection ? [...otAgents.values()] : []
-  const merged = new Map()
+  const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
 
-  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
-  otList.forEach(agent => {
-    const prev = merged.get(agent.ext)
-    if (!prev) merged.set(agent.ext, { ...agent })
-    else {
-      merged.set(agent.ext, {
-        ...prev,
-        english: prev.english + agent.english,
-        total: prev.total + agent.total,
-      })
-    }
-  })
-
-  const agents = sortAgentsByMetric([...merged.values()], 'total')
-  const mainEnglish = Math.max(mainFooter, mainList.reduce((sum, a) => sum + a.english, 0))
-  const otEnglish = withOT ? Math.max(otFooter, otList.reduce((sum, a) => sum + a.english, 0)) : 0
+  const mainEnglish = mainFooter > 0 ? mainFooter : mainList.reduce((sum, a) => sum + a.english, 0)
+  const otEnglish = withOT ? (otFooter > 0 ? otFooter : otList.reduce((sum, a) => sum + a.english, 0)) : 0
 
   return {
     agents,
@@ -392,8 +373,95 @@ function parsePhilippinesRows(rows, withOT) {
       total: mainEnglish + otEnglish,
       activeAgents: agents.length,
     },
-    mainTotals: { english: mainEnglish, spanish: 0, total: mainEnglish },
-    otTotals: { english: otEnglish, spanish: 0, total: otEnglish },
+    mainTotals: {
+      english: mainEnglish,
+      spanish: 0,
+      total: mainEnglish,
+    },
+    otTotals: {
+      english: otEnglish,
+      spanish: 0,
+      total: otEnglish,
+    },
+    includesOT: withOT,
+  }
+}
+
+function parseColombiaRows(rows, withOT) {
+  const mainAgents = new Map()
+  const otAgents = new Map()
+
+  let inOT = false
+  let sawOTSection = false
+  let mainFooter = null
+  let otFooter = null
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const txt = rowText(row)
+    const name = String(row[0] || '').trim()
+    const ext = String(row[1] || '').replace(/,/g, '').trim()
+
+    if (txt.includes('COLOMBIA OT')) {
+      sawOTSection = true
+      inOT = true
+      continue
+    }
+
+    if (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
+      const footer = {
+        english: safeInt(row[3]),
+        spanish: safeInt(row[4]),
+        total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4])),
+      }
+
+      if (!inOT) {
+        if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) mainFooter = footer
+      } else {
+        if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) otFooter = footer
+      }
+
+      continue
+    }
+
+    if (!isAgentRow(name, ext, '2')) continue
+
+    const english = safeInt(row[3])
+    const spanish = safeInt(row[4])
+    const agent = buildAgent(name, ext, spanish, english)
+
+    if (!inOT) mergeAgentByExt(mainAgents, agent, 'max')
+    else mergeAgentByExt(otAgents, agent, 'sum')
+  }
+
+  const mainList = [...mainAgents.values()]
+  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
+  const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
+
+  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
+  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
+
+  const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
+  const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
+
+  return {
+    agents,
+    totals: {
+      english: mainEnglish + otEnglish,
+      spanish: mainSpanish + otSpanish,
+      total: mainEnglish + mainSpanish + otEnglish + otSpanish,
+      activeAgents: agents.length,
+    },
+    mainTotals: {
+      english: mainEnglish,
+      spanish: mainSpanish,
+      total: mainEnglish + mainSpanish,
+    },
+    otTotals: {
+      english: otEnglish,
+      spanish: otSpanish,
+      total: otEnglish + otSpanish,
+    },
     includesOT: withOT,
   }
 }
@@ -401,6 +469,7 @@ function parsePhilippinesRows(rows, withOT) {
 function parseMexicoRows(rows, withOT) {
   const mainAgents = new Map()
   const otAgents = new Map()
+
   let inOT = false
   let sawOTSection = false
   let mainFooter = 0
@@ -435,42 +504,17 @@ function parseMexicoRows(rows, withOT) {
     const english = safeInt(row[3])
     const agent = buildAgent(name, ext, 0, english)
 
-    if (!inOT) {
-      const prev = mainAgents.get(agent.ext)
-      if (!prev || agent.english > prev.english) mainAgents.set(agent.ext, agent)
-    } else {
-      const prev = otAgents.get(agent.ext)
-      if (!prev) otAgents.set(agent.ext, agent)
-      else {
-        otAgents.set(agent.ext, {
-          ...prev,
-          english: prev.english + agent.english,
-          total: prev.total + agent.total,
-        })
-      }
-    }
+    if (!inOT) mergeAgentByExt(mainAgents, agent, 'max')
+    else mergeAgentByExt(otAgents, agent, 'sum')
   }
 
   const mainList = [...mainAgents.values()]
   const otList = withOT && sawOTSection ? [...otAgents.values()] : []
-  const merged = new Map()
+  const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
 
-  mainList.forEach(agent => merged.set(agent.ext, { ...agent }))
-  otList.forEach(agent => {
-    const prev = merged.get(agent.ext)
-    if (!prev) merged.set(agent.ext, { ...agent })
-    else {
-      merged.set(agent.ext, {
-        ...prev,
-        english: prev.english + agent.english,
-        total: prev.total + agent.total,
-      })
-    }
-  })
-
-  const agents = sortAgentsByMetric([...merged.values()], 'total')
   const mainSum = mainList.reduce((sum, agent) => sum + agent.english, 0)
   const otSum = otList.reduce((sum, agent) => sum + agent.english, 0)
+
   const mainEnglish = mainFooter > 0 ? mainFooter : mainSum
   const otEnglish = withOT ? (otFooter > 0 ? otFooter : otSum) : 0
 
@@ -482,15 +526,28 @@ function parseMexicoRows(rows, withOT) {
       total: mainEnglish + otEnglish,
       activeAgents: agents.length,
     },
-    mainTotals: { english: mainEnglish, spanish: 0, total: mainEnglish },
-    otTotals: { english: otEnglish, spanish: 0, total: otEnglish },
+    mainTotals: {
+      english: mainEnglish,
+      spanish: 0,
+      total: mainEnglish,
+    },
+    otTotals: {
+      english: otEnglish,
+      spanish: 0,
+      total: otEnglish,
+    },
     includesOT: withOT,
   }
 }
 
-function parseCentralRows(rows) {
-  const agentsMap = new Map()
-  let footer = null
+function parseVenezuelaRows(rows, withOT) {
+  const mainAgents = new Map()
+  const otAgents = new Map()
+
+  let inOT = false
+  let sawOTSection = false
+  let mainFooter = null
+  let otFooter = null
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
@@ -498,18 +555,114 @@ function parseCentralRows(rows) {
     const name = String(row[0] || '').trim()
     const ext = String(row[1] || '').replace(/,/g, '').trim()
 
-    if (txt.includes('AGENTS LOGGED IN') || txt.includes('AGENT LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
-      const footerEnglish = safeInt(row[3])
-      const footerSpanish = safeInt(row[4])
-      const footerTotal = safeInt(row[5]) || (footerEnglish + footerSpanish)
+    if (txt.includes('OT AW GARRET VENEZUELA') || txt.includes('VENEZUELA OT')) {
+      sawOTSection = true
+      inOT = true
+      continue
+    }
 
-      if (footerEnglish > 0 || footerSpanish > 0 || footerTotal > 0) {
-        footer = {
-          english: footerEnglish,
-          spanish: footerSpanish,
-          total: footerTotal,
+    if (txt.includes('AGENT LOGGED IN') || txt.includes('AGENTS LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
+      const footer = {
+        english: safeInt(row[3]),
+        spanish: safeInt(row[4]),
+        total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4])),
+      }
+
+      if (!inOT) {
+        if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) mainFooter = footer
+      } else {
+        if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) otFooter = footer
+      }
+
+      continue
+    }
+
+    if (!isAgentRow(name, ext, '6')) continue
+
+    const english = safeInt(row[3])
+    const spanish = safeInt(row[4])
+    const agent = buildAgent(name, ext, spanish, english)
+
+    if (!inOT) mergeAgentByExt(mainAgents, agent, 'max')
+    else mergeAgentByExt(otAgents, agent, 'sum')
+  }
+
+  const mainList = [...mainAgents.values()]
+  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
+  const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
+
+  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
+  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
+
+  const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
+  const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
+
+  return {
+    agents,
+    totals: {
+      english: mainEnglish + otEnglish,
+      spanish: mainSpanish + otSpanish,
+      total: mainEnglish + mainSpanish + otEnglish + otSpanish,
+      activeAgents: agents.length,
+    },
+    mainTotals: {
+      english: mainEnglish,
+      spanish: mainSpanish,
+      total: mainEnglish + mainSpanish,
+    },
+    otTotals: {
+      english: otEnglish,
+      spanish: otSpanish,
+      total: otEnglish + otSpanish,
+    },
+    includesOT: withOT,
+  }
+}
+
+function parseCentralRows(rows, withOT) {
+  const mainAgents = new Map()
+  const otAgents = new Map()
+
+  let inOT = false
+  let sawOTSection = false
+  let mainFooter = null
+  let otFooter = null
+  let sawMainFooter = false
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+    const txt = rowText(row)
+    const name = String(row[0] || '').trim()
+    const ext = String(row[1] || '').replace(/,/g, '').trim()
+
+    const looksLikeCentralHeader = txt.includes('CENTRAL AMERICA')
+    const looksLikeOTTime = txt.includes('16:00') || txt.includes('17:00 PST') || txt.includes('16:00 - 17:00')
+    const looksLikeExplicitOT = txt.includes('CENTRAL OT') || txt.includes('CENTRAL AMERICA OT')
+
+    if (!inOT && (looksLikeExplicitOT || looksLikeOTTime || (sawMainFooter && looksLikeCentralHeader && i > 20))) {
+      inOT = true
+      sawOTSection = true
+      continue
+    }
+
+    if (txt.includes('AGENTS LOGGED IN') || txt.includes('AGENT LOGGED IN') || txt.includes('TOTAL TRANSFERS')) {
+      const footer = {
+        english: safeInt(row[3]),
+        spanish: safeInt(row[4]),
+        total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4])),
+      }
+
+      if (!inOT) {
+        if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) {
+          mainFooter = footer
+          sawMainFooter = true
+        }
+      } else {
+        if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) {
+          otFooter = footer
         }
       }
+
       continue
     }
 
@@ -519,44 +672,58 @@ function parseCentralRows(rows) {
     const spanish = safeInt(row[4])
     const agent = buildAgent(name, ext, spanish, english)
 
-    const prev = agentsMap.get(agent.ext)
-    if (!prev || agent.total > prev.total) {
-      agentsMap.set(agent.ext, agent)
-    }
+    if (!inOT) mergeAgentByExt(mainAgents, agent, 'max')
+    else mergeAgentByExt(otAgents, agent, 'sum')
   }
 
-  const agents = sortAgentsByMetric([...agentsMap.values()], 'total')
-  const english = footer ? footer.english : agents.reduce((sum, agent) => sum + agent.english, 0)
-  const spanish = footer ? footer.spanish : agents.reduce((sum, agent) => sum + agent.spanish, 0)
-  const total = footer ? footer.total : english + spanish
+  const mainList = [...mainAgents.values()]
+  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
+  const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
+
+  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, agent) => sum + agent.english, 0)
+  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, agent) => sum + agent.spanish, 0)
+
+  const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, agent) => sum + agent.english, 0)) : 0
+  const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, agent) => sum + agent.spanish, 0)) : 0
 
   return {
     agents,
     totals: {
-      english,
-      spanish,
-      total,
+      english: mainEnglish + otEnglish,
+      spanish: mainSpanish + otSpanish,
+      total: mainEnglish + mainSpanish + otEnglish + otSpanish,
       activeAgents: agents.length,
     },
-    mainTotals: { english, spanish, total },
-    otTotals: { english: 0, spanish: 0, total: 0 },
-    includesOT: false,
+    mainTotals: {
+      english: mainEnglish,
+      spanish: mainSpanish,
+      total: mainEnglish + mainSpanish,
+    },
+    otTotals: {
+      english: otEnglish,
+      spanish: otSpanish,
+      total: otEnglish + otSpanish,
+    },
+    includesOT: withOT,
   }
 }
 
 function parseLiveSheet(teamId, rows) {
-  if (teamId === 'asia') return parseAsiaRows(rows, includeOT())
-  if (teamId === 'colombia') return parseColombiaRows(rows, includeOT())
-  if (teamId === 'philippines') return parsePhilippinesRows(rows, includeOT())
-  if (teamId === 'mexico') return parseMexicoRows(rows, includeOT())
-  if (teamId === 'central') return parseCentralRows(rows)
+  const withOT = includeOT()
+
+  if (teamId === 'asia') return parseAsiaRows(rows, withOT)
+  if (teamId === 'philippines') return parsePhilippinesRows(rows, withOT)
+  if (teamId === 'colombia') return parseColombiaRows(rows, withOT)
+  if (teamId === 'central') return parseCentralRows(rows, withOT)
+  if (teamId === 'mexico') return parseMexicoRows(rows, withOT)
+  if (teamId === 'venezuela') return parseVenezuelaRows(rows, withOT)
 
   return {
     agents: [],
     totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 },
     mainTotals: null,
     otTotals: null,
-    includesOT: false
+    includesOT: false,
   }
 }
 
@@ -564,7 +731,9 @@ async function fetchSheetViaScript(sheetName) {
   const url = `${SCRIPT_URL}?action=getSheet&sheetId=${encodeURIComponent(SHEET_ID)}&sheetName=${encodeURIComponent(sheetName)}&t=${Date.now()}`
   const res = await fetch(url)
   const data = await res.json()
+
   if (!Array.isArray(data)) throw new Error(`getSheet failed: ${sheetName}`)
+
   return data.map(row => row.map(cell => String(cell ?? '')))
 }
 
@@ -594,6 +763,7 @@ async function persistSnapshots(date, teamDataMap) {
       spanish: parsed.totals.spanish,
       total: parsed.totals.total,
       agents: parsed.totals.activeAgents,
+      reachedTarget: countReachedTarget(teamId, parsed.agents),
       noSpanish: !TEAMS[teamId]?.hasSpanish,
     })
 
@@ -638,13 +808,23 @@ async function persistSnapshots(date, teamDataMap) {
 
 function formatDateLabel(date) {
   if (date === todayKey()) return 'Today — LIVE'
+
   const [y, m, d] = date.split('-')
   return `${d}/${m}/${y}`
 }
 
 function FlagImg({ src, size = 18, alt = '' }) {
   if (!src) return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>🌎</span>
-  return <img src={src} alt={alt} width={size} height={Math.round(size * 0.72)} style={{ borderRadius: 3, objectFit: 'cover', display: 'inline-block' }} />
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={size}
+      height={Math.round(size * 0.72)}
+      style={{ borderRadius: 3, objectFit: 'cover', display: 'inline-block' }}
+    />
+  )
 }
 
 function Medal({ index, size = 18 }) {
@@ -661,6 +841,7 @@ function TeamTabs({ selectedTeam, onChange }) {
       {TEAM_ORDER.map(teamId => {
         const team = TEAMS[teamId]
         const active = selectedTeam === teamId
+
         return (
           <button key={teamId} className={`pulse-tab ${active ? 'active' : ''}`} onClick={() => onChange(teamId)}>
             <FlagImg src={team.flag} size={18} alt="" />
@@ -767,6 +948,7 @@ function TopRow({ title, metric, agents }) {
   return (
     <div className="pulse-top-block">
       <div className="pulse-top-block-title">{title}</div>
+
       {top.map((agent, index) => (
         <div key={`${metric}-${agent.ext}`} className="pulse-top-block-item">
           <Medal index={index} size={19} />
@@ -785,6 +967,7 @@ function AgentTable({ team, agents, navigate }) {
   return (
     <div className="pulse-table-wrap">
       <div className="pulse-table-title">{team.label} agents</div>
+
       <div className="pulse-table-scroll">
         <table className="pulse-table">
           <thead>
@@ -797,6 +980,7 @@ function AgentTable({ team, agents, navigate }) {
               <th>Total</th>
             </tr>
           </thead>
+
           <tbody>
             {displayAgents.map((agent, index) => (
               <tr key={agent.ext}>
@@ -817,17 +1001,23 @@ function AgentTable({ team, agents, navigate }) {
 
 function TeamDetail({ team, parsed, selectedDate, navigate }) {
   const showOT = parsed.includesOT && (parsed.otTotals?.total || 0) > 0
+  const reachedTarget = countReachedTarget(team.id, parsed.agents)
+  const target = TEAM_TARGETS[team.id] || 10
 
   return (
     <>
       <div className="pulse-hero-card">
         <div>
           <div className="pulse-hero-date">{formatDateLabel(selectedDate)}</div>
+
           <div className="pulse-hero-title-row">
             <FlagImg src={team.flag} size={28} alt="" />
             <div className="pulse-hero-title">{team.label}</div>
           </div>
-          <div className="pulse-hero-sub">{parsed.totals.activeAgents} active agents{showOT ? ' • OT included' : ''}</div>
+
+          <div className="pulse-hero-sub">
+            {parsed.totals.activeAgents} active agents{showOT ? ' • OT included' : ''}
+          </div>
         </div>
       </div>
 
@@ -835,6 +1025,7 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
         <SummaryCard title="English" value={parsed.totals.english} color="#60a5fa" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.english}` : ''} />
         <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />
         <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : ''} />
+        <SummaryCard title="Reached target" value={reachedTarget} color="#22c55e" subtitle={`Goal: ${target} English`} />
         <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
       </div>
 
@@ -851,6 +1042,7 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+
   const [selectedDate, setSelectedDate] = useState(todayKey())
   const [selectedTeam, setSelectedTeam] = useState('all')
   const [sortMetric, setSortMetric] = useState('english')
@@ -865,15 +1057,19 @@ export default function Dashboard() {
 
   const loadRemoteDates = useCallback(async () => {
     const data = await scriptCall({ action: 'getDailyTotals' })
+
     if (!Array.isArray(data)) return
+
     const dates = data
       .map(entry => normalizeDate(entry.date))
       .filter(date => date && date >= CLEAN_START_DATE)
+
     setRemoteDates([...new Set(dates)].sort((a, b) => b.localeCompare(a)))
   }, [])
 
   const loadLiveTeams = useCallback(async () => {
     setError('')
+
     const results = await Promise.allSettled(
       liveTeamIds.map(teamId => fetchSheetViaScript(TEAMS[teamId].sheetName))
     )
@@ -896,12 +1092,14 @@ export default function Dashboard() {
 
     setTeamData(next)
     setLastUpdate(new Date())
+
     await persistSnapshots(todayKey(), next)
     await loadRemoteDates()
   }, [liveTeamIds, loadRemoteDates])
 
   const loadHistoricalTeams = useCallback(async (date) => {
     setError('')
+
     const [teamSnapshots, totals] = await Promise.all([
       Promise.all(liveTeamIds.map(teamId => scriptCall({ action: 'getTeamSnapshot', date, teamId }))),
       scriptCall({ action: 'getDailyTotals' }),
@@ -942,6 +1140,7 @@ export default function Dashboard() {
 
     const run = async () => {
       setLoading(true)
+
       try {
         if (isToday) await loadLiveTeams()
         else await loadHistoricalTeams(selectedDate)
@@ -953,7 +1152,10 @@ export default function Dashboard() {
     }
 
     run()
-    return () => { cancelled = true }
+
+    return () => {
+      cancelled = true
+    }
   }, [selectedDate, isToday, loadLiveTeams, loadHistoricalTeams])
 
   useEffect(() => {
@@ -962,9 +1164,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isToday) return
+
     const timer = setInterval(() => {
       loadLiveTeams().catch(() => {})
     }, POLL_MS)
+
     return () => clearInterval(timer)
   }, [isToday, loadLiveTeams])
 
@@ -980,6 +1184,7 @@ export default function Dashboard() {
       .sort((a, b) => {
         const diff = (b.parsed?.totals?.[sortMetric] || 0) - (a.parsed?.totals?.[sortMetric] || 0)
         if (diff !== 0) return diff
+
         return (b.parsed?.totals?.total || 0) - (a.parsed?.totals?.total || 0)
       })
 
@@ -1038,7 +1243,7 @@ export default function Dashboard() {
         .pulse-hero-title-row{display:flex;align-items:center;gap:12px}
         .pulse-hero-title{font-size:30px;font-weight:900}
         .pulse-hero-sub{margin-top:6px;color:#94a3b8;font-size:14px}
-        .pulse-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+        .pulse-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
         .pulse-summary-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px}
         .pulse-summary-title{font-size:13px;color:#94a3b8;margin-bottom:10px}
         .pulse-summary-value{font-size:42px;font-weight:900;line-height:1}
@@ -1063,6 +1268,7 @@ export default function Dashboard() {
           .pulse-content-grid{grid-template-columns:1fr}
           .pulse-sidebar{position:static}
           .pulse-overview-grid{grid-template-columns:1fr 1fr}
+          .pulse-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
         }
         @media (max-width: 860px){
           .pulse-overview-grid,.pulse-summary-grid,.pulse-top-blocks-grid{grid-template-columns:1fr}
@@ -1090,8 +1296,9 @@ export default function Dashboard() {
         <div className="pulse-topbar">
           <div>
             <h1 className="pulse-title">AutoWarrantyGarrett</h1>
+
             <div className="pulse-subtext">
-              Live now: Asia, Philippines, Colombia, Central and Mexico. Other teams stay visible while we add them slowly and safely.
+              Live now: Asia, Philippines, Colombia, Central, Mexico and Venezuela.
             </div>
           </div>
 
@@ -1111,6 +1318,7 @@ export default function Dashboard() {
             ) : selectedTeam === 'all' ? (
               <>
                 <SortTabs sortMetric={sortMetric} onChange={setSortMetric} />
+
                 <div className="pulse-overview-grid">
                   {allTeamCards.map(({ team, parsed }, index) => (
                     parsed
@@ -1128,9 +1336,11 @@ export default function Dashboard() {
 
           <div className="pulse-sidebar">
             <div className="pulse-sidebar-title">DATES</div>
+
             <div className="pulse-dates-grid">
               {dateTabs.map(date => {
                 const active = date === selectedDate
+
                 return (
                   <button key={date} className={`pulse-date-btn ${active ? 'active' : ''}`} onClick={() => setSelectedDate(date)}>
                     {formatDateLabel(date)}
