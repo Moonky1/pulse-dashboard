@@ -5,6 +5,7 @@ import './dashboard.css'
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
+const QA_SHEET_ID = '1rw-b5o5jK4O7uMP3-vSEtT6QgitUr-xyrP3GBIcm5ig'
 const CLEAN_START_DATE = '2026-04-23'
 const POLL_MS = 30000
 
@@ -20,12 +21,17 @@ const TEAM_TARGETS = {
   venezuela: 10,
 }
 
+const QA_SHEETS_BY_TEAM = {
+  asia: ['ASIA - VICTOR', 'ASIA - ANTONIO'],
+}
+
 const TEAMS = {
   asia: {
     id: 'asia',
     label: 'Asia',
     short: 'Asia',
     sheetName: 'AW GARRET ASIA LEXNER',
+    sheetNameCandidates: ['AW GARRET ASIA LEXNER'],
     flag: '/flags/asia.png',
     extPrefix: '3',
     hasSpanish: true,
@@ -36,6 +42,7 @@ const TEAMS = {
     label: 'Philippines',
     short: 'Philippines',
     sheetName: 'AW GARRET PHILIPPINES ',
+    sheetNameCandidates: ['AW GARRET PHILIPPINES ', 'AW GARRET PHILIPPINES'],
     flag: '/flags/philippines.png',
     extPrefix: '1',
     hasSpanish: false,
@@ -46,6 +53,7 @@ const TEAMS = {
     label: 'Colombia',
     short: 'Colombia',
     sheetName: 'AW GARRET COLOMBIA JUAN GARCIA',
+    sheetNameCandidates: ['AW GARRET COLOMBIA JUAN GARCIA'],
     flag: '/flags/colombia.png',
     extPrefix: '2',
     hasSpanish: true,
@@ -56,6 +64,7 @@ const TEAMS = {
     label: 'Central America',
     short: 'Central',
     sheetName: 'AW GARRET CENTRAL AMERICA - CAROLINA',
+    sheetNameCandidates: ['AW GARRET CENTRAL AMERICA - CAROLINA'],
     flag: null,
     extPrefix: '4',
     hasSpanish: true,
@@ -66,6 +75,7 @@ const TEAMS = {
     label: 'Mexico Baja',
     short: 'Mexico',
     sheetName: 'AW GARRET BAJA MX KEVIN',
+    sheetNameCandidates: ['AW GARRET BAJA MX KEVIN'],
     flag: '/flags/mexico.png',
     extPrefix: '5',
     hasSpanish: false,
@@ -76,6 +86,11 @@ const TEAMS = {
     label: 'Venezuela',
     short: 'Venezuela',
     sheetName: 'AW GARRET VENEZUELA PATRICIA',
+    sheetNameCandidates: [
+      'AW GARRET VENEZUELA PATRICIA',
+      'AW GARRET VENEZUELA PATRICIA ',
+      'AW GARRET VENEZUELA PATRICIA  ',
+    ],
     flag: '/flags/venezuela.png',
     extPrefix: '6',
     hasSpanish: true,
@@ -95,17 +110,41 @@ const safeInt = (val) => parseInt(String(val ?? '').replace(/,/g, '').trim(), 10
 const cellUpper = (val) => String(val ?? '').trim().toUpperCase()
 
 const colombiaDate = () => new Date(Date.now() - 5 * 60 * 60 * 1000)
-
 const todayKey = () => colombiaDate().toISOString().slice(0, 10)
-
 const colombiaHour = () => colombiaDate().getUTCHours()
-
 const includeOT = () => colombiaHour() >= 18
 
 function normalizeDate(raw) {
   if (!raw) return null
+
   const s = String(raw).trim()
+  if (!s) return null
+
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+
+  let match = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (match) {
+    const first = Number(match[1])
+    const second = Number(match[2])
+    const year = Number(match[3])
+
+    const month = first > 12 ? second : first
+    const day = first > 12 ? first : second
+
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+
+  match = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+  if (match) {
+    const first = Number(match[1])
+    const second = Number(match[2])
+    const year = Number(match[3])
+
+    const month = first > 12 ? second : first
+    const day = first > 12 ? first : second
+
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
 
   const d = new Date(s)
   if (Number.isNaN(d.getTime())) return null
@@ -131,6 +170,17 @@ function buildAgent(name, ext, spanish, english) {
     spanish: sp,
     english: en,
     total: sp + en,
+  }
+}
+
+function emptyParsedTeam() {
+  return {
+    agents: [],
+    totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 },
+    mainTotals: { english: 0, spanish: 0, total: 0 },
+    otTotals: { english: 0, spanish: 0, total: 0 },
+    includesOT: false,
+    invalidTransfers: 0,
   }
 }
 
@@ -315,6 +365,7 @@ function parseAsiaRows(rows, withOT) {
       total: otSpanish + otEnglish,
     },
     includesOT: withOT,
+    invalidTransfers: 0,
   }
 }
 
@@ -384,6 +435,7 @@ function parsePhilippinesRows(rows, withOT) {
       total: otEnglish,
     },
     includesOT: withOT,
+    invalidTransfers: 0,
   }
 }
 
@@ -463,6 +515,7 @@ function parseColombiaRows(rows, withOT) {
       total: otEnglish + otSpanish,
     },
     includesOT: withOT,
+    invalidTransfers: 0,
   }
 }
 
@@ -537,6 +590,7 @@ function parseMexicoRows(rows, withOT) {
       total: otEnglish,
     },
     includesOT: withOT,
+    invalidTransfers: 0,
   }
 }
 
@@ -616,6 +670,7 @@ function parseVenezuelaRows(rows, withOT) {
       total: otEnglish + otSpanish,
     },
     includesOT: withOT,
+    invalidTransfers: 0,
   }
 }
 
@@ -705,6 +760,7 @@ function parseCentralRows(rows, withOT) {
       total: otEnglish + otSpanish,
     },
     includesOT: withOT,
+    invalidTransfers: 0,
   }
 }
 
@@ -718,23 +774,71 @@ function parseLiveSheet(teamId, rows) {
   if (teamId === 'mexico') return parseMexicoRows(rows, withOT)
   if (teamId === 'venezuela') return parseVenezuelaRows(rows, withOT)
 
-  return {
-    agents: [],
-    totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 },
-    mainTotals: null,
-    otTotals: null,
-    includesOT: false,
-  }
+  return emptyParsedTeam()
 }
 
-async function fetchSheetViaScript(sheetName) {
-  const url = `${SCRIPT_URL}?action=getSheet&sheetId=${encodeURIComponent(SHEET_ID)}&sheetName=${encodeURIComponent(sheetName)}&t=${Date.now()}`
+function parseQAInvalidRows(rows, date) {
+  let count = 0
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || []
+
+    const rowDate = normalizeDate(row[0])
+    const disposition = cellUpper(row[4])
+    const validInvalid = cellUpper(row[7])
+
+    if (rowDate !== date) continue
+    if (!disposition.includes('TRANSFER')) continue
+    if (!validInvalid.includes('INVALID')) continue
+
+    count += 1
+  }
+
+  return count
+}
+
+async function fetchSheetViaScript(sheetName, sheetId = SHEET_ID) {
+  const url = `${SCRIPT_URL}?action=getSheet&sheetId=${encodeURIComponent(sheetId)}&sheetName=${encodeURIComponent(sheetName)}&t=${Date.now()}`
   const res = await fetch(url)
   const data = await res.json()
 
   if (!Array.isArray(data)) throw new Error(`getSheet failed: ${sheetName}`)
 
   return data.map(row => row.map(cell => String(cell ?? '')))
+}
+
+async function fetchTeamSheetViaScript(team) {
+  const candidates = team.sheetNameCandidates?.length ? team.sheetNameCandidates : [team.sheetName]
+  let lastError = null
+
+  for (const sheetName of candidates) {
+    try {
+      return await fetchSheetViaScript(sheetName, SHEET_ID)
+    } catch (err) {
+      lastError = err
+    }
+  }
+
+  throw lastError || new Error(`getSheet failed: ${team.sheetName}`)
+}
+
+async function fetchInvalidTransfersForDate(date) {
+  const result = {}
+
+  const teamEntries = Object.entries(QA_SHEETS_BY_TEAM)
+
+  for (const [teamId, sheetNames] of teamEntries) {
+    const reads = await Promise.allSettled(
+      sheetNames.map(sheetName => fetchSheetViaScript(sheetName, QA_SHEET_ID))
+    )
+
+    result[teamId] = reads.reduce((sum, item) => {
+      if (item.status !== 'fulfilled') return sum
+      return sum + parseQAInvalidRows(item.value, date)
+    }, 0)
+  }
+
+  return result
 }
 
 async function scriptCall(params) {
@@ -764,6 +868,7 @@ async function persistSnapshots(date, teamDataMap) {
       total: parsed.totals.total,
       agents: parsed.totals.activeAgents,
       reachedTarget: countReachedTarget(teamId, parsed.agents),
+      invalidTransfers: Number(parsed.invalidTransfers || 0),
       noSpanish: !TEAMS[teamId]?.hasSpanish,
     })
 
@@ -935,7 +1040,7 @@ function TeamComingSoonCard({ team }) {
         <FlagImg src={team.flag} size={24} alt="" />
         <div>
           <div className="pulse-team-name">{team.label}</div>
-          <div className="pulse-team-sub">Live reading is not enabled yet for this team.</div>
+          <div className="pulse-team-sub">No live data loaded yet for this team.</div>
         </div>
       </div>
     </div>
@@ -1003,6 +1108,7 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
   const showOT = parsed.includesOT && (parsed.otTotals?.total || 0) > 0
   const reachedTarget = countReachedTarget(team.id, parsed.agents)
   const target = TEAM_TARGETS[team.id] || 10
+  const invalidTransfers = Number(parsed.invalidTransfers || 0)
 
   return (
     <>
@@ -1025,6 +1131,7 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
         <SummaryCard title="English" value={parsed.totals.english} color="#60a5fa" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.english}` : ''} />
         <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />
         <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : ''} />
+        <SummaryCard title="Invalid xfers" value={invalidTransfers} color="#f87171" subtitle={team.id === 'asia' ? 'QA: Victor + Antonio' : 'QA not connected yet'} />
         <SummaryCard title="Reached target" value={reachedTarget} color="#22c55e" subtitle={`Goal: ${target} English`} />
         <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
       </div>
@@ -1070,21 +1177,30 @@ export default function Dashboard() {
   const loadLiveTeams = useCallback(async () => {
     setError('')
 
-    const results = await Promise.allSettled(
-      liveTeamIds.map(teamId => fetchSheetViaScript(TEAMS[teamId].sheetName))
-    )
+    const [sheetResults, invalidCounts] = await Promise.all([
+      Promise.allSettled(
+        liveTeamIds.map(teamId => fetchTeamSheetViaScript(TEAMS[teamId]))
+      ),
+      fetchInvalidTransfersForDate(todayKey()).catch(() => ({})),
+    ])
 
     const next = {}
 
     liveTeamIds.forEach((teamId, index) => {
-      if (results[index].status === 'fulfilled') {
+      if (sheetResults[index].status === 'fulfilled') {
         try {
-          next[teamId] = parseLiveSheet(teamId, results[index].value)
+          const parsed = parseLiveSheet(teamId, sheetResults[index].value)
+
+          next[teamId] = {
+            ...parsed,
+            invalidTransfers: Number(invalidCounts?.[teamId] || 0),
+          }
         } catch (err) {
           console.error(`Error parsing ${teamId}:`, err)
+          next[teamId] = emptyParsedTeam()
         }
       } else {
-        console.warn(`Failed loading ${teamId}:`, results[index].reason)
+        console.warn(`Failed loading ${teamId}:`, sheetResults[index].reason)
       }
     })
 
@@ -1129,6 +1245,7 @@ export default function Dashboard() {
         mainTotals: null,
         otTotals: null,
         includesOT: false,
+        invalidTransfers: Number(totalsRow?.invalidTransfers || 0),
       }
     })
 
@@ -1178,7 +1295,7 @@ export default function Dashboard() {
   }, [remoteDates])
 
   const allTeamCards = useMemo(() => {
-    const liveCards = liveTeamIds
+    const liveCards = TEAM_ORDER
       .filter(teamId => teamData[teamId])
       .map(teamId => ({ team: TEAMS[teamId], parsed: teamData[teamId] }))
       .sort((a, b) => {
@@ -1188,12 +1305,12 @@ export default function Dashboard() {
         return (b.parsed?.totals?.total || 0) - (a.parsed?.totals?.total || 0)
       })
 
-    const placeholders = TEAM_ORDER
-      .filter(teamId => !TEAMS[teamId].live)
+    const missingCards = TEAM_ORDER
+      .filter(teamId => !teamData[teamId])
       .map(teamId => ({ team: TEAMS[teamId], parsed: null }))
 
-    return [...liveCards, ...placeholders]
-  }, [liveTeamIds, sortMetric, teamData])
+    return [...liveCards, ...missingCards]
+  }, [sortMetric, teamData])
 
   const selectedParsed = selectedTeam !== 'all' ? teamData[selectedTeam] : null
   const selectedTeamMeta = selectedTeam !== 'all' ? TEAMS[selectedTeam] : null
@@ -1243,7 +1360,7 @@ export default function Dashboard() {
         .pulse-hero-title-row{display:flex;align-items:center;gap:12px}
         .pulse-hero-title{font-size:30px;font-weight:900}
         .pulse-hero-sub{margin-top:6px;color:#94a3b8;font-size:14px}
-        .pulse-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+        .pulse-summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
         .pulse-summary-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px}
         .pulse-summary-title{font-size:13px;color:#94a3b8;margin-bottom:10px}
         .pulse-summary-value{font-size:42px;font-weight:900;line-height:1}
@@ -1264,11 +1381,13 @@ export default function Dashboard() {
         .pulse-table .linkish{font-weight:700;color:#f8fafc;cursor:pointer}
         .pulse-loading,.pulse-error{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:48px 24px;text-align:center;color:#94a3b8}
         .pulse-error{background:rgba(127,29,29,0.18);border-color:rgba(248,113,113,0.35);color:#fecaca}
+        @media (max-width: 1200px){
+          .pulse-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+        }
         @media (max-width: 1100px){
           .pulse-content-grid{grid-template-columns:1fr}
           .pulse-sidebar{position:static}
           .pulse-overview-grid{grid-template-columns:1fr 1fr}
-          .pulse-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
         }
         @media (max-width: 860px){
           .pulse-overview-grid,.pulse-summary-grid,.pulse-top-blocks-grid{grid-template-columns:1fr}
