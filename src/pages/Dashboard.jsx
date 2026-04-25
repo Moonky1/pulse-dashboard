@@ -128,10 +128,6 @@ const todayKey = () => colombiaDate().toISOString().slice(0, 10)
 const colombiaHour = () => colombiaDate().getUTCHours()
 const includeOT = () => colombiaHour() >= 18
 
-function monthKey(date) {
-  return String(date || '').slice(0, 7)
-}
-
 function normalizeDate(raw) {
   if (!raw) return null
 
@@ -200,7 +196,6 @@ function findFooterTotalsInRows(rows, startIndex, endIndex, englishIndex, spanis
     const colA = cellUpper(row[0])
 
     const looksLikeFooter = isFooterRow(txt) || (colA.includes('AGENTS') && colA.includes('LOG'))
-
     if (!looksLikeFooter) continue
 
     const english = safeInt(row[englishIndex])
@@ -224,6 +219,8 @@ function buildAgent(name, ext, spanish, english) {
     ext: String(ext || '').replace(/,/g, '').trim(),
     spanish: sp,
     english: en,
+    invalidTransfers: 0,
+    rawTotal: sp + en,
     total: sp + en,
   }
 }
@@ -231,7 +228,7 @@ function buildAgent(name, ext, spanish, english) {
 function emptyParsedTeam() {
   return {
     agents: [],
-    totals: { english: 0, spanish: 0, total: 0, activeAgents: 0 },
+    totals: { english: 0, spanish: 0, total: 0, rawTotal: 0, activeAgents: 0 },
     mainTotals: { english: 0, spanish: 0, total: 0 },
     otTotals: { english: 0, spanish: 0, total: 0 },
     includesOT: false,
@@ -312,15 +309,20 @@ function mergeAgentByExt(map, agent, mode = 'sum') {
   }
 
   if (mode === 'max') {
-    if (agent.total > prev.total) map.set(agent.ext, { ...agent })
+    if (agent.rawTotal > prev.rawTotal) map.set(agent.ext, { ...agent })
     return
   }
 
+  const spanish = prev.spanish + agent.spanish
+  const english = prev.english + agent.english
+  const rawTotal = spanish + english
+
   map.set(agent.ext, {
     ...prev,
-    english: prev.english + agent.english,
-    spanish: prev.spanish + agent.spanish,
-    total: prev.total + agent.total,
+    english,
+    spanish,
+    rawTotal,
+    total: rawTotal,
   })
 }
 
@@ -337,11 +339,16 @@ function mergeMainAndOT(mainList, otList) {
       return
     }
 
+    const spanish = prev.spanish + agent.spanish
+    const english = prev.english + agent.english
+    const rawTotal = spanish + english
+
     merged.set(agent.ext, {
       ...prev,
-      english: prev.english + agent.english,
-      spanish: prev.spanish + agent.spanish,
-      total: prev.total + agent.total,
+      english,
+      spanish,
+      rawTotal,
+      total: rawTotal,
     })
   })
 
@@ -351,6 +358,42 @@ function mergeMainAndOT(mainList, otList) {
 function countReachedTarget(teamId, agents) {
   const target = TEAM_TARGETS[teamId] || 10
   return (agents || []).filter(agent => Number(agent.english || 0) >= target).length
+}
+
+function applyInvalidTransfersToParsed(parsed, invalidInfo) {
+  const byExt = invalidInfo?.byExt || {}
+  const totalInvalid = Number(invalidInfo?.total || 0)
+
+  const agents = (parsed.agents || []).map(agent => {
+    const invalidTransfers = Number(byExt[agent.ext] || 0)
+    const rawTotal = Number(agent.spanish || 0) + Number(agent.english || 0)
+    const total = Math.max(0, rawTotal - invalidTransfers)
+
+    return {
+      ...agent,
+      invalidTransfers,
+      rawTotal,
+      total,
+    }
+  })
+
+  const english = Number(parsed.totals?.english || 0)
+  const spanish = Number(parsed.totals?.spanish || 0)
+  const rawTotal = english + spanish
+  const netTotal = Math.max(0, rawTotal - totalInvalid)
+
+  return {
+    ...parsed,
+    agents: sortAgentsByMetric(agents, 'total'),
+    totals: {
+      ...parsed.totals,
+      english,
+      spanish,
+      rawTotal,
+      total: netTotal,
+    },
+    invalidTransfers: totalInvalid,
+  }
 }
 
 function parseAsiaRows(rows, withOT) {
@@ -403,12 +446,17 @@ function parseAsiaRows(rows, withOT) {
   const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
   const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
 
+  const english = mainEnglish + otEnglish
+  const spanish = mainSpanish + otSpanish
+  const rawTotal = english + spanish
+
   return {
     agents,
     totals: {
-      spanish: mainSpanish + otSpanish,
-      english: mainEnglish + otEnglish,
-      total: mainSpanish + mainEnglish + otSpanish + otEnglish,
+      spanish,
+      english,
+      rawTotal,
+      total: rawTotal,
       activeAgents: agents.length,
     },
     mainTotals: {
@@ -472,13 +520,16 @@ function parsePhilippinesRows(rows, withOT) {
 
   const mainEnglish = mainFooter > 0 ? mainFooter : mainList.reduce((sum, a) => sum + a.english, 0)
   const otEnglish = withOT ? (otFooter > 0 ? otFooter : otList.reduce((sum, a) => sum + a.english, 0)) : 0
+  const english = mainEnglish + otEnglish
+  const rawTotal = english
 
   return {
     agents,
     totals: {
-      english: mainEnglish + otEnglish,
+      english,
       spanish: 0,
-      total: mainEnglish + otEnglish,
+      rawTotal,
+      total: rawTotal,
       activeAgents: agents.length,
     },
     mainTotals: {
@@ -553,12 +604,17 @@ function parseColombiaRows(rows, withOT) {
   const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
   const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
 
+  const english = mainEnglish + otEnglish
+  const spanish = mainSpanish + otSpanish
+  const rawTotal = english + spanish
+
   return {
     agents,
     totals: {
-      english: mainEnglish + otEnglish,
-      spanish: mainSpanish + otSpanish,
-      total: mainEnglish + mainSpanish + otEnglish + otSpanish,
+      english,
+      spanish,
+      rawTotal,
+      total: rawTotal,
       activeAgents: agents.length,
     },
     mainTotals: {
@@ -627,13 +683,16 @@ function parseMexicoRows(rows, withOT) {
 
   const mainEnglish = mainFooter > 0 ? mainFooter : mainSum
   const otEnglish = withOT ? (otFooter > 0 ? otFooter : otSum) : 0
+  const english = mainEnglish + otEnglish
+  const rawTotal = english
 
   return {
     agents,
     totals: {
-      english: mainEnglish + otEnglish,
+      english,
       spanish: 0,
-      total: mainEnglish + otEnglish,
+      rawTotal,
+      total: rawTotal,
       activeAgents: agents.length,
     },
     mainTotals: {
@@ -716,12 +775,17 @@ function parseVenezuelaRows(rows, withOT) {
   const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
   const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
 
+  const english = mainEnglish + otEnglish
+  const spanish = mainSpanish + otSpanish
+  const rawTotal = english + spanish
+
   return {
     agents,
     totals: {
-      english: mainEnglish + otEnglish,
-      spanish: mainSpanish + otSpanish,
-      total: mainEnglish + mainSpanish + otEnglish + otSpanish,
+      english,
+      spanish,
+      rawTotal,
+      total: rawTotal,
       activeAgents: agents.length,
     },
     mainTotals: {
@@ -806,12 +870,17 @@ function parseCentralRows(rows, withOT) {
   const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, agent) => sum + agent.english, 0)) : 0
   const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, agent) => sum + agent.spanish, 0)) : 0
 
+  const english = mainEnglish + otEnglish
+  const spanish = mainSpanish + otSpanish
+  const rawTotal = english + spanish
+
   return {
     agents,
     totals: {
-      english: mainEnglish + otEnglish,
-      spanish: mainSpanish + otSpanish,
-      total: mainEnglish + mainSpanish + otEnglish + otSpanish,
+      english,
+      spanish,
+      rawTotal,
+      total: rawTotal,
       activeAgents: agents.length,
     },
     mainTotals: {
@@ -843,25 +912,41 @@ function parseLiveSheet(teamId, rows) {
 }
 
 function parseQAInvalidRows(rows, date) {
-  let count = 0
-  const selectedMonth = monthKey(date)
+  let total = 0
+  const byExt = {}
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
 
     const rowDate = normalizeDate(row[0])
+    const ext = String(row[2] || '').replace(/,/g, '').trim()
     const disposition = cellUpper(row[4])
     const validInvalid = cellUpper(row[7])
 
-    if (!rowDate) continue
-    if (selectedMonth && monthKey(rowDate) !== selectedMonth) continue
+    if (rowDate !== date) continue
+    if (!ext) continue
     if (!disposition.includes('TRANSFER')) continue
     if (!validInvalid.includes('INVALID')) continue
 
-    count += 1
+    total += 1
+    byExt[ext] = (byExt[ext] || 0) + 1
   }
 
-  return count
+  return { total, byExt }
+}
+
+function mergeInvalidInfo(items) {
+  const merged = { total: 0, byExt: {} }
+
+  items.forEach(info => {
+    merged.total += Number(info?.total || 0)
+
+    Object.entries(info?.byExt || {}).forEach(([ext, count]) => {
+      merged.byExt[ext] = (merged.byExt[ext] || 0) + Number(count || 0)
+    })
+  })
+
+  return merged
 }
 
 async function fetchSheetViaScript(sheetName, sheetId = SHEET_ID) {
@@ -899,10 +984,11 @@ async function fetchInvalidTransfersForDate(date) {
       sheetNames.map(sheetName => fetchSheetViaScript(sheetName, QA_SHEET_ID))
     )
 
-    result[teamId] = reads.reduce((sum, item) => {
-      if (item.status !== 'fulfilled') return sum
-      return sum + parseQAInvalidRows(item.value, date)
-    }, 0)
+    const parsedItems = reads
+      .filter(item => item.status === 'fulfilled')
+      .map(item => parseQAInvalidRows(item.value, date))
+
+    result[teamId] = mergeInvalidInfo(parsedItems)
   }
 
   return result
@@ -932,6 +1018,7 @@ async function persistSnapshots(date, teamDataMap) {
       name: TEAMS[teamId]?.label || teamId,
       english: parsed.totals.english,
       spanish: parsed.totals.spanish,
+      rawTotal: parsed.totals.rawTotal,
       total: parsed.totals.total,
       agents: parsed.totals.activeAgents,
       reachedTarget: countReachedTarget(teamId, parsed.agents),
@@ -945,6 +1032,8 @@ async function persistSnapshots(date, teamDataMap) {
         name: agent.name,
         english: agent.english,
         spanish: agent.spanish,
+        invalidTransfers: agent.invalidTransfers || 0,
+        rawTotal: agent.rawTotal || ((agent.spanish || 0) + (agent.english || 0)),
         total: agent.total,
         team: teamId,
       })
@@ -1083,8 +1172,8 @@ function TeamOverviewCard({ team, parsed, sortMetric, onOpen, rankIndex = 0 }) {
       <div className="pulse-team-stats-grid">
         <div><span className="stat-k">English</span><span className="stat-v blue">{parsed.totals.english.toLocaleString()}</span></div>
         <div><span className="stat-k">Spanish</span><span className="stat-v green">{parsed.totals.spanish.toLocaleString()}</span></div>
+        <div><span className="stat-k">Invalid</span><span className="stat-v red">{Number(parsed.invalidTransfers || 0).toLocaleString()}</span></div>
         <div><span className="stat-k">Total</span><span className="stat-v orange">{parsed.totals.total.toLocaleString()}</span></div>
-        <div><span className="stat-k">OT total</span><span className="stat-v purple">{parsed.otTotals?.total?.toLocaleString() || 0}</span></div>
       </div>
 
       <div className="pulse-top3-list">
@@ -1149,6 +1238,7 @@ function AgentTable({ team, agents, navigate }) {
               <th>Ext</th>
               <th>Spanish</th>
               <th>English</th>
+              <th>Invalid xfers</th>
               <th>Total</th>
             </tr>
           </thead>
@@ -1161,6 +1251,7 @@ function AgentTable({ team, agents, navigate }) {
                 <td>#{agent.ext}</td>
                 <td className="green">{agent.spanish}</td>
                 <td className="blue">{agent.english}</td>
+                <td className="red">{agent.invalidTransfers || 0}</td>
                 <td className="orange">{agent.total}</td>
               </tr>
             ))}
@@ -1197,8 +1288,8 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
       <div className="pulse-summary-grid">
         <SummaryCard title="English" value={parsed.totals.english} color="#60a5fa" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.english}` : ''} />
         <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" subtitle={parsed.mainTotals ? `Main: ${parsed.mainTotals.spanish}` : ''} />
-        <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : ''} />
         <SummaryCard title="Invalid xfers" value={invalidTransfers} color="#f87171" subtitle={QA_DISPLAY_BY_TEAM[team.id] || 'QA not connected yet'} />
+        <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" subtitle={showOT ? `OT: ${parsed.otTotals.total}` : `Raw: ${parsed.totals.rawTotal || parsed.totals.total}`} />
         <SummaryCard title="Reached target" value={reachedTarget} color="#22c55e" subtitle={`Goal: ${target} English`} />
         <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" subtitle={selectedDate === todayKey() ? 'Live snapshot' : 'Saved snapshot'} />
       </div>
@@ -1254,29 +1345,19 @@ export default function Dashboard() {
     const next = {}
 
     liveTeamIds.forEach((teamId, index) => {
+      const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
+
       if (sheetResults[index].status === 'fulfilled') {
         try {
           const parsed = parseLiveSheet(teamId, sheetResults[index].value)
-
-          next[teamId] = {
-            ...parsed,
-            invalidTransfers: Number(invalidCounts?.[teamId] || 0),
-          }
+          next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
         } catch (err) {
           console.error(`Error parsing ${teamId}:`, err)
-
-          next[teamId] = {
-            ...emptyParsedTeam(),
-            invalidTransfers: Number(invalidCounts?.[teamId] || 0),
-          }
+          next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
         }
       } else {
         console.warn(`Failed loading ${teamId}:`, sheetResults[index].reason)
-
-        next[teamId] = {
-          ...emptyParsedTeam(),
-          invalidTransfers: Number(invalidCounts?.[teamId] || 0),
-        }
+        next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
       }
     })
 
@@ -1311,19 +1392,24 @@ export default function Dashboard() {
         ? dailyEntry.teams.find(team => String(team.id) === teamId)
         : null
 
-      next[teamId] = {
+      const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
+
+      const parsed = {
         agents: sortAgentsByMetric(agents, 'total'),
         totals: {
           english: Number(totalsRow?.english) || agents.reduce((sum, agent) => sum + (agent.english || 0), 0),
           spanish: Number(totalsRow?.spanish) || agents.reduce((sum, agent) => sum + (agent.spanish || 0), 0),
+          rawTotal: Number(totalsRow?.rawTotal) || agents.reduce((sum, agent) => sum + ((agent.spanish || 0) + (agent.english || 0)), 0),
           total: Number(totalsRow?.total) || agents.reduce((sum, agent) => sum + (agent.total || 0), 0),
           activeAgents: Number(totalsRow?.agents) || agents.length,
         },
         mainTotals: null,
         otTotals: null,
         includesOT: false,
-        invalidTransfers: Number(invalidCounts?.[teamId] || totalsRow?.invalidTransfers || 0),
+        invalidTransfers: Number(totalsRow?.invalidTransfers || 0),
       }
+
+      next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
     })
 
     setTeamData(next)
@@ -1427,7 +1513,7 @@ export default function Dashboard() {
         .pulse-team-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
         .stat-k{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}
         .stat-v{display:block;font-size:18px;font-weight:900}
-        .blue{color:#60a5fa}.green{color:#34d399}.orange{color:#f59e0b}.purple{color:#c084fc}
+        .blue{color:#60a5fa}.green{color:#34d399}.orange{color:#f59e0b}.purple{color:#c084fc}.red{color:#f87171}
         .pulse-top3-list{display:grid;gap:8px;margin-top:18px}
         .pulse-top3-item{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:8px;align-items:center}
         .pulse-top3-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e5e7eb;font-size:13px}
