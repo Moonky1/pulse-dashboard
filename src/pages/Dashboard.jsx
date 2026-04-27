@@ -1598,7 +1598,19 @@ const loadLiveTeams = useCallback(async () => {
     if (sheetResults[index].status === 'fulfilled') {
       try {
         const parsed = parseLiveSheet(teamId, sheetResults[index].value)
-        next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
+        const parsedWithInvalids = applyInvalidTransfersToParsed(parsed, invalidInfo)
+
+if (teamId === 'venezuela') {
+  parsedWithInvalids.totals.english = Math.max(
+    0,
+    Number(parsedWithInvalids.totals.english || 0) - Number(parsedWithInvalids.invalidTransfers || 0)
+  )
+
+  parsedWithInvalids.totals.total =
+    Number(parsedWithInvalids.totals.english || 0) + Number(parsedWithInvalids.totals.spanish || 0)
+}
+
+next[teamId] = parsedWithInvalids
       } catch (err) {
         console.error(`Error parsing ${teamId}:`, err)
         next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
