@@ -953,6 +953,65 @@ function detectQAHeader(row, sheetName = '') {
   }
 }
 
+function getQATeamPrefix(sheetName = '') {
+  const upper = cellUpper(sheetName)
+
+  if (upper.includes('PH')) return '1'
+  if (upper.includes('COL')) return '2'
+  if (upper.includes('ASIA')) return '3'
+  if (upper.includes('CA')) return '4'
+  if (upper.includes('MX')) return '5'
+  if (upper.includes('VZ') || upper.includes('VENEZUELA')) return '6'
+
+  return ''
+}
+
+function getQAExtFromRow(row, config, sheetName = '') {
+  const prefix = getQATeamPrefix(sheetName)
+
+  const direct = String(row?.[config.extIndex] || '').replace(/,/g, '').trim()
+  if (/^\d{3,5}$/.test(direct) && (!prefix || direct.startsWith(prefix))) {
+    return direct
+  }
+
+  // Fallback: scan the first columns only.
+  // This avoids grabbing phone numbers / links later in the row.
+  for (let i = 0; i < Math.min(row.length, 6); i++) {
+    const candidate = String(row[i] || '').replace(/,/g, '').trim()
+
+    if (/^\d{4}$/.test(candidate) && (!prefix || candidate.startsWith(prefix))) {
+      return candidate
+    }
+  }
+
+  return ''
+}
+
+function getQADateFromRow(row, config) {
+  const direct = normalizeDate(row?.[config.dateIndex])
+  if (direct) return direct
+
+  // Fallback: sometimes Apps Script / Sheets returns date columns weirdly.
+  for (let i = 0; i < Math.min(row.length, 4); i++) {
+    const candidate = normalizeDate(row[i])
+    if (candidate) return candidate
+  }
+
+  return null
+}
+
+function rowHasInvalidStatus(row, config) {
+  const configured = cellUpper(row?.[config.validIndex])
+  if (configured === 'INVALID' || configured.includes('INVALID')) return true
+
+  // Fallback: scan only first 12 cells.
+  // We use exact-ish status matching to avoid counting long QA notes by accident.
+  return (row || []).slice(0, 12).some(cell => {
+    const value = cellUpper(cell)
+    return value === 'INVALID' || value === 'INVALID TRANSFER'
+  })
+}
+
 function parseQAInvalidRows(rows, date, sheetName = '') {
   let total = 0
   const byExt = {}
@@ -967,17 +1026,13 @@ function parseQAInvalidRows(rows, date, sheetName = '') {
       continue
     }
 
-    const rowDate = normalizeDate(row[config.dateIndex])
-    const ext = String(row[config.extIndex] || '').replace(/,/g, '').trim()
-    const validInvalid = cellUpper(row[config.validIndex])
-
+    const rowDate = getQADateFromRow(row, config)
     if (rowDate !== date) continue
-    if (!ext) continue
 
-    // Count every QA row marked INVALID, even if the disposition is NOT A XFER.
-    // Before, Pulse only counted rows where Disposition included TRANSFER,
-    // so NOT A XFER + INVALID rows were being ignored.
-    if (!validInvalid.includes('INVALID')) continue
+    if (!rowHasInvalidStatus(row, config)) continue
+
+    const ext = getQAExtFromRow(row, config, sheetName)
+    if (!ext) continue
 
     total += 1
     byExt[ext] = (byExt[ext] || 0) + 1
