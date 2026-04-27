@@ -969,12 +969,14 @@ function parseQAInvalidRows(rows, date, sheetName = '') {
 
     const rowDate = normalizeDate(row[config.dateIndex])
     const ext = String(row[config.extIndex] || '').replace(/,/g, '').trim()
-    const disposition = cellUpper(row[config.dispositionIndex])
     const validInvalid = cellUpper(row[config.validIndex])
 
     if (rowDate !== date) continue
     if (!ext) continue
-    if (!disposition.includes('TRANSFER')) continue
+
+    // Count every QA row marked INVALID, even if the disposition is NOT A XFER.
+    // Before, Pulse only counted rows where Disposition included TRANSFER,
+    // so NOT A XFER + INVALID rows were being ignored.
     if (!validInvalid.includes('INVALID')) continue
 
     total += 1
@@ -983,7 +985,6 @@ function parseQAInvalidRows(rows, date, sheetName = '') {
 
   return { total, byExt }
 }
-
 function mergeInvalidInfo(items) {
   const merged = { total: 0, byExt: {} }
 
