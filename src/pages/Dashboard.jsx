@@ -1497,68 +1497,43 @@ const loadRemoteDates = useCallback(async () => {
 const loadLiveTeams = useCallback(async () => {
   setError('')
 
-  let parsedFromSheets = null
+  const [sheetResults, invalidCounts] = await Promise.all([
+    Promise.allSettled(
+      liveTeamIds.map(teamId => fetchTeamSheetViaScript(TEAMS[teamId]))
+    ),
+    fetchInvalidTransfersForDate(todayKey()).catch(() => ({})),
+  ])
 
-  try {
-    const [sheetResults, invalidCounts] = await Promise.all([
-      Promise.allSettled(
-        liveTeamIds.map(teamId => fetchTeamSheetViaScript(TEAMS[teamId]))
-      ),
-      fetchInvalidTransfersForDate(todayKey()).catch(() => ({})),
-    ])
+  const next = {}
 
-    const next = {}
+  liveTeamIds.forEach((teamId, index) => {
+    const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
 
-    liveTeamIds.forEach((teamId, index) => {
-      const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
-
-      if (sheetResults[index].status === 'fulfilled') {
-        try {
-          const parsed = parseLiveSheet(teamId, sheetResults[index].value)
-          next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
-        } catch (err) {
-          console.error(`Error parsing ${teamId}:`, err)
-          next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
-        }
-      } else {
-        console.warn(`Failed loading ${teamId}:`, sheetResults[index].reason)
+    if (sheetResults[index].status === 'fulfilled') {
+      try {
+        const parsed = parseLiveSheet(teamId, sheetResults[index].value)
+        next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
+      } catch (err) {
+        console.error(`Error parsing ${teamId}:`, err)
         next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
       }
-    })
-
-    if (Object.keys(next).length) {
-      parsedFromSheets = next
-
-      await persistSnapshots(todayKey(), next)
-
-      // Small delay so Apps Script has time to finish writing into Supabase.
-      await delay(1200)
+    } else {
+      console.warn(`Failed loading ${teamId}:`, sheetResults[index].reason)
+      next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
     }
-  } catch (err) {
-    console.warn('Live Sheets sync failed, trying Supabase:', err)
-  }
+  })
 
-  try {
-    const supabaseData = await fetchSupabaseDashboardDate(todayKey())
+  if (!Object.keys(next).length) throw new Error('Failed to read live team sheets')
 
-    if (Object.keys(supabaseData).length) {
-      setTeamData(supabaseData)
-      setLastUpdate(new Date())
-      await loadRemoteDates()
-      return
-    }
-  } catch (err) {
-    console.warn('Supabase live read failed:', err)
-  }
+  // IMPORTANT:
+  // Today LIVE displays the freshly parsed Google Sheets data immediately.
+  // Supabase is updated in the background so the page does not wait or show stale data.
+  setTeamData(next)
+  setLastUpdate(new Date())
 
-  if (parsedFromSheets && Object.keys(parsedFromSheets).length) {
-    setTeamData(parsedFromSheets)
-    setLastUpdate(new Date())
-    await loadRemoteDates()
-    return
-  }
-
-  throw new Error('Failed to read live team data')
+  persistSnapshots(todayKey(), next)
+    .then(() => loadRemoteDates())
+    .catch(err => console.warn('Background snapshot persist failed:', err))
 }, [liveTeamIds, loadRemoteDates])
 
 const loadHistoricalTeams = useCallback(async (date) => {
