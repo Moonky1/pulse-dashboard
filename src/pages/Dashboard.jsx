@@ -490,6 +490,10 @@ function parsePhilippinesRows(rows, withOT) {
     const name = String(row[0] || '').trim()
     const ext = String(row[1] || '').replace(/,/g, '').trim()
 
+    if (txt.includes('AW PHIL')) {
+      break
+    }
+
     if (txt.includes('PHILIPPINES OT')) {
       sawOTSection = true
       inOT = true
@@ -497,13 +501,17 @@ function parsePhilippinesRows(rows, withOT) {
     }
 
     if (!inOT && isFooterRow(txt)) {
-      mainFooter = Math.max(mainFooter, safeInt(row[2]), safeInt(row[3]))
+      const footer = Math.max(safeInt(row[2]), safeInt(row[3]))
+      if (footer > 0) mainFooter = footer
       continue
     }
 
     if (inOT && isFooterRow(txt)) {
-      otFooter = Math.max(otFooter, safeInt(row[2]), safeInt(row[3]))
-      continue
+      const footer = Math.max(safeInt(row[2]), safeInt(row[3]))
+      if (footer > 0) otFooter = footer
+
+      // Important: after OT footer, stop reading.
+      break
     }
 
     if (!isAgentRow(name, ext, '1')) continue
@@ -543,7 +551,7 @@ function parsePhilippinesRows(rows, withOT) {
       spanish: 0,
       total: otEnglish,
     },
-    includesOT: withOT,
+    includesOT: withOT && sawOTSection,
     invalidTransfers: 0,
   }
 }
@@ -580,6 +588,9 @@ function parseColombiaRows(rows, withOT) {
         if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) mainFooter = footer
       } else {
         if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) otFooter = footer
+
+        // Important: after OT footer, stop reading.
+        break
       }
 
       continue
@@ -628,7 +639,7 @@ function parseColombiaRows(rows, withOT) {
       spanish: otSpanish,
       total: otEnglish + otSpanish,
     },
-    includesOT: withOT,
+    includesOT: withOT && sawOTSection,
     invalidTransfers: 0,
   }
 }
@@ -711,6 +722,15 @@ function parseMexicoRows(rows, withOT) {
   }
 }
 
+function findDateInRow(row) {
+  for (let i = 0; i < Math.min((row || []).length, 8); i++) {
+    const date = normalizeDate(row[i])
+    if (date) return date
+  }
+
+  return null
+}
+
 function parseVenezuelaRows(rows, withOT) {
   const mainAgents = new Map()
   const otAgents = new Map()
@@ -728,6 +748,13 @@ function parseVenezuelaRows(rows, withOT) {
     const ext = String(row[1] || '').replace(/,/g, '').trim()
 
     if (txt.includes('OT AW GARRET VENEZUELA') || txt.includes('VENEZUELA OT')) {
+      const otDate = findDateInRow(row)
+
+      // If the OT block has an old date, do not read it.
+      if (otDate && otDate !== todayKey()) {
+        break
+      }
+
       sawOTSection = true
       inOT = true
       otStartIndex = i
@@ -745,6 +772,9 @@ function parseVenezuelaRows(rows, withOT) {
         if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) mainFooter = footer
       } else {
         if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) otFooter = footer
+
+        // Important: after OT footer, stop reading.
+        break
       }
 
       continue
@@ -799,7 +829,7 @@ function parseVenezuelaRows(rows, withOT) {
       spanish: otSpanish,
       total: otEnglish + otSpanish,
     },
-    includesOT: withOT,
+    includesOT: withOT && sawOTSection,
     invalidTransfers: 0,
   }
 }
