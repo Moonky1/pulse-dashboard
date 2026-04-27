@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { supabase } from '../utils/supabase'
 import './dashboard.css'
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
@@ -1055,7 +1056,109 @@ async function scriptPost(params) {
   const body = new URLSearchParams(params)
   await fetch(SCRIPT_URL, { method: 'POST', body, mode: 'no-cors' })
 }
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
 
+function normalizeSupabaseAgent(row) {
+  const english = Number(row?.english || 0)
+  const spanish = Number(row?.spanish || 0)
+  const invalidTransfers = Number(row?.invalid_transfers || 0)
+
+  const rawTotal = Number(row?.raw_total ?? (english + spanish))
+  const total = Number(row?.net_total ?? Math.max(0, rawTotal - invalidTransfers))
+
+  return {
+    ext: String(row?.agent_ext || '').trim(),
+    name: String(row?.agent_name || '').trim(),
+    team: String(row?.team || '').trim(),
+    english,
+    spanish,
+    invalidTransfers,
+    rawTotal,
+    total,
+  }
+}
+
+function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
+  const teamMap = {}
+
+  TEAM_ORDER.forEach(teamId => {
+    const teamRow = teamRows.find(row => String(row.team || '') === teamId)
+    const agents = agentRows
+      .filter(row => String(row.team || '') === teamId)
+      .map(normalizeSupabaseAgent)
+      .filter(agent => agent.ext)
+
+    if (!teamRow && agents.length === 0) return
+
+    const fallbackEnglish = agents.reduce((sum, agent) => sum + Number(agent.english || 0), 0)
+    const fallbackSpanish = agents.reduce((sum, agent) => sum + Number(agent.spanish || 0), 0)
+    const fallbackInvalid = agents.reduce((sum, agent) => sum + Number(agent.invalidTransfers || 0), 0)
+    const fallbackRawTotal = fallbackEnglish + fallbackSpanish
+    const fallbackTotal = agents.reduce((sum, agent) => sum + Number(agent.total || 0), 0)
+
+    const english = Number(teamRow?.english ?? fallbackEnglish)
+    const spanish = Number(teamRow?.spanish ?? fallbackSpanish)
+    const invalidTransfers = Number(teamRow?.invalid_transfers ?? fallbackInvalid)
+    const rawTotal = english + spanish
+    const total = Number(teamRow?.total ?? (fallbackTotal || Math.max(0, rawTotal - invalidTransfers)))
+    const activeAgents = Number(teamRow?.active_agents ?? agents.length)
+
+    teamMap[teamId] = {
+      agents: sortAgentsByMetric(agents, 'total'),
+      totals: {
+        english,
+        spanish,
+        rawTotal,
+        total,
+        activeAgents,
+      },
+      mainTotals: null,
+      otTotals: null,
+      includesOT: false,
+      invalidTransfers,
+    }
+  })
+
+  return teamMap
+}
+
+async function fetchSupabaseDashboardDate(date) {
+  const [teamResult, agentResult] = await Promise.all([
+    supabase
+      .from('daily_team_stats')
+      .select('*')
+      .eq('date', date),
+
+    supabase
+      .from('daily_agent_stats')
+      .select('*')
+      .eq('date', date)
+      .range(0, 4999),
+  ])
+
+  if (teamResult.error) throw teamResult.error
+  if (agentResult.error) throw agentResult.error
+
+  return buildParsedTeamsFromSupabase(teamResult.data || [], agentResult.data || [])
+}
+
+async function fetchSupabaseDates() {
+  const { data, error } = await supabase
+    .from('daily_team_stats')
+    .select('date')
+    .gte('date', CLEAN_START_DATE)
+    .order('date', { ascending: false })
+
+  if (error) throw error
+
+  return [...new Set(
+    (data || [])
+      .map(row => normalizeDate(row.date))
+      .filter(Boolean)
+  )].sort((a, b) => b.localeCompare(a))
+}
 async function persistSnapshots(date, teamDataMap) {
   const totalsPayload = []
   const allAgents = []
@@ -1371,21 +1474,32 @@ export default function Dashboard() {
   const liveTeamIds = useMemo(() => TEAM_ORDER.filter(teamId => TEAMS[teamId].live), [])
   const isToday = selectedDate === todayKey()
 
-  const loadRemoteDates = useCallback(async () => {
-    const data = await scriptCall({ action: 'getDailyTotals' })
+const loadRemoteDates = useCallback(async () => {
+  try {
+    const dates = await fetchSupabaseDates()
+    setRemoteDates(dates)
+    return
+  } catch (err) {
+    console.warn('Supabase dates failed, falling back to Apps Script:', err)
+  }
 
-    if (!Array.isArray(data)) return
+  const data = await scriptCall({ action: 'getDailyTotals' })
 
-    const dates = data
-      .map(entry => normalizeDate(entry.date))
-      .filter(date => date && date >= CLEAN_START_DATE)
+  if (!Array.isArray(data)) return
 
-    setRemoteDates([...new Set(dates)].sort((a, b) => b.localeCompare(a)))
-  }, [])
+  const dates = data
+    .map(entry => normalizeDate(entry.date))
+    .filter(date => date && date >= CLEAN_START_DATE)
 
-  const loadLiveTeams = useCallback(async () => {
-    setError('')
+  setRemoteDates([...new Set(dates)].sort((a, b) => b.localeCompare(a)))
+}, [])
 
+const loadLiveTeams = useCallback(async () => {
+  setError('')
+
+  let parsedFromSheets = null
+
+  try {
     const [sheetResults, invalidCounts] = await Promise.all([
       Promise.allSettled(
         liveTeamIds.map(teamId => fetchTeamSheetViaScript(TEAMS[teamId]))
@@ -1412,59 +1526,97 @@ export default function Dashboard() {
       }
     })
 
-    if (!Object.keys(next).length) throw new Error('Failed to read live team sheets')
+    if (Object.keys(next).length) {
+      parsedFromSheets = next
 
-    setTeamData(next)
+      await persistSnapshots(todayKey(), next)
+
+      // Small delay so Apps Script has time to finish writing into Supabase.
+      await delay(1200)
+    }
+  } catch (err) {
+    console.warn('Live Sheets sync failed, trying Supabase:', err)
+  }
+
+  try {
+    const supabaseData = await fetchSupabaseDashboardDate(todayKey())
+
+    if (Object.keys(supabaseData).length) {
+      setTeamData(supabaseData)
+      setLastUpdate(new Date())
+      await loadRemoteDates()
+      return
+    }
+  } catch (err) {
+    console.warn('Supabase live read failed:', err)
+  }
+
+  if (parsedFromSheets && Object.keys(parsedFromSheets).length) {
+    setTeamData(parsedFromSheets)
     setLastUpdate(new Date())
-
-    await persistSnapshots(todayKey(), next)
     await loadRemoteDates()
-  }, [liveTeamIds, loadRemoteDates])
+    return
+  }
 
-  const loadHistoricalTeams = useCallback(async (date) => {
-    setError('')
+  throw new Error('Failed to read live team data')
+}, [liveTeamIds, loadRemoteDates])
 
-    const [teamSnapshots, totals, invalidCounts] = await Promise.all([
-      Promise.all(liveTeamIds.map(teamId => scriptCall({ action: 'getTeamSnapshot', date, teamId }))),
-      scriptCall({ action: 'getDailyTotals' }),
-      fetchInvalidTransfersForDate(date).catch(() => ({})),
-    ])
+const loadHistoricalTeams = useCallback(async (date) => {
+  setError('')
 
-    const dailyEntry = Array.isArray(totals)
-      ? totals.find(entry => normalizeDate(entry.date) === date)
+  try {
+    const supabaseData = await fetchSupabaseDashboardDate(date)
+
+    if (Object.keys(supabaseData).length) {
+      setTeamData(supabaseData)
+      setLastUpdate(null)
+      return
+    }
+  } catch (err) {
+    console.warn('Supabase historical read failed, falling back to Apps Script:', err)
+  }
+
+  const [teamSnapshots, totals, invalidCounts] = await Promise.all([
+    Promise.all(liveTeamIds.map(teamId => scriptCall({ action: 'getTeamSnapshot', date, teamId }))),
+    scriptCall({ action: 'getDailyTotals' }),
+    fetchInvalidTransfersForDate(date).catch(() => ({})),
+  ])
+
+  const dailyEntry = Array.isArray(totals)
+    ? totals.find(entry => normalizeDate(entry.date) === date)
+    : null
+
+  const next = {}
+
+  liveTeamIds.forEach((teamId, index) => {
+    const snap = teamSnapshots[index]
+    const agents = snap?.ok && Array.isArray(snap.agents) ? snap.agents : []
+    const totalsRow = Array.isArray(dailyEntry?.teams)
+      ? dailyEntry.teams.find(team => String(team.id) === teamId)
       : null
 
-    const next = {}
+    const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
 
-    liveTeamIds.forEach((teamId, index) => {
-      const snap = teamSnapshots[index]
-      const agents = snap?.ok && Array.isArray(snap.agents) ? snap.agents : []
-      const totalsRow = Array.isArray(dailyEntry?.teams)
-        ? dailyEntry.teams.find(team => String(team.id) === teamId)
-        : null
+    const parsed = {
+      agents: sortAgentsByMetric(agents, 'total'),
+      totals: {
+        english: Number(totalsRow?.english) || agents.reduce((sum, agent) => sum + (agent.english || 0), 0),
+        spanish: Number(totalsRow?.spanish) || agents.reduce((sum, agent) => sum + (agent.spanish || 0), 0),
+        rawTotal: Number(totalsRow?.rawTotal) || agents.reduce((sum, agent) => sum + ((agent.spanish || 0) + (agent.english || 0)), 0),
+        total: Number(totalsRow?.total) || agents.reduce((sum, agent) => sum + (agent.total || 0), 0),
+        activeAgents: Number(totalsRow?.agents) || agents.length,
+      },
+      mainTotals: null,
+      otTotals: null,
+      includesOT: false,
+      invalidTransfers: Number(totalsRow?.invalidTransfers || 0),
+    }
 
-      const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
+    next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
+  })
 
-      const parsed = {
-        agents: sortAgentsByMetric(agents, 'total'),
-        totals: {
-          english: Number(totalsRow?.english) || agents.reduce((sum, agent) => sum + (agent.english || 0), 0),
-          spanish: Number(totalsRow?.spanish) || agents.reduce((sum, agent) => sum + (agent.spanish || 0), 0),
-          rawTotal: Number(totalsRow?.rawTotal) || agents.reduce((sum, agent) => sum + ((agent.spanish || 0) + (agent.english || 0)), 0),
-          total: Number(totalsRow?.total) || agents.reduce((sum, agent) => sum + (agent.total || 0), 0),
-          activeAgents: Number(totalsRow?.agents) || agents.length,
-        },
-        mainTotals: null,
-        otTotals: null,
-        includesOT: false,
-        invalidTransfers: Number(totalsRow?.invalidTransfers || 0),
-      }
-
-      next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
-    })
-
-    setTeamData(next)
-  }, [liveTeamIds])
+  setTeamData(next)
+}, [liveTeamIds])
 
   useEffect(() => {
     let cancelled = false
