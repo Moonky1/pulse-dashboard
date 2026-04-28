@@ -503,3 +503,57 @@
 .agent-table thead th:last-child  { border-radius: 0 20px 0 0; }
 .agent-table tbody tr:last-child td:first-child { border-radius: 0 0 0 20px; }
 .agent-table tbody tr:last-child td:last-child  { border-radius: 0 0 20px 0; }
+/* Compatibility layer: current Dashboard.jsx uses pulse-* classes */
+.dash-root .pulse-page {
+  position: relative;
+  z-index: 1;
+  width: min(1480px, calc(100% - 56px));
+  max-width: 1480px;
+  padding: 34px 0 60px;
+  margin: 0 auto;
+}
+
+.dash-root .pulse-topbar {
+  border: 1px solid rgba(249,115,22,0.22);
+  border-radius: 26px;
+  padding: 30px;
+  background:
+    radial-gradient(circle at 96% 10%, rgba(249,115,22,0.22), transparent 24%),
+    linear-gradient(135deg, rgba(255,255,255,0.045), rgba(249,115,22,0.07));
+  box-shadow: 0 22px 70px rgba(0,0,0,0.45);
+}
+
+.dash-root .pulse-title {
+  font-size: clamp(34px, 4vw, 52px);
+  letter-spacing: -0.05em;
+  color: #f5f0ea;
+}
+
+.dash-root .pulse-subtext {
+  color: #c7b9ae;
+}
+
+.dash-root .pulse-team-card {
+  background: linear-gradient(180deg, rgba(16,20,30,0.9), rgba(11,14,22,0.9)) !important;
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 22px 44px rgba(0,0,0,0.28);
+  backdrop-filter: blur(12px);
+}
+
+.dash-root .pulse-team-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(249,115,22,0.35);
+  box-shadow: 0 14px 44px rgba(0,0,0,0.5);
+}
+
+.dash-root .pulse-team-metric-value {
+  color: #f97316 !important;
+}
+
+.dash-root .pulse-tab.active,
+.dash-root .pulse-sort-tab.active,
+.dash-root .pulse-date-btn.active {
+  border-color: rgba(249,115,22,0.55);
+  background: rgba(249,115,22,0.14) !important;
+  color: #fff !important;
+}

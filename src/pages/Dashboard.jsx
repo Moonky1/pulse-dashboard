@@ -1138,13 +1138,6 @@ async function scriptCall(params) {
   return res.json()
 }
 
-async function scriptPost(params) {
-  const body = new URLSearchParams(params)
-  await fetch(SCRIPT_URL, { method: 'POST', body, mode: 'no-cors' })
-}
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
 
 function normalizeSupabaseAgent(row) {
   const english = Number(row?.english || 0)
@@ -1245,67 +1238,7 @@ async function fetchSupabaseDates() {
       .filter(Boolean)
   )].sort((a, b) => b.localeCompare(a))
 }
-async function persistSnapshots(date, teamDataMap) {
-  const totalsPayload = []
-  const allAgents = []
 
-  for (const teamId of Object.keys(teamDataMap || {})) {
-    const parsed = teamDataMap[teamId]
-    if (!parsed) continue
-
-    totalsPayload.push({
-      id: teamId,
-      name: TEAMS[teamId]?.label || teamId,
-      english: parsed.totals.english,
-      spanish: parsed.totals.spanish,
-      rawTotal: parsed.totals.rawTotal,
-      total: parsed.totals.total,
-      agents: parsed.totals.activeAgents,
-      reachedTarget: countReachedTarget(teamId, parsed.agents),
-      invalidTransfers: Number(parsed.invalidTransfers || 0),
-      noSpanish: !TEAMS[teamId]?.hasSpanish,
-    })
-
-    parsed.agents.forEach(agent => {
-      allAgents.push({
-        ext: agent.ext,
-        name: agent.name,
-        english: agent.english,
-        spanish: agent.spanish,
-        invalidTransfers: agent.invalidTransfers || 0,
-        rawTotal: agent.rawTotal || ((agent.spanish || 0) + (agent.english || 0)),
-        total: agent.total,
-        team: teamId,
-      })
-    })
-
-    await scriptPost({
-      action: 'saveTeamSnapshot',
-      date,
-      teamId,
-      agents: JSON.stringify(parsed.agents),
-    })
-
-    await scriptPost({
-      action: 'saveToWeeklySheet',
-      date,
-      team: teamId,
-      agents: JSON.stringify(parsed.agents),
-    })
-  }
-
-  await scriptPost({
-    action: 'saveDailyTotals',
-    date,
-    teams: JSON.stringify(totalsPayload),
-  })
-
-  await scriptPost({
-    action: 'saveAgentSnapshots',
-    date,
-    snapshots: JSON.stringify(allAgents),
-  })
-}
 
 function formatDateLabel(date) {
   if (date === todayKey()) return 'Today — LIVE'
@@ -1613,13 +1546,11 @@ const loadLiveTeams = useCallback(async () => {
 
   // IMPORTANT:
   // Today LIVE displays the freshly parsed Google Sheets data immediately.
-  // Supabase is updated in the background so the page does not wait or show stale data.
+  // Supabase is updated automatically by Apps Script every 5 minutes.
   setTeamData(next)
   setLastUpdate(new Date())
 
-  persistSnapshots(todayKey(), next)
-    .then(() => loadRemoteDates())
-    .catch(err => console.warn('Background snapshot persist failed:', err))
+  loadRemoteDates().catch(() => {})
 }, [liveTeamIds, loadRemoteDates])
 
 const loadHistoricalTeams = useCallback(async (date) => {
@@ -1743,7 +1674,7 @@ const loadHistoricalTeams = useCallback(async (date) => {
   const selectedTeamMeta = selectedTeam !== 'all' ? TEAMS[selectedTeam] : null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#040812', color: '#fff' }}>
+    <div className="pulse-lovable-theme" style={{ minHeight: '100vh', background: '#040812', color: '#fff' }}>
       <Navbar />
 
       <style>{`
