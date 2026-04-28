@@ -904,15 +904,21 @@ function parseVenezuelaRows(rows, withOT) {
   if (forcedMainFooter) mainFooter = forcedMainFooter
   if (forcedOTFooter) otFooter = forcedOTFooter
 
-  const mainList = [...mainAgents.values()]
-  const otList = withOT && sawOTSection ? [...otAgents.values()] : []
-  const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
+const mainList = [...mainAgents.values()]
 
-  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
-  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
+// Venezuela fix:
+// If today's OT block exists, include it immediately.
+// Do not wait for the global withOT hour gate.
+const useVenezuelaOT = sawOTSection
 
-  const otEnglish = withOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
-  const otSpanish = withOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
+const otList = useVenezuelaOT ? [...otAgents.values()] : []
+const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
+
+const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
+const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
+
+const otEnglish = useVenezuelaOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
+const otSpanish = useVenezuelaOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
 
   const english = mainEnglish + otEnglish
   const spanish = mainSpanish + otSpanish
@@ -937,7 +943,7 @@ function parseVenezuelaRows(rows, withOT) {
       spanish: otSpanish,
       total: otEnglish + otSpanish,
     },
-    includesOT: withOT && sawOTSection,
+    includesOT: useVenezuelaOT,
     invalidTransfers: 0,
   }
 }
