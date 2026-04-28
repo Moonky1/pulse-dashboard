@@ -852,8 +852,6 @@ function parseVenezuelaRows(rows, withOT) {
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] || []
     const txt = rowText(row)
-    const name = String(row[0] || '').trim()
-    const ext = String(row[1] || '').replace(/,/g, '').trim()
 
     if (txt.includes('OT AW GARRET VENEZUELA') || txt.includes('VENEZUELA OT')) {
       const otDate = findDateInRow(row)
@@ -869,24 +867,54 @@ function parseVenezuelaRows(rows, withOT) {
       continue
     }
 
-    if (isFooterRow(txt)) {
+    if (!inOT && isFooterRow(txt)) {
       const footer = {
         english: safeInt(row[3]),
         spanish: safeInt(row[4]),
         total: safeInt(row[5]) || (safeInt(row[3]) + safeInt(row[4])),
       }
 
-      if (!inOT) {
-        if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) mainFooter = footer
-      } else {
-        if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) otFooter = footer
-
-        // Important: after OT footer, stop reading.
-        break
+      if (footer.english > 0 || footer.spanish > 0 || footer.total > 0) {
+        mainFooter = footer
       }
 
       continue
     }
+
+    // Venezuela OT block is shifted one column to the right:
+    // B = name, C = ext, D = English, E = Spanish, F = Total
+    if (inOT) {
+      const otName = String(row[1] || '').trim()
+      const otExt = String(row[2] || '').replace(/,/g, '').trim()
+
+      const otEnglish = safeInt(row[3])
+      const otSpanish = safeInt(row[4])
+      const otTotal = safeInt(row[5]) || (otEnglish + otSpanish)
+
+      const looksLikeOTFooter =
+        !isAgentRow(otName, otExt, '6') &&
+        (otEnglish > 0 || otSpanish > 0 || otTotal > 0)
+
+      if (looksLikeOTFooter) {
+        otFooter = {
+          english: otEnglish,
+          spanish: otSpanish,
+          total: otTotal,
+        }
+        break
+      }
+
+      if (!isAgentRow(otName, otExt, '6')) continue
+
+      const agent = buildAgent(otName, otExt, otSpanish, otEnglish)
+      mergeAgentByExt(otAgents, agent, 'sum')
+      continue
+    }
+
+    // Main Venezuela block:
+    // A = name, B = ext, D = English, E = Spanish, F = Total
+    const name = String(row[0] || '').trim()
+    const ext = String(row[1] || '').replace(/,/g, '').trim()
 
     if (!isAgentRow(name, ext, '6')) continue
 
@@ -894,31 +922,31 @@ function parseVenezuelaRows(rows, withOT) {
     const spanish = safeInt(row[4])
     const agent = buildAgent(name, ext, spanish, english)
 
-    if (!inOT) mergeAgentByExt(mainAgents, agent, 'max')
-    else mergeAgentByExt(otAgents, agent, 'sum')
+    mergeAgentByExt(mainAgents, agent, 'max')
   }
 
   const forcedMainFooter = findFooterTotalsInRows(rows, 0, otStartIndex, 3, 4, 5)
-  const forcedOTFooter = sawOTSection ? findFooterTotalsInRows(rows, otStartIndex, rows.length, 3, 4, 5) : null
 
   if (forcedMainFooter) mainFooter = forcedMainFooter
-  if (forcedOTFooter) otFooter = forcedOTFooter
 
-const mainList = [...mainAgents.values()]
+  const mainList = [...mainAgents.values()]
 
-// Venezuela fix:
-// If today's OT block exists, include it immediately.
-// Do not wait for the global withOT hour gate.
-const useVenezuelaOT = sawOTSection
+  // For Venezuela: if today's OT block exists, include it.
+  const useVenezuelaOT = sawOTSection
+  const otList = useVenezuelaOT ? [...otAgents.values()] : []
 
-const otList = useVenezuelaOT ? [...otAgents.values()] : []
-const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
+  const agents = sortAgentsByMetric(mergeMainAndOT(mainList, otList), 'total')
 
-const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
-const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
+  const mainEnglish = mainFooter ? mainFooter.english : mainList.reduce((sum, a) => sum + a.english, 0)
+  const mainSpanish = mainFooter ? mainFooter.spanish : mainList.reduce((sum, a) => sum + a.spanish, 0)
 
-const otEnglish = useVenezuelaOT ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0)) : 0
-const otSpanish = useVenezuelaOT ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0)) : 0
+  const otEnglish = useVenezuelaOT
+    ? (otFooter ? otFooter.english : otList.reduce((sum, a) => sum + a.english, 0))
+    : 0
+
+  const otSpanish = useVenezuelaOT
+    ? (otFooter ? otFooter.spanish : otList.reduce((sum, a) => sum + a.spanish, 0))
+    : 0
 
   const english = mainEnglish + otEnglish
   const spanish = mainSpanish + otSpanish
