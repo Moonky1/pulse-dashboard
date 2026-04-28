@@ -634,14 +634,3 @@
   letter-spacing: .08em !important;
   font-size: 10px !important;
 }
-
-.dash-root .stat-v {
-  font-size: 24px !important;
-}
-body {
-  outline: 10px solid red !important;
-}
-
-.dash-root {
-  background: red !important;
-}

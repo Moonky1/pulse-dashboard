@@ -1674,7 +1674,7 @@ const loadHistoricalTeams = useCallback(async (date) => {
   const selectedTeamMeta = selectedTeam !== 'all' ? TEAMS[selectedTeam] : null
 
   return (
-    <div className="pulse-lovable-theme" style={{ minHeight: '100vh', background: '#040812', color: '#fff' }}>
+    <div className="dash-root pulse-lovable-theme">
       <Navbar />
 
       <style>{`
