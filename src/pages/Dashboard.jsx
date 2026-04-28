@@ -1774,19 +1774,23 @@ const loadHistoricalTeams = useCallback(async (date) => {
       `}</style>
 
       <div className="pulse-page">
-        <div className="pulse-topbar">
-          <div>
-            <h1 className="pulse-title">AutoWarrantyGarrett</h1>
+<div className="dash-hero">
+  <div className="dash-hero-top">
+    <span className="dash-hero-badge">✦ AutoWarrantyGarrett · Live</span>
 
-            <div className="pulse-subtext">
-              Live now: Asia, Philippines, Colombia, Central, Mexico and Venezuela.
-            </div>
-          </div>
+    <div className="dash-hero-updated">
+      {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : 'Waiting for first load...'}
+    </div>
+  </div>
 
-          <div className="pulse-updated">
-            {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : 'Waiting for first load...'}
-          </div>
-        </div>
+  <div className="dash-hero-body">
+    <h1 className="dash-hero-title">AutoWarrantyGarrett</h1>
+
+    <p className="dash-hero-subtitle">
+      Live now: Asia, Philippines, Colombia, Central, Mexico and Venezuela.
+    </p>
+  </div>
+</div>
 
         <TeamTabs selectedTeam={selectedTeam} onChange={setSelectedTeam} />
 

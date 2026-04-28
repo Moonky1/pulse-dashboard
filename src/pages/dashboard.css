@@ -504,133 +504,99 @@
 .agent-table tbody tr:last-child td:first-child { border-radius: 0 0 0 20px; }
 .agent-table tbody tr:last-child td:last-child  { border-radius: 0 0 20px 0; }
 /* =========================================================
-   LOVABLE LOOK — STRONG TEST OVERRIDES
-   Paste at the VERY END of dashboard.css
+ /* =========================================================
+   DASH HERO — Lovable style
 ========================================================= */
 
-.dash-root {
+.dash-root .dash-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(249, 115, 22, 0.26);
+  border-radius: 30px;
+  padding: 24px 28px 42px;
+  margin-bottom: 26px;
   background:
-    radial-gradient(circle at 88% 10%, rgba(249,115,22,0.22), transparent 26%),
-    radial-gradient(circle at 50% 100%, rgba(249,115,22,0.13), transparent 32%),
-    linear-gradient(180deg, #050403 0%, #090706 45%, #030303 100%) !important;
+    radial-gradient(circle at 96% 12%, rgba(249, 115, 22, 0.36), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,0.045), rgba(249,115,22,0.10));
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.52);
 }
 
-.dash-root::before {
-  content: '' !important;
-  position: fixed !important;
-  inset: 0 !important;
-  pointer-events: none !important;
-  z-index: 0 !important;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px) !important;
-  background-size: 54px 54px !important;
-  opacity: 0.25 !important;
+.dash-root .dash-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 46px;
 }
 
-.dash-root .pulse-page {
-  position: relative !important;
-  z-index: 1 !important;
-  max-width: 1500px !important;
-}
-
-.dash-root .pulse-topbar {
-  border: 1px solid rgba(249,115,22,0.32) !important;
-  border-radius: 30px !important;
-  padding: 42px 44px !important;
-  margin-bottom: 26px !important;
-  background:
-    radial-gradient(circle at 96% 10%, rgba(249,115,22,0.38), transparent 28%),
-    linear-gradient(135deg, rgba(255,255,255,0.055), rgba(249,115,22,0.10)) !important;
-  box-shadow: 0 26px 80px rgba(0,0,0,0.55) !important;
-}
-
-.dash-root .pulse-topbar::before {
-  content: "✦ AutoWarrantyGarrett · Live";
+.dash-root .dash-hero-badge {
   display: inline-flex;
-  position: absolute;
-  top: 18px;
-  left: 44px;
-  padding: 6px 14px;
+  align-items: center;
+  padding: 7px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(249,115,22,0.45);
-  background: rgba(249,115,22,0.16);
+  border: 1px solid rgba(249, 115, 22, 0.42);
+  background: rgba(249, 115, 22, 0.14);
   color: #fb923c;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.dash-root .pulse-title {
-  margin-top: 24px !important;
-  font-size: clamp(42px, 5vw, 68px) !important;
-  letter-spacing: -0.06em !important;
-  color: #f7efe8 !important;
+.dash-root .dash-hero-updated {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(249, 115, 22, 0.24);
+  background: rgba(249, 115, 22, 0.10);
+  color: #fed7aa;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
-.dash-root .pulse-subtext {
-  color: #d6c7ba !important;
-  font-size: 16px !important;
+.dash-root .dash-hero-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.dash-root .pulse-updated {
-  background: rgba(249,115,22,0.12) !important;
-  border: 1px solid rgba(249,115,22,0.32) !important;
-  color: #fed7aa !important;
-  padding: 10px 14px !important;
-  border-radius: 999px !important;
+.dash-root .dash-hero-title {
+  margin: 0;
+  color: #f7f3ed;
+  font-size: clamp(46px, 5.8vw, 78px);
+  font-weight: 950;
+  letter-spacing: -0.065em;
+  line-height: 0.95;
 }
 
-.dash-root .pulse-tabs-grid,
-.dash-root .pulse-sort-tabs,
-.dash-root .pulse-sidebar {
-  background: rgba(12,10,9,0.82) !important;
-  border: 1px solid rgba(255,255,255,0.09) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 55px rgba(0,0,0,0.35) !important;
+.dash-root .dash-hero-subtitle {
+  margin: 20px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 17px;
+  line-height: 1.5;
 }
 
-.dash-root .pulse-tab.active,
-.dash-root .pulse-sort-tab.active,
-.dash-root .pulse-date-btn.active {
-  background: linear-gradient(135deg, #fb923c, #f97316) !important;
-  color: #160b04 !important;
-  border-color: rgba(251,146,60,0.85) !important;
-  box-shadow: 0 14px 34px rgba(249,115,22,0.32) !important;
-}
+@media (max-width: 800px) {
+  .dash-root .dash-hero {
+    padding: 20px 18px 28px;
+    border-radius: 24px;
+  }
 
-.dash-root .pulse-overview-grid {
-  gap: 24px !important;
-}
+  .dash-root .dash-hero-top {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 30px;
+  }
 
-.dash-root .pulse-team-card {
-  border-radius: 28px !important;
-  border: 1px solid rgba(255,255,255,0.10) !important;
-  background:
-    radial-gradient(circle at 96% 0%, rgba(249,115,22,0.32), transparent 30%),
-    linear-gradient(180deg, rgba(20,16,14,0.96), rgba(8,10,16,0.96)) !important;
-  box-shadow: 0 26px 70px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.05) !important;
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease !important;
-}
+  .dash-root .dash-hero-title {
+    font-size: clamp(36px, 10vw, 52px);
+  }
 
-.dash-root .pulse-team-card:hover {
-  transform: translateY(-5px) !important;
-  border-color: rgba(249,115,22,0.42) !important;
-  box-shadow: 0 34px 90px rgba(0,0,0,0.65) !important;
-}
-
-.dash-root .pulse-team-name {
-  font-size: 26px !important;
-  letter-spacing: -0.04em !important;
-  color: #fff7ed !important;
-}
-
-.dash-root .pulse-team-metric-value {
-  color: #fb923c !important;
-  font-size: 40px !important;
-  text-shadow: 0 0 28px rgba(249,115,22,0.25) !important;
-}
-
-.dash-root .stat-k {
-  text-transform: uppercase !important;
-  letter-spacing: .08em !important;
-  font-size: 10px !important;
+  .dash-root .dash-hero-subtitle {
+    font-size: 15px;
+  }
 }
