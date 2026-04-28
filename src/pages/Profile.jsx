@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { supabase } from '../utils/supabase'
 import './profile.css'
 
 const HISTORY_SHEET_ID = '1u_5CLPEonZGarvaXU3Uwwx-nczElf5td3iKLRfQOVYU'
@@ -204,7 +205,93 @@ async function loadDailyTotals() {
     return map
   } catch(e) { return {} }
 }
+async function fetchAllSupabaseRows(makeQuery, pageSize = 1000) {
+  let from = 0
+  const all = []
 
+  while (true) {
+    const { data, error } = await makeQuery().range(from, from + pageSize - 1)
+
+    if (error) throw error
+
+    const rows = data || []
+    all.push(...rows)
+
+    if (rows.length < pageSize) break
+
+    from += pageSize
+
+    // Safety limit
+    if (from > 30000) break
+  }
+
+  return all
+}
+
+async function loadTeamHistoryFromSupabase(teamId) {
+  const rows = await fetchAllSupabaseRows(() =>
+    supabase
+      .from('daily_agent_stats')
+      .select('date, agent_ext, agent_name, team, english, spanish, invalid_transfers, raw_total, net_total')
+      .eq('team', teamId)
+      .gte('date', PROFILE_START_DATE)
+      .order('date', { ascending: true })
+  )
+
+  const map = {}
+
+  rows.forEach(row => {
+    const english = Number(row?.english || 0)
+    const spanish = Number(row?.spanish || 0)
+    const invalidTransfers = Number(row?.invalid_transfers || 0)
+    const rawTotal = Number(row?.raw_total ?? (english + spanish))
+    const netTotal = Number(row?.net_total ?? Math.max(0, rawTotal - invalidTransfers))
+
+    const clean = sanitizeRecord({
+      date: row.date,
+      ext: row.agent_ext,
+      name: row.agent_name,
+      english,
+      spanish,
+      total: netTotal,
+      team: row.team,
+      rank: null,
+    })
+
+    if (!clean) return
+
+    const key = recordKey(clean.date, clean.ext)
+
+    if (!map[key] || clean.total > map[key].total || clean.english > map[key].english) {
+      map[key] = clean
+    }
+  })
+
+  return applyDailyRanks(Object.values(map))
+}
+
+async function loadTeamTotalsFromSupabase(teamId) {
+  const rows = await fetchAllSupabaseRows(() =>
+    supabase
+      .from('daily_team_stats')
+      .select('date, team, english, total')
+      .eq('team', teamId)
+      .gte('date', PROFILE_START_DATE)
+      .order('date', { ascending: true })
+  )
+
+  const map = {}
+
+  rows.forEach(row => {
+    const date = normalizeDate(row.date)
+    if (!date) return
+
+    // Share% currently uses English contribution, same as your old logic.
+    map[date] = Number(row.english || 0)
+  })
+
+  return map
+}
 const getTeamFromExt = (ext) => {
   const e = String(ext)
   if (e.startsWith('1')) return { id:'philippines', name:'Philippines',     flag:'ph', hasSp:false, goal:10 }
@@ -540,6 +627,16 @@ function applyDailyRanks(records) {
 }
 
 async function buildCanonicalTeamHistory(teamId) {
+  try {
+    const supabaseRecords = await loadTeamHistoryFromSupabase(teamId)
+
+    if (Array.isArray(supabaseRecords) && supabaseRecords.length > 0) {
+      return supabaseRecords
+    }
+  } catch (err) {
+    console.warn('Supabase profile history failed, falling back to old sources:', err)
+  }
+
   const [remoteRecords, weeklyRecords] = await Promise.all([
     loadAgentSnapshotsRemoteForTeam(teamId),
     fetchWeeklySheetAgents(teamId),
@@ -547,7 +644,7 @@ async function buildCanonicalTeamHistory(teamId) {
 
   const map = {}
 
-  // Weekly sheets = source of truth for persisted history
+  // Weekly sheets = old source of truth
   ;(weeklyRecords || []).forEach(r => {
     const clean = sanitizeRecord(r)
     if (!clean) return
@@ -640,16 +737,25 @@ export default function Profile() {
       }
     })
 
-    loadDailyTotals().then(totalsMap=>{
-      if(cancelled)return
-      const teamMap={}
-      Object.entries(totalsMap||{}).forEach(([date,teams])=>{
-        const normalized=normalizeDate(date)
-        if(!normalized)return
-        if(teams?.[teamInfo.id]!==undefined) teamMap[normalized]=teams[teamInfo.id]
-      })
-      setTeamTotals(teamMap)
-    }).catch(()=>{})
+loadTeamTotalsFromSupabase(teamInfo.id).then(teamMap => {
+  if (cancelled) return
+  setTeamTotals(teamMap || {})
+}).catch(() => {
+  // Old fallback, just in case Supabase fails.
+  loadDailyTotals().then(totalsMap => {
+    if (cancelled) return
+
+    const teamMap = {}
+
+    Object.entries(totalsMap || {}).forEach(([date, teams]) => {
+      const normalized = normalizeDate(date)
+      if (!normalized) return
+      if (teams?.[teamInfo.id] !== undefined) teamMap[normalized] = teams[teamInfo.id]
+    })
+
+    setTeamTotals(teamMap)
+  }).catch(() => {})
+})
 
     return()=>{cancelled=true}
   },[ext,user,teamInfo.id])
