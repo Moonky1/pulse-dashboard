@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Navbar from '../components/Navbar'
 import { supabase } from '../utils/supabase'
 import './dashboard.css'
 
@@ -120,7 +119,116 @@ const SORT_OPTIONS = [
   { id: 'spanish', label: 'Spanish Xfers' },
   { id: 'total', label: 'Total Xfers' },
 ]
+const SIDEBAR_GROUPS = [
+  {
+    title: 'WORKSPACE',
+    items: [
+      { id: 'overview', label: 'Overview', icon: '▦', active: true },
+      { id: 'analytics', label: 'Analytics', icon: '▥' },
+      { id: 'rankings', label: 'Rankings', icon: '🏆' },
+      { id: 'teams', label: 'Teams', icon: '👥' },
+      { id: 'commissions', label: 'Commissions', icon: '$' },
+    ],
+  },
+  {
+    title: 'APPS',
+    items: [
+      { id: 'pulse-go', label: 'Pulse GO', icon: '⚡' },
+      { id: 'academy', label: 'Academy', icon: '📖' },
+    ],
+  },
+  {
+    title: 'SYSTEM',
+    items: [
+      { id: 'alerts', label: 'Alerts', icon: '🔔' },
+      { id: 'settings', label: 'Settings', icon: '⚙️' },
+      { id: 'support', label: 'Support', icon: '◎' },
+    ],
+  },
+]
 
+function LovableSidebar() {
+  return (
+    <aside className="lov-sidebar">
+      <div className="lov-brand">
+        <div className="lov-brand-glow" />
+        <span>Pulse</span>
+      </div>
+
+      <div className="lov-sidebar-scroll">
+        {SIDEBAR_GROUPS.map(group => (
+          <div className="lov-sidebar-group" key={group.title}>
+            <div className="lov-sidebar-title">{group.title}</div>
+
+            <div className="lov-sidebar-list">
+              {group.items.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`lov-sidebar-item ${item.active ? 'active' : ''}`}
+                >
+                  <span className="lov-sidebar-icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="lov-sidebar-status">
+        <div className="lov-status-dot-row">
+          <span className="lov-status-dot" />
+          <strong>Pulse GO active</strong>
+        </div>
+        <span>All systems nominal</span>
+      </div>
+    </aside>
+  )
+}
+
+function LovableHeader() {
+  return (
+    <header className="lov-header">
+      <button type="button" className="lov-icon-btn">☰</button>
+
+      <div className="lov-search">
+        <span>⌕</span>
+        <input readOnly placeholder="Search agents, teams..." />
+      </div>
+
+      <div className="lov-live-pill">● Today — LIVE</div>
+
+      <nav className="lov-nav-pill">
+        <button type="button" className="active">Home</button>
+        <button type="button">Pulse GO</button>
+        <button type="button">Academy</button>
+      </nav>
+
+      <div className="lov-header-actions">
+        <button type="button" className="lov-icon-btn">◔</button>
+        <button type="button" className="lov-icon-btn">🔔</button>
+
+        <div className="lov-user">
+          <div>
+            <strong>Simon</strong>
+            <span>Asia · Team Leader</span>
+          </div>
+          <div className="lov-avatar">SM</div>
+        </div>
+      </div>
+    </header>
+  )
+}
+
+function LovableKpi({ title, value, tone }) {
+  return (
+    <div className={`lov-kpi-card ${tone}`}>
+      <div className="lov-kpi-title">{title}</div>
+      <div className="lov-kpi-value">{Number(value || 0).toLocaleString()}</div>
+    </div>
+  )
+}
 const safeInt = (val) => parseInt(String(val ?? '').replace(/,/g, '').trim(), 10) || 0
 const cellUpper = (val) => String(val ?? '').trim().toUpperCase()
 
@@ -1672,168 +1780,126 @@ const loadHistoricalTeams = useCallback(async (date) => {
 
   const selectedParsed = selectedTeam !== 'all' ? teamData[selectedTeam] : null
   const selectedTeamMeta = selectedTeam !== 'all' ? TEAMS[selectedTeam] : null
+const dashboardTotals = useMemo(() => {
+  const source =
+    selectedTeam === 'all'
+      ? TEAM_ORDER.map(teamId => teamData[teamId]).filter(Boolean)
+      : selectedParsed
+        ? [selectedParsed]
+        : []
 
-  return (
-    <div className="dash-root pulse-lovable-theme">
-      <Navbar />
+  return source.reduce((acc, parsed) => {
+    acc.english += Number(parsed?.totals?.english || 0)
+    acc.spanish += Number(parsed?.totals?.spanish || 0)
+    acc.invalid += Number(parsed?.invalidTransfers || 0)
+    acc.total += Number(parsed?.totals?.total || 0)
+    acc.activeAgents += Number(parsed?.totals?.activeAgents || parsed?.agents?.length || 0)
+    return acc
+  }, {
+    english: 0,
+    spanish: 0,
+    invalid: 0,
+    total: 0,
+    activeAgents: 0,
+  })
+}, [selectedTeam, selectedParsed, teamData])
+    return (
+    <div className="dash-root">
+      <div className="lov-shell">
+        <LovableSidebar />
 
-      <style>{`
-        .pulse-page{max-width:1320px;margin:0 auto;padding:26px 20px 60px}
-        .pulse-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-        .pulse-title{margin:0;font-size:32px;font-weight:900;color:#f8fafc}
-        .pulse-subtext{margin-top:8px;color:#94a3b8;font-size:14px;line-height:1.5}
-        .pulse-updated{color:#94a3b8;font-size:13px}
-        .pulse-tabs-grid{display:flex;flex-wrap:wrap;gap:10px;padding:16px;border-radius:28px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);margin-bottom:18px}
-        .pulse-tab{border:1px solid transparent;background:transparent!important;color:#cbd5e1!important;border-radius:999px;padding:12px 16px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px}
-        .pulse-tab.active{border-color:rgba(249,115,22,0.55);background:rgba(249,115,22,0.18)!important;color:#fff!important}
-        .pulse-sort-tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
-        .pulse-sort-tab{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)!important;color:#cbd5e1!important;border-radius:16px;padding:12px 16px;font-weight:800;cursor:pointer;font-size:14px}
-        .pulse-sort-tab.active{border-color:#f97316;background:rgba(249,115,22,0.12)!important;color:#fff!important}
-        .pulse-content-grid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
-        .pulse-sidebar{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:16px;position:sticky;top:86px}
-        .pulse-sidebar-title{font-size:12px;color:#94a3b8;margin-bottom:12px;font-weight:800;letter-spacing:0.08em}
-        .pulse-dates-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-        .pulse-date-btn{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)!important;color:#cbd5e1!important;border-radius:14px;padding:12px 10px;font-weight:800;cursor:pointer}
-        .pulse-date-btn.active{border-color:#f97316;background:rgba(249,115,22,0.12)!important;color:#fff!important}
-        .pulse-overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-        .pulse-team-card{background:linear-gradient(135deg,rgba(249,115,22,0.10),rgba(59,130,246,0.05));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:20px;cursor:pointer;min-height:220px}
-        .pulse-coming-soon{background:rgba(255,255,255,0.03);min-height:130px;cursor:default}
-        .pulse-team-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
-        .pulse-team-title-wrap{display:flex;align-items:center;gap:12px}
-        .pulse-team-name{font-size:20px;font-weight:900;color:#f8fafc}
-        .pulse-team-sub{margin-top:4px;font-size:13px;color:#94a3b8;line-height:1.45}
-        .pulse-team-metric{text-align:right}
-        .pulse-team-metric-label{font-size:12px;color:#94a3b8}
-        .pulse-team-metric-value{margin-top:4px;font-size:22px;font-weight:900;color:#60a5fa}
-        .pulse-team-stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
-        .stat-k{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;font-weight:800}
-        .stat-v{display:block;font-size:18px;font-weight:900}
-        .blue{color:#60a5fa!important}.green{color:#34d399!important}.orange{color:#f59e0b!important}.purple{color:#c084fc!important}.red{color:#f87171!important}
-        .pulse-top3-list{display:grid;gap:8px;margin-top:18px}
-        .pulse-top3-item{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:8px;align-items:center}
-        .pulse-top3-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e5e7eb;font-size:13px}
-        .pulse-top3-val{font-weight:900;color:#f8fafc;font-size:13px}
-        .pulse-hero-card{background:linear-gradient(135deg,rgba(249,115,22,0.12),rgba(59,130,246,0.06));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:24px;margin-bottom:18px}
-        .pulse-hero-date{font-size:13px;color:#94a3b8;margin-bottom:6px}
-        .pulse-hero-title-row{display:flex;align-items:center;gap:12px}
-        .pulse-hero-title{font-size:30px;font-weight:900}
-        .pulse-hero-sub{margin-top:6px;color:#94a3b8;font-size:14px}
-        .pulse-summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
-        .pulse-summary-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px}
-        .pulse-summary-title{font-size:13px;color:#94a3b8;margin-bottom:10px;font-weight:900}
-        .pulse-summary-value{font-size:42px;font-weight:900;line-height:1}
-        .pulse-summary-subtitle{margin-top:10px;color:#94a3b8;font-size:13px;min-height:18px}
-        .pulse-top-blocks-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
-        .pulse-top-block{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px}
-        .pulse-top-block-title{font-size:14px;font-weight:800;color:#f8fafc;margin-bottom:12px}
-        .pulse-top-block-item{display:grid;grid-template-columns:20px minmax(0,1fr) auto auto;gap:8px;align-items:center;margin-top:8px}
-        .pulse-top-block-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;color:#f8fafc}
-        .pulse-top-block-ext{font-size:12px;color:#94a3b8}
-        .pulse-top-block-value{font-size:14px;font-weight:900;color:#f59e0b}
-        .pulse-table-wrap{margin-top:18px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;overflow:hidden}
-        .pulse-table-title{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:800;color:#e5e7eb}
-        .pulse-table-scroll{overflow-x:auto}
-        .pulse-table{width:100%;border-collapse:collapse}
-        .pulse-table th{padding:12px 16px;text-align:left;font-size:12px;color:#94a3b8;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,0.02)}
-        .pulse-table td{padding:12px 16px;font-size:14px;color:#e5e7eb;border-top:1px solid rgba(255,255,255,0.04)}
-        .pulse-table .linkish{font-weight:700;color:#f8fafc;cursor:pointer}
-        .th-spanish{color:#34d399!important}
-        .th-english{color:#60a5fa!important}
-        .th-invalid{color:#f87171!important}
-        .th-total{color:#f59e0b!important}
-        .pulse-loading,.pulse-error{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:48px 24px;text-align:center;color:#94a3b8}
-        .pulse-error{background:rgba(127,29,29,0.18);border-color:rgba(248,113,113,0.35);color:#fecaca}
-        @media (max-width: 1200px){
-          .pulse-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-        }
-        @media (max-width: 1100px){
-          .pulse-content-grid{grid-template-columns:1fr}
-          .pulse-sidebar{position:static}
-          .pulse-overview-grid{grid-template-columns:1fr 1fr}
-        }
-        @media (max-width: 860px){
-          .pulse-overview-grid,.pulse-summary-grid,.pulse-top-blocks-grid{grid-template-columns:1fr}
-          .pulse-team-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-          .pulse-title{font-size:28px}
-          .pulse-hero-title{font-size:26px}
-          .pulse-summary-value{font-size:34px}
-        }
-        @media (max-width: 640px){
-          .pulse-page{padding:18px 14px 44px}
-          .pulse-tabs-grid{padding:12px;border-radius:22px}
-          .pulse-tab{padding:10px 12px;font-size:14px}
-          .pulse-sort-tab{padding:10px 12px;font-size:13px}
-          .pulse-dates-grid{grid-template-columns:1fr}
-          .pulse-team-card{padding:16px;min-height:auto}
-          .pulse-team-card-top{display:block}
-          .pulse-team-metric{text-align:left;margin-top:12px}
-          .pulse-top-block-item{grid-template-columns:20px minmax(0,1fr) auto}
-          .pulse-top-block-ext{display:none}
-          .pulse-team-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-        }
-      `}</style>
+        <div className="lov-main">
+          <LovableHeader />
 
-      <div className="pulse-page">
-<div className="dash-hero">
-  <div className="dash-hero-top">
-    <span className="dash-hero-badge">✦ AutoWarrantyGarrett · Live</span>
+          <main className="lov-content">
+            <section className="lov-hero">
+              <div className="lov-hero-left">
+                <div className="lov-hero-badge">✦ AutoWarrantyGarrett · Live</div>
 
-    <div className="dash-hero-updated">
-      {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : 'Waiting for first load...'}
-    </div>
-  </div>
+                <h1 className="lov-hero-title">AutoWarranty Garrett</h1>
 
-  <div className="dash-hero-body">
-    <h1 className="dash-hero-title">AutoWarrantyGarrett</h1>
+                <p className="lov-hero-subtitle">
+                  Live now: Asia, Philippines, Colombia, Central, Mexico & Venezuela
+                </p>
+              </div>
 
-    <p className="dash-hero-subtitle">
-      Live now: Asia, Philippines, Colombia, Central, Mexico and Venezuela.
-    </p>
-  </div>
-</div>
+              <div className="lov-hero-right">
+                <div className="lov-range-tabs">
+                  <button type="button">Range</button>
+                  <button type="button">Day</button>
+                  <button type="button" className="active">Week</button>
+                  <button type="button">Month</button>
+                </div>
 
-        <TeamTabs selectedTeam={selectedTeam} onChange={setSelectedTeam} />
+                <button type="button" className="lov-export-btn">
+                  Export Excel
+                </button>
+              </div>
+            </section>
 
-        <div className="pulse-content-grid">
-          <div>
+            <section className="lov-kpi-grid">
+              <LovableKpi title="English" value={dashboardTotals.english} tone="blue" />
+              <LovableKpi title="Spanish" value={dashboardTotals.spanish} tone="green" />
+              <LovableKpi title="Invalid" value={dashboardTotals.invalid} tone="red" />
+              <LovableKpi title="Total Xfers" value={dashboardTotals.total} tone="orange" />
+              <LovableKpi title="Active agents" value={dashboardTotals.activeAgents} tone="purple" />
+            </section>
+
+            <section className="lov-control-row">
+              <TeamTabs selectedTeam={selectedTeam} onChange={setSelectedTeam} />
+
+              <SortTabs sortMetric={sortMetric} onChange={setSortMetric} />
+            </section>
+
+            <section className="lov-date-row">
+              {dateTabs.map(date => {
+                const active = date === selectedDate
+
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    className={`lov-date-btn ${active ? 'active' : ''}`}
+                    onClick={() => setSelectedDate(date)}
+                  >
+                    {formatDateLabel(date)}
+                  </button>
+                )
+              })}
+            </section>
+
             {loading ? (
               <div className="pulse-loading">Loading live team data...</div>
             ) : error ? (
               <div className="pulse-error">{error}</div>
             ) : selectedTeam === 'all' ? (
-              <>
-                <SortTabs sortMetric={sortMetric} onChange={setSortMetric} />
-
-                <div className="pulse-overview-grid">
-                  {allTeamCards.map(({ team, parsed }, index) => (
-                    parsed
-                      ? <TeamOverviewCard key={team.id} team={team} parsed={parsed} sortMetric={sortMetric} onOpen={setSelectedTeam} rankIndex={index} />
-                      : <TeamComingSoonCard key={team.id} team={team} />
-                  ))}
-                </div>
-              </>
+              <div className="pulse-overview-grid">
+                {allTeamCards.map(({ team, parsed }, index) => (
+                  parsed
+                    ? (
+                      <TeamOverviewCard
+                        key={team.id}
+                        team={team}
+                        parsed={parsed}
+                        sortMetric={sortMetric}
+                        onOpen={setSelectedTeam}
+                        rankIndex={index}
+                      />
+                    )
+                    : <TeamComingSoonCard key={team.id} team={team} />
+                ))}
+              </div>
             ) : selectedParsed && selectedTeamMeta ? (
-              <TeamDetail team={selectedTeamMeta} parsed={selectedParsed} selectedDate={selectedDate} navigate={navigate} />
+              <TeamDetail
+                team={selectedTeamMeta}
+                parsed={selectedParsed}
+                selectedDate={selectedDate}
+                navigate={navigate}
+              />
             ) : (
               <TeamComingSoonCard team={TEAMS[selectedTeam]} />
             )}
-          </div>
-
-          <div className="pulse-sidebar">
-            <div className="pulse-sidebar-title">DATES</div>
-
-            <div className="pulse-dates-grid">
-              {dateTabs.map(date => {
-                const active = date === selectedDate
-
-                return (
-                  <button key={date} className={`pulse-date-btn ${active ? 'active' : ''}`} onClick={() => setSelectedDate(date)}>
-                    {formatDateLabel(date)}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          </main>
         </div>
       </div>
     </div>
