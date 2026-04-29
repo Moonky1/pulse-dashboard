@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
 import './dashboard.css'
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
@@ -1590,90 +1592,152 @@ function getYesterdayKey() {
   return d.toISOString().slice(0, 10)
 }
 
-function csvCell(value) {
-  const text = String(value ?? '')
-  const escaped = text.replace(/"/g, '""')
-  return `"${escaped}"`
+function safeNumber(value) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
 }
 
-function downloadCsv(filename, rows) {
-  const csv = rows.map(row => row.map(csvCell).join(',')).join('\n')
-
-  const blob = new Blob(['\uFEFF' + csv], {
-    type: 'text/csv;charset=utf-8;',
-  })
-
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-
-  URL.revokeObjectURL(url)
+function normalizeExtValue(ext) {
+  const raw = String(ext ?? '').trim()
+  if (!raw) return ''
+  return raw.startsWith('#') ? raw : `#${raw}`
 }
 
-function buildDashboardExportRows(date, entries) {
-  const rows = [
-    [
-      'date',
-      'team',
-      'row_type',
-      'rank',
-      'agent_name',
-      'agent_ext',
-      'english',
-      'spanish',
-      'invalid_transfers',
-      'raw_total',
-      'net_total',
-      'active_agents',
-    ],
-  ]
+function sanitizeSheetName(name = 'Sheet') {
+  return String(name)
+    .replace(/[\\/*?:[\]]/g, '')
+    .slice(0, 31) || 'Sheet'
+}
+
+async function downloadStyledDashboardExcel({
+  date,
+  label,
+  entries,
+  selectedTeam,
+}) {
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = 'Pulse Dashboard'
+  workbook.created = new Date()
+  workbook.modified = new Date()
+
+  const border = {
+    top: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+    left: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+    bottom: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+    right: { style: 'thin', color: { argb: 'FFD9D9D9' } },
+  }
+
+  const topFill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE2F0D9' },
+  }
+
+  const headerFill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFD9EAD3' },
+  }
+
+  const applyRowStyle = (row, totalCols = 7, centerFromCol = 3) => {
+    for (let col = 1; col <= totalCols; col += 1) {
+      const cell = row.getCell(col)
+      cell.border = border
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: col >= centerFromCol ? 'center' : 'left',
+      }
+    }
+  }
 
   entries.forEach(({ teamId, parsed }) => {
-    if (!teamId || !parsed) return
+    const teamLabel = TEAMS[teamId]?.label || teamId
+    const worksheet = workbook.addWorksheet(sanitizeSheetName(teamLabel))
 
-    const team = TEAMS[teamId]
-    const totals = parsed.totals || {}
-    const agents = sortAgentsByMetric(parsed.agents || [], 'total')
+    worksheet.views = [{ state: 'frozen', ySplit: 2 }]
+    worksheet.properties.defaultRowHeight = 22
 
-    rows.push([
-      date,
-      team?.label || teamId,
-      'TEAM TOTAL',
-      '',
-      '',
-      '',
-      Number(totals.english || 0),
-      Number(totals.spanish || 0),
-      Number(parsed.invalidTransfers || 0),
-      Number(totals.rawTotal || 0),
-      Number(totals.total || 0),
-      Number(totals.activeAgents || agents.length || 0),
-    ])
+    worksheet.columns = [
+      { key: 'rank', width: 8 },
+      { key: 'agent', width: 30 },
+      { key: 'ext', width: 14 },
+      { key: 'spanish', width: 12 },
+      { key: 'english', width: 12 },
+      { key: 'invalid', width: 14 },
+      { key: 'total', width: 12 },
+    ]
 
-    agents.forEach((agent, index) => {
-      rows.push([
-        date,
-        team?.label || teamId,
-        'AGENT',
-        index + 1,
-        agent.name || '',
-        agent.ext || '',
-        Number(agent.english || 0),
-        Number(agent.spanish || 0),
-        Number(agent.invalidTransfers || 0),
-        Number(agent.rawTotal || 0),
-        Number(agent.total || 0),
-        '',
-      ])
-    })
+    const totals = parsed?.totals || {}
+    const agents = sortAgentsByMetric(parsed?.agents || [], 'total')
+
+    worksheet.getCell('A1').value = `${teamLabel} agents`
+    worksheet.getCell('A1').font = { bold: true, size: 15 }
+    worksheet.getCell('A1').alignment = { vertical: 'middle', horizontal: 'left' }
+
+    worksheet.getCell('D1').value = safeNumber(totals.spanish)
+    worksheet.getCell('E1').value = safeNumber(totals.english)
+    worksheet.getCell('F1').value = safeNumber(parsed?.invalidTransfers)
+    worksheet.getCell('G1').value = safeNumber(totals.total)
+
+    for (let col = 1; col <= 7; col += 1) {
+      const cell = worksheet.getRow(1).getCell(col)
+      cell.fill = topFill
+      cell.border = border
+
+      if (col >= 4) {
+        cell.font = { bold: true, size: 13 }
+        cell.alignment = { vertical: 'middle', horizontal: 'center' }
+      }
+    }
+
+    const headerRow = worksheet.getRow(2)
+    headerRow.values = ['#', 'Agent', 'Ext', 'Spanish', 'English', 'Invalid xfers', 'Total']
+    headerRow.font = { bold: true, size: 11 }
+    headerRow.height = 24
+
+    for (let col = 1; col <= 7; col += 1) {
+      const cell = headerRow.getCell(col)
+      cell.fill = headerFill
+      cell.border = border
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: col >= 3 ? 'center' : 'left',
+      }
+    }
+
+    worksheet.autoFilter = 'A2:G2'
+
+    if (!agents.length) {
+      const row = worksheet.getRow(3)
+      row.values = ['', 'N/A', '', 'N/A', 'N/A', 'N/A', 'N/A']
+      applyRowStyle(row)
+    } else {
+      agents.forEach((agent, index) => {
+        const row = worksheet.addRow([
+          index + 1,
+          agent.name || '',
+          normalizeExtValue(agent.ext),
+          safeNumber(agent.spanish),
+          safeNumber(agent.english),
+          safeNumber(agent.invalidTransfers),
+          safeNumber(agent.total),
+        ])
+
+        row.height = 22
+        row.getCell(2).font = { bold: true }
+        applyRowStyle(row)
+      })
+    }
   })
 
-  return rows
+  const fileName = `pulse_${selectedTeam === 'all' ? 'all_teams' : selectedTeam}_${date}_${label}.xlsx`
+  const buffer = await workbook.xlsx.writeBuffer()
+
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+
+  saveAs(blob, fileName)
 }
 function formatDateLabel(date) {
   if (date === todayKey()) return 'Today — LIVE'
@@ -2211,15 +2275,18 @@ const handleExportDateData = useCallback(async (date, label) => {
       return
     }
 
-    const fileTeam = exportTeam === 'all' ? 'all_teams' : exportTeam
-    const filename = `pulse_${fileTeam}_${date}_${label}.csv`
-
-    downloadCsv(filename, buildDashboardExportRows(date, entries))
+    await downloadStyledDashboardExcel({
+      date,
+      label,
+      entries,
+      selectedTeam: exportTeam,
+    })
   } catch (err) {
     console.error('Export failed:', err)
     window.alert(`Could not export data: ${err?.message || err}`)
   }
 }, [exportTeam, getExportEntriesFromData, teamData])
+
 
 const handleExportTodayData = useCallback(() => {
   handleExportDateData(todayKey(), 'today')
