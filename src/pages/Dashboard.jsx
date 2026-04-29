@@ -1584,7 +1584,97 @@ function protectTodayWithSupabase(liveParsed, savedParsed) {
 
   return liveParsed
 }
+function getYesterdayKey() {
+  const d = colombiaDate()
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
 
+function csvCell(value) {
+  const text = String(value ?? '')
+  const escaped = text.replace(/"/g, '""')
+  return `"${escaped}"`
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map(row => row.map(csvCell).join(',')).join('\n')
+
+  const blob = new Blob(['\uFEFF' + csv], {
+    type: 'text/csv;charset=utf-8;',
+  })
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  URL.revokeObjectURL(url)
+}
+
+function buildDashboardExportRows(date, entries) {
+  const rows = [
+    [
+      'date',
+      'team',
+      'row_type',
+      'rank',
+      'agent_name',
+      'agent_ext',
+      'english',
+      'spanish',
+      'invalid_transfers',
+      'raw_total',
+      'net_total',
+      'active_agents',
+    ],
+  ]
+
+  entries.forEach(({ teamId, parsed }) => {
+    if (!teamId || !parsed) return
+
+    const team = TEAMS[teamId]
+    const totals = parsed.totals || {}
+    const agents = sortAgentsByMetric(parsed.agents || [], 'total')
+
+    rows.push([
+      date,
+      team?.label || teamId,
+      'TEAM TOTAL',
+      '',
+      '',
+      '',
+      Number(totals.english || 0),
+      Number(totals.spanish || 0),
+      Number(parsed.invalidTransfers || 0),
+      Number(totals.rawTotal || 0),
+      Number(totals.total || 0),
+      Number(totals.activeAgents || agents.length || 0),
+    ])
+
+    agents.forEach((agent, index) => {
+      rows.push([
+        date,
+        team?.label || teamId,
+        'AGENT',
+        index + 1,
+        agent.name || '',
+        agent.ext || '',
+        Number(agent.english || 0),
+        Number(agent.spanish || 0),
+        Number(agent.invalidTransfers || 0),
+        Number(agent.rawTotal || 0),
+        Number(agent.total || 0),
+        '',
+      ])
+    })
+  })
+
+  return rows
+}
 function formatDateLabel(date) {
   if (date === todayKey()) return 'Today — LIVE'
 
@@ -1930,8 +2020,21 @@ const loadHistoricalTeams = useCallback(async (date) => {
       setLastUpdate(null)
       return
     }
+
+    // Official data starts on 2026-04-28.
+    // For official dates, do NOT fall back to old Apps Script snapshots,
+    // because that can overwrite good Supabase data with zeros.
+    if (date >= OFFICIAL_DATA_START) {
+      setTeamData({})
+      setLastUpdate(null)
+      return
+    }
   } catch (err) {
-    console.warn('Supabase historical read failed, falling back to Apps Script:', err)
+    console.warn('Supabase historical read failed:', err)
+
+    if (date >= OFFICIAL_DATA_START) {
+      throw err
+    }
   }
 
   const [teamSnapshots, totals, invalidCounts] = await Promise.all([
@@ -2061,6 +2164,70 @@ const dashboardTotals = useMemo(() => {
     activeAgents: 0,
   })
 }, [selectedTeam, selectedParsed, teamData])
+const exportTeamOptions = useMemo(() => {
+  return [
+    { id: 'all', label: 'All Teams' },
+    ...TEAM_ORDER.map(teamId => ({
+      id: teamId,
+      label: TEAMS[teamId]?.label || teamId,
+    })),
+  ]
+}, [])
+
+const getExportEntriesFromData = useCallback((sourceData, teamId) => {
+  if (!sourceData) return []
+
+  if (teamId === 'all') {
+    return TEAM_ORDER
+      .map(id => ({
+        teamId: id,
+        parsed: sourceData[id],
+      }))
+      .filter(item => item.parsed)
+  }
+
+  return sourceData[teamId]
+    ? [
+        {
+          teamId,
+          parsed: sourceData[teamId],
+        },
+      ]
+    : []
+}, [])
+
+const handleExportDateData = useCallback(async (date, label) => {
+  try {
+    const isExportingToday = date === todayKey()
+
+    const sourceData = isExportingToday
+      ? teamData
+      : await fetchSupabaseDashboardDate(date)
+
+    const entries = getExportEntriesFromData(sourceData, exportTeam)
+
+    if (!entries.length) {
+      window.alert(`No data available for ${exportTeam} on ${date}.`)
+      return
+    }
+
+    const fileTeam = exportTeam === 'all' ? 'all_teams' : exportTeam
+    const filename = `pulse_${fileTeam}_${date}_${label}.csv`
+
+    downloadCsv(filename, buildDashboardExportRows(date, entries))
+  } catch (err) {
+    console.error('Export failed:', err)
+    window.alert(`Could not export data: ${err?.message || err}`)
+  }
+}, [exportTeam, getExportEntriesFromData, teamData])
+
+const handleExportTodayData = useCallback(() => {
+  handleExportDateData(todayKey(), 'today')
+}, [handleExportDateData])
+
+const handleExportYesterdayData = useCallback(() => {
+  handleExportDateData(getYesterdayKey(), 'yesterday')
+}, [handleExportDateData])
 const normalizedSearch = useMemo(() => {
   return normalizeSearchText(searchQuery)
 }, [searchQuery])
