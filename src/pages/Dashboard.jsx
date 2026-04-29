@@ -1838,6 +1838,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [rangeMode, setRangeMode] = useState('day')
+  const [exportTeam, setExportTeam] = useState('all')
 
   const liveTeamIds = useMemo(() => TEAM_ORDER.filter(teamId => TEAMS[teamId].live), [])
   const isToday = selectedDate === todayKey()
@@ -2174,6 +2175,7 @@ const handleUserAction = useCallback((action) => {
     navigate('/signin')
   }
 }, [navigate])
+
     return (
     <div className={`dash-root ${sidebarCollapsed ? 'lov-sidebar-collapsed' : ''}`}>
       <div className="lov-shell">
@@ -2207,39 +2209,70 @@ const handleUserAction = useCallback((action) => {
               
               </div>
 
-<div className="lov-range-tabs">
+<div className="lov-hero-right">
+  <div className="lov-range-tabs">
+    <button
+      type="button"
+      className={rangeMode === 'range' ? 'active' : ''}
+      onClick={() => setRangeMode('range')}
+    >
+      Range
+    </button>
+
+    <button
+      type="button"
+      className={rangeMode === 'day' ? 'active' : ''}
+      onClick={() => setRangeMode('day')}
+    >
+      Day
+    </button>
+
+    <button
+      type="button"
+      className={rangeMode === 'week' ? 'active' : ''}
+      onClick={() => setRangeMode('week')}
+    >
+      Week
+    </button>
+
+    <button
+      type="button"
+      className={rangeMode === 'month' ? 'active' : ''}
+      onClick={() => setRangeMode('month')}
+    >
+      Month
+    </button>
+  </div>
+
+  <select
+    className="lov-export-select"
+    value={exportTeam}
+    onChange={e => setExportTeam(e.target.value)}
+  >
+    {exportTeamOptions.map(option => (
+      <option key={option.id} value={option.id}>
+        {option.label}
+      </option>
+    ))}
+  </select>
+
   <button
     type="button"
-    className={rangeMode === 'range' ? 'active' : ''}
-    onClick={() => setRangeMode('range')}
+    className="lov-export-btn"
+    onClick={handleExportTodayData}
   >
-    Range
+    Download today
   </button>
 
   <button
     type="button"
-    className={rangeMode === 'day' ? 'active' : ''}
-    onClick={() => setRangeMode('day')}
+    className="lov-export-btn"
+    onClick={handleExportYesterdayData}
   >
-    Day
-  </button>
-
-  <button
-    type="button"
-    className={rangeMode === 'week' ? 'active' : ''}
-    onClick={() => setRangeMode('week')}
-  >
-    Week
-  </button>
-
-  <button
-    type="button"
-    className={rangeMode === 'month' ? 'active' : ''}
-    onClick={() => setRangeMode('month')}
-  >
-    Month
+    Download yesterday
   </button>
 </div>
+
             </section>
 
 <section className="lov-kpi-grid lov-kpi-grid-main">
