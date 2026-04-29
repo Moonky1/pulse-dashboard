@@ -123,7 +123,7 @@ const SIDEBAR_GROUPS = [
   {
     title: 'WORKSPACE',
     items: [
-      { id: 'overview', label: 'Overview', icon: '▦', active: true },
+      { id: 'overview', label: 'Overview', icon: '▦' },
       { id: 'analytics', label: 'Analytics', icon: '▥' },
       { id: 'rankings', label: 'Rankings', icon: '🏆' },
       { id: 'teams', label: 'Teams', icon: '👥' },
@@ -147,9 +147,45 @@ const SIDEBAR_GROUPS = [
   },
 ]
 
-function LovableSidebar() {
+const normalizeSearchText = (value) => {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
+function agentMatchesSearch(agent, query) {
+  if (!query) return true
+
+  const name = normalizeSearchText(agent?.name)
+  const ext = normalizeSearchText(agent?.ext)
+
+  return name.includes(query) || ext.includes(query)
+}
+
+function teamMatchesSearch(team, query) {
+  if (!query) return true
+
+  const label = normalizeSearchText(team?.label)
+  const short = normalizeSearchText(team?.short)
+  const id = normalizeSearchText(team?.id)
+
+  return label.includes(query) || short.includes(query) || id.includes(query)
+}
+
+function filterParsedBySearch(parsed, query) {
+  if (!parsed || !query) return parsed
+
+  return {
+    ...parsed,
+    agents: (parsed.agents || []).filter(agent => agentMatchesSearch(agent, query)),
+  }
+}
+
+function LovableSidebar({ collapsed, activeItem, onNavigate }) {
   return (
-    <aside className="lov-sidebar">
+    <aside className={`lov-sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="lov-brand">
         <div className="lov-brand-glow" />
         <span>Pulse</span>
@@ -165,10 +201,12 @@ function LovableSidebar() {
                 <button
                   key={item.id}
                   type="button"
-                  className={`lov-sidebar-item ${item.active ? 'active' : ''}`}
+                  title={item.label}
+                  className={`lov-sidebar-item ${activeItem === item.id ? 'active' : ''}`}
+                  onClick={() => onNavigate(item)}
                 >
                   <span className="lov-sidebar-icon">{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className="lov-sidebar-label">{item.label}</span>
                 </button>
               ))}
             </div>
@@ -187,14 +225,45 @@ function LovableSidebar() {
   )
 }
 
-function LovableHeader() {
+function LovableHeader({
+  sidebarCollapsed,
+  onToggleSidebar,
+  searchQuery,
+  onSearchChange,
+  onSearchSubmit,
+}) {
   return (
     <header className="lov-header">
-      <button type="button" className="lov-icon-btn">☰</button>
+      <button
+        type="button"
+        className={`lov-icon-btn ${sidebarCollapsed ? 'active' : ''}`}
+        onClick={onToggleSidebar}
+        title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+      >
+        {sidebarCollapsed ? '☰' : '▥'}
+      </button>
 
       <div className="lov-search">
         <span>⌕</span>
-        <input readOnly placeholder="Search agents, teams..." />
+        <input
+          value={searchQuery}
+          placeholder="Search agents, teams..."
+          onChange={e => onSearchChange(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') onSearchSubmit()
+          }}
+        />
+
+        {searchQuery ? (
+          <button
+            type="button"
+            className="lov-search-clear"
+            onClick={() => onSearchChange('')}
+            title="Clear search"
+          >
+            ×
+          </button>
+        ) : null}
       </div>
 
       <div className="lov-live-pill">● Today — LIVE</div>
@@ -1631,6 +1700,8 @@ export default function Dashboard() {
   const [teamData, setTeamData] = useState({})
   const [remoteDates, setRemoteDates] = useState([])
   const [lastUpdate, setLastUpdate] = useState(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const liveTeamIds = useMemo(() => TEAM_ORDER.filter(teamId => TEAMS[teamId].live), [])
   const isToday = selectedDate === todayKey()
@@ -1837,13 +1908,107 @@ const dashboardTotals = useMemo(() => {
     activeAgents: 0,
   })
 }, [selectedTeam, selectedParsed, teamData])
+const normalizedSearch = useMemo(() => {
+  return normalizeSearchText(searchQuery)
+}, [searchQuery])
+
+const activeSidebarItem = selectedTeam === 'all' ? 'overview' : 'teams'
+
+const visibleAllTeamCards = useMemo(() => {
+  if (!normalizedSearch) return allTeamCards
+
+  return allTeamCards
+    .map(({ team, parsed }) => {
+      const teamMatch = teamMatchesSearch(team, normalizedSearch)
+
+      if (!parsed) {
+        return teamMatch ? { team, parsed } : null
+      }
+
+      const filteredParsed = filterParsedBySearch(parsed, normalizedSearch)
+      const hasAgentMatches = (filteredParsed?.agents || []).length > 0
+
+      if (!teamMatch && !hasAgentMatches) return null
+
+      return {
+        team,
+        parsed: teamMatch ? parsed : filteredParsed,
+      }
+    })
+    .filter(Boolean)
+}, [allTeamCards, normalizedSearch])
+
+const selectedParsedForView = useMemo(() => {
+  return filterParsedBySearch(selectedParsed, normalizedSearch)
+}, [selectedParsed, normalizedSearch])
+
+const handleSidebarNavigate = useCallback((item) => {
+  if (item.id === 'overview') {
+    setSelectedTeam('all')
+    setSelectedDate(todayKey())
+    setSortMetric('english')
+    setSearchQuery('')
+    navigate('/dashboard')
+    loadLiveTeams().catch(() => {})
+    return
+  }
+
+  if (item.id === 'teams') {
+    setSelectedTeam('all')
+    setSearchQuery('')
+    return
+  }
+
+  if (item.id === 'pulse-go') {
+    navigate('/go')
+    return
+  }
+
+  if (item.id === 'settings') {
+    navigate('/settings')
+    return
+  }
+
+  window.alert(`${item.label} is coming soon.`)
+}, [loadLiveTeams, navigate])
+
+const handleSearchSubmit = useCallback(() => {
+  const query = normalizeSearchText(searchQuery)
+  if (!query) return
+
+  for (const teamId of TEAM_ORDER) {
+    const team = TEAMS[teamId]
+    const parsed = teamData[teamId]
+
+    if (teamMatchesSearch(team, query)) {
+      setSelectedTeam(teamId)
+      return
+    }
+
+    const match = (parsed?.agents || []).find(agent => agentMatchesSearch(agent, query))
+    if (match?.ext) {
+      navigate(`/profile/${match.ext}`)
+      return
+    }
+  }
+}, [navigate, searchQuery, teamData])
     return (
-    <div className="dash-root">
+    <div className={`dash-root ${sidebarCollapsed ? 'lov-sidebar-collapsed' : ''}`}>
       <div className="lov-shell">
-        <LovableSidebar />
+        <LovableSidebar
+  collapsed={sidebarCollapsed}
+  activeItem={activeSidebarItem}
+  onNavigate={handleSidebarNavigate}
+/>
 
         <div className="lov-main">
-          <LovableHeader />
+          <LovableHeader
+  sidebarCollapsed={sidebarCollapsed}
+  onToggleSidebar={() => setSidebarCollapsed(prev => !prev)}
+  searchQuery={searchQuery}
+  onSearchChange={setSearchQuery}
+  onSearchSubmit={handleSearchSubmit}
+/>
 
           <main className="lov-content">
             <section className="lov-hero">
@@ -1908,7 +2073,7 @@ const dashboardTotals = useMemo(() => {
               <div className="pulse-error">{error}</div>
             ) : selectedTeam === 'all' ? (
               <div className="pulse-overview-grid">
-                {allTeamCards.map(({ team, parsed }, index) => (
+                {visibleAllTeamCards.map(({ team, parsed }, index) => (
                   parsed
                     ? (
                       <TeamOverviewCard
@@ -1924,12 +2089,12 @@ const dashboardTotals = useMemo(() => {
                 ))}
               </div>
             ) : selectedParsed && selectedTeamMeta ? (
-              <TeamDetail
-                team={selectedTeamMeta}
-                parsed={selectedParsed}
-                selectedDate={selectedDate}
-                navigate={navigate}
-              />
+<TeamDetail
+  team={selectedTeamMeta}
+  parsed={selectedParsedForView}
+  selectedDate={selectedDate}
+  navigate={navigate}
+/>
             ) : (
               <TeamComingSoonCard team={TEAMS[selectedTeam]} />
             )}
