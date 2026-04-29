@@ -1934,6 +1934,583 @@ function AgentTable({ team, agents, navigate }) {
   )
 }
 
+
+function getMetricLabel(metric) {
+  if (metric === 'english') return 'English'
+  if (metric === 'spanish') return 'Spanish'
+  if (metric === 'total') return 'Total'
+  return metric
+}
+
+function getMetricColor(metric) {
+  if (metric === 'english') return '#38bdf8'
+  if (metric === 'spanish') return '#34d399'
+  if (metric === 'invalid') return '#fb7185'
+  return '#ff8a2a'
+}
+
+function getTeamName(teamId) {
+  return TEAMS[teamId]?.label || teamId || 'Unknown team'
+}
+
+function getTeamFlag(teamId) {
+  return TEAMS[teamId]?.flag || null
+}
+
+function flattenAgentsForRankings(teamData) {
+  const agents = []
+
+  TEAM_ORDER.forEach(teamId => {
+    const parsed = teamData?.[teamId]
+    const team = TEAMS[teamId]
+
+    ;(parsed?.agents || []).forEach(agent => {
+      const english = Number(agent?.english || 0)
+      const spanish = Number(agent?.spanish || 0)
+      const invalidTransfers = Number(agent?.invalidTransfers || 0)
+      const rawTotal = Number(agent?.rawTotal ?? (english + spanish))
+      const total = Number(agent?.total ?? Math.max(0, rawTotal - invalidTransfers))
+
+      if (!agent?.ext) return
+
+      agents.push({
+        ...agent,
+        teamId,
+        teamLabel: team?.label || teamId,
+        teamFlag: team?.flag || null,
+        english,
+        spanish,
+        invalidTransfers,
+        rawTotal,
+        total,
+      })
+    })
+  })
+
+  return agents
+}
+
+function sortRankingAgents(agents, metric = 'total') {
+  return [...(agents || [])].sort((a, b) => {
+    const metricDiff = Number(b?.[metric] || 0) - Number(a?.[metric] || 0)
+    if (metricDiff !== 0) return metricDiff
+
+    const totalDiff = Number(b?.total || 0) - Number(a?.total || 0)
+    if (totalDiff !== 0) return totalDiff
+
+    const englishDiff = Number(b?.english || 0) - Number(a?.english || 0)
+    if (englishDiff !== 0) return englishDiff
+
+    return String(a?.name || '').localeCompare(String(b?.name || ''))
+  })
+}
+
+function buildCurrentTeamRankings(teamData, metric = 'total') {
+  return TEAM_ORDER
+    .map(teamId => {
+      const parsed = teamData?.[teamId]
+      if (!parsed) return null
+
+      return {
+        teamId,
+        teamLabel: getTeamName(teamId),
+        teamFlag: getTeamFlag(teamId),
+        english: Number(parsed?.totals?.english || 0),
+        spanish: Number(parsed?.totals?.spanish || 0),
+        invalidTransfers: Number(parsed?.invalidTransfers || 0),
+        total: Number(parsed?.totals?.total || 0),
+        activeAgents: Number(parsed?.totals?.activeAgents || parsed?.agents?.length || 0),
+        value: Number(parsed?.totals?.[metric] || 0),
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const metricDiff = Number(b?.value || 0) - Number(a?.value || 0)
+      if (metricDiff !== 0) return metricDiff
+      return Number(b?.total || 0) - Number(a?.total || 0)
+    })
+}
+
+function normalizeHistoryAgent(row) {
+  const english = Number(row?.english || 0)
+  const spanish = Number(row?.spanish || 0)
+  const invalidTransfers = Number(row?.invalid_transfers || 0)
+  const rawTotal = Number(row?.raw_total ?? (english + spanish))
+  const total = Number(row?.net_total ?? Math.max(0, rawTotal - invalidTransfers))
+  const teamId = String(row?.team || '').trim()
+
+  return {
+    date: normalizeDate(row?.date),
+    ext: String(row?.agent_ext || '').trim(),
+    name: String(row?.agent_name || '').trim(),
+    teamId,
+    teamLabel: getTeamName(teamId),
+    teamFlag: getTeamFlag(teamId),
+    english,
+    spanish,
+    invalidTransfers,
+    rawTotal,
+    total,
+  }
+}
+
+function normalizeHistoryTeam(row) {
+  const teamId = String(row?.team || '').trim()
+  const english = Number(row?.english || 0)
+  const spanish = Number(row?.spanish || 0)
+  const invalidTransfers = Number(row?.invalid_transfers || 0)
+  const total = Number(row?.total ?? Math.max(0, english + spanish - invalidTransfers))
+
+  return {
+    date: normalizeDate(row?.date),
+    teamId,
+    teamLabel: getTeamName(teamId),
+    teamFlag: getTeamFlag(teamId),
+    english,
+    spanish,
+    invalidTransfers,
+    total,
+    activeAgents: Number(row?.active_agents || 0),
+  }
+}
+
+function buildMostFirstPlaceAgents(agentRows = []) {
+  const byDate = new Map()
+
+  agentRows
+    .map(normalizeHistoryAgent)
+    .filter(agent => agent.date && agent.ext && agent.total > 0)
+    .forEach(agent => {
+      if (!byDate.has(agent.date)) byDate.set(agent.date, [])
+      byDate.get(agent.date).push(agent)
+    })
+
+  const byAgent = new Map()
+
+  byDate.forEach((agents, date) => {
+    const topAgent = sortRankingAgents(agents, 'total')[0]
+    if (!topAgent) return
+
+    const key = topAgent.ext
+    const current = byAgent.get(key) || {
+      ext: topAgent.ext,
+      name: topAgent.name,
+      teamId: topAgent.teamId,
+      teamLabel: topAgent.teamLabel,
+      teamFlag: topAgent.teamFlag,
+      firstPlaces: 0,
+      bestTotal: 0,
+      bestEnglish: 0,
+      bestSpanish: 0,
+      bestDate: date,
+    }
+
+    current.firstPlaces += 1
+
+    if (topAgent.total > current.bestTotal) {
+      current.bestTotal = topAgent.total
+      current.bestEnglish = topAgent.english
+      current.bestSpanish = topAgent.spanish
+      current.bestDate = date
+    }
+
+    byAgent.set(key, current)
+  })
+
+  return [...byAgent.values()].sort((a, b) => {
+    const firstDiff = Number(b.firstPlaces || 0) - Number(a.firstPlaces || 0)
+    if (firstDiff !== 0) return firstDiff
+    return Number(b.bestTotal || 0) - Number(a.bestTotal || 0)
+  })
+}
+
+function buildTeamWinnerCounts(teamRows = [], metric = 'english') {
+  const byDate = new Map()
+
+  teamRows
+    .map(normalizeHistoryTeam)
+    .filter(team => team.date && team.teamId && Number(team?.[metric] || 0) > 0)
+    .forEach(team => {
+      if (!byDate.has(team.date)) byDate.set(team.date, [])
+      byDate.get(team.date).push(team)
+    })
+
+  const byTeam = new Map()
+
+  byDate.forEach((teams, date) => {
+    const topTeam = [...teams].sort((a, b) => {
+      const metricDiff = Number(b?.[metric] || 0) - Number(a?.[metric] || 0)
+      if (metricDiff !== 0) return metricDiff
+      return Number(b?.total || 0) - Number(a?.total || 0)
+    })[0]
+
+    if (!topTeam) return
+
+    const current = byTeam.get(topTeam.teamId) || {
+      teamId: topTeam.teamId,
+      teamLabel: topTeam.teamLabel,
+      teamFlag: topTeam.teamFlag,
+      wins: 0,
+      bestValue: 0,
+      bestDate: date,
+      bestTotal: 0,
+    }
+
+    current.wins += 1
+
+    if (Number(topTeam?.[metric] || 0) > current.bestValue) {
+      current.bestValue = Number(topTeam?.[metric] || 0)
+      current.bestDate = date
+      current.bestTotal = Number(topTeam.total || 0)
+    }
+
+    byTeam.set(topTeam.teamId, current)
+  })
+
+  return [...byTeam.values()].sort((a, b) => {
+    const winDiff = Number(b.wins || 0) - Number(a.wins || 0)
+    if (winDiff !== 0) return winDiff
+    return Number(b.bestValue || 0) - Number(a.bestValue || 0)
+  })
+}
+
+function buildRankingHistoryInsights(agentRows = [], teamRows = []) {
+  const cleanAgentRows = (agentRows || []).filter(row => normalizeDate(row?.date) >= OFFICIAL_DATA_START)
+  const cleanTeamRows = (teamRows || []).filter(row => normalizeDate(row?.date) >= OFFICIAL_DATA_START)
+  const dates = [...new Set(cleanTeamRows.map(row => normalizeDate(row?.date)).filter(Boolean))].sort()
+
+  return {
+    datesTracked: dates.length,
+    mostFirstPlaceAgents: buildMostFirstPlaceAgents(cleanAgentRows).slice(0, 10),
+    englishTeamWinners: buildTeamWinnerCounts(cleanTeamRows, 'english').slice(0, 10),
+    spanishTeamWinners: buildTeamWinnerCounts(cleanTeamRows, 'spanish').slice(0, 10),
+  }
+}
+
+async function fetchRankingHistoryInsights() {
+  const [agentResult, teamResult] = await Promise.all([
+    supabase
+      .from('daily_agent_stats')
+      .select('date,agent_ext,agent_name,team,english,spanish,invalid_transfers,raw_total,net_total')
+      .gte('date', OFFICIAL_DATA_START)
+      .order('date', { ascending: false })
+      .range(0, 9999),
+
+    supabase
+      .from('daily_team_stats')
+      .select('date,team,english,spanish,invalid_transfers,total,active_agents')
+      .gte('date', OFFICIAL_DATA_START)
+      .order('date', { ascending: false })
+      .range(0, 9999),
+  ])
+
+  if (agentResult.error) throw agentResult.error
+  if (teamResult.error) throw teamResult.error
+
+  return buildRankingHistoryInsights(agentResult.data || [], teamResult.data || [])
+}
+
+function RankMarker({ index }) {
+  if (index < 3) return <Medal index={index} size={20} />
+  return <span className="pulse-team-rank-text">#{index + 1}</span>
+}
+
+function RankingTopBlock({ title, metric, rows = [], navigate }) {
+  const color = getMetricColor(metric)
+
+  return (
+    <div className="pulse-top-block">
+      <div className="pulse-top-block-title">{title}</div>
+
+      {rows.slice(0, 5).map((agent, index) => (
+        <div key={`${title}-${agent.ext}-${index}`} className="pulse-top-block-item">
+          <RankMarker index={index} />
+          <span className="pulse-top-block-name linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</span>
+          <span className="pulse-top-block-ext">#{agent.ext}</span>
+          <span className="pulse-top-block-value" style={{ color }}>{Number(agent?.[metric] || 0).toLocaleString()}</span>
+        </div>
+      ))}
+
+      {!rows.length ? <div className="pulse-summary-subtitle">No ranking data available yet.</div> : null}
+    </div>
+  )
+}
+
+function AgentRankingTable({ title, subtitle, rows = [], metric = 'total', navigate }) {
+  return (
+    <div className="pulse-table-wrap">
+      <div className="pulse-table-title">{title}</div>
+      {subtitle ? <div className="pulse-summary-subtitle" style={{ margin: '0 0 12px' }}>{subtitle}</div> : null}
+
+      <div className="pulse-table-scroll">
+        <table className="pulse-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Agent</th>
+              <th>Team</th>
+              <th>Ext</th>
+              <th className="th-english">English</th>
+              <th className="th-spanish">Spanish</th>
+              <th className="th-invalid">Invalid</th>
+              <th className="th-total">Total</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {rows.map((agent, index) => (
+              <tr key={`${title}-${agent.ext}-${index}`}>
+                <td><RankMarker index={index} /></td>
+                <td className="linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
+                <td>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <FlagImg src={agent.teamFlag} size={18} alt="" />
+                    {agent.teamLabel}
+                  </span>
+                </td>
+                <td>#{agent.ext}</td>
+                <td className="blue">{Number(agent.english || 0).toLocaleString()}</td>
+                <td className="green">{Number(agent.spanish || 0).toLocaleString()}</td>
+                <td className="red">{Number(agent.invalidTransfers || 0).toLocaleString()}</td>
+                <td className="orange" style={{ fontWeight: metric === 'total' ? 950 : 800 }}>{Number(agent.total || 0).toLocaleString()}</td>
+              </tr>
+            ))}
+
+            {!rows.length ? (
+              <tr>
+                <td colSpan="8">No ranking data available yet.</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function FirstPlaceTable({ rows = [], loading, error, navigate }) {
+  return (
+    <div className="pulse-table-wrap">
+      <div className="pulse-table-title">🏆 Most #1 Days</div>
+      <div className="pulse-summary-subtitle" style={{ margin: '0 0 12px' }}>
+        Agents who finished #1 the most times since the official Supabase start date.
+      </div>
+
+      {loading ? <div className="pulse-loading">Loading ranking history...</div> : null}
+      {error ? <div className="pulse-error">{error}</div> : null}
+
+      {!loading && !error ? (
+        <div className="pulse-table-scroll">
+          <table className="pulse-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Agent</th>
+                <th>Team</th>
+                <th>Ext</th>
+                <th>#1 Days</th>
+                <th>Best Total</th>
+                <th>Best Day</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {rows.map((agent, index) => (
+                <tr key={`first-${agent.ext}-${index}`}>
+                  <td><RankMarker index={index} /></td>
+                  <td className="linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
+                  <td>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <FlagImg src={agent.teamFlag} size={18} alt="" />
+                      {agent.teamLabel}
+                    </span>
+                  </td>
+                  <td>#{agent.ext}</td>
+                  <td className="orange">{Number(agent.firstPlaces || 0).toLocaleString()}</td>
+                  <td className="orange">{Number(agent.bestTotal || 0).toLocaleString()}</td>
+                  <td>{agent.bestDate ? formatDateLabel(agent.bestDate) : 'N/A'}</td>
+                </tr>
+              ))}
+
+              {!rows.length ? (
+                <tr>
+                  <td colSpan="7">No #1 history available yet.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function TeamWinnerTable({ title, rows = [], metric }) {
+  const color = getMetricColor(metric)
+
+  return (
+    <div className="pulse-table-wrap">
+      <div className="pulse-table-title">{title}</div>
+      <div className="pulse-table-scroll">
+        <table className="pulse-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Team</th>
+              <th>#1 Days</th>
+              <th>Best {getMetricLabel(metric)}</th>
+              <th>Best Total</th>
+              <th>Best Day</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {rows.map((team, index) => (
+              <tr key={`${title}-${team.teamId}-${index}`}>
+                <td><RankMarker index={index} /></td>
+                <td>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 900 }}>
+                    <FlagImg src={team.teamFlag} size={18} alt="" />
+                    {team.teamLabel}
+                  </span>
+                </td>
+                <td className="orange">{Number(team.wins || 0).toLocaleString()}</td>
+                <td style={{ color, fontWeight: 950 }}>{Number(team.bestValue || 0).toLocaleString()}</td>
+                <td className="orange">{Number(team.bestTotal || 0).toLocaleString()}</td>
+                <td>{team.bestDate ? formatDateLabel(team.bestDate) : 'N/A'}</td>
+              </tr>
+            ))}
+
+            {!rows.length ? (
+              <tr>
+                <td colSpan="6">No team ranking history available yet.</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function RankingsPage({ teamData, selectedDate, history, historyLoading, historyError, navigate }) {
+  const currentAgents = useMemo(() => flattenAgentsForRankings(teamData), [teamData])
+  const topTotal = useMemo(() => sortRankingAgents(currentAgents, 'total').slice(0, 10), [currentAgents])
+  const topEnglish = useMemo(() => sortRankingAgents(currentAgents, 'english').slice(0, 10), [currentAgents])
+  const topSpanish = useMemo(() => sortRankingAgents(currentAgents, 'spanish').slice(0, 10), [currentAgents])
+  const teamEnglish = useMemo(() => buildCurrentTeamRankings(teamData, 'english')[0], [teamData])
+  const teamSpanish = useMemo(() => buildCurrentTeamRankings(teamData, 'spanish')[0], [teamData])
+  const teamTotal = useMemo(() => buildCurrentTeamRankings(teamData, 'total')[0], [teamData])
+  const mostFirst = history?.mostFirstPlaceAgents || []
+  const topFirstAgent = mostFirst[0]
+
+  return (
+    <>
+      <div className="pulse-hero-card">
+        <div>
+          <div className="pulse-hero-date">{formatDateLabel(selectedDate)}</div>
+
+          <div className="pulse-hero-title-row">
+            <span style={{ fontSize: 30, lineHeight: 1 }}>🏆</span>
+            <div className="pulse-hero-title">Rankings</div>
+          </div>
+
+          <div className="pulse-hero-sub">
+            Top 10 agents, most #1 days, and best teams by English / Spanish xfers.
+          </div>
+        </div>
+      </div>
+
+      <div className="pulse-summary-grid">
+        <SummaryCard
+          title="Best Team English"
+          value={teamEnglish?.english || 0}
+          color="#38bdf8"
+          titleColor="#38bdf8"
+          subtitle={teamEnglish ? `${teamEnglish.teamLabel} • ${teamEnglish.activeAgents} agents` : 'N/A'}
+        />
+        <SummaryCard
+          title="Best Team Spanish"
+          value={teamSpanish?.spanish || 0}
+          color="#34d399"
+          titleColor="#34d399"
+          subtitle={teamSpanish ? `${teamSpanish.teamLabel} • ${teamSpanish.activeAgents} agents` : 'N/A'}
+        />
+        <SummaryCard
+          title="Best Team Total"
+          value={teamTotal?.total || 0}
+          color="#ff8a2a"
+          titleColor="#ff8a2a"
+          subtitle={teamTotal ? `${teamTotal.teamLabel} • ${teamTotal.activeAgents} agents` : 'N/A'}
+        />
+        <SummaryCard
+          title="Most #1 Days"
+          value={topFirstAgent?.firstPlaces || 0}
+          color="#fbbf24"
+          titleColor="#fbbf24"
+          subtitle={topFirstAgent ? `${topFirstAgent.name} • #${topFirstAgent.ext}` : historyLoading ? 'Loading history...' : 'N/A'}
+        />
+        <SummaryCard
+          title="Days Tracked"
+          value={history?.datesTracked || 0}
+          color="#c084fc"
+          titleColor="#c084fc"
+          subtitle={`Since ${formatDateLabel(OFFICIAL_DATA_START)}`}
+        />
+        <SummaryCard
+          title="Agents Ranked"
+          value={currentAgents.length}
+          color="#60a5fa"
+          titleColor="#60a5fa"
+          subtitle="Current selected date"
+        />
+      </div>
+
+      <div className="pulse-top-blocks-grid">
+        <RankingTopBlock title="Top Total" metric="total" rows={topTotal} navigate={navigate} />
+        <RankingTopBlock title="Top English" metric="english" rows={topEnglish} navigate={navigate} />
+        <RankingTopBlock title="Top Spanish" metric="spanish" rows={topSpanish} navigate={navigate} />
+      </div>
+
+      <AgentRankingTable
+        title="🏆 Top 10 Agents Overall"
+        subtitle="Sorted by total xfers for the selected date. Click an agent to open the profile."
+        rows={topTotal}
+        metric="total"
+        navigate={navigate}
+      />
+
+      <AgentRankingTable
+        title="🔵 Top 10 English Xfers"
+        subtitle="Best English performance for the selected date."
+        rows={topEnglish}
+        metric="english"
+        navigate={navigate}
+      />
+
+      <AgentRankingTable
+        title="🟢 Top 10 Spanish Xfers"
+        subtitle="Best Spanish performance for the selected date."
+        rows={topSpanish}
+        metric="spanish"
+        navigate={navigate}
+      />
+
+      <FirstPlaceTable
+        rows={mostFirst}
+        loading={historyLoading}
+        error={historyError}
+        navigate={navigate}
+      />
+
+      <div className="pulse-top-blocks-grid">
+        <TeamWinnerTable title="🏆 Team #1 Days by English" metric="english" rows={history?.englishTeamWinners || []} />
+        <TeamWinnerTable title="🏆 Team #1 Days by Spanish" metric="spanish" rows={history?.spanishTeamWinners || []} />
+      </div>
+    </>
+  )
+}
+
 function TeamDetail({ team, parsed, selectedDate, navigate, onDownload }) {
   const showOT = parsed.includesOT && (parsed.otTotals?.total || 0) > 0
   const reachedTarget = countReachedTarget(team.id, parsed.agents)
@@ -1999,6 +2576,8 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [rangeMode, setRangeMode] = useState('day')
+  const [activeView, setActiveView] = useState('overview')
+  const [rankingsHistory, setRankingsHistory] = useState({ insights: null, loading: false, error: '' })
 
   const liveTeamIds = useMemo(() => TEAM_ORDER.filter(teamId => TEAMS[teamId].live), [])
   const isToday = selectedDate === todayKey()
@@ -2033,6 +2612,22 @@ const loadRemoteDates = useCallback(async () => {
     .filter(date => date && date >= CLEAN_START_DATE)
 
   setRemoteDates([...new Set(dates)].sort((a, b) => b.localeCompare(a)))
+}, [])
+
+const loadRankingsHistory = useCallback(async () => {
+  setRankingsHistory(prev => ({ ...prev, loading: true, error: '' }))
+
+  try {
+    const insights = await fetchRankingHistoryInsights()
+    setRankingsHistory({ insights, loading: false, error: '' })
+  } catch (err) {
+    console.error('Rankings history failed:', err)
+    setRankingsHistory({
+      insights: null,
+      loading: false,
+      error: String(err?.message || err || 'Failed to load ranking history'),
+    })
+  }
 }, [])
 
 const loadLiveTeams = useCallback(async () => {
@@ -2215,6 +2810,13 @@ const loadHistoricalTeams = useCallback(async (date) => {
   }, [loadRemoteDates])
 
   useEffect(() => {
+    if (activeView !== 'rankings') return
+    if (rankingsHistory.loading || rankingsHistory.insights) return
+
+    loadRankingsHistory().catch(() => {})
+  }, [activeView, loadRankingsHistory, rankingsHistory.insights, rankingsHistory.loading])
+
+  useEffect(() => {
     if (!isToday) return
 
     let cancelled = false
@@ -2335,7 +2937,7 @@ const normalizedSearch = useMemo(() => {
   return normalizeSearchText(searchQuery)
 }, [searchQuery])
 
-const activeSidebarItem = selectedTeam === 'all' ? 'overview' : 'teams'
+const activeSidebarItem = activeView === 'rankings' ? 'rankings' : selectedTeam === 'all' ? 'overview' : 'teams'
 
 const visibleAllTeamCards = useMemo(() => {
   if (!normalizedSearch) return allTeamCards
@@ -2375,6 +2977,7 @@ const searchSuggestions = useMemo(() => {
 
 const handleSidebarNavigate = useCallback((item) => {
   if (item.id === 'overview') {
+    setActiveView('overview')
     setSelectedTeam('all')
     setSelectedDateSafe(todayKey())
     setSortMetric('english')
@@ -2386,6 +2989,15 @@ const handleSidebarNavigate = useCallback((item) => {
   }
 
   if (item.id === 'teams') {
+    setActiveView('overview')
+    setSelectedTeam('all')
+    setSearchQuery('')
+    setUserMenuOpen(false)
+    return
+  }
+
+  if (item.id === 'rankings') {
+    setActiveView('rankings')
     setSelectedTeam('all')
     setSearchQuery('')
     setUserMenuOpen(false)
@@ -2405,6 +3017,11 @@ const handleSidebarNavigate = useCallback((item) => {
   window.alert(`${item.label} is coming soon.`)
 }, [loadLiveTeams, navigate, setSelectedDateSafe])
 
+const handleTeamTabChange = useCallback((teamId) => {
+  setActiveView('overview')
+  setSelectedTeam(teamId)
+}, [])
+
 const handleSuggestionClick = useCallback((item) => {
   if (!item) return
 
@@ -2418,6 +3035,7 @@ const handleSuggestionClick = useCallback((item) => {
   if (item.type === 'team') {
     setSearchQuery('')
     setUserMenuOpen(false)
+    setActiveView('overview')
     setSelectedTeam(item.id)
   }
 }, [navigate])
@@ -2524,33 +3142,63 @@ const handleUserAction = useCallback((action) => {
   <LovableKpi title="Total Xfers" value={dashboardTotals.total} tone="orange" />
 </section>
 
-            <section className="lov-control-row">
-              <TeamTabs selectedTeam={selectedTeam} onChange={setSelectedTeam} />
+            {activeView === 'rankings' ? (
+              <section className="lov-date-row">
+                {officialDateTabs.map(date => {
+                  const active = date === selectedDate
 
-              <SortTabs sortMetric={sortMetric} onChange={setSortMetric} />
-            </section>
+                  return (
+                    <button
+                      key={date}
+                      type="button"
+                      className={`lov-date-btn ${active ? 'active' : ''}`}
+                      onClick={() => setSelectedDateSafe(date)}
+                    >
+                      {formatDateLabel(date)}
+                    </button>
+                  )
+                })}
+              </section>
+            ) : (
+              <>
+                <section className="lov-control-row">
+                  <TeamTabs selectedTeam={selectedTeam} onChange={handleTeamTabChange} />
 
-            <section className="lov-date-row">
-              {officialDateTabs.map(date => {
-                const active = date === selectedDate
+                  <SortTabs sortMetric={sortMetric} onChange={setSortMetric} />
+                </section>
 
-                return (
-                  <button
-                    key={date}
-                    type="button"
-                    className={`lov-date-btn ${active ? 'active' : ''}`}
-                    onClick={() => setSelectedDateSafe(date)}
-                  >
-                    {formatDateLabel(date)}
-                  </button>
-                )
-              })}
-            </section>
+                <section className="lov-date-row">
+                  {officialDateTabs.map(date => {
+                    const active = date === selectedDate
+
+                    return (
+                      <button
+                        key={date}
+                        type="button"
+                        className={`lov-date-btn ${active ? 'active' : ''}`}
+                        onClick={() => setSelectedDateSafe(date)}
+                      >
+                        {formatDateLabel(date)}
+                      </button>
+                    )
+                  })}
+                </section>
+              </>
+            )}
 
             {loading ? (
               <div className="pulse-loading">Loading live team data...</div>
             ) : error ? (
               <div className="pulse-error">{error}</div>
+            ) : activeView === 'rankings' ? (
+              <RankingsPage
+                teamData={teamData}
+                selectedDate={selectedDate}
+                history={rankingsHistory.insights}
+                historyLoading={rankingsHistory.loading}
+                historyError={rankingsHistory.error}
+                navigate={navigate}
+              />
             ) : selectedTeam === 'all' ? (
               <div className="pulse-overview-grid">
                 {visibleAllTeamCards.map(({ team, parsed }, index) => (
@@ -2561,7 +3209,7 @@ const handleUserAction = useCallback((action) => {
                         team={team}
                         parsed={parsed}
                         sortMetric={sortMetric}
-                        onOpen={setSelectedTeam}
+                        onOpen={teamId => { setActiveView('overview'); setSelectedTeam(teamId) }}
                         rankIndex={index}
                       />
                     )
