@@ -10,7 +10,7 @@ const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const QA_SHEET_ID = '1rw-b5o5jK4O7uMP3-vSEtT6QgitUr-xyrP3GBIcm5ig'
 const CLEAN_START_DATE = '2026-04-23'
 const OFFICIAL_DATA_START = '2026-04-28'
-const POLL_MS = 30000
+const POLL_MS = 10000
 
 const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
 const TEAM_RANK_EMOJIS = ['/emojis/goal1.webp', '/emojis/goal3.webp', '/emojis/goal4.webp']
@@ -2037,33 +2037,22 @@ const loadRemoteDates = useCallback(async () => {
 
 const loadLiveTeams = useCallback(async () => {
   const requestId = ++activeLoadIdRef.current
-  setError('')
-
   const today = todayKey()
 
-  // IMPORTANT:
-  // Today LIVE now uses Supabase as the main source of truth.
-  // The Google Sheets reader is only a fallback for the first moments of the day
-  // if Supabase has not received any snapshot yet. This prevents the UI from
-  // jumping between old Sheets data and protected Supabase data.
-  try {
-    const savedToday = await fetchSupabaseDashboardDate(today)
+  setError('')
 
-    if (Object.keys(savedToday).length) {
-      if (selectedDateRef.current !== today || requestId !== activeLoadIdRef.current) {
-        return savedToday
-      }
+  // Fast LIVE strategy:
+  // 1) Read Google Sheets now so Pulse updates as soon as the charts change.
+  // 2) Read Supabase at the same time as the protected backup.
+  // 3) For every team, keep whichever version is stronger.
+  // This prevents old/cleared charts from lowering the UI, while still making
+  // today's dashboard much faster than waiting for the 1-minute Supabase trigger.
+  const [savedResult, sheetResults, invalidCounts] = await Promise.all([
+    fetchSupabaseDashboardDate(today).catch(err => {
+      console.warn('Supabase today read failed, using Sheets only:', err)
+      return {}
+    }),
 
-      setTeamData(savedToday)
-      setLastUpdate(new Date())
-      loadRemoteDates().catch(() => {})
-      return savedToday
-    }
-  } catch (err) {
-    console.warn('Supabase today read failed, falling back to Sheets:', err)
-  }
-
-  const [sheetResults, invalidCounts] = await Promise.all([
     Promise.allSettled(
       liveTeamIds.map(teamId => fetchTeamSheetViaScript(TEAMS[teamId]))
     ),
@@ -2075,22 +2064,31 @@ const loadLiveTeams = useCallback(async () => {
 
   liveTeamIds.forEach((teamId, index) => {
     const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
+    const savedParsed = savedResult?.[teamId] || null
 
-    if (sheetResults[index].status === 'fulfilled') {
+    let liveParsed = null
+
+    if (sheetResults[index]?.status === 'fulfilled') {
       try {
-        const parsed = parseLiveSheet(teamId, sheetResults[index].value)
-        next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
+        liveParsed = applyInvalidTransfersToParsed(
+          parseLiveSheet(teamId, sheetResults[index].value),
+          invalidInfo
+        )
       } catch (err) {
         console.error(`Error parsing ${teamId}:`, err)
-        next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
       }
     } else {
-      console.warn(`Failed loading ${teamId}:`, sheetResults[index].reason)
-      next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
+      console.warn(`Failed loading ${teamId}:`, sheetResults[index]?.reason)
+    }
+
+    const protectedParsed = protectTodayWithSupabase(liveParsed, savedParsed)
+
+    if (protectedParsed) {
+      next[teamId] = protectedParsed
     }
   })
 
-  if (!Object.keys(next).length) throw new Error('Failed to read live team sheets')
+  if (!Object.keys(next).length) throw new Error('Failed to read live team data')
 
   if (selectedDateRef.current !== today || requestId !== activeLoadIdRef.current) {
     return next
@@ -2219,11 +2217,29 @@ const loadHistoricalTeams = useCallback(async (date) => {
   useEffect(() => {
     if (!isToday) return
 
-    const timer = setInterval(() => {
-      loadLiveTeams().catch(() => {})
-    }, POLL_MS)
+    let cancelled = false
+    let timer = null
 
-    return () => clearInterval(timer)
+    const scheduleNext = () => {
+      if (cancelled) return
+
+      timer = window.setTimeout(async () => {
+        try {
+          await loadLiveTeams()
+        } catch (err) {
+          console.warn('Live refresh failed:', err)
+        } finally {
+          scheduleNext()
+        }
+      }, POLL_MS)
+    }
+
+    scheduleNext()
+
+    return () => {
+      cancelled = true
+      if (timer) window.clearTimeout(timer)
+    }
   }, [isToday, loadLiveTeams])
 
   const dateTabs = useMemo(() => {
