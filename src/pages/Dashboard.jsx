@@ -1449,7 +1449,44 @@ async function fetchSupabaseDates() {
       .filter(Boolean)
   )].sort((a, b) => b.localeCompare(a))
 }
+function getParsedScore(parsed) {
+  if (!parsed) return 0
 
+  const english = Number(parsed?.totals?.english || 0)
+  const spanish = Number(parsed?.totals?.spanish || 0)
+  const rawTotal = Number(parsed?.totals?.rawTotal || 0)
+  const total = Number(parsed?.totals?.total || 0)
+
+  return Math.max(rawTotal, english + spanish, total)
+}
+
+function getParsedAgentCount(parsed) {
+  return Number(parsed?.totals?.activeAgents || parsed?.agents?.length || 0)
+}
+
+function protectTodayWithSupabase(liveParsed, savedParsed) {
+  if (!liveParsed && !savedParsed) return emptyParsedTeam()
+  if (!savedParsed) return liveParsed
+  if (!liveParsed) return savedParsed
+
+  const liveScore = getParsedScore(liveParsed)
+  const savedScore = getParsedScore(savedParsed)
+
+  // Main rule:
+  // If Sheets got cleared/moved and Supabase has a stronger snapshot,
+  // keep Supabase for Today LIVE.
+  if (savedScore > liveScore) return savedParsed
+
+  // Extra protection:
+  // Sometimes the total is similar but live sheet has way fewer agents
+  // because the chart was moved/cleared.
+  const liveAgents = getParsedAgentCount(liveParsed)
+  const savedAgents = getParsedAgentCount(savedParsed)
+
+  if (savedScore === liveScore && savedAgents > liveAgents) return savedParsed
+
+  return liveParsed
+}
 
 function formatDateLabel(date) {
   if (date === todayKey()) return 'Today — LIVE'
@@ -1729,37 +1766,53 @@ const loadRemoteDates = useCallback(async () => {
 const loadLiveTeams = useCallback(async () => {
   setError('')
 
-  const [sheetResults, invalidCounts] = await Promise.all([
+  const today = todayKey()
+
+  const [savedTodayResult, sheetResults, invalidCounts] = await Promise.all([
+    fetchSupabaseDashboardDate(today)
+      .then(data => ({ ok: true, data }))
+      .catch(err => {
+        console.warn('Supabase today read failed:', err)
+        return { ok: false, data: {} }
+      }),
+
     Promise.allSettled(
       liveTeamIds.map(teamId => fetchTeamSheetViaScript(TEAMS[teamId]))
     ),
-    fetchInvalidTransfersForDate(todayKey()).catch(() => ({})),
+
+    fetchInvalidTransfersForDate(today).catch(() => ({})),
   ])
 
+  const savedToday = savedTodayResult?.ok ? savedTodayResult.data : {}
   const next = {}
 
   liveTeamIds.forEach((teamId, index) => {
     const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
 
+    let liveParsed = null
+
     if (sheetResults[index].status === 'fulfilled') {
       try {
         const parsed = parseLiveSheet(teamId, sheetResults[index].value)
-        next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
+        liveParsed = applyInvalidTransfersToParsed(parsed, invalidInfo)
       } catch (err) {
         console.error(`Error parsing ${teamId}:`, err)
-        next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
+        liveParsed = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
       }
     } else {
       console.warn(`Failed loading ${teamId}:`, sheetResults[index].reason)
-      next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
+      liveParsed = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
     }
+
+    const savedParsed = savedToday?.[teamId]
+      ? applyInvalidTransfersToParsed(savedToday[teamId], invalidInfo)
+      : null
+
+    next[teamId] = protectTodayWithSupabase(liveParsed, savedParsed)
   })
 
   if (!Object.keys(next).length) throw new Error('Failed to read live team sheets')
 
-  // IMPORTANT:
-  // Today LIVE displays the freshly parsed Google Sheets data immediately.
-  // Supabase is updated automatically by Apps Script every 5 minutes.
   setTeamData(next)
   setLastUpdate(new Date())
 
