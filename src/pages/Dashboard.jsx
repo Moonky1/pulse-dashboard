@@ -7,6 +7,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBl
 const SHEET_ID = '1M-LxHggUFQlmZVDbOPwU866ee0_Dp4AnDchBHXaq-fs'
 const QA_SHEET_ID = '1rw-b5o5jK4O7uMP3-vSEtT6QgitUr-xyrP3GBIcm5ig'
 const CLEAN_START_DATE = '2026-04-23'
+const OFFICIAL_DATA_START = '2026-04-28'
 const POLL_MS = 30000
 
 const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
@@ -182,6 +183,54 @@ function filterParsedBySearch(parsed, query) {
     agents: (parsed.agents || []).filter(agent => agentMatchesSearch(agent, query)),
   }
 }
+function isOfficialDate(date) {
+  if (!date) return true
+  if (date === todayKey()) return true
+  return String(date) >= OFFICIAL_DATA_START
+}
+
+function buildSearchSuggestions(teamData, query) {
+  const q = normalizeSearchText(query)
+  if (!q) return []
+
+  const suggestions = []
+
+  TEAM_ORDER.forEach(teamId => {
+    const team = TEAMS[teamId]
+    const parsed = teamData?.[teamId]
+
+    const teamLabel = normalizeSearchText(team?.label)
+    const teamShort = normalizeSearchText(team?.short)
+    const teamKey = normalizeSearchText(teamId)
+
+    if (teamLabel.includes(q) || teamShort.includes(q) || teamKey.includes(q)) {
+      suggestions.push({
+        type: 'team',
+        id: teamId,
+        label: team.label,
+        sub: 'Team',
+        icon: team.flag ? '🌐' : '🌎',
+      })
+    }
+
+    ;(parsed?.agents || []).forEach(agent => {
+      const name = normalizeSearchText(agent?.name)
+      const ext = normalizeSearchText(agent?.ext)
+
+      if (name.includes(q) || ext.includes(q)) {
+        suggestions.push({
+          type: 'agent',
+          id: agent.ext,
+          label: agent.name,
+          sub: `${agent.ext} • ${team.label}`,
+          icon: '👤',
+        })
+      }
+    })
+  })
+
+  return suggestions.slice(0, 8)
+}
 
 function LovableSidebar({ collapsed, activeItem, onNavigate }) {
   return (
@@ -231,38 +280,70 @@ function LovableHeader({
   searchQuery,
   onSearchChange,
   onSearchSubmit,
+  suggestions = [],
+  onSuggestionClick,
+  userMenuOpen,
+  onToggleUserMenu,
+  onUserAction,
 }) {
   return (
     <header className="lov-header">
       <button
         type="button"
-        className={`lov-icon-btn ${sidebarCollapsed ? 'active' : ''}`}
+        className={`lov-icon-btn lov-menu-toggle ${sidebarCollapsed ? 'active' : ''}`}
         onClick={onToggleSidebar}
         title={sidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
       >
-        {sidebarCollapsed ? '☰' : '▥'}
+        ☰
       </button>
 
-      <div className="lov-search">
-        <span>⌕</span>
-        <input
-          value={searchQuery}
-          placeholder="Search agents, teams..."
-          onChange={e => onSearchChange(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') onSearchSubmit()
-          }}
-        />
+      <div className="lov-search-wrap">
+        <div className="lov-search">
+          <span className="lov-search-icon">⌕</span>
 
-        {searchQuery ? (
-          <button
-            type="button"
-            className="lov-search-clear"
-            onClick={() => onSearchChange('')}
-            title="Clear search"
-          >
-            ×
-          </button>
+          <input
+            value={searchQuery}
+            placeholder="Search agent name or extension..."
+            onChange={e => onSearchChange(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') onSearchSubmit()
+            }}
+          />
+
+          {searchQuery ? (
+            <button
+              type="button"
+              className="lov-search-clear"
+              onClick={() => onSearchChange('')}
+              title="Clear search"
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
+
+        {searchQuery && suggestions.length > 0 ? (
+          <div className="lov-search-suggestions">
+            {suggestions.map(item => (
+              <button
+                key={`${item.type}-${item.id}`}
+                type="button"
+                className="lov-search-suggestion"
+                onClick={() => onSuggestionClick(item)}
+              >
+                <span className="lov-suggestion-icon">{item.icon}</span>
+
+                <span className="lov-suggestion-text">
+                  <strong>{item.label}</strong>
+                  <small>{item.sub}</small>
+                </span>
+
+                <span className="lov-suggestion-action">
+                  {item.type === 'agent' ? 'Open profile' : 'Open team'}
+                </span>
+              </button>
+            ))}
+          </div>
         ) : null}
       </div>
 
@@ -278,12 +359,28 @@ function LovableHeader({
         <button type="button" className="lov-icon-btn">◔</button>
         <button type="button" className="lov-icon-btn">🔔</button>
 
-        <div className="lov-user">
-          <div>
-            <strong>Simon</strong>
-            <span>Asia · Team Leader</span>
-          </div>
-          <div className="lov-avatar">SM</div>
+        <div className="lov-user-wrap">
+          <button type="button" className="lov-user" onClick={onToggleUserMenu}>
+            <div>
+              <strong>Simon</strong>
+              <span>Asia · Team Leader</span>
+            </div>
+            <div className="lov-avatar">SM</div>
+          </button>
+
+          {userMenuOpen ? (
+            <div className="lov-user-menu">
+              <button type="button" onClick={() => onUserAction('profile')}>
+                👤 Profile
+              </button>
+              <button type="button" onClick={() => onUserAction('settings')}>
+                ⚙️ Settings
+              </button>
+              <button type="button" onClick={() => onUserAction('logout')}>
+                🚪 Log out
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </header>
@@ -1739,6 +1836,8 @@ export default function Dashboard() {
   const [lastUpdate, setLastUpdate] = useState(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [rangeMode, setRangeMode] = useState('day')
 
   const liveTeamIds = useMemo(() => TEAM_ORDER.filter(teamId => TEAMS[teamId].live), [])
   const isToday = selectedDate === todayKey()
@@ -1995,12 +2094,21 @@ const selectedParsedForView = useMemo(() => {
   return filterParsedBySearch(selectedParsed, normalizedSearch)
 }, [selectedParsed, normalizedSearch])
 
+const officialDateTabs = useMemo(() => {
+  return dateTabs.filter(date => isOfficialDate(date))
+}, [dateTabs])
+
+const searchSuggestions = useMemo(() => {
+  return buildSearchSuggestions(teamData, searchQuery)
+}, [teamData, searchQuery])
+
 const handleSidebarNavigate = useCallback((item) => {
   if (item.id === 'overview') {
     setSelectedTeam('all')
     setSelectedDate(todayKey())
     setSortMetric('english')
     setSearchQuery('')
+    setUserMenuOpen(false)
     navigate('/dashboard')
     loadLiveTeams().catch(() => {})
     return
@@ -2009,6 +2117,7 @@ const handleSidebarNavigate = useCallback((item) => {
   if (item.id === 'teams') {
     setSelectedTeam('all')
     setSearchQuery('')
+    setUserMenuOpen(false)
     return
   }
 
@@ -2025,26 +2134,46 @@ const handleSidebarNavigate = useCallback((item) => {
   window.alert(`${item.label} is coming soon.`)
 }, [loadLiveTeams, navigate])
 
-const handleSearchSubmit = useCallback(() => {
-  const query = normalizeSearchText(searchQuery)
-  if (!query) return
+const handleSuggestionClick = useCallback((item) => {
+  if (!item) return
 
-  for (const teamId of TEAM_ORDER) {
-    const team = TEAMS[teamId]
-    const parsed = teamData[teamId]
-
-    if (teamMatchesSearch(team, query)) {
-      setSelectedTeam(teamId)
-      return
-    }
-
-    const match = (parsed?.agents || []).find(agent => agentMatchesSearch(agent, query))
-    if (match?.ext) {
-      navigate(`/profile/${match.ext}`)
-      return
-    }
+  if (item.type === 'agent') {
+    setSearchQuery('')
+    setUserMenuOpen(false)
+    navigate(`/profile/${item.id}`)
+    return
   }
-}, [navigate, searchQuery, teamData])
+
+  if (item.type === 'team') {
+    setSearchQuery('')
+    setUserMenuOpen(false)
+    setSelectedTeam(item.id)
+  }
+}, [navigate])
+
+const handleSearchSubmit = useCallback(() => {
+  const first = searchSuggestions[0]
+  if (first) handleSuggestionClick(first)
+}, [searchSuggestions, handleSuggestionClick])
+
+const handleUserAction = useCallback((action) => {
+  setUserMenuOpen(false)
+
+  if (action === 'profile') {
+    navigate('/profile/3134')
+    return
+  }
+
+  if (action === 'settings') {
+    navigate('/settings')
+    return
+  }
+
+  if (action === 'logout') {
+    localStorage.removeItem('pulse_user')
+    navigate('/signin')
+  }
+}, [navigate])
     return (
     <div className={`dash-root ${sidebarCollapsed ? 'lov-sidebar-collapsed' : ''}`}>
       <div className="lov-shell">
@@ -2055,12 +2184,17 @@ const handleSearchSubmit = useCallback(() => {
 />
 
         <div className="lov-main">
-          <LovableHeader
+<LovableHeader
   sidebarCollapsed={sidebarCollapsed}
   onToggleSidebar={() => setSidebarCollapsed(prev => !prev)}
   searchQuery={searchQuery}
   onSearchChange={setSearchQuery}
   onSearchSubmit={handleSearchSubmit}
+  suggestions={searchSuggestions}
+  onSuggestionClick={handleSuggestionClick}
+  userMenuOpen={userMenuOpen}
+  onToggleUserMenu={() => setUserMenuOpen(prev => !prev)}
+  onUserAction={handleUserAction}
 />
 
           <main className="lov-content">
@@ -2070,32 +2204,50 @@ const handleSearchSubmit = useCallback(() => {
 
                 <h1 className="lov-hero-title">AutoWarranty Garrett</h1>
 
-                <p className="lov-hero-subtitle">
-                  Live now: Asia, Philippines, Colombia, Central, Mexico & Venezuela
-                </p>
+              
               </div>
 
-              <div className="lov-hero-right">
-                <div className="lov-range-tabs">
-                  <button type="button">Range</button>
-                  <button type="button">Day</button>
-                  <button type="button" className="active">Week</button>
-                  <button type="button">Month</button>
-                </div>
+<div className="lov-range-tabs">
+  <button
+    type="button"
+    className={rangeMode === 'range' ? 'active' : ''}
+    onClick={() => setRangeMode('range')}
+  >
+    Range
+  </button>
 
-                <button type="button" className="lov-export-btn">
-                  Export Excel
-                </button>
-              </div>
+  <button
+    type="button"
+    className={rangeMode === 'day' ? 'active' : ''}
+    onClick={() => setRangeMode('day')}
+  >
+    Day
+  </button>
+
+  <button
+    type="button"
+    className={rangeMode === 'week' ? 'active' : ''}
+    onClick={() => setRangeMode('week')}
+  >
+    Week
+  </button>
+
+  <button
+    type="button"
+    className={rangeMode === 'month' ? 'active' : ''}
+    onClick={() => setRangeMode('month')}
+  >
+    Month
+  </button>
+</div>
             </section>
 
-            <section className="lov-kpi-grid">
-              <LovableKpi title="English" value={dashboardTotals.english} tone="blue" />
-              <LovableKpi title="Spanish" value={dashboardTotals.spanish} tone="green" />
-              <LovableKpi title="Invalid" value={dashboardTotals.invalid} tone="red" />
-              <LovableKpi title="Total Xfers" value={dashboardTotals.total} tone="orange" />
-              <LovableKpi title="Active agents" value={dashboardTotals.activeAgents} tone="purple" />
-            </section>
+<section className="lov-kpi-grid lov-kpi-grid-main">
+  <LovableKpi title="English" value={dashboardTotals.english} tone="blue" />
+  <LovableKpi title="Spanish" value={dashboardTotals.spanish} tone="green" />
+  <LovableKpi title="Invalid" value={dashboardTotals.invalid} tone="red" />
+  <LovableKpi title="Total Xfers" value={dashboardTotals.total} tone="orange" />
+</section>
 
             <section className="lov-control-row">
               <TeamTabs selectedTeam={selectedTeam} onChange={setSelectedTeam} />
@@ -2104,7 +2256,7 @@ const handleSearchSubmit = useCallback(() => {
             </section>
 
             <section className="lov-date-row">
-              {dateTabs.map(date => {
+              {officialDateTabs.map(date => {
                 const active = date === selectedDate
 
                 return (
