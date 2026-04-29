@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
 import './dashboard.css'
@@ -1934,7 +1934,7 @@ function AgentTable({ team, agents, navigate }) {
   )
 }
 
-function TeamDetail({ team, parsed, selectedDate, navigate }) {
+function TeamDetail({ team, parsed, selectedDate, navigate, onDownload }) {
   const showOT = parsed.includesOT && (parsed.otTotals?.total || 0) > 0
   const reachedTarget = countReachedTarget(team.id, parsed.agents)
   const target = TEAM_TARGETS[team.id] || 10
@@ -1949,6 +1949,13 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
           <div className="pulse-hero-title-row">
             <FlagImg src={team.flag} size={28} alt="" />
             <div className="pulse-hero-title">{team.label}</div>
+            <button
+              type="button"
+              className="lov-export-btn pulse-team-download-btn"
+              onClick={() => onDownload?.(team.id)}
+            >
+              Download
+            </button>
           </div>
 
           <div className="pulse-hero-sub">
@@ -1992,10 +1999,15 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [rangeMode, setRangeMode] = useState('day')
-  const [exportTeam, setExportTeam] = useState('all')
 
   const liveTeamIds = useMemo(() => TEAM_ORDER.filter(teamId => TEAMS[teamId].live), [])
   const isToday = selectedDate === todayKey()
+
+  const selectedDateRef = useRef(selectedDate)
+
+  useEffect(() => {
+    selectedDateRef.current = selectedDate
+  }, [selectedDate])
 
 const loadRemoteDates = useCallback(async () => {
   try {
@@ -2067,10 +2079,15 @@ const loadLiveTeams = useCallback(async () => {
 
   if (!Object.keys(next).length) throw new Error('Failed to read live team sheets')
 
+  // Prevent an old LIVE request from overwriting a historical date
+  // after the user clicks a saved day like 28/04.
+  if (selectedDateRef.current !== todayKey()) return next
+
   setTeamData(next)
   setLastUpdate(new Date())
 
   loadRemoteDates().catch(() => {})
+  return next
 }, [liveTeamIds, loadRemoteDates])
 
 const loadHistoricalTeams = useCallback(async (date) => {
@@ -2080,18 +2097,22 @@ const loadHistoricalTeams = useCallback(async (date) => {
     const supabaseData = await fetchSupabaseDashboardDate(date)
 
     if (Object.keys(supabaseData).length) {
+      if (selectedDateRef.current !== date) return supabaseData
+
       setTeamData(supabaseData)
       setLastUpdate(null)
-      return
+      return supabaseData
     }
 
     // Official data starts on 2026-04-28.
     // For official dates, do NOT fall back to old Apps Script snapshots,
     // because that can overwrite good Supabase data with zeros.
     if (date >= OFFICIAL_DATA_START) {
+      if (selectedDateRef.current !== date) return {}
+
       setTeamData({})
       setLastUpdate(null)
-      return
+      return {}
     }
   } catch (err) {
     console.warn('Supabase historical read failed:', err)
@@ -2140,7 +2161,10 @@ const loadHistoricalTeams = useCallback(async (date) => {
     next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
   })
 
+  if (selectedDateRef.current !== date) return next
+
   setTeamData(next)
+  return next
 }, [liveTeamIds])
 
   useEffect(() => {
@@ -2228,27 +2252,8 @@ const dashboardTotals = useMemo(() => {
     activeAgents: 0,
   })
 }, [selectedTeam, selectedParsed, teamData])
-const exportTeamOptions = useMemo(() => {
-  return [
-    { id: 'all', label: 'All Teams' },
-    ...TEAM_ORDER.map(teamId => ({
-      id: teamId,
-      label: TEAMS[teamId]?.label || teamId,
-    })),
-  ]
-}, [])
-
 const getExportEntriesFromData = useCallback((sourceData, teamId) => {
-  if (!sourceData) return []
-
-  if (teamId === 'all') {
-    return TEAM_ORDER
-      .map(id => ({
-        teamId: id,
-        parsed: sourceData[id],
-      }))
-      .filter(item => item.parsed)
-  }
+  if (!sourceData || !teamId || teamId === 'all') return []
 
   return sourceData[teamId]
     ? [
@@ -2260,41 +2265,34 @@ const getExportEntriesFromData = useCallback((sourceData, teamId) => {
     : []
 }, [])
 
-const handleExportDateData = useCallback(async (date, label) => {
-  try {
-    const isExportingToday = date === todayKey()
+const handleDownloadTeamData = useCallback(async (teamId) => {
+  if (!teamId || teamId === 'all') return
 
-    const sourceData = isExportingToday
+  try {
+    const date = selectedDate
+    const sourceData = teamData?.[teamId]
       ? teamData
       : await fetchSupabaseDashboardDate(date)
 
-    const entries = getExportEntriesFromData(sourceData, exportTeam)
+    const entries = getExportEntriesFromData(sourceData, teamId)
 
     if (!entries.length) {
-      window.alert(`No data available for ${exportTeam} on ${date}.`)
+      window.alert(`No data available for ${TEAMS[teamId]?.label || teamId} on ${date}.`)
       return
     }
 
     await downloadStyledDashboardExcel({
       date,
-      label,
+      label: date === todayKey() ? 'today' : 'saved',
       entries,
-      selectedTeam: exportTeam,
+      selectedTeam: teamId,
     })
   } catch (err) {
     console.error('Export failed:', err)
     window.alert(`Could not export data: ${err?.message || err}`)
   }
-}, [exportTeam, getExportEntriesFromData, teamData])
+}, [getExportEntriesFromData, selectedDate, teamData])
 
-
-const handleExportTodayData = useCallback(() => {
-  handleExportDateData(todayKey(), 'today')
-}, [handleExportDateData])
-
-const handleExportYesterdayData = useCallback(() => {
-  handleExportDateData(getYesterdayKey(), 'yesterday')
-}, [handleExportDateData])
 const normalizedSearch = useMemo(() => {
   return normalizeSearchText(searchQuery)
 }, [searchQuery])
@@ -2477,34 +2475,6 @@ const handleUserAction = useCallback((action) => {
       Month
     </button>
   </div>
-
-  <select
-    className="lov-export-select"
-    value={exportTeam}
-    onChange={e => setExportTeam(e.target.value)}
-  >
-    {exportTeamOptions.map(option => (
-      <option key={option.id} value={option.id}>
-        {option.label}
-      </option>
-    ))}
-  </select>
-
-  <button
-    type="button"
-    className="lov-export-btn"
-    onClick={handleExportTodayData}
-  >
-    Download today
-  </button>
-
-  <button
-    type="button"
-    className="lov-export-btn"
-    onClick={handleExportYesterdayData}
-  >
-    Download yesterday
-  </button>
 </div>
 
             </section>
@@ -2566,6 +2536,7 @@ const handleUserAction = useCallback((action) => {
   parsed={selectedParsedForView}
   selectedDate={selectedDate}
   navigate={navigate}
+  onDownload={handleDownloadTeamData}
 />
             ) : (
               <TeamComingSoonCard team={TEAMS[selectedTeam]} />
