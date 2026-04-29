@@ -2004,6 +2004,12 @@ export default function Dashboard() {
   const isToday = selectedDate === todayKey()
 
   const selectedDateRef = useRef(selectedDate)
+  const activeLoadIdRef = useRef(0)
+
+  const setSelectedDateSafe = useCallback((date) => {
+    selectedDateRef.current = date
+    setSelectedDate(date)
+  }, [])
 
   useEffect(() => {
     selectedDateRef.current = selectedDate
@@ -2030,18 +2036,34 @@ const loadRemoteDates = useCallback(async () => {
 }, [])
 
 const loadLiveTeams = useCallback(async () => {
+  const requestId = ++activeLoadIdRef.current
   setError('')
 
   const today = todayKey()
 
-  const [savedTodayResult, sheetResults, invalidCounts] = await Promise.all([
-    fetchSupabaseDashboardDate(today)
-      .then(data => ({ ok: true, data }))
-      .catch(err => {
-        console.warn('Supabase today read failed:', err)
-        return { ok: false, data: {} }
-      }),
+  // IMPORTANT:
+  // Today LIVE now uses Supabase as the main source of truth.
+  // The Google Sheets reader is only a fallback for the first moments of the day
+  // if Supabase has not received any snapshot yet. This prevents the UI from
+  // jumping between old Sheets data and protected Supabase data.
+  try {
+    const savedToday = await fetchSupabaseDashboardDate(today)
 
+    if (Object.keys(savedToday).length) {
+      if (selectedDateRef.current !== today || requestId !== activeLoadIdRef.current) {
+        return savedToday
+      }
+
+      setTeamData(savedToday)
+      setLastUpdate(new Date())
+      loadRemoteDates().catch(() => {})
+      return savedToday
+    }
+  } catch (err) {
+    console.warn('Supabase today read failed, falling back to Sheets:', err)
+  }
+
+  const [sheetResults, invalidCounts] = await Promise.all([
     Promise.allSettled(
       liveTeamIds.map(teamId => fetchTeamSheetViaScript(TEAMS[teamId]))
     ),
@@ -2049,39 +2071,30 @@ const loadLiveTeams = useCallback(async () => {
     fetchInvalidTransfersForDate(today).catch(() => ({})),
   ])
 
-  const savedToday = savedTodayResult?.ok ? savedTodayResult.data : {}
   const next = {}
 
   liveTeamIds.forEach((teamId, index) => {
     const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
 
-    let liveParsed = null
-
     if (sheetResults[index].status === 'fulfilled') {
       try {
         const parsed = parseLiveSheet(teamId, sheetResults[index].value)
-        liveParsed = applyInvalidTransfersToParsed(parsed, invalidInfo)
+        next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
       } catch (err) {
         console.error(`Error parsing ${teamId}:`, err)
-        liveParsed = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
+        next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
       }
     } else {
       console.warn(`Failed loading ${teamId}:`, sheetResults[index].reason)
-      liveParsed = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
+      next[teamId] = applyInvalidTransfersToParsed(emptyParsedTeam(), invalidInfo)
     }
-
-    const savedParsed = savedToday?.[teamId]
-      ? applyInvalidTransfersToParsed(savedToday[teamId], invalidInfo)
-      : null
-
-    next[teamId] = protectTodayWithSupabase(liveParsed, savedParsed)
   })
 
   if (!Object.keys(next).length) throw new Error('Failed to read live team sheets')
 
-  // Prevent an old LIVE request from overwriting a historical date
-  // after the user clicks a saved day like 28/04.
-  if (selectedDateRef.current !== todayKey()) return next
+  if (selectedDateRef.current !== today || requestId !== activeLoadIdRef.current) {
+    return next
+  }
 
   setTeamData(next)
   setLastUpdate(new Date())
@@ -2091,13 +2104,14 @@ const loadLiveTeams = useCallback(async () => {
 }, [liveTeamIds, loadRemoteDates])
 
 const loadHistoricalTeams = useCallback(async (date) => {
+  const requestId = ++activeLoadIdRef.current
   setError('')
 
   try {
     const supabaseData = await fetchSupabaseDashboardDate(date)
 
     if (Object.keys(supabaseData).length) {
-      if (selectedDateRef.current !== date) return supabaseData
+      if (selectedDateRef.current !== date || requestId !== activeLoadIdRef.current) return supabaseData
 
       setTeamData(supabaseData)
       setLastUpdate(null)
@@ -2108,7 +2122,7 @@ const loadHistoricalTeams = useCallback(async (date) => {
     // For official dates, do NOT fall back to old Apps Script snapshots,
     // because that can overwrite good Supabase data with zeros.
     if (date >= OFFICIAL_DATA_START) {
-      if (selectedDateRef.current !== date) return {}
+      if (selectedDateRef.current !== date || requestId !== activeLoadIdRef.current) return {}
 
       setTeamData({})
       setLastUpdate(null)
@@ -2161,7 +2175,7 @@ const loadHistoricalTeams = useCallback(async (date) => {
     next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
   })
 
-  if (selectedDateRef.current !== date) return next
+  if (selectedDateRef.current !== date || requestId !== activeLoadIdRef.current) return next
 
   setTeamData(next)
   return next
@@ -2169,13 +2183,21 @@ const loadHistoricalTeams = useCallback(async (date) => {
 
   useEffect(() => {
     let cancelled = false
+    const requestedDate = selectedDate
 
     const run = async () => {
+      selectedDateRef.current = requestedDate
       setLoading(true)
+      setError('')
+
+      // Clear the previous date/team data before loading the new selection.
+      // This prevents the UI from briefly showing old high numbers while
+      // the requested date is still loading.
+      setTeamData({})
 
       try {
-        if (isToday) await loadLiveTeams()
-        else await loadHistoricalTeams(selectedDate)
+        if (requestedDate === todayKey()) await loadLiveTeams()
+        else await loadHistoricalTeams(requestedDate)
       } catch (err) {
         if (!cancelled) setError(String(err?.message || err || 'Failed to load dashboard data'))
       } finally {
@@ -2338,7 +2360,7 @@ const searchSuggestions = useMemo(() => {
 const handleSidebarNavigate = useCallback((item) => {
   if (item.id === 'overview') {
     setSelectedTeam('all')
-    setSelectedDate(todayKey())
+    setSelectedDateSafe(todayKey())
     setSortMetric('english')
     setSearchQuery('')
     setUserMenuOpen(false)
@@ -2365,7 +2387,7 @@ const handleSidebarNavigate = useCallback((item) => {
   }
 
   window.alert(`${item.label} is coming soon.`)
-}, [loadLiveTeams, navigate])
+}, [loadLiveTeams, navigate, setSelectedDateSafe])
 
 const handleSuggestionClick = useCallback((item) => {
   if (!item) return
@@ -2501,7 +2523,7 @@ const handleUserAction = useCallback((action) => {
                     key={date}
                     type="button"
                     className={`lov-date-btn ${active ? 'active' : ''}`}
-                    onClick={() => setSelectedDate(date)}
+                    onClick={() => setSelectedDateSafe(date)}
                   >
                     {formatDateLabel(date)}
                   </button>
