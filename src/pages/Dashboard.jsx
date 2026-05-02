@@ -1469,30 +1469,80 @@ function normalizeSupabaseAgent(row) {
   }
 }
 
+function getSupabaseAgentScore(agent) {
+  if (!agent) return 0
+
+  const english = Number(agent?.english || 0)
+  const spanish = Number(agent?.spanish || 0)
+  const rawTotal = Number(agent?.rawTotal ?? (english + spanish))
+  const total = Number(agent?.total ?? rawTotal)
+
+  return Math.max(total, rawTotal, english + spanish)
+}
+
+function dedupeSupabaseAgents(agentRows = [], teamId) {
+  const byExt = new Map()
+
+  agentRows
+    .filter(row => String(row.team || '') === teamId)
+    .map(normalizeSupabaseAgent)
+    .filter(agent => agent.ext)
+    .forEach(agent => {
+      const prev = byExt.get(agent.ext)
+
+      if (!prev) {
+        byExt.set(agent.ext, agent)
+        return
+      }
+
+      // Supabase can contain more than one row for the same ext/date when the
+      // sync ran before the unique keys were fully protected. Do NOT sum those
+      // duplicates. Keep the strongest snapshot for that agent.
+      if (getSupabaseAgentScore(agent) >= getSupabaseAgentScore(prev)) {
+        byExt.set(agent.ext, {
+          ...prev,
+          ...agent,
+          name: agent.name || prev.name,
+        })
+      }
+    })
+
+  return [...byExt.values()]
+}
+
 function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
   const teamMap = {}
 
   TEAM_ORDER.forEach(teamId => {
     const teamRow = teamRows.find(row => String(row.team || '') === teamId)
-    const agents = agentRows
-      .filter(row => String(row.team || '') === teamId)
-      .map(normalizeSupabaseAgent)
-      .filter(agent => agent.ext)
+    const agents = dedupeSupabaseAgents(agentRows, teamId)
 
     if (!teamRow && agents.length === 0) return
 
-    const fallbackEnglish = agents.reduce((sum, agent) => sum + Number(agent.english || 0), 0)
-    const fallbackSpanish = agents.reduce((sum, agent) => sum + Number(agent.spanish || 0), 0)
-    const fallbackInvalid = agents.reduce((sum, agent) => sum + Number(agent.invalidTransfers || 0), 0)
-    const fallbackRawTotal = fallbackEnglish + fallbackSpanish
-    const fallbackTotal = agents.reduce((sum, agent) => sum + Number(agent.total || 0), 0)
+    const agentEnglish = agents.reduce((sum, agent) => sum + Number(agent.english || 0), 0)
+    const agentSpanish = agents.reduce((sum, agent) => sum + Number(agent.spanish || 0), 0)
+    const agentInvalid = agents.reduce((sum, agent) => sum + Number(agent.invalidTransfers || 0), 0)
+    const agentRawTotal = agentEnglish + agentSpanish
+    const agentTotal = agents.reduce((sum, agent) => sum + Number(agent.total || 0), 0)
 
-    const english = Number(teamRow?.english ?? fallbackEnglish)
-    const spanish = Number(teamRow?.spanish ?? fallbackSpanish)
-    const invalidTransfers = Number(teamRow?.invalid_transfers ?? fallbackInvalid)
+    const teamEnglish = Number(teamRow?.english || 0)
+    const teamSpanish = Number(teamRow?.spanish || 0)
+    const teamInvalid = Number(teamRow?.invalid_transfers || 0)
+    const teamTotal = Number(teamRow?.total || 0)
+
+    // Agent rows are the source of truth for old dates because team total rows
+    // can be stale/duplicated. Only use team totals when there are no agent rows.
+    const hasAgentData = agents.length > 0
+    const english = hasAgentData ? agentEnglish : teamEnglish
+    const spanish = hasAgentData ? agentSpanish : teamSpanish
+    const invalidTransfers = hasAgentData ? agentInvalid : teamInvalid
     const rawTotal = english + spanish
-    const total = Number(teamRow?.total ?? (fallbackTotal || Math.max(0, rawTotal - invalidTransfers)))
-    const activeAgents = Number(teamRow?.active_agents ?? agents.length)
+    const total = hasAgentData
+      ? Math.max(0, agentTotal || rawTotal - invalidTransfers)
+      : Math.max(0, teamTotal || rawTotal - invalidTransfers)
+    const activeAgents = hasAgentData
+      ? agents.length
+      : Number(teamRow?.active_agents || 0)
 
     teamMap[teamId] = {
       agents: sortAgentsByMetric(agents, 'total'),
@@ -1563,29 +1613,66 @@ function getParsedAgentCount(parsed) {
   return Number(parsed?.totals?.activeAgents || parsed?.agents?.length || 0)
 }
 
-function protectTodayWithSupabase(liveParsed, savedParsed) {
-  if (!liveParsed && !savedParsed) return emptyParsedTeam()
-  if (!savedParsed) return liveParsed
-  if (!liveParsed) return savedParsed
+function isSuspiciousLiveJump(liveParsed, savedParsed, previousParsed) {
+  if (!liveParsed) return false
 
   const liveScore = getParsedScore(liveParsed)
   const savedScore = getParsedScore(savedParsed)
+  const previousScore = getParsedScore(previousParsed)
+  const baseline = Math.max(savedScore, previousScore)
 
-  // Main rule:
-  // If Sheets got cleared/moved and Supabase has a stronger snapshot,
-  // keep Supabase for Today LIVE.
-  if (savedScore > liveScore) return savedParsed
+  if (baseline <= 0) return false
 
-  // Extra protection:
-  // Sometimes the total is similar but live sheet has way fewer agents
-  // because the chart was moved/cleared.
+  const liveAgents = getParsedAgentCount(liveParsed)
+  const baselineAgents = Math.max(getParsedAgentCount(savedParsed), getParsedAgentCount(previousParsed))
+
+  // A real 10-second refresh should not suddenly jump hundreds/thousands.
+  // These spikes usually happen when Sheets briefly exposes an old chart/range.
+  const maxAllowedJump = Math.max(80, baseline * 0.35)
+  if (liveScore > baseline + maxAllowedJump) return true
+
+  // Also reject cases where totals look close but the agent list is clearly from
+  // a partial/old range.
+  if (baselineAgents > 20 && liveAgents > 0 && liveAgents < baselineAgents * 0.45) return true
+
+  return false
+}
+
+function protectTodayWithSupabase(liveParsed, savedParsed, previousParsed = null) {
+  if (!liveParsed && !savedParsed && !previousParsed) return emptyParsedTeam()
+  if (!liveParsed && savedParsed) return savedParsed
+  if (!liveParsed && previousParsed) return previousParsed
+
+  const liveScore = getParsedScore(liveParsed)
+  const savedScore = getParsedScore(savedParsed)
+  const previousScore = getParsedScore(previousParsed)
+
+  if (isSuspiciousLiveJump(liveParsed, savedParsed, previousParsed)) {
+    return savedScore >= previousScore ? savedParsed : previousParsed
+  }
+
+  // Never let a cleared/moved chart lower the UI if Supabase already has a
+  // stronger protected snapshot.
+  if (savedParsed && savedScore > liveScore) return savedParsed
+
+  // Same protection against regressions inside the current visible session.
+  if (previousParsed && previousScore > liveScore) {
+    const previousAgents = getParsedAgentCount(previousParsed)
+    const liveAgents = getParsedAgentCount(liveParsed)
+
+    if (previousAgents > liveAgents || previousScore > liveScore + 10) {
+      return previousParsed
+    }
+  }
+
   const liveAgents = getParsedAgentCount(liveParsed)
   const savedAgents = getParsedAgentCount(savedParsed)
 
-  if (savedScore === liveScore && savedAgents > liveAgents) return savedParsed
+  if (savedParsed && savedScore === liveScore && savedAgents > liveAgents) return savedParsed
 
-  return liveParsed
+  return liveParsed || savedParsed || previousParsed || emptyParsedTeam()
 }
+
 function getYesterdayKey() {
   const d = colombiaDate()
   d.setUTCDate(d.getUTCDate() - 1)
@@ -2735,6 +2822,7 @@ export default function Dashboard() {
 
   const selectedDateRef = useRef(selectedDate)
   const activeLoadIdRef = useRef(0)
+  const teamDataRef = useRef({})
 
   const setSelectedDateSafe = useCallback((date) => {
     selectedDateRef.current = date
@@ -2744,6 +2832,10 @@ export default function Dashboard() {
   useEffect(() => {
     selectedDateRef.current = selectedDate
   }, [selectedDate])
+
+  useEffect(() => {
+    teamDataRef.current = teamData
+  }, [teamData])
 
 const loadRemoteDates = useCallback(async () => {
   try {
@@ -2807,10 +2899,12 @@ const loadLiveTeams = useCallback(async () => {
   ])
 
   const next = {}
+  const previousData = teamDataRef.current || {}
 
   liveTeamIds.forEach((teamId, index) => {
     const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
     const savedParsed = savedResult?.[teamId] || null
+    const previousParsed = previousData?.[teamId] || null
 
     let liveParsed = null
 
@@ -2827,7 +2921,7 @@ const loadLiveTeams = useCallback(async () => {
       console.warn(`Failed loading ${teamId}:`, sheetResults[index]?.reason)
     }
 
-    const protectedParsed = protectTodayWithSupabase(liveParsed, savedParsed)
+    const protectedParsed = protectTodayWithSupabase(liveParsed, savedParsed, previousParsed)
 
     if (protectedParsed) {
       next[teamId] = protectedParsed
@@ -2840,6 +2934,7 @@ const loadLiveTeams = useCallback(async () => {
     return next
   }
 
+  teamDataRef.current = next
   setTeamData(next)
   setLastUpdate(new Date())
 
@@ -2857,6 +2952,7 @@ const loadHistoricalTeams = useCallback(async (date) => {
     if (Object.keys(supabaseData).length) {
       if (selectedDateRef.current !== date || requestId !== activeLoadIdRef.current) return supabaseData
 
+      teamDataRef.current = supabaseData
       setTeamData(supabaseData)
       setLastUpdate(null)
       return supabaseData
@@ -2868,6 +2964,7 @@ const loadHistoricalTeams = useCallback(async (date) => {
     if (date >= OFFICIAL_DATA_START) {
       if (selectedDateRef.current !== date || requestId !== activeLoadIdRef.current) return {}
 
+      teamDataRef.current = {}
       setTeamData({})
       setLastUpdate(null)
       return {}
@@ -2921,6 +3018,7 @@ const loadHistoricalTeams = useCallback(async (date) => {
 
   if (selectedDateRef.current !== date || requestId !== activeLoadIdRef.current) return next
 
+  teamDataRef.current = next
   setTeamData(next)
   return next
 }, [liveTeamIds])
@@ -2937,6 +3035,7 @@ const loadHistoricalTeams = useCallback(async (date) => {
       // Clear the previous date/team data before loading the new selection.
       // This prevents the UI from briefly showing old high numbers while
       // the requested date is still loading.
+      teamDataRef.current = {}
       setTeamData({})
 
       try {
