@@ -114,9 +114,25 @@ const normalizeDate = (raw) => {
 
 const isValidIsoDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ''))
 
+function profileColombiaDate() {
+  return new Date(Date.now() - 5 * 60 * 60 * 1000)
+}
+
+function profileTodayKey() {
+  const d = profileColombiaDate()
+
+  // Same business-day rule as Dashboard:
+  // after midnight until 3:59am Colombia time, still belongs to previous work date.
+  if (d.getUTCHours() < 4) {
+    d.setUTCDate(d.getUTCDate() - 1)
+  }
+
+  return d.toISOString().slice(0, 10)
+}
+
 function keepProfileDate(date) {
   const d = normalizeDate(date)
-  return !!d && d >= PROFILE_START_DATE
+  return !!d && d >= PROFILE_START_DATE && d <= profileTodayKey()
 }
 
 function recordKey(date, ext) {
