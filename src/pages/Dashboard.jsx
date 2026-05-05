@@ -2868,7 +2868,51 @@ const loadHistoricalTeams = useCallback(async (date) => {
   setTeamData(supabaseData)
   setLastUpdate(null)
 }, [])
+const loadRankingsHistory = useCallback(async () => {
+  setRankingsHistory(prev => ({
+    ...prev,
+    loading: true,
+    error: '',
+  }))
 
+  try {
+    const [agentResult, teamResult] = await Promise.all([
+      supabase
+        .from('daily_agent_stats_v2')
+        .select('*')
+        .gte('date', OFFICIAL_DATA_START)
+        .range(0, 49999),
+
+      supabase
+        .from('daily_team_stats_v2')
+        .select('*')
+        .gte('date', OFFICIAL_DATA_START)
+        .range(0, 9999),
+    ])
+
+    if (agentResult.error) throw agentResult.error
+    if (teamResult.error) throw teamResult.error
+
+    const insights = buildRankingHistoryInsights(
+      agentResult.data || [],
+      teamResult.data || []
+    )
+
+    setRankingsHistory({
+      insights,
+      loading: false,
+      error: '',
+    })
+  } catch (err) {
+    console.error('Failed loading rankings history:', err)
+
+    setRankingsHistory({
+      insights: null,
+      loading: false,
+      error: String(err?.message || err || 'Failed loading rankings history'),
+    })
+  }
+}, [])
   useEffect(() => {
     let cancelled = false
     const requestedDate = selectedDate
