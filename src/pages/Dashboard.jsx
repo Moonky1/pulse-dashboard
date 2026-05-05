@@ -401,7 +401,19 @@ const safeInt = (val) => parseInt(String(val ?? '').replace(/,/g, '').trim(), 10
 const cellUpper = (val) => String(val ?? '').trim().toUpperCase()
 
 const colombiaDate = () => new Date(Date.now() - 5 * 60 * 60 * 1000)
-const todayKey = () => colombiaDate().toISOString().slice(0, 10)
+
+const todayKey = () => {
+  const d = colombiaDate()
+
+  // Business day protection:
+  // After midnight until 3:59am Colombia time, still show previous work date.
+  if (d.getUTCHours() < 4) {
+    d.setUTCDate(d.getUTCDate() - 1)
+  }
+
+  return d.toISOString().slice(0, 10)
+}
+
 const colombiaHour = () => colombiaDate().getUTCHours()
 const includeOT = () => colombiaHour() >= 18
 
@@ -1515,34 +1527,28 @@ function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
 
   TEAM_ORDER.forEach(teamId => {
     const teamRow = teamRows.find(row => String(row.team || '') === teamId)
-    const agents = dedupeSupabaseAgents(agentRows, teamId)
+
+    const agents = agentRows
+      .filter(row => String(row.team || '') === teamId)
+      .map(normalizeSupabaseAgent)
+      .filter(agent => agent.ext)
 
     if (!teamRow && agents.length === 0) return
 
-    const agentEnglish = agents.reduce((sum, agent) => sum + Number(agent.english || 0), 0)
-    const agentSpanish = agents.reduce((sum, agent) => sum + Number(agent.spanish || 0), 0)
-    const agentInvalid = agents.reduce((sum, agent) => sum + Number(agent.invalidTransfers || 0), 0)
-    const agentRawTotal = agentEnglish + agentSpanish
-    const agentTotal = agents.reduce((sum, agent) => sum + Number(agent.total || 0), 0)
+    const fallbackEnglish = agents.reduce((sum, agent) => sum + Number(agent.english || 0), 0)
+    const fallbackSpanish = agents.reduce((sum, agent) => sum + Number(agent.spanish || 0), 0)
+    const fallbackInvalid = agents.reduce((sum, agent) => sum + Number(agent.invalidTransfers || 0), 0)
+    const fallbackRawTotal = agents.reduce((sum, agent) => sum + Number(agent.rawTotal || 0), 0)
+    const fallbackTotal = agents.reduce((sum, agent) => sum + Number(agent.total || 0), 0)
 
-    const teamEnglish = Number(teamRow?.english || 0)
-    const teamSpanish = Number(teamRow?.spanish || 0)
-    const teamInvalid = Number(teamRow?.invalid_transfers || 0)
-    const teamTotal = Number(teamRow?.total || 0)
+    const english = Number(teamRow?.english ?? fallbackEnglish)
+    const spanish = Number(teamRow?.spanish ?? fallbackSpanish)
+    const invalidTransfers = Number(teamRow?.invalid_transfers ?? fallbackInvalid)
 
-    // Agent rows are the source of truth for old dates because team total rows
-    // can be stale/duplicated. Only use team totals when there are no agent rows.
-    const hasAgentData = agents.length > 0
-    const english = hasAgentData ? agentEnglish : teamEnglish
-    const spanish = hasAgentData ? agentSpanish : teamSpanish
-    const invalidTransfers = hasAgentData ? agentInvalid : teamInvalid
-    const rawTotal = english + spanish
-    const total = hasAgentData
-      ? Math.max(0, agentTotal || rawTotal - invalidTransfers)
-      : Math.max(0, teamTotal || rawTotal - invalidTransfers)
-    const activeAgents = hasAgentData
-      ? agents.length
-      : Number(teamRow?.active_agents || 0)
+    // v2 uses raw_total and net_total, not total.
+    const rawTotal = Number(teamRow?.raw_total ?? (fallbackRawTotal || english + spanish))
+    const total = Number(teamRow?.net_total ?? (fallbackTotal || Math.max(0, rawTotal - invalidTransfers)))
+    const activeAgents = Number(teamRow?.active_agents ?? agents.length)
 
     teamMap[teamId] = {
       agents: sortAgentsByMetric(agents, 'total'),
@@ -1566,15 +1572,15 @@ function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
 async function fetchSupabaseDashboardDate(date) {
   const [teamResult, agentResult] = await Promise.all([
     supabase
-      .from('daily_team_stats')
+      .from('daily_team_stats_v2')
       .select('*')
       .eq('date', date),
 
     supabase
-      .from('daily_agent_stats')
+      .from('daily_agent_stats_v2')
       .select('*')
       .eq('date', date)
-      .range(0, 4999),
+      .range(0, 9999),
   ])
 
   if (teamResult.error) throw teamResult.error
@@ -1585,7 +1591,7 @@ async function fetchSupabaseDashboardDate(date) {
 
 async function fetchSupabaseDates() {
   const { data, error } = await supabase
-    .from('daily_team_stats')
+    .from('daily_team_stats_v2')
     .select('date')
     .gte('date', CLEAN_START_DATE)
     .order('date', { ascending: false })
@@ -2838,190 +2844,30 @@ export default function Dashboard() {
   }, [teamData])
 
 const loadRemoteDates = useCallback(async () => {
-  try {
-    const dates = await fetchSupabaseDates()
-    setRemoteDates(dates)
-    return
-  } catch (err) {
-    console.warn('Supabase dates failed, falling back to Apps Script:', err)
-  }
-
-  const data = await scriptCall({ action: 'getDailyTotals' })
-
-  if (!Array.isArray(data)) return
-
-  const dates = data
-    .map(entry => normalizeDate(entry.date))
-    .filter(date => date && date >= CLEAN_START_DATE)
-
-  setRemoteDates([...new Set(dates)].sort((a, b) => b.localeCompare(a)))
-}, [])
-
-const loadRankingsHistory = useCallback(async () => {
-  setRankingsHistory(prev => ({ ...prev, loading: true, error: '' }))
-
-  try {
-    const insights = await fetchRankingHistoryInsights()
-    setRankingsHistory({ insights, loading: false, error: '' })
-  } catch (err) {
-    console.error('Rankings history failed:', err)
-    setRankingsHistory({
-      insights: null,
-      loading: false,
-      error: String(err?.message || err || 'Failed to load ranking history'),
-    })
-  }
+  const dates = await fetchSupabaseDates()
+  setRemoteDates(dates)
 }, [])
 
 const loadLiveTeams = useCallback(async () => {
-  const requestId = ++activeLoadIdRef.current
-  const today = todayKey()
-
   setError('')
 
-  // Fast LIVE strategy:
-  // 1) Read Google Sheets now so Pulse updates as soon as the charts change.
-  // 2) Read Supabase at the same time as the protected backup.
-  // 3) For every team, keep whichever version is stronger.
-  // This prevents old/cleared charts from lowering the UI, while still making
-  // today's dashboard much faster than waiting for the 1-minute Supabase trigger.
-  const [savedResult, sheetResults, invalidCounts] = await Promise.all([
-    fetchSupabaseDashboardDate(today).catch(err => {
-      console.warn('Supabase today read failed, using Sheets only:', err)
-      return {}
-    }),
+  const today = todayKey()
+  const supabaseData = await fetchSupabaseDashboardDate(today)
 
-    Promise.allSettled(
-      liveTeamIds.map(teamId => fetchTeamSheetViaScript(TEAMS[teamId]))
-    ),
-
-    fetchInvalidTransfersForDate(today).catch(() => ({})),
-  ])
-
-  const next = {}
-  const previousData = teamDataRef.current || {}
-
-  liveTeamIds.forEach((teamId, index) => {
-    const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
-    const savedParsed = savedResult?.[teamId] || null
-    const previousParsed = previousData?.[teamId] || null
-
-    let liveParsed = null
-
-    if (sheetResults[index]?.status === 'fulfilled') {
-      try {
-        liveParsed = applyInvalidTransfersToParsed(
-          parseLiveSheet(teamId, sheetResults[index].value),
-          invalidInfo
-        )
-      } catch (err) {
-        console.error(`Error parsing ${teamId}:`, err)
-      }
-    } else {
-      console.warn(`Failed loading ${teamId}:`, sheetResults[index]?.reason)
-    }
-
-    const protectedParsed = protectTodayWithSupabase(liveParsed, savedParsed, previousParsed)
-
-    if (protectedParsed) {
-      next[teamId] = protectedParsed
-    }
-  })
-
-  if (!Object.keys(next).length) throw new Error('Failed to read live team data')
-
-  if (selectedDateRef.current !== today || requestId !== activeLoadIdRef.current) {
-    return next
-  }
-
-  teamDataRef.current = next
-  setTeamData(next)
+  setTeamData(supabaseData)
   setLastUpdate(new Date())
 
   loadRemoteDates().catch(() => {})
-  return next
-}, [liveTeamIds, loadRemoteDates])
+}, [loadRemoteDates])
 
 const loadHistoricalTeams = useCallback(async (date) => {
-  const requestId = ++activeLoadIdRef.current
   setError('')
 
-  try {
-    const supabaseData = await fetchSupabaseDashboardDate(date)
+  const supabaseData = await fetchSupabaseDashboardDate(date)
 
-    if (Object.keys(supabaseData).length) {
-      if (selectedDateRef.current !== date || requestId !== activeLoadIdRef.current) return supabaseData
-
-      teamDataRef.current = supabaseData
-      setTeamData(supabaseData)
-      setLastUpdate(null)
-      return supabaseData
-    }
-
-    // Official data starts on 2026-04-28.
-    // For official dates, do NOT fall back to old Apps Script snapshots,
-    // because that can overwrite good Supabase data with zeros.
-    if (date >= OFFICIAL_DATA_START) {
-      if (selectedDateRef.current !== date || requestId !== activeLoadIdRef.current) return {}
-
-      teamDataRef.current = {}
-      setTeamData({})
-      setLastUpdate(null)
-      return {}
-    }
-  } catch (err) {
-    console.warn('Supabase historical read failed:', err)
-
-    if (date >= OFFICIAL_DATA_START) {
-      throw err
-    }
-  }
-
-  const [teamSnapshots, totals, invalidCounts] = await Promise.all([
-    Promise.all(liveTeamIds.map(teamId => scriptCall({ action: 'getTeamSnapshot', date, teamId }))),
-    scriptCall({ action: 'getDailyTotals' }),
-    fetchInvalidTransfersForDate(date).catch(() => ({})),
-  ])
-
-  const dailyEntry = Array.isArray(totals)
-    ? totals.find(entry => normalizeDate(entry.date) === date)
-    : null
-
-  const next = {}
-
-  liveTeamIds.forEach((teamId, index) => {
-    const snap = teamSnapshots[index]
-    const agents = snap?.ok && Array.isArray(snap.agents) ? snap.agents : []
-    const totalsRow = Array.isArray(dailyEntry?.teams)
-      ? dailyEntry.teams.find(team => String(team.id) === teamId)
-      : null
-
-    const invalidInfo = invalidCounts?.[teamId] || { total: 0, byExt: {} }
-
-    const parsed = {
-      agents: sortAgentsByMetric(agents, 'total'),
-      totals: {
-        english: Number(totalsRow?.english) || agents.reduce((sum, agent) => sum + (agent.english || 0), 0),
-        spanish: Number(totalsRow?.spanish) || agents.reduce((sum, agent) => sum + (agent.spanish || 0), 0),
-        rawTotal: Number(totalsRow?.rawTotal) || agents.reduce((sum, agent) => sum + ((agent.spanish || 0) + (agent.english || 0)), 0),
-        total: Number(totalsRow?.total) || agents.reduce((sum, agent) => sum + (agent.total || 0), 0),
-        activeAgents: Number(totalsRow?.agents) || agents.length,
-      },
-      mainTotals: null,
-      otTotals: null,
-      includesOT: false,
-      invalidTransfers: Number(totalsRow?.invalidTransfers || 0),
-    }
-
-    next[teamId] = applyInvalidTransfersToParsed(parsed, invalidInfo)
-  })
-
-  if (selectedDateRef.current !== date || requestId !== activeLoadIdRef.current) return next
-
-  teamDataRef.current = next
-  setTeamData(next)
-  return next
-}, [liveTeamIds])
+  setTeamData(supabaseData)
+  setLastUpdate(null)
+}, [])
 
   useEffect(() => {
     let cancelled = false
