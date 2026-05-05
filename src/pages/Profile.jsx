@@ -231,8 +231,8 @@ async function fetchAllSupabaseRows(makeQuery, pageSize = 1000) {
 async function loadTeamHistoryFromSupabase(teamId) {
   const rows = await fetchAllSupabaseRows(() =>
     supabase
-      .from('daily_agent_stats')
-      .select('date, agent_ext, agent_name, team, english, spanish, invalid_transfers, raw_total, net_total')
+      .from('daily_agent_stats_v2')
+      .select('date, agent_ext, agent_name, team, english, spanish, invalid_transfers, raw_total, net_total, is_final, source')
       .eq('team', teamId)
       .gte('date', PROFILE_START_DATE)
       .order('date', { ascending: true })
@@ -273,8 +273,8 @@ async function loadTeamHistoryFromSupabase(teamId) {
 async function loadTeamTotalsFromSupabase(teamId) {
   const rows = await fetchAllSupabaseRows(() =>
     supabase
-      .from('daily_team_stats')
-      .select('date, team, english, total')
+      .from('daily_team_stats_v2')
+      .select('date, team, english, raw_total, net_total, is_final, source')
       .eq('team', teamId)
       .gte('date', PROFILE_START_DATE)
       .order('date', { ascending: true })
@@ -286,7 +286,7 @@ async function loadTeamTotalsFromSupabase(teamId) {
     const date = normalizeDate(row.date)
     if (!date) return
 
-    // Share% currently uses English contribution, same as your old logic.
+    // Share% uses English contribution.
     map[date] = Number(row.english || 0)
   })
 
@@ -627,14 +627,12 @@ function applyDailyRanks(records) {
 }
 
 async function buildCanonicalTeamHistory(teamId) {
-  try {
-    const supabaseRecords = await loadTeamHistoryFromSupabase(teamId)
+  let supabaseRecords = []
 
-    if (Array.isArray(supabaseRecords) && supabaseRecords.length > 0) {
-      return supabaseRecords
-    }
+  try {
+    supabaseRecords = await loadTeamHistoryFromSupabase(teamId)
   } catch (err) {
-    console.warn('Supabase profile history failed, falling back to old sources:', err)
+    console.warn('Supabase v2 profile history failed, falling back to old sources:', err)
   }
 
   const [remoteRecords, weeklyRecords] = await Promise.all([
@@ -644,19 +642,33 @@ async function buildCanonicalTeamHistory(teamId) {
 
   const map = {}
 
-  // Weekly sheets = old source of truth
+  // Weekly sheets = base fallback for dates not yet imported into v2.
   ;(weeklyRecords || []).forEach(r => {
     const clean = sanitizeRecord(r)
     if (!clean) return
     map[recordKey(clean.date, clean.ext)] = clean
   })
 
-  // Remote snapshots = fallback only if weekly is missing that date/ext
+  // Remote snapshots = fallback only if weekly is missing that date/ext.
   ;(remoteRecords || []).forEach(r => {
     const clean = sanitizeRecord(r)
     if (!clean) return
+
     const key = recordKey(clean.date, clean.ext)
     if (!map[key]) map[key] = clean
+  })
+
+  // Supabase v2 = preferred source when available.
+  ;(supabaseRecords || []).forEach(r => {
+    const clean = sanitizeRecord(r)
+    if (!clean) return
+
+    const key = recordKey(clean.date, clean.ext)
+    const prev = map[key]
+
+    if (!prev || clean.total >= prev.total || clean.english >= prev.english) {
+      map[key] = clean
+    }
   })
 
   return applyDailyRanks(Object.values(map))
