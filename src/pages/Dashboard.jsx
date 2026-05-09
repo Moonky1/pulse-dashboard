@@ -792,9 +792,11 @@ function buildHistoryInsights(agentRows = [], teamRows = []) {
     topGoalAchievementAgents: [...allTimeAgents].sort((a, b) => {
       const goalDiff = Number(b.goalDays || 0) - Number(a.goalDays || 0)
       if (goalDiff !== 0) return goalDiff
-      const rateDiff = Number(b.goalRate || 0) - Number(a.goalRate || 0)
-      if (rateDiff !== 0) return rateDiff
-      return Number(b.english || 0) - Number(a.english || 0)
+      const englishDiff = Number(b.english || 0) - Number(a.english || 0)
+      if (englishDiff !== 0) return englishDiff
+      const bestDiff = Number(b.bestEnglish || 0) - Number(a.bestEnglish || 0)
+      if (bestDiff !== 0) return bestDiff
+      return String(a.name || '').localeCompare(String(b.name || ''))
     }).slice(0, 10),
     mostEnglishFirstPlaceAgents: placement.mostFirst.slice(0, 10),
     mostEnglishTop3Agents: placement.mostTop3.slice(0, 10),
@@ -1055,33 +1057,156 @@ function SortTabs({ sortMetric, onChange }) {
 }
 
 function DateSelectorRow({ dates = [], selectedDate, onChange }) {
-  return (
-    <section className="lov-date-row" style={{ alignItems: 'center', overflowX: 'auto', flexWrap: 'nowrap', paddingBottom: 6 }}>
-      <select
-        value={selectedDate}
-        onChange={event => onChange(event.target.value)}
-        className="lov-date-btn active"
-        style={{ minWidth: 180, cursor: 'pointer' }}
-      >
-        {dates.map(date => (
-          <option key={date} value={date}>{formatDateLabel(date)}</option>
-        ))}
-      </select>
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
 
-      {dates.map(date => {
-        const active = date === selectedDate
-        return (
-          <button
-            key={date}
-            type="button"
-            className={`lov-date-btn ${active ? 'active' : ''}`}
-            style={{ whiteSpace: 'nowrap', flex: '0 0 auto' }}
-            onClick={() => onChange(date)}
+  useEffect(() => {
+    if (!open) return undefined
+
+    const handleClickOutside = event => {
+      if (wrapRef.current && !wrapRef.current.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
+  const groupedDates = useMemo(() => {
+    const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    const groups = []
+    const groupMap = new Map()
+
+    ;(dates || []).forEach(date => {
+      const normalized = normalizeDate(date)
+      if (!normalized) return
+
+      const key = normalized.slice(0, 7)
+      const label = normalized === todayKey()
+        ? 'Today'
+        : monthFormatter.format(new Date(`${normalized}T12:00:00Z`))
+
+      if (!groupMap.has(key)) {
+        const group = { key, label, dates: [] }
+        groupMap.set(key, group)
+        groups.push(group)
+      }
+
+      groupMap.get(key).dates.push(normalized)
+    })
+
+    return groups
+  }, [dates])
+
+  return (
+    <section
+      className="lov-date-row"
+      ref={wrapRef}
+      style={{
+        alignItems: 'center',
+        overflow: 'visible',
+        flexWrap: 'nowrap',
+        paddingBottom: 0,
+        position: 'relative',
+        zIndex: 20,
+      }}
+    >
+      <button
+        type="button"
+        className="lov-date-btn active"
+        onClick={() => setOpen(prev => !prev)}
+        style={{
+          minWidth: 190,
+          justifyContent: 'space-between',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <span>{formatDateLabel(selectedDate)}</span>
+        <span style={{ fontSize: 14, opacity: 0.8 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open ? (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 10px)',
+            left: 0,
+            width: 310,
+            maxHeight: 420,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: 12,
+            borderRadius: 18,
+            border: '1px solid rgba(255, 138, 42, 0.35)',
+            background: 'linear-gradient(180deg, rgba(20, 12, 7, 0.98), rgba(8, 6, 5, 0.98))',
+            boxShadow: '0 22px 60px rgba(0, 0, 0, 0.65)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '4px 4px 10px',
+              color: '#f7eee7',
+              fontWeight: 800,
+            }}
           >
-            {formatDateLabel(date)}
-          </button>
-        )
-      })}
+            <span>Select day</span>
+            <span style={{ color: '#8f8178', fontSize: 12 }}>{dates.length} days</span>
+          </div>
+
+          {groupedDates.map(group => (
+            <div key={group.key} style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  color: '#8f8178',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: '.08em',
+                  textTransform: 'uppercase',
+                  margin: '4px 4px 8px',
+                }}
+              >
+                {group.label}
+              </div>
+
+              <div style={{ display: 'grid', gap: 6 }}>
+                {group.dates.map(date => {
+                  const active = date === selectedDate
+
+                  return (
+                    <button
+                      key={date}
+                      type="button"
+                      onClick={() => {
+                        onChange(date)
+                        setOpen(false)
+                      }}
+                      style={{
+                        width: '100%',
+                        border: active ? '1px solid rgba(255, 138, 42, 0.9)' : '1px solid rgba(255,255,255,0.08)',
+                        background: active ? 'rgba(255, 138, 42, 0.18)' : 'rgba(255,255,255,0.035)',
+                        color: active ? '#ff9b3d' : '#f7eee7',
+                        borderRadius: 12,
+                        padding: '10px 12px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontWeight: active ? 800 : 600,
+                      }}
+                    >
+                      {formatDateLabel(date)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </section>
   )
 }
@@ -1259,7 +1384,7 @@ function RankingTopBlock({ title, metric, rows = [], navigate }) {
       {rows.slice(0, 5).map((agent, index) => (
         <div key={`${title}-${agent.ext}-${index}`} className="pulse-top-block-item">
           <RankMarker index={index} />
-          <span className="pulse-top-block-name linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</span>
+          <span className="pulse-top-block-name linkish" style={{ fontWeight: 400 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</span>
           <span className="pulse-top-block-ext">#{agent.ext}</span>
           <span className="pulse-top-block-value" style={{ color }}>{Number(agent?.[metric] || 0).toLocaleString()}</span>
         </div>
@@ -1296,7 +1421,7 @@ function AgentRankingTable({ title, subtitle, rows = [], metric = 'english', nav
             {rows.map((agent, index) => (
               <tr key={`${title}-${agent.ext}-${index}`}>
                 <td><RankMarker index={index} /></td>
-                <td className="linkish" style={{ fontWeight: 700 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
+                <td className="linkish" style={{ fontWeight: 400 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
                 <td><TeamInlineLabel teamId={agent.teamId} teamFlag={agent.teamFlag} teamLabel={agent.teamLabel} /></td>
                 <td>#{agent.ext}</td>
                 <td className="blue" style={{ fontWeight: metric === 'english' ? 950 : 700, color: metric === 'english' ? highlightColor : undefined }}>{Number(agent.english || 0).toLocaleString()}</td>
@@ -1390,8 +1515,6 @@ function GoalAchievementTable({ title, rows = [], loading, error, navigate }) {
                 <th>Team</th>
                 <th>Ext</th>
                 <th>Goal Days</th>
-                <th>Goal Rate</th>
-                <th>Active Days</th>
                 <th>Total ENG</th>
                 <th>Best ENG</th>
                 <th>Best Day</th>
@@ -1402,12 +1525,10 @@ function GoalAchievementTable({ title, rows = [], loading, error, navigate }) {
               {rows.slice(0, 10).map((agent, index) => (
                 <tr key={`goal-${agent.ext}-${index}`}>
                   <td><RankMarker index={index} /></td>
-                  <td className="linkish" style={{ fontWeight: 700 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
+                  <td className="linkish" style={{ fontWeight: 400 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
                   <td><TeamInlineLabel teamId={agent.teamId} teamFlag={agent.teamFlag} teamLabel={agent.teamLabel} /></td>
                   <td>#{agent.ext}</td>
                   <td className="orange" style={{ fontWeight: 950 }}>{Number(agent.goalDays || 0).toLocaleString()}</td>
-                  <td className="green">{Math.round(Number(agent.goalRate || 0) * 100)}%</td>
-                  <td>{Number(agent.activeDays || 0).toLocaleString()}</td>
                   <td className="blue">{Number(agent.english || 0).toLocaleString()}</td>
                   <td className="blue">{Number(agent.bestEnglish || 0).toLocaleString()}</td>
                   <td>{agent.bestDate ? formatDateLabel(agent.bestDate) : 'N/A'}</td>
@@ -1416,7 +1537,7 @@ function GoalAchievementTable({ title, rows = [], loading, error, navigate }) {
 
               {!rows.length ? (
                 <tr>
-                  <td colSpan="10">No goal data available yet.</td>
+                  <td colSpan="8">No goal data available yet.</td>
                 </tr>
               ) : null}
             </tbody>
@@ -1477,10 +1598,6 @@ function RankingsPage({ history, historyLoading, historyError, navigate }) {
   const topSpanish = useMemo(() => sortAgentsByMetric(rankingAgents, 'spanish').slice(0, 10), [rankingAgents])
   const goalAgents = history?.topGoalAchievementAgents || []
 
-  const topEnglishAgent = topEnglish[0]
-  const topSpanishAgent = topSpanish[0]
-  const topGoalAgent = goalAgents[0]
-
   return (
     <>
       <div className="pulse-hero-card">
@@ -1491,15 +1608,9 @@ function RankingsPage({ history, historyLoading, historyError, navigate }) {
             <div className="pulse-hero-title">Rankings</div>
           </div>
           <div className="pulse-hero-sub">
-            Global rankings from Supabase. Goal days: Asia 20 ENG Mon-Fri, all other teams 10 ENG Mon-Fri, and Saturday 10 Total for everyone.
+            Goal days are sorted by the highest number of days on target. Asia uses 20 ENG Monday-Friday; all other teams use 10 ENG Monday-Friday; Saturday uses 10 Total for everyone.
           </div>
         </div>
-      </div>
-
-      <div className="pulse-summary-grid">
-        <SummaryCard title="Top English" value={topEnglishAgent?.english || 0} color="#38bdf8" titleColor="#38bdf8" subtitle={topEnglishAgent ? `${topEnglishAgent.name} • #${topEnglishAgent.ext}` : historyLoading ? 'Loading history...' : 'N/A'} />
-        <SummaryCard title="Top Spanish" value={topSpanishAgent?.spanish || 0} color="#34d399" titleColor="#34d399" subtitle={topSpanishAgent ? `${topSpanishAgent.name} • #${topSpanishAgent.ext}` : historyLoading ? 'Loading history...' : 'N/A'} />
-        <SummaryCard title="Most Goal Days" value={topGoalAgent?.goalDays || 0} color="#fbbf24" titleColor="#fbbf24" subtitle={topGoalAgent ? `${topGoalAgent.name} • #${topGoalAgent.ext}` : historyLoading ? 'Loading history...' : 'N/A'} />
       </div>
 
       <div className="pulse-top-blocks-grid">
@@ -1599,7 +1710,7 @@ function MiniAgentList({ title, rows = [], metric = 'english', navigate }) {
       {rows.slice(0, 5).map((agent, index) => (
         <div key={`${title}-${agent.ext}-${index}`} className="pulse-top-block-item">
           <RankMarker index={index} />
-          <span className="pulse-top-block-name linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</span>
+          <span className="pulse-top-block-name linkish" style={{ fontWeight: 400 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</span>
           <span className="pulse-top-block-ext">#{agent.ext}</span>
           <span className="pulse-top-block-value" style={{ color }}>
             {metric === 'goalDays'
@@ -2034,36 +2145,32 @@ export default function Dashboard() {
           />
 
           <main className="lov-content">
-            <section className="lov-hero" style={{ padding: '22px 28px' }}>
-              <div className="lov-hero-left">
-                <div className="lov-hero-badge">
-                  {activeView === 'rankings'
-                    ? '🏆 Global rankings'
-                    : activeView === 'teams'
+            {activeView !== 'rankings' ? (
+              <section className="lov-hero" style={{ padding: '22px 28px' }}>
+                <div className="lov-hero-left">
+                  <div className="lov-hero-badge">
+                    {activeView === 'teams'
                       ? '👥 Team weekly breakdown'
                       : selectedDate === todayKey()
                         ? '● Today — live from Supabase'
                         : `Saved snapshot · ${formatDateLabel(selectedDate)}`}
+                  </div>
+
+                  <h1 className="lov-hero-title" style={{ fontSize: 34 }}>
+                    {activeView === 'teams' ? 'Teams' : 'Overview'}
+                  </h1>
                 </div>
+              </section>
+            ) : null}
 
-                <h1 className="lov-hero-title" style={{ fontSize: 34 }}>
-                  {activeView === 'rankings'
-                    ? 'Rankings'
-                    : activeView === 'teams'
-                      ? 'Teams'
-                      : 'Overview'}
-                </h1>
-              </div>
-
-              {activeView === 'rankings' ? null : null}
-            </section>
-
-            <section className="lov-kpi-grid lov-kpi-grid-main">
-              <LovableKpi title="English" value={dashboardTotals.english} tone="blue" />
-              <LovableKpi title="Spanish" value={dashboardTotals.spanish} tone="green" />
-              {activeView === 'rankings' ? null : <LovableKpi title="Invalid" value={dashboardTotals.invalid} tone="red" />}
-              <LovableKpi title="Total Xfers" value={dashboardTotals.total} tone="orange" />
-            </section>
+            {activeView !== 'rankings' ? (
+              <section className="lov-kpi-grid lov-kpi-grid-main">
+                <LovableKpi title="English" value={dashboardTotals.english} tone="blue" />
+                <LovableKpi title="Spanish" value={dashboardTotals.spanish} tone="green" />
+                <LovableKpi title="Invalid" value={dashboardTotals.invalid} tone="red" />
+                <LovableKpi title="Total Xfers" value={dashboardTotals.total} tone="orange" />
+              </section>
+            ) : null}
 
             {activeView === 'overview' ? (
               <>
