@@ -193,6 +193,7 @@ function getMetricColor(metric) {
   if (metric === 'spanish') return '#34d399'
   if (metric === 'invalid') return '#fb7185'
   if (metric === 'goalDays') return '#fbbf24'
+  if (metric === 'lowestXfers') return '#fbbf24'
   return '#ff8a2a'
 }
 
@@ -395,6 +396,28 @@ function sortAgentsByMetric(agents, metric = 'total') {
 
     return String(a?.name || '').localeCompare(String(b?.name || ''))
   })
+}
+
+function sortAgentsByLowestXfers(agents = []) {
+  return [...(agents || [])]
+    .filter(agent => Number(agent.lowestXfers ?? agent.weekXfers ?? agent.total ?? 0) > 0)
+    .sort((a, b) => {
+      const aXfers = Number(a.lowestXfers ?? a.weekXfers ?? a.total ?? 0)
+      const bXfers = Number(b.lowestXfers ?? b.weekXfers ?? b.total ?? 0)
+      const xferDiff = aXfers - bXfers
+      if (xferDiff !== 0) return xferDiff
+
+      const englishDiff = Number(a.english || 0) - Number(b.english || 0)
+      if (englishDiff !== 0) return englishDiff
+
+      const spanishDiff = Number(a.spanish || 0) - Number(b.spanish || 0)
+      if (spanishDiff !== 0) return spanishDiff
+
+      const activeDiff = Number(b.activeDays || 0) - Number(a.activeDays || 0)
+      if (activeDiff !== 0) return activeDiff
+
+      return String(a?.name || '').localeCompare(String(b?.name || ''))
+    })
 }
 
 function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
@@ -746,13 +769,21 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
       }
 
       current.name = agent.name || current.name
-      current.english += Number(agent.english || 0)
-      current.spanish += Number(agent.spanish || 0)
-      current.total += Number(agent.total || 0)
+      const dayEnglish = Number(agent.english || 0)
+      const daySpanish = Number(agent.spanish || 0)
+      const dayXfers = dayEnglish + daySpanish
 
-      if (agent.date) {
+      current.english += dayEnglish
+      current.spanish += daySpanish
+      current.total += dayXfers
+      current.weekXfers = Number(current.weekXfers || 0) + dayXfers
+      current.lowestXfers = Number(current.lowestXfers || 0) + dayXfers
+
+      if (agent.date && dayXfers > 0) {
         current.activeDateKeys.add(agent.date)
-        if (agentReachedGoal(agent)) current.goalDateKeys.add(agent.date)
+        if (agentReachedGoal({ ...agent, english: dayEnglish, spanish: daySpanish, total: dayXfers, rawTotal: dayXfers })) {
+          current.goalDateKeys.add(agent.date)
+        }
       }
 
       if (Number(agent.english || 0) > current.bestEnglish) {
@@ -810,10 +841,7 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
           return Number(b.total || 0) - Number(a.total || 0)
         })
         .slice(0, 10),
-      lowestActive: [...weekAgents]
-        .filter(agent => Number(agent.total || 0) > 0)
-        .sort((a, b) => Number(a.total || 0) - Number(b.total || 0))
-        .slice(0, 10),
+      lowestActive: sortAgentsByLowestXfers(weekAgents).slice(0, 10),
     }
   }
 
@@ -1769,7 +1797,9 @@ function MiniAgentList({ title, rows = [], metric = 'english', navigate }) {
           <span className="pulse-top-block-value" style={{ color }}>
             {metric === 'goalDays'
               ? `${Number(agent.goalDays || 0)}x`
-              : Number(agent?.[metric] || 0).toLocaleString()}
+              : metric === 'lowestXfers'
+                ? Number(agent.lowestXfers ?? agent.weekXfers ?? agent.total ?? 0).toLocaleString()
+                : Number(agent?.[metric] || 0).toLocaleString()}
           </span>
         </div>
       ))}
@@ -1803,7 +1833,7 @@ function TeamWeeklyCard({ teamInsight, navigate }) {
         <MiniAgentList title="Top English" rows={week.topEnglish} metric="english" navigate={navigate} />
         <MiniAgentList title="Top Total" rows={week.topTotal} metric="total" navigate={navigate} />
         <MiniAgentList title="Goal Days" rows={week.goalLeaders} metric="goalDays" navigate={navigate} />
-        <MiniAgentList title="Lowest Active" rows={week.lowestActive} metric="total" navigate={navigate} />
+        <MiniAgentList title="Lowest Xfers" rows={week.lowestActive} metric="lowestXfers" navigate={navigate} />
       </div>
     </div>
   )
