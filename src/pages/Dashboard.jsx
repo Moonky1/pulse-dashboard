@@ -1572,12 +1572,12 @@ function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
 async function fetchSupabaseDashboardDate(date) {
   const [teamResult, agentResult] = await Promise.all([
     supabase
-      .from('daily_team_stats_v2')
+      .from('pulse_team_daily_clean')
       .select('*')
       .eq('date', date),
 
     supabase
-      .from('daily_agent_stats_v2')
+      .from('pulse_agent_daily_clean')
       .select('*')
       .eq('date', date)
       .range(0, 9999),
@@ -1591,7 +1591,7 @@ async function fetchSupabaseDashboardDate(date) {
 
 async function fetchSupabaseDates() {
   const { data, error } = await supabase
-    .from('daily_team_stats_v2')
+    .from('pulse_team_daily_clean')
     .select('date')
     .gte('date', CLEAN_START_DATE)
     .order('date', { ascending: false })
@@ -2154,7 +2154,8 @@ function normalizeHistoryTeam(row) {
   const english = Number(row?.english || 0)
   const spanish = Number(row?.spanish || 0)
   const invalidTransfers = Number(row?.invalid_transfers || 0)
-  const total = Number(row?.total ?? Math.max(0, english + spanish - invalidTransfers))
+  const rawTotal = Number(row?.raw_total ?? (english + spanish))
+  const total = Number(row?.net_total ?? Math.max(0, rawTotal - invalidTransfers))
 
   return {
     date: normalizeDate(row?.date),
@@ -2401,15 +2402,15 @@ function buildRankingHistoryInsights(agentRows = [], teamRows = []) {
 async function fetchRankingHistoryInsights() {
   const [agentResult, teamResult] = await Promise.all([
     supabase
-      .from('daily_agent_stats')
+      .from('pulse_agent_daily_clean')
       .select('date,agent_ext,agent_name,team,english,spanish,invalid_transfers,raw_total,net_total')
       .gte('date', OFFICIAL_DATA_START)
       .order('date', { ascending: false })
       .range(0, 9999),
 
     supabase
-      .from('daily_team_stats')
-      .select('date,team,english,spanish,invalid_transfers,total,active_agents')
+      .from('pulse_team_daily_clean')
+      .select('date,team,english,spanish,invalid_transfers,raw_total,net_total,active_agents')
       .gte('date', OFFICIAL_DATA_START)
       .order('date', { ascending: false })
       .range(0, 9999),
@@ -2878,13 +2879,13 @@ const loadRankingsHistory = useCallback(async () => {
   try {
     const [agentResult, teamResult] = await Promise.all([
       supabase
-        .from('daily_agent_stats_v2')
+        .from('pulse_agent_daily_clean')
         .select('*')
         .gte('date', OFFICIAL_DATA_START)
         .range(0, 49999),
 
       supabase
-        .from('daily_team_stats_v2')
+        .from('pulse_team_daily_clean')
         .select('*')
         .gte('date', OFFICIAL_DATA_START)
         .range(0, 9999),
