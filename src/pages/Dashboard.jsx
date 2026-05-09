@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
 import './dashboard.css'
 
-const CLEAN_START_DATE = '2026-04-23'
-const OFFICIAL_DATA_START = '2026-04-28'
+const CLEAN_START_DATE = '2026-03-23'
+const OFFICIAL_DATA_START = '2026-03-23'
 const POLL_MS = 10000
 
 const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
@@ -206,6 +206,39 @@ function getTeamFlag(teamId) {
 
 function getTeamGoal(teamId) {
   return Number(TEAM_TARGETS[teamId] || 10)
+}
+
+function isSaturdayDateKey(dateKey) {
+  const date = normalizeDate(dateKey)
+  if (!date) return false
+
+  const d = new Date(`${date}T12:00:00Z`)
+  return d.getUTCDay() === 6
+}
+
+function getGoalTargetForDate(teamId, dateKey) {
+  return isSaturdayDateKey(dateKey) ? 10 : getTeamGoal(teamId)
+}
+
+function getGoalMetricForDate(dateKey) {
+  return isSaturdayDateKey(dateKey) ? 'total' : 'english'
+}
+
+function agentReachedGoal(agent) {
+  const goal = getGoalTargetForDate(agent?.teamId || agent?.team, agent?.date)
+  const metric = getGoalMetricForDate(agent?.date)
+
+  if (metric === 'total') {
+    return Number(agent?.total || agent?.rawTotal || 0) >= goal
+  }
+
+  return Number(agent?.english || 0) >= goal
+}
+
+function getGoalRuleLabel(teamId, dateKey = null) {
+  if (dateKey && isSaturdayDateKey(dateKey)) return 'Saturday goal: 10 Total'
+  if (teamId === 'asia') return 'Mon-Fri goal: 20 English • Saturday: 10 Total'
+  return 'Mon-Fri goal: 10 English • Saturday: 10 Total'
 }
 
 function FlagImg({ src, size = 18, alt = '' }) {
@@ -467,7 +500,7 @@ function buildAllTimeAgentRankings(agentRows = []) {
       current.rawTotal += Number(agent.rawTotal || 0)
       current.total += Number(agent.total || 0)
       current.activeDays += 1
-      if (Number(agent.english || 0) >= getTeamGoal(agent.teamId)) current.goalDays += 1
+      if (agentReachedGoal(agent)) current.goalDays += 1
 
       if (Number(agent.english || 0) > current.bestEnglish) current.bestEnglish = Number(agent.english || 0)
       if (Number(agent.spanish || 0) > current.bestSpanish) current.bestSpanish = Number(agent.spanish || 0)
@@ -678,7 +711,7 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
       current.spanish += Number(agent.spanish || 0)
       current.total += Number(agent.total || 0)
       current.activeDays += 1
-      if (Number(agent.english || 0) >= goal) current.goalDays += 1
+      if (agentReachedGoal(agent)) current.goalDays += 1
 
       if (Number(agent.english || 0) > current.bestEnglish) {
         current.bestEnglish = Number(agent.english || 0)
@@ -762,7 +795,7 @@ function buildHistoryInsights(agentRows = [], teamRows = []) {
       const rateDiff = Number(b.goalRate || 0) - Number(a.goalRate || 0)
       if (rateDiff !== 0) return rateDiff
       return Number(b.english || 0) - Number(a.english || 0)
-    }).slice(0, 15),
+    }).slice(0, 10),
     mostEnglishFirstPlaceAgents: placement.mostFirst.slice(0, 10),
     mostEnglishTop3Agents: placement.mostTop3.slice(0, 10),
     englishTeamWinners: buildTeamWinnerCounts(cleanTeamRows, 'english').slice(0, 10),
@@ -1176,7 +1209,7 @@ function TopRow({ title, metric, agents }) {
 }
 
 function TeamDetail({ team, parsed, selectedDate, navigate }) {
-  const reachedTarget = (parsed.agents || []).filter(agent => Number(agent.english || 0) >= getTeamGoal(team.id)).length
+  const reachedTarget = (parsed.agents || []).filter(agent => agentReachedGoal({ ...agent, teamId: team.id, date: selectedDate })).length
   const invalidTransfers = Number(parsed.invalidTransfers || 0)
 
   return (
@@ -1191,7 +1224,7 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
           </div>
 
           <div className="pulse-hero-sub">
-            {parsed.totals.activeAgents} active agents • Goal: {getTeamGoal(team.id)} English
+            {parsed.totals.activeAgents} active agents • {getGoalRuleLabel(team.id, selectedDate)}
           </div>
         </div>
       </div>
@@ -1201,7 +1234,7 @@ function TeamDetail({ team, parsed, selectedDate, navigate }) {
         <SummaryCard title="Spanish" value={parsed.totals.spanish} color="#34d399" titleColor="#34d399" />
         <SummaryCard title="Invalid xfers" value={invalidTransfers} color="#f87171" titleColor="#f87171" />
         <SummaryCard title="Total" value={parsed.totals.total} color="#f59e0b" titleColor="#f59e0b" subtitle={`Raw: ${parsed.totals.rawTotal || parsed.totals.total}`} />
-        <SummaryCard title="Reached target" value={reachedTarget} color="#22c55e" titleColor="#22c55e" subtitle={`Goal: ${getTeamGoal(team.id)} English`} />
+        <SummaryCard title="Reached target" value={reachedTarget} color="#22c55e" titleColor="#22c55e" subtitle={getGoalRuleLabel(team.id, selectedDate)} />
         <SummaryCard title="Active agents" value={parsed.totals.activeAgents} color="#c084fc" titleColor="#c084fc" />
       </div>
 
@@ -1237,9 +1270,8 @@ function RankingTopBlock({ title, metric, rows = [], navigate }) {
   )
 }
 
-function AgentRankingTable({ title, subtitle, rows = [], metric = 'total', navigate }) {
-  const showEnglish = metric === 'english' || metric === 'total'
-  const showSpanish = metric === 'spanish' || metric === 'total'
+function AgentRankingTable({ title, subtitle, rows = [], metric = 'english', navigate }) {
+  const highlightColor = getMetricColor(metric)
 
   return (
     <div className="pulse-table-wrap">
@@ -1254,9 +1286,8 @@ function AgentRankingTable({ title, subtitle, rows = [], metric = 'total', navig
               <th>Agent</th>
               <th>Team</th>
               <th>Ext</th>
-              {showEnglish ? <th className="th-english">English</th> : null}
-              {showSpanish ? <th className="th-spanish">Spanish</th> : null}
-              <th className="th-invalid">Invalid</th>
+              <th className="th-english">English</th>
+              <th className="th-spanish">Spanish</th>
               <th className="th-total">Total</th>
             </tr>
           </thead>
@@ -1265,19 +1296,18 @@ function AgentRankingTable({ title, subtitle, rows = [], metric = 'total', navig
             {rows.map((agent, index) => (
               <tr key={`${title}-${agent.ext}-${index}`}>
                 <td><RankMarker index={index} /></td>
-                <td className="linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
+                <td className="linkish" style={{ fontWeight: 700 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
                 <td><TeamInlineLabel teamId={agent.teamId} teamFlag={agent.teamFlag} teamLabel={agent.teamLabel} /></td>
                 <td>#{agent.ext}</td>
-                {showEnglish ? <td className="blue" style={{ fontWeight: metric === 'english' ? 950 : 800 }}>{Number(agent.english || 0).toLocaleString()}</td> : null}
-                {showSpanish ? <td className="green" style={{ fontWeight: metric === 'spanish' ? 950 : 800 }}>{Number(agent.spanish || 0).toLocaleString()}</td> : null}
-                <td className="red">{Number(agent.invalidTransfers || 0).toLocaleString()}</td>
-                <td className="orange" style={{ fontWeight: 950 }}>{Number(agent.total || 0).toLocaleString()}</td>
+                <td className="blue" style={{ fontWeight: metric === 'english' ? 950 : 700, color: metric === 'english' ? highlightColor : undefined }}>{Number(agent.english || 0).toLocaleString()}</td>
+                <td className="green" style={{ fontWeight: metric === 'spanish' ? 950 : 700, color: metric === 'spanish' ? highlightColor : undefined }}>{Number(agent.spanish || 0).toLocaleString()}</td>
+                <td className="orange" style={{ fontWeight: metric === 'total' ? 950 : 700 }}>{Number(agent.total || 0).toLocaleString()}</td>
               </tr>
             ))}
 
             {!rows.length ? (
               <tr>
-                <td colSpan={showEnglish && showSpanish ? 8 : 7}>No ranking data available yet.</td>
+                <td colSpan="7">No ranking data available yet.</td>
               </tr>
             ) : null}
           </tbody>
@@ -1344,7 +1374,7 @@ function GoalAchievementTable({ title, rows = [], loading, error, navigate }) {
     <div className="pulse-table-wrap">
       <div className="pulse-table-title">{title}</div>
       <div className="pulse-summary-subtitle" style={{ margin: '0 0 12px' }}>
-        Goal days use each team target: Asia 20 English, every other team 10 English.
+        Goal days: Monday-Friday uses English target (Asia 20, all other teams 10). Saturday uses 10 Total transfers for everyone.
       </div>
 
       {loading ? <div className="pulse-loading">Loading goal history...</div> : null}
@@ -1359,26 +1389,26 @@ function GoalAchievementTable({ title, rows = [], loading, error, navigate }) {
                 <th>Agent</th>
                 <th>Team</th>
                 <th>Ext</th>
-                <th>Goal</th>
                 <th>Goal Days</th>
                 <th>Goal Rate</th>
-                <th>Avg ENG</th>
+                <th>Active Days</th>
+                <th>Total ENG</th>
                 <th>Best ENG</th>
                 <th>Best Day</th>
               </tr>
             </thead>
 
             <tbody>
-              {rows.map((agent, index) => (
+              {rows.slice(0, 10).map((agent, index) => (
                 <tr key={`goal-${agent.ext}-${index}`}>
                   <td><RankMarker index={index} /></td>
-                  <td className="linkish" onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
+                  <td className="linkish" style={{ fontWeight: 700 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
                   <td><TeamInlineLabel teamId={agent.teamId} teamFlag={agent.teamFlag} teamLabel={agent.teamLabel} /></td>
                   <td>#{agent.ext}</td>
-                  <td className="blue">{Number(agent.goal || 0)}</td>
-                  <td className="orange">{Number(agent.goalDays || 0).toLocaleString()}</td>
+                  <td className="orange" style={{ fontWeight: 950 }}>{Number(agent.goalDays || 0).toLocaleString()}</td>
                   <td className="green">{Math.round(Number(agent.goalRate || 0) * 100)}%</td>
-                  <td>{Number(agent.avgEnglish || 0).toFixed(1)}</td>
+                  <td>{Number(agent.activeDays || 0).toLocaleString()}</td>
+                  <td className="blue">{Number(agent.english || 0).toLocaleString()}</td>
                   <td className="blue">{Number(agent.bestEnglish || 0).toLocaleString()}</td>
                   <td>{agent.bestDate ? formatDateLabel(agent.bestDate) : 'N/A'}</td>
                 </tr>
@@ -1440,77 +1470,74 @@ function TeamWinnerTable({ title, rows = [], metric }) {
   )
 }
 
-function RankingsPage({ teamData, selectedDate, rangeMode, history, historyLoading, historyError, navigate }) {
-  const isAllTime = rangeMode === 'all_time'
-  const currentAgents = useMemo(() => flattenAgentsForRankings(teamData), [teamData])
-  const rankingAgents = isAllTime ? (history?.allTimeAgents || []) : currentAgents
+function RankingsPage({ history, historyLoading, historyError, navigate }) {
+  const rankingAgents = history?.allTimeAgents || []
 
-  const topTotal = useMemo(() => sortAgentsByMetric(rankingAgents, 'total').slice(0, 10), [rankingAgents])
   const topEnglish = useMemo(() => sortAgentsByMetric(rankingAgents, 'english').slice(0, 10), [rankingAgents])
   const topSpanish = useMemo(() => sortAgentsByMetric(rankingAgents, 'spanish').slice(0, 10), [rankingAgents])
   const goalAgents = history?.topGoalAchievementAgents || []
-  const mostFirst = history?.mostEnglishFirstPlaceAgents || []
-  const mostTop3 = history?.mostEnglishTop3Agents || []
-  const allTimeTeams = history?.allTimeTeams || []
 
-  const currentTeamEnglish = buildCurrentTeamRankings(teamData, 'english')[0]
-  const currentTeamSpanish = buildCurrentTeamRankings(teamData, 'spanish')[0]
-  const currentTeamTotal = buildCurrentTeamRankings(teamData, 'total')[0]
-
-  const teamEnglish = isAllTime ? [...allTimeTeams].sort((a, b) => Number(b.english || 0) - Number(a.english || 0))[0] : currentTeamEnglish
-  const teamSpanish = isAllTime ? [...allTimeTeams].sort((a, b) => Number(b.spanish || 0) - Number(a.spanish || 0))[0] : currentTeamSpanish
-  const teamTotal = isAllTime ? [...allTimeTeams].sort((a, b) => Number(b.total || 0) - Number(a.total || 0))[0] : currentTeamTotal
-
-  const topFirstAgent = mostFirst[0]
-  const topTop3Agent = mostTop3[0]
+  const topEnglishAgent = topEnglish[0]
+  const topSpanishAgent = topSpanish[0]
   const topGoalAgent = goalAgents[0]
-  const periodLabel = isAllTime ? 'All Time' : formatDateLabel(selectedDate)
 
   return (
     <>
       <div className="pulse-hero-card">
         <div>
-          <div className="pulse-hero-date">{periodLabel}</div>
+          <div className="pulse-hero-date">All Time</div>
           <div className="pulse-hero-title-row">
             <span style={{ fontSize: 30, lineHeight: 1 }}>🏆</span>
             <div className="pulse-hero-title">Rankings</div>
           </div>
           <div className="pulse-hero-sub">
-            Global rankings from Supabase. #1 and Top 3 streaks are always based on English xfers.
+            Global rankings from Supabase. Goal days: Asia 20 ENG Mon-Fri, all other teams 10 ENG Mon-Fri, and Saturday 10 Total for everyone.
           </div>
         </div>
       </div>
 
       <div className="pulse-summary-grid">
-        <SummaryCard title="Best Team English" value={teamEnglish?.english || 0} color="#38bdf8" titleColor="#38bdf8" subtitle={teamEnglish ? `${teamEnglish.teamLabel} • ${teamEnglish.activeAgents || 0} agents` : historyLoading ? 'Loading history...' : 'N/A'} />
-        <SummaryCard title="Best Team Spanish" value={teamSpanish?.spanish || 0} color="#34d399" titleColor="#34d399" subtitle={teamSpanish ? `${teamSpanish.teamLabel} • ${teamSpanish.activeAgents || 0} agents` : historyLoading ? 'Loading history...' : 'N/A'} />
-        <SummaryCard title="Best Team Total" value={teamTotal?.total || 0} color="#ff8a2a" titleColor="#ff8a2a" subtitle={teamTotal ? `${teamTotal.teamLabel} • ${teamTotal.activeAgents || 0} agents` : historyLoading ? 'Loading history...' : 'N/A'} />
-        <SummaryCard title="Most #1 Days" value={topFirstAgent?.firstPlaces || 0} color="#fbbf24" titleColor="#fbbf24" subtitle={topFirstAgent ? `${topFirstAgent.name} • #${topFirstAgent.ext}` : historyLoading ? 'Loading history...' : 'N/A'} />
-        <SummaryCard title="Most Top 3 Days" value={topTop3Agent?.top3Days || 0} color="#22c55e" titleColor="#22c55e" subtitle={topTop3Agent ? `${topTop3Agent.name} • #${topTop3Agent.ext}` : historyLoading ? 'Loading history...' : 'N/A'} />
+        <SummaryCard title="Top English" value={topEnglishAgent?.english || 0} color="#38bdf8" titleColor="#38bdf8" subtitle={topEnglishAgent ? `${topEnglishAgent.name} • #${topEnglishAgent.ext}` : historyLoading ? 'Loading history...' : 'N/A'} />
+        <SummaryCard title="Top Spanish" value={topSpanishAgent?.spanish || 0} color="#34d399" titleColor="#34d399" subtitle={topSpanishAgent ? `${topSpanishAgent.name} • #${topSpanishAgent.ext}` : historyLoading ? 'Loading history...' : 'N/A'} />
         <SummaryCard title="Most Goal Days" value={topGoalAgent?.goalDays || 0} color="#fbbf24" titleColor="#fbbf24" subtitle={topGoalAgent ? `${topGoalAgent.name} • #${topGoalAgent.ext}` : historyLoading ? 'Loading history...' : 'N/A'} />
       </div>
 
       <div className="pulse-top-blocks-grid">
-        <RankingTopBlock title="Top Total" metric="total" rows={topTotal} navigate={navigate} />
         <RankingTopBlock title="Top English" metric="english" rows={topEnglish} navigate={navigate} />
         <RankingTopBlock title="Top Spanish" metric="spanish" rows={topSpanish} navigate={navigate} />
+        <RankingTopBlock title="Most Goal Days" metric="goalDays" rows={goalAgents} navigate={navigate} />
       </div>
 
-      <AgentRankingTable title="🏆 Top 10 Total Xfers" subtitle={isAllTime ? 'All-time totals from Supabase.' : 'Sorted by total xfers for the selected date.'} rows={topTotal} metric="total" navigate={navigate} />
-      <AgentRankingTable title="🔵 Top 10 English Xfers" subtitle={isAllTime ? 'All-time English xfers.' : 'Best English performance for the selected date.'} rows={topEnglish} metric="english" navigate={navigate} />
-      <AgentRankingTable title="🟢 Top 10 Spanish Xfers" subtitle={isAllTime ? 'All-time Spanish xfers.' : 'Best Spanish performance for the selected date.'} rows={topSpanish} metric="spanish" navigate={navigate} />
+      {historyLoading ? <div className="pulse-loading">Loading rankings...</div> : null}
+      {historyError ? <div className="pulse-error">{historyError}</div> : null}
 
-      <GoalAchievementTable title="🎯 Most Goal Days" rows={goalAgents} loading={historyLoading} error={historyError} navigate={navigate} />
+      {!historyLoading && !historyError ? (
+        <>
+          <AgentRankingTable
+            title="🔵 Top 10 English Xfers"
+            subtitle="All-time English transfers from Supabase."
+            rows={topEnglish}
+            metric="english"
+            navigate={navigate}
+          />
 
-      <div className="pulse-top-blocks-grid">
-        <EnglishPlacementTable title="🏆 Most #1 Days by English" subtitle="Agents who finished #1 the most times." rows={mostFirst} loading={historyLoading} error={historyError} navigate={navigate} mode="first" />
-        <EnglishPlacementTable title="🥇 Most Top 3 Days by English" subtitle="Agents who appeared in the daily Top 3 the most times." rows={mostTop3} loading={historyLoading} error={historyError} navigate={navigate} mode="top3" />
-      </div>
+          <AgentRankingTable
+            title="🟢 Top 10 Spanish Xfers"
+            subtitle="All-time Spanish transfers from Supabase."
+            rows={topSpanish}
+            metric="spanish"
+            navigate={navigate}
+          />
 
-      <div className="pulse-top-blocks-grid">
-        <TeamWinnerTable title="🏆 Team #1 Days by English" metric="english" rows={history?.englishTeamWinners || []} />
-        <TeamWinnerTable title="🏆 Team #1 Days by Spanish" metric="spanish" rows={history?.spanishTeamWinners || []} />
-      </div>
+          <GoalAchievementTable
+            title="🎯 Top 10 Most Goal Days"
+            rows={goalAgents}
+            loading={false}
+            error=""
+            navigate={navigate}
+          />
+        </>
+      ) : null}
     </>
   )
 }
@@ -1601,7 +1628,7 @@ function TeamWeeklyCard({ teamInsight, navigate }) {
           <div>
             <div className="pulse-team-name">{teamInsight.teamLabel}</div>
             <div className="pulse-team-sub">
-              {formatDateLabel(week.weekStart)} - {formatDateLabel(week.weekEnd)} • Goal {teamInsight.goal} ENG/day
+              {formatDateLabel(week.weekStart)} - {formatDateLabel(week.weekEnd)} • {getGoalRuleLabel(teamInsight.teamId)}
             </div>
           </div>
         </div>
@@ -2028,32 +2055,13 @@ export default function Dashboard() {
                 </h1>
               </div>
 
-              {activeView === 'rankings' ? (
-                <div className="lov-hero-right">
-                  <div className="lov-range-tabs">
-                    <button
-                      type="button"
-                      className={rangeMode === 'all_time' ? 'active' : ''}
-                      onClick={() => setRangeMode('all_time')}
-                    >
-                      All Time
-                    </button>
-                    <button
-                      type="button"
-                      className={rangeMode === 'day' ? 'active' : ''}
-                      onClick={() => setRangeMode('day')}
-                    >
-                      Selected Day
-                    </button>
-                  </div>
-                </div>
-              ) : null}
+              {activeView === 'rankings' ? null : null}
             </section>
 
             <section className="lov-kpi-grid lov-kpi-grid-main">
               <LovableKpi title="English" value={dashboardTotals.english} tone="blue" />
               <LovableKpi title="Spanish" value={dashboardTotals.spanish} tone="green" />
-              <LovableKpi title="Invalid" value={dashboardTotals.invalid} tone="red" />
+              {activeView === 'rankings' ? null : <LovableKpi title="Invalid" value={dashboardTotals.invalid} tone="red" />}
               <LovableKpi title="Total Xfers" value={dashboardTotals.total} tone="orange" />
             </section>
 
