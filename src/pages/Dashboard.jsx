@@ -751,11 +751,16 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
       totals,
       topEnglish: sortAgentsByMetric(weekAgents, 'english').slice(0, 10),
       topTotal: sortAgentsByMetric(weekAgents, 'total').slice(0, 10),
-      goalLeaders: [...weekAgents].sort((a, b) => {
-        const goalDiff = Number(b.goalDays || 0) - Number(a.goalDays || 0)
-        if (goalDiff !== 0) return goalDiff
-        return Number(b.english || 0) - Number(a.english || 0)
-      }).slice(0, 10),
+      goalLeaders: [...weekAgents]
+        .filter(agent => Number(agent.goalDays || 0) > 0)
+        .sort((a, b) => {
+          const goalDiff = Number(b.goalDays || 0) - Number(a.goalDays || 0)
+          if (goalDiff !== 0) return goalDiff
+          const englishDiff = Number(b.english || 0) - Number(a.english || 0)
+          if (englishDiff !== 0) return englishDiff
+          return Number(b.total || 0) - Number(a.total || 0)
+        })
+        .slice(0, 10),
       lowestActive: [...weekAgents]
         .filter(agent => Number(agent.total || 0) > 0)
         .sort((a, b) => Number(a.total || 0) - Number(b.total || 0))
@@ -1752,11 +1757,21 @@ function TeamWeeklyCard({ teamInsight, navigate }) {
         <SummaryCard title="Active Agents" value={week.totals.activeAgents} color="#c084fc" titleColor="#c084fc" subtitle="Max active count this week" />
       </div>
 
-      <div className="pulse-top-blocks-grid">
+      <div
+        className="pulse-team-week-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gap: 14,
+          alignItems: 'stretch',
+        }}
+      >
         <MiniAgentList title="Top English — This Week" rows={week.topEnglish} metric="english" navigate={navigate} />
         <MiniAgentList title="Top Total — This Week" rows={week.topTotal} metric="total" navigate={navigate} />
         <MiniAgentList title="Goal Days — This Week" rows={week.goalLeaders} metric="goalDays" navigate={navigate} />
-        <MiniAgentList title="Lowest Active — This Week" rows={week.lowestActive} metric="total" navigate={navigate} />
+        <div style={{ gridColumn: '1 / -1' }}>
+          <MiniAgentList title="Lowest Active — This Week" rows={week.lowestActive} metric="total" navigate={navigate} />
+        </div>
       </div>
     </div>
   )
@@ -1767,19 +1782,6 @@ function TeamsInsightsPage({ history, historyLoading, historyError, navigate }) 
 
   return (
     <>
-      <div className="pulse-hero-card">
-        <div>
-          <div className="pulse-hero-date">Teams</div>
-          <div className="pulse-hero-title-row">
-            <span style={{ fontSize: 30, lineHeight: 1 }}>👥</span>
-            <div className="pulse-hero-title">Weekly Team Breakdown</div>
-          </div>
-          <div className="pulse-hero-sub">
-            One card per team: this week totals, last week comparison, top agents, goal days and lowest active performers.
-          </div>
-        </div>
-      </div>
-
       {historyLoading ? <div className="pulse-loading">Loading team history...</div> : null}
       {historyError ? <div className="pulse-error">{historyError}</div> : null}
 
@@ -1951,7 +1953,21 @@ export default function Dashboard() {
   const selectedTeamMeta = selectedTeam !== 'all' ? TEAMS[selectedTeam] : null
 
   const dashboardTotals = useMemo(() => {
-    if ((activeView === 'rankings' || activeView === 'teams' || activeView === 'analytics') && rangeMode === 'all_time') {
+    if (activeView === 'teams') {
+      const weeklyTeams = historyState.insights?.weeklyTeams || []
+
+      return weeklyTeams.reduce((acc, teamInsight) => {
+        const totals = teamInsight?.thisWeek?.totals || {}
+        acc.english += Number(totals.english || 0)
+        acc.spanish += Number(totals.spanish || 0)
+        acc.invalid += Number(totals.invalidTransfers || 0)
+        acc.total += Number(totals.total || 0)
+        acc.activeAgents += Number(totals.activeAgents || 0)
+        return acc
+      }, { english: 0, spanish: 0, invalid: 0, total: 0, activeAgents: 0 })
+    }
+
+    if ((activeView === 'rankings' || activeView === 'analytics') && rangeMode === 'all_time') {
       const allTimeAgents = historyState.insights?.allTimeAgents || []
 
       return allTimeAgents.reduce((acc, agent) => {
@@ -2148,16 +2164,17 @@ export default function Dashboard() {
             {activeView !== 'rankings' ? (
               <section className="lov-hero" style={{ padding: '22px 28px' }}>
                 <div className="lov-hero-left">
-                  <div className="lov-hero-badge">
-                    {activeView === 'teams'
-                      ? '👥 Team weekly breakdown'
-                      : selectedDate === todayKey()
+                  {activeView === 'teams' ? null : (
+                    <div className="lov-hero-badge">
+                      {selectedDate === todayKey()
                         ? '● Today — live from Supabase'
                         : `Saved snapshot · ${formatDateLabel(selectedDate)}`}
-                  </div>
+                    </div>
+                  )}
 
-                  <h1 className="lov-hero-title" style={{ fontSize: 34 }}>
-                    {activeView === 'teams' ? 'Teams' : 'Overview'}
+                  <h1 className="lov-hero-title" style={{ fontSize: 34, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {activeView === 'teams' ? <span style={{ fontSize: 30, lineHeight: 1 }}>👥</span> : null}
+                    {activeView === 'teams' ? 'Weekly Team Breakdown' : 'Overview'}
                   </h1>
                 </div>
               </section>
