@@ -318,6 +318,45 @@ function normalizeSupabaseAgent(row) {
   }
 }
 
+function dedupeDailyAgents(normalizedAgents = []) {
+  const byKey = new Map()
+
+  ;(normalizedAgents || []).forEach(agent => {
+    if (!agent?.date || !agent?.teamId || !agent?.ext) return
+
+    const key = `${agent.date}|${agent.teamId}|${agent.ext}`
+    const previous = byKey.get(key)
+
+    if (!previous) {
+      byKey.set(key, agent)
+      return
+    }
+
+    const previousIsFinal = Boolean(previous.isFinal)
+    const currentIsFinal = Boolean(agent.isFinal)
+    const previousScore = Number(previous.rawTotal || previous.total || 0)
+    const currentScore = Number(agent.rawTotal || agent.total || 0)
+
+    // Official/final rows must ALWAYS win over live rows for the same date/team/agent.
+    // This prevents old live/OT snapshots from creating fake Goal Days or inflated weekly totals.
+    if (currentIsFinal && !previousIsFinal) {
+      byKey.set(key, agent)
+      return
+    }
+
+    if (!currentIsFinal && previousIsFinal) {
+      return
+    }
+
+    // If both rows have the same status, keep the strongest row.
+    if (currentScore > previousScore) {
+      byKey.set(key, agent)
+    }
+  })
+
+  return [...byKey.values()]
+}
+
 function normalizeSupabaseTeam(row) {
   const teamId = String(row?.team || '').trim()
   const english = Number(row?.english || 0)
@@ -465,8 +504,7 @@ async function fetchHistoryRows() {
 function buildAllTimeAgentRankings(agentRows = []) {
   const byAgent = new Map()
 
-  agentRows
-    .map(normalizeSupabaseAgent)
+  dedupeDailyAgents((agentRows || []).map(normalizeSupabaseAgent))
     .filter(agent => agent.date && agent.ext && (agent.english > 0 || agent.spanish > 0 || agent.total > 0))
     .forEach(agent => {
       const current = byAgent.get(agent.ext) || {
@@ -565,8 +603,7 @@ function buildAllTimeTeamRankings(teamRows = []) {
 function buildEnglishPlacementAgents(agentRows = []) {
   const byDate = new Map()
 
-  agentRows
-    .map(normalizeSupabaseAgent)
+  dedupeDailyAgents((agentRows || []).map(normalizeSupabaseAgent))
     .filter(agent => agent.date && agent.ext && agent.english > 0)
     .forEach(agent => {
       if (!byDate.has(agent.date)) byDate.set(agent.date, [])
@@ -676,7 +713,7 @@ function buildTeamWinnerCounts(teamRows = [], metric = 'english') {
 }
 
 function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
-  const agents = (agentRows || []).map(normalizeSupabaseAgent).filter(agent => agent.date && agent.ext && agent.teamId)
+  const agents = dedupeDailyAgents((agentRows || []).map(normalizeSupabaseAgent).filter(agent => agent.date && agent.ext && agent.teamId))
   const teams = (teamRows || []).map(normalizeSupabaseTeam).filter(team => team.date && team.teamId)
   const dates = [...new Set(teams.map(team => team.date).filter(Boolean))].sort()
   const latestDate = dates[dates.length - 1] || todayKey()
@@ -704,14 +741,19 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
         goalDays: 0,
         bestEnglish: 0,
         bestDate: agent.date,
+        activeDateKeys: new Set(),
+        goalDateKeys: new Set(),
       }
 
       current.name = agent.name || current.name
       current.english += Number(agent.english || 0)
       current.spanish += Number(agent.spanish || 0)
       current.total += Number(agent.total || 0)
-      current.activeDays += 1
-      if (agentReachedGoal(agent)) current.goalDays += 1
+
+      if (agent.date) {
+        current.activeDateKeys.add(agent.date)
+        if (agentReachedGoal(agent)) current.goalDateKeys.add(agent.date)
+      }
 
       if (Number(agent.english || 0) > current.bestEnglish) {
         current.bestEnglish = Number(agent.english || 0)
@@ -721,11 +763,18 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
       byAgent.set(agent.ext, current)
     })
 
-    const weekAgents = [...byAgent.values()].map(agent => ({
-      ...agent,
-      goalRate: agent.activeDays ? agent.goalDays / agent.activeDays : 0,
-      avgEnglish: agent.activeDays ? agent.english / agent.activeDays : 0,
-    }))
+    const weekAgents = [...byAgent.values()].map(agent => {
+      const activeDays = agent.activeDateKeys?.size || 0
+      const goalDays = agent.goalDateKeys?.size || 0
+
+      return {
+        ...agent,
+        activeDays,
+        goalDays,
+        goalRate: activeDays ? goalDays / activeDays : 0,
+        avgEnglish: activeDays ? agent.english / activeDays : 0,
+      }
+    })
 
     const totals = weekTeamRows.reduce((acc, row) => {
       acc.english += Number(row.english || 0)
@@ -1737,41 +1786,24 @@ function TeamWeeklyCard({ teamInsight, navigate }) {
   const totalDiff = Number(week?.totals?.total || 0) - Number(previous?.totals?.total || 0)
 
   return (
-    <div className="pulse-table-wrap" style={{ marginBottom: 22 }}>
-      <div className="pulse-team-card-top" style={{ marginBottom: 14 }}>
-        <div className="pulse-team-title-wrap">
-          <FlagImg src={teamInsight.teamFlag} size={24} alt="" />
-          <div>
-            <div className="pulse-team-name">{teamInsight.teamLabel}</div>
-            <div className="pulse-team-sub">
-              {formatDateLabel(week.weekStart)} - {formatDateLabel(week.weekEnd)} • {getGoalRuleLabel(teamInsight.teamId)}
-            </div>
-          </div>
-        </div>
+    <div className="pulse-table-wrap pulse-team-card">
+      <div className="pulse-team-card-header">
+        <FlagImg src={teamInsight.teamFlag} size={24} alt="" />
+        <div className="pulse-team-name">{teamInsight.teamLabel}</div>
       </div>
 
-      <div className="pulse-summary-grid" style={{ marginBottom: 16 }}>
+      <div className="pulse-summary-grid pulse-team-summary-grid">
         <SummaryCard title="Week English" value={week.totals.english} color="#38bdf8" titleColor="#38bdf8" subtitle={`${englishDiff >= 0 ? '+' : ''}${englishDiff.toLocaleString()} vs last week`} />
         <SummaryCard title="Week Spanish" value={week.totals.spanish} color="#34d399" titleColor="#34d399" subtitle={`${week.totals.daysTracked || 0} days tracked`} />
         <SummaryCard title="Week Total" value={week.totals.total} color="#ff8a2a" titleColor="#ff8a2a" subtitle={`${totalDiff >= 0 ? '+' : ''}${totalDiff.toLocaleString()} vs last week`} />
         <SummaryCard title="Active Agents" value={week.totals.activeAgents} color="#c084fc" titleColor="#c084fc" subtitle="Max active count this week" />
       </div>
 
-      <div
-        className="pulse-team-week-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          gap: 14,
-          alignItems: 'stretch',
-        }}
-      >
-        <MiniAgentList title="Top English — This Week" rows={week.topEnglish} metric="english" navigate={navigate} />
-        <MiniAgentList title="Top Total — This Week" rows={week.topTotal} metric="total" navigate={navigate} />
-        <MiniAgentList title="Goal Days — This Week" rows={week.goalLeaders} metric="goalDays" navigate={navigate} />
-        <div style={{ gridColumn: '1 / -1' }}>
-          <MiniAgentList title="Lowest Active — This Week" rows={week.lowestActive} metric="total" navigate={navigate} />
-        </div>
+      <div className="pulse-team-week-grid">
+        <MiniAgentList title="Top English" rows={week.topEnglish} metric="english" navigate={navigate} />
+        <MiniAgentList title="Top Total" rows={week.topTotal} metric="total" navigate={navigate} />
+        <MiniAgentList title="Goal Days" rows={week.goalLeaders} metric="goalDays" navigate={navigate} />
+        <MiniAgentList title="Lowest Active" rows={week.lowestActive} metric="total" navigate={navigate} />
       </div>
     </div>
   )
@@ -1781,7 +1813,7 @@ function TeamsInsightsPage({ history, historyLoading, historyError, navigate }) 
   const teams = history?.weeklyTeams || []
 
   return (
-    <>
+    <section className="pulse-teams-list">
       {historyLoading ? <div className="pulse-loading">Loading team history...</div> : null}
       {historyError ? <div className="pulse-error">{historyError}</div> : null}
 
@@ -1790,7 +1822,143 @@ function TeamsInsightsPage({ history, historyLoading, historyError, navigate }) 
           <TeamWeeklyCard key={teamInsight.teamId} teamInsight={teamInsight} navigate={navigate} />
         ))
       ) : null}
-    </>
+    </section>
+  )
+}
+
+function DashboardResponsivePolishStyle() {
+  return (
+    <style>{`
+      .lov-content {
+        width: 100%;
+        max-width: 1540px;
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+      }
+
+      .lov-kpi-grid-main {
+        width: min(100%, 1280px);
+        margin: 0 auto 18px !important;
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(170px, 1fr)) !important;
+        gap: 16px !important;
+        align-items: stretch;
+        justify-content: center;
+      }
+
+      .lov-kpi-grid-main .lov-kpi-card,
+      .pulse-team-summary-grid .pulse-summary-card {
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .pulse-teams-list {
+        width: min(100%, 1380px);
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .pulse-team-card {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0 !important;
+        padding: 18px 20px 20px !important;
+        overflow: hidden;
+      }
+
+      .pulse-team-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 0 14px;
+        padding-left: 8px;
+      }
+
+      .pulse-team-card-header img,
+      .pulse-team-card-header span:first-child {
+        flex: 0 0 auto;
+      }
+
+      .pulse-team-summary-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(170px, 1fr)) !important;
+        gap: 14px !important;
+        margin: 0 0 14px !important;
+        width: 100%;
+      }
+
+      .pulse-team-week-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(210px, 1fr)) !important;
+        gap: 14px !important;
+        width: 100%;
+        align-items: stretch;
+      }
+
+      .pulse-team-week-grid .pulse-top-block {
+        min-width: 0;
+        height: 100%;
+        box-sizing: border-box;
+        margin: 0 !important;
+      }
+
+      .pulse-top-block-item {
+        min-width: 0;
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+      }
+
+      .pulse-top-block-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 400 !important;
+      }
+
+      .pulse-top-block-title,
+      .pulse-summary-title,
+      .lov-kpi-title {
+        font-weight: 800 !important;
+      }
+
+      @media (max-width: 1250px) {
+        .lov-kpi-grid-main,
+        .pulse-team-summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        .pulse-team-week-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .lov-content {
+          padding-left: 14px !important;
+          padding-right: 14px !important;
+        }
+
+        .lov-kpi-grid-main,
+        .pulse-team-summary-grid,
+        .pulse-team-week-grid {
+          grid-template-columns: 1fr !important;
+          width: 100%;
+        }
+
+        .pulse-team-card {
+          padding: 16px 14px !important;
+          border-radius: 22px;
+        }
+
+        .pulse-team-card-header {
+          padding-left: 4px;
+        }
+      }
+    `}</style>
   )
 }
 
@@ -2161,6 +2329,7 @@ export default function Dashboard() {
           />
 
           <main className="lov-content">
+            <DashboardResponsivePolishStyle />
             {activeView !== 'rankings' ? (
               <section className="lov-hero" style={{ padding: '22px 28px' }}>
                 <div className="lov-hero-left">
