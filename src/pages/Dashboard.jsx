@@ -1540,11 +1540,32 @@ function TeamComingSoonCard({ team }) {
 }
 
 function AgentTable({ team, agents, navigate }) {
-  const displayAgents = sortAgentsByMetric(agents, 'english')
+  const [query, setQuery] = useState('')
+  const normalizedQuery = normalizeSearchText(query)
+  const displayAgents = useMemo(() => {
+    const sorted = sortAgentsByMetric(agents || [], 'english')
+    if (!normalizedQuery) return sorted
+    return sorted.filter(agent => agentMatchesSearch(agent, normalizedQuery))
+  }, [agents, normalizedQuery])
 
   return (
-    <div className="pulse-table-wrap">
-      <div className="pulse-table-title">{team.label} agents</div>
+    <div className="pulse-table-wrap pulse-agent-table-card">
+      <div className="pulse-table-head-row">
+        <div className="pulse-table-title">{team.label} agents</div>
+        <div className="pulse-dark-search mini pulse-agent-local-search">
+          <span>⌕</span>
+          <input
+            value={query}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck="false"
+            placeholder="Search agent..."
+            onChange={event => setQuery(event.target.value)}
+          />
+          {query ? <button type="button" onClick={() => setQuery('')}>×</button> : null}
+        </div>
+      </div>
 
       <div className="pulse-table-scroll">
         <table className="pulse-table">
@@ -1572,6 +1593,7 @@ function AgentTable({ team, agents, navigate }) {
                 <td className="orange">{agent.total}</td>
               </tr>
             ))}
+            {!displayAgents.length ? <tr><td colSpan="7">No agents found.</td></tr> : null}
           </tbody>
         </table>
       </div>
@@ -2823,6 +2845,19 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
       .sort((a, b) => b.localeCompare(a))
   }, [dateTabs, history?.dates])
 
+  const latestSavedDate = useMemo(() => {
+    const dates = (history?.dates || []).filter(Boolean).sort((a, b) => b.localeCompare(a))
+    return dates[0] || todayKey()
+  }, [history?.dates])
+
+  useEffect(() => {
+    if (historyLoading || !latestSavedDate) return
+    const hasTodayData = (history?.dates || []).includes(todayKey())
+    if (!hasTodayData) {
+      setAnalyticsDate(prev => ((history?.dates || []).includes(prev) ? prev : latestSavedDate))
+    }
+  }, [historyLoading, latestSavedDate, history?.dates])
+
   const analytics = useMemo(() => {
     return buildAnalyticsInsights(history, analyticsTeams, analyticsRange, analyticsDate)
   }, [analyticsDate, analyticsRange, analyticsTeams, history])
@@ -2856,6 +2891,7 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
   const isAllSelected = analyticsTeams.includes('all')
   const selectedTeamIds = analytics.selectedTeamIds?.length ? analytics.selectedTeamIds : TEAM_ORDER
   const selectedTeamsLabel = isAllSelected ? 'All teams' : selectedTeamIds.map(getTeamName).join(' + ')
+  const weeklyTeamsForAnalytics = (history?.weeklyTeams || []).filter(team => selectedTeamIds.includes(team.teamId))
 
   return (
     <section className="pulse-analytics-page">
@@ -2978,7 +3014,7 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
             </div>
           </div>
 
-          <div className="pulse-analytics-grid pulse-analytics-grid-secondary">
+          <div className="pulse-analytics-grid pulse-analytics-grid-secondary pulse-analytics-grid-single">
             <div className="pulse-table-wrap pulse-chart-card pulse-chart-card-wide">
               <div className="pulse-chart-card-head">
                 <div>
@@ -2991,15 +3027,6 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
                   <span key={teamId}><i style={{ background: getTeamColor(teamId) }} />{getTeamName(teamId)}</span>
                 ))}
               </div>
-            </div>
-
-            <div className="pulse-table-wrap pulse-chart-card">
-              <div className="pulse-chart-card-head">
-                <div>
-                  <div className="pulse-table-title">Language mix per team</div>
-                </div>
-              </div>
-              <LanguageMixChart data={analytics.languageMix} />
             </div>
           </div>
 
@@ -3027,18 +3054,17 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
             <SimpleBarChart data={analytics.teamComparison} metric={comparisonMetric} />
           </div>
 
-          <div className="pulse-top-blocks-grid pulse-analytics-top-grid">
-            <RankingTopBlock title="Top English" metric="english" rows={analytics.topEnglish} navigate={navigate} />
-            <RankingTopBlock title="Top Spanish" metric="spanish" rows={analytics.topSpanish} navigate={navigate} />
-            <RankingTopBlock title="Top Total" metric="total" rows={analytics.topTotal} navigate={navigate} />
-            <RankingTopBlock title="Goal Days" metric="goalDays" rows={analytics.goalLeaders} navigate={navigate} />
-          </div>
-
-          <AnalyticsAgentsPanel rows={analytics.topTotal.concat(analytics.topEnglish, analytics.topSpanish, analytics.goalLeaders)} navigate={navigate} />
-
-          <AnalyticsAgentTable title="Top 10 English" rows={analytics.topEnglish} metric="english" navigate={navigate} />
-          <AnalyticsAgentTable title="Top 10 Spanish" rows={analytics.topSpanish} metric="spanish" navigate={navigate} />
-          <AnalyticsAgentTable title="Top 10 Goal Days" rows={analytics.goalLeaders} metric="goalDays" navigate={navigate} />
+          <section className="pulse-analytics-weekly-section">
+            <div className="pulse-section-title-row">
+              <span>👥</span>
+              <h2>Weekly Team Breakdown</h2>
+            </div>
+            <div className="pulse-analytics-weekly-list">
+              {weeklyTeamsForAnalytics.map(teamInsight => (
+                <TeamWeeklyCard key={`analytics-week-${teamInsight.teamId}`} teamInsight={teamInsight} navigate={navigate} compact />
+              ))}
+            </div>
+          </section>
         </>
       ) : null}
     </section>
@@ -3149,17 +3175,28 @@ function TeamWeeklyCard({ teamInsight, navigate }) {
   )
 }
 
-function TeamsInsightsPage({ history, historyLoading, historyError, navigate }) {
-  const teams = history?.weeklyTeams || []
+function TeamDirectoryCard({ teamId, onOpenTeam }) {
+  const team = TEAMS[teamId]
 
   return (
-    <section className="pulse-teams-list">
-      {historyLoading ? <div className="pulse-loading">Loading team history...</div> : null}
+    <button type="button" className="pulse-team-directory-card" onClick={() => onOpenTeam?.(teamId)}>
+      <div className="pulse-team-directory-flag">
+        <FlagImg src={team?.flag} size={34} alt="" />
+      </div>
+      <div className="pulse-team-directory-name">{team?.label || getTeamName(teamId)}</div>
+    </button>
+  )
+}
+
+function TeamsInsightsPage({ historyLoading, historyError, onOpenTeam }) {
+  return (
+    <section className="pulse-teams-directory-grid">
+      {historyLoading ? <div className="pulse-loading">Loading teams...</div> : null}
       {historyError ? <div className="pulse-error">{historyError}</div> : null}
 
       {!historyLoading && !historyError ? (
-        teams.map(teamInsight => (
-          <TeamWeeklyCard key={teamInsight.teamId} teamInsight={teamInsight} navigate={navigate} />
+        TEAM_ORDER.map(teamId => (
+          <TeamDirectoryCard key={teamId} teamId={teamId} onOpenTeam={onOpenTeam} />
         ))
       ) : null}
     </section>
@@ -4405,13 +4442,13 @@ export default function Dashboard() {
 
                   <h1 className="lov-hero-title" style={{ fontSize: 34, display: 'flex', alignItems: 'center', gap: 12 }}>
                     {activeView === 'teams' ? <span style={{ fontSize: 30, lineHeight: 1 }}>👥</span> : null}
-                    {activeView === 'teams' ? 'Weekly Team Breakdown' : 'Overview'}
+                    {activeView === 'teams' ? 'Teams' : 'Overview'}
                   </h1>
                 </div>
               </section>
             ) : null}
 
-            {activeView !== 'rankings' && activeView !== 'analytics' ? (
+            {activeView !== 'rankings' && activeView !== 'analytics' && activeView !== 'teams' ? (
               <section className="lov-kpi-grid lov-kpi-grid-main">
                 <LovableKpi title="English" value={dashboardTotals.english} tone="blue" />
                 <LovableKpi title="Spanish" value={dashboardTotals.spanish} tone="green" />
@@ -4449,10 +4486,9 @@ export default function Dashboard() {
               />
             ) : activeView === 'teams' ? (
               <TeamsInsightsPage
-                history={historyState.insights}
                 historyLoading={historyState.loading}
                 historyError={historyState.error}
-                navigate={navigate}
+                onOpenTeam={openTeamWithReveal}
               />
             ) : activeView === 'rankings' ? (
               <RankingsPage

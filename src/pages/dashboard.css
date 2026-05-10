@@ -2373,3 +2373,247 @@
     font-size: clamp(38px, 13vw, 62px) !important;
   }
 }
+
+/* =========================================================
+   FINAL CLEAN PATCH — analytics + teams cleanup
+   - No language mix section
+   - No analytics agent/ranking duplicates
+   - Charts without inner scrollbars
+   - Teams page becomes clean team cards only
+========================================================= */
+
+.dash-root .pulse-chart-card,
+.dash-root .pulse-all-teams-card,
+.dash-root .pulse-table-wrap {
+  box-sizing: border-box;
+}
+
+.dash-root .pulse-chart-scroll {
+  overflow: visible !important;
+  scrollbar-width: none !important;
+  padding: 6px 18px 4px !important;
+}
+
+.dash-root .pulse-chart-scroll::-webkit-scrollbar {
+  display: none !important;
+}
+
+.dash-root .pulse-line-chart {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.dash-root .pulse-chart-card-wide {
+  min-width: 0 !important;
+}
+
+.dash-root .pulse-all-teams-card .pulse-chart-card-head,
+.dash-root .pulse-chart-card .pulse-chart-card-head {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dash-root .pulse-all-teams-card .pulse-mini-tabs,
+.dash-root .pulse-chart-card .pulse-mini-tabs {
+  margin-right: 8px !important;
+}
+
+.dash-root .pulse-mini-tabs {
+  max-width: 100%;
+}
+
+.dash-root .pulse-chart-tooltip.follow-cursor {
+  z-index: 80 !important;
+  transform-origin: top left;
+}
+
+.dash-root .pulse-analytics-grid-single {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.dash-root .pulse-radar-wrap {
+  display: grid;
+  place-items: center;
+}
+
+.dash-root .pulse-radar-chart {
+  margin: 0 auto !important;
+}
+
+.dash-root .pulse-bar-chart {
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.dash-root .pulse-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 1380px);
+  margin: 10px auto 16px;
+}
+
+.dash-root .pulse-section-title-row span {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.dash-root .pulse-section-title-row h2 {
+  margin: 0;
+  color: #fff7ed;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+
+.dash-root .pulse-analytics-weekly-section {
+  width: 100%;
+  margin-top: 24px;
+}
+
+.dash-root .pulse-analytics-weekly-list {
+  width: min(100%, 1380px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dash-root .pulse-table-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.dash-root .pulse-table-head-row .pulse-table-title {
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+.dash-root .pulse-agent-local-search {
+  width: min(330px, 100%);
+  background: rgba(255,255,255,.035) !important;
+  border: 1px solid rgba(255,255,255,.09) !important;
+  color: #f5efe7 !important;
+}
+
+.dash-root .pulse-agent-local-search input {
+  color: #f5efe7 !important;
+}
+
+.dash-root .pulse-agent-local-search input::placeholder {
+  color: rgba(235,226,216,.58) !important;
+}
+
+.dash-root .pulse-teams-directory-grid {
+  width: min(100%, 1240px);
+  margin: 0 auto 40px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.dash-root .pulse-team-directory-card {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(215,185,135,.12), transparent 34%),
+    linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+  min-height: 158px;
+  border-radius: 28px;
+  padding: 24px;
+  color: #fff7ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 24px 60px rgba(0,0,0,.18);
+}
+
+.dash-root .pulse-team-directory-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(215,185,135,.34);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(215,185,135,.18), transparent 36%),
+    linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.026));
+}
+
+.dash-root .pulse-team-directory-flag {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.dash-root .pulse-team-directory-name {
+  font-size: clamp(24px, 2.3vw, 34px);
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.dash-root .pulse-analytics-controls-polished,
+.dash-root .pulse-team-filter-wrap-analytics,
+.dash-root .pulse-analytics-kpis,
+.dash-root .pulse-analytics-grid,
+.dash-root .pulse-all-teams-card,
+.dash-root .pulse-analytics-weekly-section {
+  max-width: 1380px;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.dash-root .pulse-analytics-grid-main {
+  grid-template-columns: minmax(0, 1.45fr) minmax(340px, .75fr) !important;
+  align-items: stretch;
+}
+
+.dash-root .pulse-analytics-grid-main > .pulse-chart-card,
+.dash-root .pulse-analytics-grid-secondary > .pulse-chart-card {
+  min-width: 0;
+}
+
+@media (max-width: 1180px) {
+  .dash-root .pulse-teams-directory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dash-root .pulse-analytics-grid-main {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .dash-root .pulse-teams-directory-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-root .pulse-table-head-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dash-root .pulse-agent-local-search {
+    width: 100%;
+  }
+
+  .dash-root .pulse-chart-scroll {
+    padding: 4px 6px 2px !important;
+  }
+
+  .dash-root .pulse-chart-axis-text {
+    font-size: 10px !important;
+  }
+
+  .dash-root .pulse-team-directory-card {
+    min-height: 128px;
+    border-radius: 22px;
+  }
+}
