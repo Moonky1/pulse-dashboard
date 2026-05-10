@@ -501,27 +501,55 @@ async function fetchSupabaseDates() {
   )].sort((a, b) => b.localeCompare(a))
 }
 
-async function fetchHistoryRows() {
-  const [agentResult, teamResult] = await Promise.all([
-    supabase
-      .from('pulse_agent_daily_clean')
-      .select('*')
-      .gte('date', OFFICIAL_DATA_START)
-      .order('date', { ascending: false })
-      .range(0, 49999),
+async function fetchAllSupabaseRows(tableName, select = '*', pageSize = 1000, orderColumns = []) {
+  const rows = []
+  let from = 0
 
-    supabase
-      .from('pulse_team_daily_clean')
-      .select('*')
+  // Supabase/PostgREST can silently return only the first page if we request a huge range.
+  // This loop forces Dashboard rankings to read every historical row saved in the tables,
+  // not only the current week or the first 1,000 rows.
+  while (true) {
+    const to = from + pageSize - 1
+    let query = supabase
+      .from(tableName)
+      .select(select)
       .gte('date', OFFICIAL_DATA_START)
-      .order('date', { ascending: false })
-      .range(0, 9999),
+
+    orderColumns.forEach(column => {
+      query = query.order(column.name, { ascending: column.ascending })
+    })
+
+    const { data, error } = await query.range(from, to)
+
+    if (error) throw error
+
+    const batch = data || []
+    rows.push(...batch)
+
+    if (batch.length < pageSize) break
+    from += pageSize
+
+    // Safety guard. 100k rows is far above what this dashboard needs right now.
+    if (from >= 100000) break
+  }
+
+  return rows
+}
+
+async function fetchHistoryRows() {
+  const [agentRows, teamRows] = await Promise.all([
+    fetchAllSupabaseRows('pulse_agent_daily_clean', '*', 1000, [
+      { name: 'date', ascending: false },
+      { name: 'team', ascending: true },
+      { name: 'agent_ext', ascending: true },
+    ]),
+    fetchAllSupabaseRows('pulse_team_daily_clean', '*', 1000, [
+      { name: 'date', ascending: false },
+      { name: 'team', ascending: true },
+    ]),
   ])
 
-  if (agentResult.error) throw agentResult.error
-  if (teamResult.error) throw teamResult.error
-
-  return buildHistoryInsights(agentResult.data || [], teamResult.data || [])
+  return buildHistoryInsights(agentRows || [], teamRows || [])
 }
 
 function buildAllTimeAgentRankings(agentRows = []) {
@@ -530,7 +558,8 @@ function buildAllTimeAgentRankings(agentRows = []) {
   dedupeDailyAgents((agentRows || []).map(normalizeSupabaseAgent))
     .filter(agent => agent.date && agent.ext && (agent.english > 0 || agent.spanish > 0 || agent.total > 0))
     .forEach(agent => {
-      const current = byAgent.get(agent.ext) || {
+      const agentKey = `${agent.teamId}|${agent.ext}`
+      const current = byAgent.get(agentKey) || {
         ext: agent.ext,
         name: agent.name,
         teamId: agent.teamId,
@@ -570,7 +599,7 @@ function buildAllTimeAgentRankings(agentRows = []) {
         current.bestDate = agent.date
       }
 
-      byAgent.set(agent.ext, current)
+      byAgent.set(agentKey, current)
     })
 
   return [...byAgent.values()].map(agent => ({
@@ -639,7 +668,8 @@ function buildEnglishPlacementAgents(agentRows = []) {
     const sorted = sortAgentsByMetric(agents, 'english')
 
     sorted.slice(0, 3).forEach((agent, index) => {
-      const current = byAgent.get(agent.ext) || {
+      const agentKey = `${agent.teamId}|${agent.ext}`
+      const current = byAgent.get(agentKey) || {
         ext: agent.ext,
         name: agent.name,
         teamId: agent.teamId,
@@ -661,7 +691,7 @@ function buildEnglishPlacementAgents(agentRows = []) {
         current.bestDate = date
       }
 
-      byAgent.set(agent.ext, current)
+      byAgent.set(agentKey, current)
     })
   })
 
@@ -751,7 +781,8 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
     const byAgent = new Map()
 
     weekAgentRows.forEach(agent => {
-      const current = byAgent.get(agent.ext) || {
+      const agentKey = `${agent.teamId}|${agent.ext}`
+      const current = byAgent.get(agentKey) || {
         ext: agent.ext,
         name: agent.name,
         teamId: agent.teamId,
@@ -791,7 +822,7 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
         current.bestDate = agent.date
       }
 
-      byAgent.set(agent.ext, current)
+      byAgent.set(agentKey, current)
     })
 
     const weekAgents = [...byAgent.values()].map(agent => {
@@ -1708,7 +1739,7 @@ function RankingsPage({ history, historyLoading, historyError, navigate }) {
         <>
           <AgentRankingTable
             title="🔵 Top 10 English Xfers"
-            subtitle="All-time English transfers from Supabase."
+            subtitle=""
             rows={topEnglish}
             metric="english"
             navigate={navigate}
@@ -1716,7 +1747,7 @@ function RankingsPage({ history, historyLoading, historyError, navigate }) {
 
           <AgentRankingTable
             title="🟢 Top 10 Spanish Xfers"
-            subtitle="All-time Spanish transfers from Supabase."
+            subtitle=""
             rows={topSpanish}
             metric="spanish"
             navigate={navigate}
@@ -1951,8 +1982,25 @@ function DashboardResponsivePolishStyle() {
 
       .pulse-top-block-title,
       .pulse-summary-title,
-      .lov-kpi-title {
+      .lov-kpi-title,
+      .pulse-table-title {
         font-weight: 800 !important;
+      }
+
+      .pulse-table td,
+      .pulse-table .linkish,
+      .pulse-top-block-name,
+      .pulse-top3-name {
+        font-weight: 400 !important;
+      }
+
+      .pulse-table th {
+        font-weight: 800 !important;
+      }
+
+      .pulse-hero-sub:empty,
+      .pulse-summary-subtitle:empty {
+        display: none;
       }
 
       @media (max-width: 1250px) {
@@ -2366,7 +2414,7 @@ export default function Dashboard() {
                   {activeView === 'teams' ? null : (
                     <div className="lov-hero-badge">
                       {selectedDate === todayKey()
-                        ? '● Today — live from Supabase'
+                        ? '● Today — live data'
                         : `Saved snapshot · ${formatDateLabel(selectedDate)}`}
                     </div>
                   )}
