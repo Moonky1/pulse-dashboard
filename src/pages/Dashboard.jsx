@@ -6,6 +6,7 @@ import './dashboard.css'
 const CLEAN_START_DATE = '2026-03-23'
 const OFFICIAL_DATA_START = '2026-03-23'
 const POLL_MS = 10000
+const SUPABASE_PAGE_SIZE = 1000
 
 const MEDALS = ['/emojis/medal1.webp', '/emojis/medal2.webp', '/emojis/medal3.webp']
 const TEAM_RANK_EMOJIS = ['/emojis/goal1.webp', '/emojis/goal3.webp', '/emojis/goal4.webp']
@@ -65,6 +66,20 @@ const SORT_OPTIONS = [
   { id: 'spanish', label: 'Spanish Xfers' },
   { id: 'total', label: 'Total Xfers' },
 ]
+
+const TEAM_COLORS = {
+  philippines: '#38bdf8',
+  mexico: '#34d399',
+  colombia: '#f59e0b',
+  asia: '#8b5cf6',
+  central: '#fb923c',
+  venezuela: '#fb7185',
+}
+
+const BUSINESS_HOURS = {
+  weekday: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+  saturday: ['11:00', '12:00', '13:00', '14:00', '15:00', '16:00'],
+}
 
 const SIDEBAR_GROUPS = [
   {
@@ -194,7 +209,60 @@ function getMetricColor(metric) {
   if (metric === 'invalid') return '#fb7185'
   if (metric === 'goalDays') return '#fbbf24'
   if (metric === 'lowestXfers') return '#fbbf24'
-  return '#ff8a2a'
+  return '#e98a34'
+}
+
+function getTeamColor(teamId) {
+  return TEAM_COLORS[teamId] || '#e98a34'
+}
+
+function getBusinessHoursForDate(dateKey) {
+  return isSaturdayDateKey(dateKey) ? BUSINESS_HOURS.saturday : BUSINESS_HOURS.weekday
+}
+
+function playPulseSound(type = 'click') {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext
+    if (!AudioCtx) return
+
+    const ctx = new AudioCtx()
+    const now = ctx.currentTime
+    const tones = type === 'goal'
+      ? [
+          { f: 660, t: 0, d: 0.09, g: 0.055 },
+          { f: 880, t: 0.09, d: 0.11, g: 0.05 },
+          { f: 1175, t: 0.2, d: 0.16, g: 0.045 },
+        ]
+      : type === 'team'
+        ? [
+            { f: 196, t: 0, d: 0.14, g: 0.038 },
+            { f: 392, t: 0.05, d: 0.18, g: 0.034 },
+            { f: 587, t: 0.14, d: 0.18, g: 0.03 },
+            { f: 784, t: 0.28, d: 0.2, g: 0.026 },
+          ]
+        : [
+            { f: 440, t: 0, d: 0.05, g: 0.026 },
+            { f: 620, t: 0.045, d: 0.06, g: 0.022 },
+          ]
+
+    tones.forEach(tone => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(tone.f, now + tone.t)
+      gain.gain.setValueAtTime(0.0001, now + tone.t)
+      gain.gain.exponentialRampToValueAtTime(tone.g, now + tone.t + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + tone.t + tone.d)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(now + tone.t)
+      osc.stop(now + tone.t + tone.d + 0.02)
+    })
+
+    window.setTimeout(() => ctx.close?.(), 700)
+  } catch (err) {
+    // Sounds are a nice-to-have. Never break the dashboard if the browser blocks audio.
+  }
 }
 
 function getTeamName(teamId) {
@@ -274,6 +342,42 @@ function TeamInlineLabel({ teamId, teamFlag, teamLabel }) {
   )
 }
 
+function TeamRevealOverlay({ reveal, onDone }) {
+  const teamId = reveal?.teamId
+  const team = TEAMS[teamId]
+
+  useEffect(() => {
+    if (!teamId) return undefined
+
+    const timer = window.setTimeout(() => {
+      onDone?.()
+    }, 1550)
+
+    return () => window.clearTimeout(timer)
+  }, [teamId, reveal?.key, onDone])
+
+  if (!team) return null
+
+  return (
+    <div className="team-reveal-overlay" key={reveal?.key}>
+      <div className="team-reveal-bg" />
+      <div className="team-reveal-card" style={{ '--team-reveal-accent': getTeamColor(teamId) }}>
+        <div className="team-reveal-orb team-reveal-orb-one" />
+        <div className="team-reveal-orb team-reveal-orb-two" />
+
+        <div className="team-reveal-flag-wrap">
+          <div className="team-reveal-flag-glow" />
+          <FlagImg src={team.flag} size={96} alt={team.label} />
+        </div>
+
+        <div className="team-reveal-kicker">Loading team pulse</div>
+        <div className="team-reveal-name">{team.label}</div>
+        <div className="team-reveal-line" />
+      </div>
+    </div>
+  )
+}
+
 function SummaryCard({ title, value, color, subtitle, titleColor }) {
   return (
     <div className="pulse-summary-card">
@@ -296,15 +400,15 @@ function LovableKpi({ title, value, tone }) {
 function normalizeSupabaseAgent(row) {
   const english = Number(row?.english || 0)
   const spanish = Number(row?.spanish || 0)
-  const invalidTransfers = Number(row?.invalid_transfers || 0)
-  const rawTotal = Number(row?.raw_total ?? (english + spanish))
-  const total = Number(row?.net_total ?? Math.max(0, rawTotal - invalidTransfers))
-  const teamId = String(row?.team || '').trim()
+  const invalidTransfers = Number(row?.invalid_transfers ?? row?.invalidTransfers ?? 0)
+  const rawTotal = Number(row?.raw_total ?? row?.rawTotal ?? (english + spanish))
+  const total = Number(row?.net_total ?? row?.total ?? Math.max(0, rawTotal - invalidTransfers))
+  const teamId = String(row?.team ?? row?.teamId ?? '').trim()
 
   return {
     date: normalizeDate(row?.date),
-    ext: String(row?.agent_ext || '').trim(),
-    name: String(row?.agent_name || '').trim(),
+    ext: String(row?.agent_ext ?? row?.ext ?? '').trim(),
+    name: String(row?.agent_name ?? row?.name ?? '').trim(),
     teamId,
     team: teamId,
     teamLabel: getTeamName(teamId),
@@ -315,7 +419,7 @@ function normalizeSupabaseAgent(row) {
     rawTotal,
     total,
     source: String(row?.source || ''),
-    isFinal: Boolean(row?.is_final),
+    isFinal: Boolean(row?.is_final ?? row?.isFinal),
   }
 }
 
@@ -358,13 +462,46 @@ function dedupeDailyAgents(normalizedAgents = []) {
   return [...byKey.values()]
 }
 
+
+function dedupeDailyTeams(normalizedTeams = []) {
+  const byKey = new Map()
+
+  ;(normalizedTeams || []).forEach(team => {
+    if (!team?.date || !team?.teamId) return
+
+    const key = `${team.date}|${team.teamId}`
+    const previous = byKey.get(key)
+
+    if (!previous) {
+      byKey.set(key, team)
+      return
+    }
+
+    const previousIsFinal = Boolean(previous.isFinal)
+    const currentIsFinal = Boolean(team.isFinal)
+    const previousScore = Number(previous.rawTotal || previous.total || 0)
+    const currentScore = Number(team.rawTotal || team.total || 0)
+
+    if (currentIsFinal && !previousIsFinal) {
+      byKey.set(key, team)
+      return
+    }
+
+    if (!currentIsFinal && previousIsFinal) return
+
+    if (currentScore >= previousScore) byKey.set(key, team)
+  })
+
+  return [...byKey.values()]
+}
+
 function normalizeSupabaseTeam(row) {
-  const teamId = String(row?.team || '').trim()
+  const teamId = String(row?.team ?? row?.teamId ?? '').trim()
   const english = Number(row?.english || 0)
   const spanish = Number(row?.spanish || 0)
-  const invalidTransfers = Number(row?.invalid_transfers || 0)
-  const rawTotal = Number(row?.raw_total ?? (english + spanish))
-  const total = Number(row?.net_total ?? Math.max(0, rawTotal - invalidTransfers))
+  const invalidTransfers = Number(row?.invalid_transfers ?? row?.invalidTransfers ?? 0)
+  const rawTotal = Number(row?.raw_total ?? row?.rawTotal ?? (english + spanish))
+  const total = Number(row?.net_total ?? row?.total ?? Math.max(0, rawTotal - invalidTransfers))
 
   return {
     date: normalizeDate(row?.date),
@@ -377,9 +514,9 @@ function normalizeSupabaseTeam(row) {
     invalidTransfers,
     rawTotal,
     total,
-    activeAgents: Number(row?.active_agents || 0),
+    activeAgents: Number(row?.active_agents ?? row?.activeAgents ?? 0),
     source: String(row?.source || ''),
-    isFinal: Boolean(row?.is_final),
+    isFinal: Boolean(row?.is_final ?? row?.isFinal),
   }
 }
 
@@ -464,6 +601,7 @@ function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
   return teamMap
 }
 
+
 async function fetchSupabaseDashboardDate(date) {
   const [teamResult, agentResult] = await Promise.all([
     supabase
@@ -538,14 +676,12 @@ async function fetchAllSupabaseRows(tableName, select = '*', pageSize = 1000, or
 
 async function fetchHistoryRows() {
   const [agentRows, teamRows] = await Promise.all([
-    fetchAllSupabaseRows('pulse_agent_daily_clean', '*', 1000, [
+    fetchAllSupabaseRows('pulse_agent_daily_clean', '*', SUPABASE_PAGE_SIZE, [
       { name: 'date', ascending: false },
-      { name: 'team', ascending: true },
-      { name: 'agent_ext', ascending: true },
     ]),
-    fetchAllSupabaseRows('pulse_team_daily_clean', '*', 1000, [
+
+    fetchAllSupabaseRows('pulse_team_daily_clean', '*', SUPABASE_PAGE_SIZE, [
       { name: 'date', ascending: false },
-      { name: 'team', ascending: true },
     ]),
   ])
 
@@ -887,9 +1023,19 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
 }
 
 function buildHistoryInsights(agentRows = [], teamRows = []) {
-  const cleanAgentRows = (agentRows || []).filter(row => normalizeDate(row?.date) >= OFFICIAL_DATA_START)
-  const cleanTeamRows = (teamRows || []).filter(row => normalizeDate(row?.date) >= OFFICIAL_DATA_START)
-  const dates = [...new Set(cleanTeamRows.map(row => normalizeDate(row?.date)).filter(Boolean))].sort()
+  const cleanAgentRows = dedupeDailyAgents(
+    (agentRows || [])
+      .map(normalizeSupabaseAgent)
+      .filter(row => row.date && row.date >= OFFICIAL_DATA_START && row.ext && row.teamId),
+  )
+
+  const cleanTeamRows = dedupeDailyTeams(
+    (teamRows || [])
+      .map(normalizeSupabaseTeam)
+      .filter(row => row.date && row.date >= OFFICIAL_DATA_START && row.teamId),
+  )
+
+  const dates = [...new Set(cleanTeamRows.map(row => row.date).filter(Boolean))].sort()
   const allTimeAgents = buildAllTimeAgentRankings(cleanAgentRows)
   const allTimeTeams = buildAllTimeTeamRankings(cleanTeamRows)
   const placement = buildEnglishPlacementAgents(cleanAgentRows)
@@ -897,6 +1043,8 @@ function buildHistoryInsights(agentRows = [], teamRows = []) {
   return {
     dates,
     datesTracked: dates.length,
+    dailyAgents: cleanAgentRows,
+    dailyTeams: cleanTeamRows,
     allTimeAgents,
     allTimeTeams,
     topAllTimeTotalAgents: sortAgentsByMetric(allTimeAgents, 'total').slice(0, 10),
@@ -1056,6 +1204,11 @@ function LovableHeader({
           <input
             value={searchQuery}
             placeholder="Search agent name or extension..."
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck="false"
+            name="pulse-global-search"
             onChange={event => onSearchChange(event.target.value)}
             onKeyDown={event => {
               if (event.key === 'Enter') onSearchSubmit()
@@ -1160,7 +1313,10 @@ function SortTabs({ sortMetric, onChange }) {
         <button
           key={option.id}
           className={`pulse-sort-tab ${sortMetric === option.id ? 'active' : ''}`}
-          onClick={() => onChange(option.id)}
+          onClick={() => {
+            playPulseSound('click')
+            onChange(option.id)
+          }}
         >
           {option.label}
         </button>
@@ -1296,6 +1452,7 @@ function DateSelectorRow({ dates = [], selectedDate, onChange }) {
                       key={date}
                       type="button"
                       onClick={() => {
+                        playPulseSound('click')
                         onChange(date)
                         setOpen(false)
                       }}
@@ -1766,6 +1923,993 @@ function RankingsPage({ history, historyLoading, historyError, navigate }) {
   )
 }
 
+
+function getMonthStartKey(dateKey) {
+  const date = normalizeDate(dateKey) || todayKey()
+  return `${date.slice(0, 7)}-01`
+}
+
+function getMonthEndKey(dateKey) {
+  const date = normalizeDate(dateKey) || todayKey()
+  const [year, month] = date.split('-').map(Number)
+  const d = new Date(Date.UTC(year, month, 0, 12, 0, 0))
+  return d.toISOString().slice(0, 10)
+}
+
+function getRangeBounds(rangeMode, anchorDate, availableDates = []) {
+  const date = normalizeDate(anchorDate) || todayKey()
+  const sortedDates = [...new Set((availableDates || []).map(normalizeDate).filter(Boolean))].sort()
+
+  if (rangeMode === 'day') return { start: date, end: date, label: formatDateLabel(date) }
+
+  if (rangeMode === 'week') {
+    const start = getWeekStartKey(date)
+    const end = getWeekEndKey(start)
+    return { start, end, label: `${formatDateLabel(start)} - ${formatDateLabel(end)}` }
+  }
+
+  if (rangeMode === 'month') {
+    const start = getMonthStartKey(date)
+    const end = getMonthEndKey(date)
+    return { start, end, label: `${formatDateLabel(start)} - ${formatDateLabel(end)}` }
+  }
+
+  const start = sortedDates[0] || OFFICIAL_DATA_START
+  const end = sortedDates[sortedDates.length - 1] || todayKey()
+  return { start, end, label: 'All Time' }
+}
+
+function isDateInsideRange(date, start, end) {
+  const normalized = normalizeDate(date)
+  if (!normalized || !start || !end) return false
+  return normalized >= start && normalized <= end
+}
+
+function isTeamSelected(teamId, selectedTeams = []) {
+  return selectedTeams.includes('all') || selectedTeams.length === 0 || selectedTeams.includes(teamId)
+}
+
+function buildAnalyticsInsights(history, selectedTeams = ['all'], rangeMode = 'week', anchorDate = todayKey()) {
+  const dailyAgents = history?.dailyAgents || []
+  const dailyTeams = history?.dailyTeams || []
+  const range = getRangeBounds(rangeMode, anchorDate, history?.dates || [])
+  const selectedTeamIds = selectedTeams.includes('all') || selectedTeams.length === 0 ? TEAM_ORDER : selectedTeams
+
+  const teamRows = dailyTeams.filter(row => selectedTeamIds.includes(row.teamId) && isDateInsideRange(row.date, range.start, range.end))
+  const agentRows = dailyAgents.filter(row => selectedTeamIds.includes(row.teamId) && isDateInsideRange(row.date, range.start, range.end))
+
+  const summary = teamRows.reduce((acc, row) => {
+    acc.english += Number(row.english || 0)
+    acc.spanish += Number(row.spanish || 0)
+    acc.invalid += Number(row.invalidTransfers || 0)
+    acc.total += Number(row.total || 0)
+    acc.activeAgents = Math.max(acc.activeAgents, Number(row.activeAgents || 0))
+    return acc
+  }, { english: 0, spanish: 0, invalid: 0, total: 0, activeAgents: 0 })
+
+  const byDate = new Map()
+  ;(history?.dates || []).forEach(date => {
+    if (isDateInsideRange(date, range.start, range.end)) {
+      byDate.set(date, { date, label: formatDateLabel(date), english: 0, spanish: 0, total: 0, invalid: 0 })
+    }
+  })
+
+  teamRows.forEach(row => {
+    const current = byDate.get(row.date) || { date: row.date, label: formatDateLabel(row.date), english: 0, spanish: 0, total: 0, invalid: 0 }
+    current.english += Number(row.english || 0)
+    current.spanish += Number(row.spanish || 0)
+    current.total += Number(row.total || 0)
+    current.invalid += Number(row.invalidTransfers || 0)
+    byDate.set(row.date, current)
+  })
+
+  const trend = [...byDate.values()]
+    .filter(row => row.english > 0 || row.spanish > 0 || row.total > 0 || rangeMode !== 'all_time')
+    .sort((a, b) => a.date.localeCompare(b.date))
+
+  const byTeam = new Map()
+  selectedTeamIds.forEach(teamId => {
+    byTeam.set(teamId, {
+      teamId,
+      teamLabel: getTeamName(teamId),
+      teamFlag: getTeamFlag(teamId),
+      english: 0,
+      spanish: 0,
+      total: 0,
+      invalid: 0,
+      activeAgents: 0,
+      daysTracked: 0,
+      goalDays: 0,
+      bestTotal: 0,
+      bestEnglish: 0,
+      bestSpanish: 0,
+    })
+  })
+
+  const allTeamsByDate = new Map()
+  ;(history?.dates || []).forEach(date => {
+    if (!isDateInsideRange(date, range.start, range.end)) return
+    const row = { date, label: formatDateLabel(date) }
+    TEAM_ORDER.forEach(teamId => { row[teamId] = 0 })
+    allTeamsByDate.set(date, row)
+  })
+
+  teamRows.forEach(row => {
+    const current = byTeam.get(row.teamId) || {
+      teamId: row.teamId,
+      teamLabel: getTeamName(row.teamId),
+      teamFlag: getTeamFlag(row.teamId),
+      english: 0,
+      spanish: 0,
+      total: 0,
+      invalid: 0,
+      activeAgents: 0,
+      daysTracked: 0,
+      goalDays: 0,
+      bestTotal: 0,
+      bestEnglish: 0,
+      bestSpanish: 0,
+    }
+
+    current.english += Number(row.english || 0)
+    current.spanish += Number(row.spanish || 0)
+    current.total += Number(row.total || 0)
+    current.invalid += Number(row.invalidTransfers || 0)
+    current.activeAgents = Math.max(current.activeAgents, Number(row.activeAgents || 0))
+    current.daysTracked += 1
+    current.bestTotal = Math.max(current.bestTotal, Number(row.total || 0))
+    current.bestEnglish = Math.max(current.bestEnglish, Number(row.english || 0))
+    current.bestSpanish = Math.max(current.bestSpanish, Number(row.spanish || 0))
+    byTeam.set(row.teamId, current)
+
+    const dateRow = allTeamsByDate.get(row.date) || { date: row.date, label: formatDateLabel(row.date) }
+    TEAM_ORDER.forEach(teamId => {
+      if (dateRow[teamId] == null) dateRow[teamId] = 0
+    })
+    dateRow[row.teamId] = Number(row.total || 0)
+    dateRow[`${row.teamId}_english`] = Number(row.english || 0)
+    dateRow[`${row.teamId}_spanish`] = Number(row.spanish || 0)
+    allTeamsByDate.set(row.date, dateRow)
+  })
+
+  const byAgent = new Map()
+  agentRows.forEach(agent => {
+    const key = `${agent.teamId}|${agent.ext}`
+    const current = byAgent.get(key) || {
+      ext: agent.ext,
+      name: agent.name,
+      teamId: agent.teamId,
+      teamLabel: agent.teamLabel,
+      teamFlag: agent.teamFlag,
+      english: 0,
+      spanish: 0,
+      total: 0,
+      rawTotal: 0,
+      goalDays: 0,
+      activeDays: 0,
+      bestEnglish: 0,
+      bestTotal: 0,
+      bestDate: agent.date,
+      activeDateKeys: new Set(),
+      goalDateKeys: new Set(),
+    }
+
+    const dayEnglish = Number(agent.english || 0)
+    const daySpanish = Number(agent.spanish || 0)
+    const dayTotal = Number(agent.total || agent.rawTotal || dayEnglish + daySpanish)
+
+    current.name = agent.name || current.name
+    current.english += dayEnglish
+    current.spanish += daySpanish
+    current.total += dayTotal
+    current.rawTotal += Number(agent.rawTotal || dayTotal)
+
+    if (dayTotal > 0 && agent.date) current.activeDateKeys.add(agent.date)
+    if (dayTotal > 0 && agentReachedGoal({ ...agent, total: dayTotal, rawTotal: dayTotal })) current.goalDateKeys.add(agent.date)
+
+    if (dayEnglish > current.bestEnglish) {
+      current.bestEnglish = dayEnglish
+      current.bestDate = agent.date
+    }
+
+    if (dayTotal > current.bestTotal) current.bestTotal = dayTotal
+
+    byAgent.set(key, current)
+  })
+
+  const agentAggregates = [...byAgent.values()].map(agent => ({
+    ...agent,
+    activeDays: agent.activeDateKeys.size,
+    goalDays: agent.goalDateKeys.size,
+  }))
+
+  const teamComparison = [...byTeam.values()]
+    .filter(team => team.english > 0 || team.spanish > 0 || team.total > 0)
+    .map(team => ({
+      ...team,
+      avgEnglish: team.daysTracked ? team.english / team.daysTracked : 0,
+      avgSpanish: team.daysTracked ? team.spanish / team.daysTracked : 0,
+      avgTotal: team.daysTracked ? team.total / team.daysTracked : 0,
+    }))
+    .sort((a, b) => Number(b.total || 0) - Number(a.total || 0))
+
+  const dailyGoalAgents = agentRows.filter(agent => agentReachedGoal(agent))
+  dailyGoalAgents.forEach(agent => {
+    const current = byTeam.get(agent.teamId)
+    if (current) current.goalDays += 1
+  })
+
+  const allTeamsTrend = [...allTeamsByDate.values()]
+    .filter(row => TEAM_ORDER.some(teamId => Number(row[teamId] || 0) > 0))
+    .sort((a, b) => a.date.localeCompare(b.date))
+
+  const languageMix = teamComparison.map(team => ({
+    ...team,
+    englishPct: team.total ? (team.english / team.total) * 100 : 0,
+    spanishPct: team.total ? (team.spanish / team.total) * 100 : 0,
+    invalidPct: team.total ? (team.invalid / team.total) * 100 : 0,
+  }))
+
+  const selectedTeamForProfile = selectedTeamIds.length === 1 ? selectedTeamIds[0] : (teamComparison[0]?.teamId || 'all')
+  const profileTeam = selectedTeamForProfile === 'all'
+    ? null
+    : teamComparison.find(team => team.teamId === selectedTeamForProfile) || null
+
+  const radarTeams = selectedTeamIds.length === 1
+    ? [selectedTeamIds[0]]
+    : TEAM_ORDER.filter(teamId => byTeam.has(teamId))
+
+  const radarAxes = ['English', 'Spanish', 'Total', 'Goal', 'Active', 'Best']
+  const radarMax = {
+    English: Math.max(1, ...teamComparison.map(t => Number(t.english || 0))),
+    Spanish: Math.max(1, ...teamComparison.map(t => Number(t.spanish || 0))),
+    Total: Math.max(1, ...teamComparison.map(t => Number(t.total || 0))),
+    Goal: Math.max(1, ...teamComparison.map(t => Number(t.goalDays || 0))),
+    Active: Math.max(1, ...teamComparison.map(t => Number(t.activeAgents || 0))),
+    Best: Math.max(1, ...teamComparison.map(t => Number(t.bestTotal || 0))),
+  }
+
+  const radarData = radarTeams
+    .map(teamId => byTeam.get(teamId))
+    .filter(Boolean)
+    .map(team => ({
+      teamId: team.teamId,
+      label: team.teamLabel,
+      color: getTeamColor(team.teamId),
+      values: {
+        English: Number(team.english || 0) / radarMax.English,
+        Spanish: Number(team.spanish || 0) / radarMax.Spanish,
+        Total: Number(team.total || 0) / radarMax.Total,
+        Goal: Number(team.goalDays || 0) / radarMax.Goal,
+        Active: Number(team.activeAgents || 0) / radarMax.Active,
+        Best: Number(team.bestTotal || 0) / radarMax.Best,
+      },
+    }))
+
+  const selectedDateRows = dailyTeams.filter(row => selectedTeamIds.includes(row.teamId) && row.date === anchorDate)
+  const currentDayRows = selectedDateRows.length ? selectedDateRows : teamRows.filter(row => row.date === range.end)
+  const hours = getBusinessHoursForDate(anchorDate)
+  const hourlyCompared = hours.map((hour, index) => {
+    const row = { hour }
+    const progress = hours.length <= 1 ? 1 : (index + 1) / hours.length
+
+    TEAM_ORDER.forEach(teamId => {
+      const team = currentDayRows.find(item => item.teamId === teamId)
+      const activeAgents = Math.max(1, Number(team?.activeAgents || 0))
+      const total = Number(team?.total || 0)
+      const dailyPace = total / activeAgents / Math.max(1, hours.length)
+      row[teamId] = Number((dailyPace * (1.1 - progress * 0.16)).toFixed(2))
+    })
+
+    return row
+  })
+
+  return {
+    range,
+    summary,
+    trend,
+    teamComparison,
+    allTeamsTrend,
+    languageMix,
+    radarAxes,
+    radarData,
+    profileTeam,
+    hourlyCompared,
+    selectedTeamIds,
+    topEnglish: sortAgentsByMetric(agentAggregates, 'english').slice(0, 10),
+    topSpanish: sortAgentsByMetric(agentAggregates, 'spanish').slice(0, 10),
+    topTotal: sortAgentsByMetric(agentAggregates, 'total').slice(0, 10),
+    goalLeaders: [...agentAggregates]
+      .filter(agent => Number(agent.goalDays || 0) > 0)
+      .sort((a, b) => {
+        const goalDiff = Number(b.goalDays || 0) - Number(a.goalDays || 0)
+        if (goalDiff !== 0) return goalDiff
+        const englishDiff = Number(b.english || 0) - Number(a.english || 0)
+        if (englishDiff !== 0) return englishDiff
+        return Number(b.total || 0) - Number(a.total || 0)
+      })
+      .slice(0, 10),
+    lowestXfers: sortAgentsByLowestXfers(agentAggregates.map(agent => ({
+      ...agent,
+      lowestXfers: agent.total,
+      weekXfers: agent.total,
+    }))).slice(0, 10),
+  }
+}
+
+function SimpleLineChart({ data = [], series = [], height = 280 }) {
+  const width = 760
+  const pad = { top: 18, right: 18, bottom: 36, left: 54 }
+  const innerW = width - pad.left - pad.right
+  const innerH = height - pad.top - pad.bottom
+  const maxValue = Math.max(1, ...data.flatMap(row => series.map(item => Number(row[item.key] || 0))))
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(n => Math.round(maxValue * n))
+
+  const xForIndex = index => {
+    if (data.length <= 1) return pad.left + innerW / 2
+    return pad.left + (index / (data.length - 1)) * innerW
+  }
+
+  const yForValue = value => pad.top + innerH - (Number(value || 0) / maxValue) * innerH
+
+  return (
+    <div className="pulse-chart-scroll">
+      <svg className="pulse-line-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Performance trend">
+        {yTicks.map((tick, index) => {
+          const y = yForValue(tick)
+          return (
+            <g key={`tick-${index}`}>
+              <line x1={pad.left} x2={width - pad.right} y1={y} y2={y} className="pulse-chart-grid-line" />
+              <text x={pad.left - 12} y={y + 4} textAnchor="end" className="pulse-chart-axis-text">{tick.toLocaleString()}</text>
+            </g>
+          )
+        })}
+
+        {series.map(item => {
+          const points = data.map((row, index) => `${xForIndex(index)},${yForValue(row[item.key])}`).join(' ')
+          const areaPoints = data.length
+            ? `${pad.left},${pad.top + innerH} ${points} ${xForIndex(data.length - 1)},${pad.top + innerH}`
+            : ''
+
+          return (
+            <g key={item.key}>
+              {areaPoints ? <polygon points={areaPoints} fill={item.color} opacity="0.08" /> : null}
+              <polyline points={points} fill="none" stroke={item.color} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </g>
+          )
+        })}
+
+        {data.map((row, index) => {
+          if (data.length > 8 && index !== 0 && index !== data.length - 1 && index % Math.ceil(data.length / 4) !== 0) return null
+          return (
+            <text key={`x-${row.date}`} x={xForIndex(index)} y={height - 12} textAnchor="middle" className="pulse-chart-axis-text">
+              {row.date?.slice(5).replace('-', '/')}
+            </text>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
+function SimpleBarChart({ data = [], metric = 'total' }) {
+  const maxValue = Math.max(1, ...data.map(row => Number(row[metric] || 0)))
+  const color = getMetricColor(metric)
+
+  return (
+    <div className="pulse-bar-chart">
+      {data.map(row => {
+        const value = Number(row[metric] || 0)
+        const pct = Math.max(4, Math.round((value / maxValue) * 100))
+
+        return (
+          <div key={row.teamId} className="pulse-bar-row">
+            <div className="pulse-bar-label">
+              <FlagImg src={row.teamFlag} size={18} alt="" />
+              <span>{row.teamLabel}</span>
+            </div>
+            <div className="pulse-bar-track">
+              <div className="pulse-bar-fill" style={{ width: `${pct}%`, background: color }} />
+            </div>
+            <strong style={{ color }}>{value.toLocaleString()}</strong>
+          </div>
+        )
+      })}
+
+      {!data.length ? <div className="pulse-summary-subtitle">No chart data for this selection yet.</div> : null}
+    </div>
+  )
+}
+
+function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total', height = 300 }) {
+  const [hoverIndex, setHoverIndex] = useState(null)
+  const width = 860
+  const pad = { top: 18, right: 24, bottom: 42, left: 58 }
+  const innerW = width - pad.left - pad.right
+  const innerH = height - pad.top - pad.bottom
+  const activeTeamIds = (teamIds || TEAM_ORDER).filter(teamId => TEAM_ORDER.includes(teamId))
+  const metricKey = teamId => metric === 'english' || metric === 'spanish' ? `${teamId}_${metric}` : teamId
+  const values = data.flatMap(row => activeTeamIds.map(teamId => Number(row[metricKey(teamId)] ?? row[teamId] ?? 0)))
+  const maxValue = Math.max(1, ...values)
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(n => Math.round(maxValue * n))
+  const xForIndex = index => data.length <= 1 ? pad.left + innerW / 2 : pad.left + (index / (data.length - 1)) * innerW
+  const yForValue = value => pad.top + innerH - (Number(value || 0) / maxValue) * innerH
+
+  const handleMove = event => {
+    if (!data.length) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) / rect.width) * width
+    const pct = Math.min(1, Math.max(0, (x - pad.left) / Math.max(1, innerW)))
+    const index = Math.round(pct * (data.length - 1))
+    setHoverIndex(Math.min(data.length - 1, Math.max(0, index)))
+  }
+
+  const hoverRow = hoverIndex != null ? data[hoverIndex] : null
+
+  return (
+    <div className="pulse-chart-scroll pulse-multiline-wrap">
+      <svg
+        className="pulse-line-chart pulse-multiline-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="All teams compared"
+        onMouseMove={handleMove}
+        onMouseLeave={() => setHoverIndex(null)}
+      >
+        {yTicks.map((tick, index) => {
+          const y = yForValue(tick)
+          return (
+            <g key={`mt-y-${index}`}>
+              <line x1={pad.left} x2={width - pad.right} y1={y} y2={y} className="pulse-chart-grid-line" />
+              <text x={pad.left - 12} y={y + 4} textAnchor="end" className="pulse-chart-axis-text">{tick.toLocaleString()}</text>
+            </g>
+          )
+        })}
+
+        {activeTeamIds.map(teamId => {
+          const points = data.map((row, index) => `${xForIndex(index)},${yForValue(row[metricKey(teamId)] ?? row[teamId] ?? 0)}`).join(' ')
+          return <polyline key={teamId} points={points} fill="none" stroke={getTeamColor(teamId)} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        })}
+
+        {data.map((row, index) => {
+          if (data.length > 8 && index !== 0 && index !== data.length - 1 && index % Math.ceil(data.length / 4) !== 0) return null
+          return (
+            <text key={`mt-x-${row.date}`} x={xForIndex(index)} y={height - 14} textAnchor="middle" className="pulse-chart-axis-text">
+              {row.date?.slice(5).replace('-', '/')}
+            </text>
+          )
+        })}
+
+        {hoverRow ? (
+          <g>
+            <line x1={xForIndex(hoverIndex)} x2={xForIndex(hoverIndex)} y1={pad.top} y2={pad.top + innerH} className="pulse-chart-hover-line" />
+            {activeTeamIds.map(teamId => (
+              <circle
+                key={`dot-${teamId}`}
+                cx={xForIndex(hoverIndex)}
+                cy={yForValue(hoverRow[metricKey(teamId)] ?? hoverRow[teamId] ?? 0)}
+                r="5"
+                fill={getTeamColor(teamId)}
+                stroke="#080604"
+                strokeWidth="2"
+              />
+            ))}
+          </g>
+        ) : null}
+      </svg>
+
+      {hoverRow ? (
+        <div className="pulse-chart-tooltip">
+          <strong>{formatDateLabel(hoverRow.date)}</strong>
+          {activeTeamIds.map(teamId => (
+            <span key={teamId} style={{ color: getTeamColor(teamId) }}>
+              {getTeamName(teamId)}: {Number(hoverRow[metricKey(teamId)] ?? hoverRow[teamId] ?? 0).toLocaleString()}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function RadarChart({ axes = [], data = [], size = 300 }) {
+  const cx = size / 2
+  const cy = size / 2
+  const radius = size * 0.34
+  const angleFor = index => (Math.PI * 2 * index) / Math.max(1, axes.length) - Math.PI / 2
+  const pointFor = (index, value = 1) => {
+    const angle = angleFor(index)
+    return [cx + Math.cos(angle) * radius * value, cy + Math.sin(angle) * radius * value]
+  }
+
+  const polygonFor = item => axes.map((axis, index) => pointFor(index, Math.max(0, Math.min(1, Number(item.values?.[axis] || 0))))).map(point => point.join(',')).join(' ')
+
+  return (
+    <div className="pulse-radar-wrap">
+      <svg viewBox={`0 0 ${size} ${size}`} className="pulse-radar-chart" role="img" aria-label="Team profile radar">
+        {[0.25, 0.5, 0.75, 1].map(level => (
+          <polygon key={level} points={axes.map((axis, index) => pointFor(index, level).join(',')).join(' ')} className="pulse-radar-ring" />
+        ))}
+
+        {axes.map((axis, index) => {
+          const [x, y] = pointFor(index, 1.16)
+          const [x2, y2] = pointFor(index, 1)
+          return (
+            <g key={axis}>
+              <line x1={cx} y1={cy} x2={x2} y2={y2} className="pulse-radar-axis" />
+              <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="pulse-radar-label">{axis}</text>
+            </g>
+          )
+        })}
+
+        {data.slice(0, 2).map((item, index) => (
+          <polygon
+            key={item.teamId}
+            points={polygonFor(item)}
+            fill={item.color}
+            stroke={item.color}
+            opacity={index === 0 ? 0.32 : 0.18}
+            strokeWidth="3"
+          />
+        ))}
+      </svg>
+
+      <div className="pulse-chart-legend compact">
+        {data.slice(0, 2).map(item => (
+          <span key={item.teamId}><i style={{ background: item.color }} />{item.label}</span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function LanguageMixChart({ data = [] }) {
+  return (
+    <div className="pulse-language-mix">
+      {data.map(row => (
+        <div className="pulse-language-row" key={row.teamId}>
+          <div className="pulse-language-label">
+            <FlagImg src={row.teamFlag} size={18} alt="" />
+            <span>{row.teamLabel}</span>
+          </div>
+          <div className="pulse-language-track">
+            <span className="eng" style={{ width: `${Math.max(0, row.englishPct)}%` }} />
+            <span className="spa" style={{ width: `${Math.max(0, row.spanishPct)}%` }} />
+            <span className="bad" style={{ width: `${Math.max(0, row.invalidPct)}%` }} />
+          </div>
+          <div className="pulse-language-values">
+            <span className="blue">{Number(row.english || 0).toLocaleString()}</span>
+            <span className="green">{Number(row.spanish || 0).toLocaleString()}</span>
+            <span className="orange">{Number(row.total || 0).toLocaleString()}</span>
+          </div>
+        </div>
+      ))}
+      {!data.length ? <div className="pulse-summary-subtitle">No language mix data yet.</div> : null}
+    </div>
+  )
+}
+
+function HourlyPaceChart({ data = [], teamIds = TEAM_ORDER }) {
+  const [hoverIndex, setHoverIndex] = useState(null)
+  const width = 860
+  const height = 260
+  const pad = { top: 20, right: 22, bottom: 42, left: 50 }
+  const innerW = width - pad.left - pad.right
+  const innerH = height - pad.top - pad.bottom
+  const activeTeamIds = (teamIds || TEAM_ORDER).filter(teamId => TEAM_ORDER.includes(teamId))
+  const maxValue = Math.max(3, ...data.flatMap(row => activeTeamIds.map(teamId => Number(row[teamId] || 0))))
+  const yTicks = [0, 1, 2, 3, Math.ceil(maxValue)].filter((v, i, arr) => arr.indexOf(v) === i)
+  const xForIndex = index => data.length <= 1 ? pad.left + innerW / 2 : pad.left + (index / (data.length - 1)) * innerW
+  const yForValue = value => pad.top + innerH - (Number(value || 0) / maxValue) * innerH
+
+  const handleMove = event => {
+    if (!data.length) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) / rect.width) * width
+    const pct = Math.min(1, Math.max(0, (x - pad.left) / Math.max(1, innerW)))
+    setHoverIndex(Math.min(data.length - 1, Math.max(0, Math.round(pct * (data.length - 1)))))
+  }
+
+  const hoverRow = hoverIndex != null ? data[hoverIndex] : null
+
+  return (
+    <div className="pulse-chart-scroll pulse-multiline-wrap">
+      <svg
+        className="pulse-line-chart pulse-hourly-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        onMouseMove={handleMove}
+        onMouseLeave={() => setHoverIndex(null)}
+        role="img"
+        aria-label="Hourly pace chart"
+      >
+        {yTicks.map(tick => {
+          const y = yForValue(tick)
+          return (
+            <g key={tick}>
+              <line x1={pad.left} x2={width - pad.right} y1={y} y2={y} className="pulse-chart-grid-line" />
+              <text x={pad.left - 12} y={y + 4} textAnchor="end" className="pulse-chart-axis-text">{tick}</text>
+            </g>
+          )
+        })}
+        <line x1={pad.left} x2={width - pad.right} y1={yForValue(3)} y2={yForValue(3)} className="pulse-hour-goal-line" />
+
+        {activeTeamIds.map(teamId => {
+          const points = data.map((row, index) => `${xForIndex(index)},${yForValue(row[teamId])}`).join(' ')
+          return <polyline key={teamId} points={points} fill="none" stroke={getTeamColor(teamId)} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        })}
+
+        {data.map((row, index) => (
+          <text key={row.hour} x={xForIndex(index)} y={height - 14} textAnchor="middle" className="pulse-chart-axis-text">{row.hour}</text>
+        ))}
+
+        {hoverRow ? <line x1={xForIndex(hoverIndex)} x2={xForIndex(hoverIndex)} y1={pad.top} y2={pad.top + innerH} className="pulse-chart-hover-line" /> : null}
+      </svg>
+
+      {hoverRow ? (
+        <div className="pulse-chart-tooltip">
+          <strong>{hoverRow.hour}</strong>
+          {activeTeamIds.map(teamId => (
+            <span key={teamId} style={{ color: getTeamColor(teamId) }}>
+              {getTeamName(teamId)}: {Number(hoverRow[teamId] || 0).toFixed(2)}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function AnalyticsAgentsPanel({ rows = [], navigate }) {
+  const [query, setQuery] = useState('')
+  const normalized = normalizeSearchText(query)
+  const filteredRows = useMemo(() => {
+    const source = rows || []
+    if (!normalized) return source.slice(0, 35)
+    return source.filter(agent => agentMatchesSearch(agent, normalized)).slice(0, 35)
+  }, [normalized, rows])
+
+  return (
+    <div className="pulse-table-wrap analytics-table-card pulse-agents-panel">
+      <div className="pulse-chart-card-head">
+        <div>
+          <div className="pulse-table-title">🏆 Agents</div>
+          <div className="pulse-summary-subtitle">Search inside this analytics selection</div>
+        </div>
+        <div className="pulse-dark-search mini">
+          <span>⌕</span>
+          <input
+            value={query}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck="false"
+            placeholder="Search agent..."
+            onChange={event => setQuery(event.target.value)}
+          />
+          {query ? <button type="button" onClick={() => setQuery('')}>×</button> : null}
+        </div>
+      </div>
+
+      <div className="pulse-table-scroll">
+        <table className="pulse-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Agent</th>
+              <th>Team</th>
+              <th>Ext</th>
+              <th>English</th>
+              <th>Spanish</th>
+              <th>Total</th>
+              <th>Goal Days</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRows.map((agent, index) => (
+              <tr key={`agent-panel-${agent.teamId}-${agent.ext}-${index}`}>
+                <td>{index + 1}</td>
+                <td className="linkish" style={{ fontWeight: 400 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
+                <td><TeamInlineLabel teamId={agent.teamId} teamFlag={agent.teamFlag} teamLabel={agent.teamLabel} /></td>
+                <td>#{agent.ext}</td>
+                <td className="blue">{Number(agent.english || 0).toLocaleString()}</td>
+                <td className="green">{Number(agent.spanish || 0).toLocaleString()}</td>
+                <td className="orange">{Number(agent.total || 0).toLocaleString()}</td>
+                <td className="yellow">{Number(agent.goalDays || 0).toLocaleString()}x</td>
+              </tr>
+            ))}
+            {!filteredRows.length ? <tr><td colSpan="8">No agents found.</td></tr> : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+
+function AnalyticsAgentTable({ title, rows = [], metric = 'english', navigate }) {
+  const color = getMetricColor(metric)
+
+  return (
+    <div className="pulse-table-wrap analytics-table-card">
+      <div className="pulse-table-title">{title}</div>
+      <div className="pulse-table-scroll">
+        <table className="pulse-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Agent</th>
+              <th>Team</th>
+              <th>Ext</th>
+              <th>English</th>
+              <th>Spanish</th>
+              <th>Total</th>
+              {metric === 'goalDays' ? <th>Goal Days</th> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((agent, index) => (
+              <tr key={`${title}-${agent.teamId}-${agent.ext}-${index}`}>
+                <td><RankMarker index={index} /></td>
+                <td className="linkish" style={{ fontWeight: 400 }} onClick={() => navigate(`/profile/${agent.ext}`)}>{agent.name}</td>
+                <td><TeamInlineLabel teamId={agent.teamId} teamFlag={agent.teamFlag} teamLabel={agent.teamLabel} /></td>
+                <td>#{agent.ext}</td>
+                <td className="blue">{Number(agent.english || 0).toLocaleString()}</td>
+                <td className="green">{Number(agent.spanish || 0).toLocaleString()}</td>
+                <td className="orange">{Number(agent.total || 0).toLocaleString()}</td>
+                {metric === 'goalDays' ? <td style={{ color, fontWeight: 900 }}>{Number(agent.goalDays || 0).toLocaleString()}</td> : null}
+              </tr>
+            ))}
+            {!rows.length ? (
+              <tr><td colSpan={metric === 'goalDays' ? 8 : 7}>No data for this selection yet.</td></tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], navigate }) {
+  const [analyticsDate, setAnalyticsDate] = useState(todayKey())
+  const [analyticsRange, setAnalyticsRange] = useState('week')
+  const [analyticsTeams, setAnalyticsTeams] = useState(['all'])
+  const [comparisonMetric, setComparisonMetric] = useState('total')
+
+  const availableDates = useMemo(() => {
+    const source = history?.dates?.length ? history.dates : dateTabs
+    return [...new Set([todayKey(), ...(source || [])])]
+      .filter(Boolean)
+      .sort((a, b) => b.localeCompare(a))
+  }, [dateTabs, history?.dates])
+
+  const analytics = useMemo(() => {
+    return buildAnalyticsInsights(history, analyticsTeams, analyticsRange, analyticsDate)
+  }, [analyticsDate, analyticsRange, analyticsTeams, history])
+
+  const toggleTeam = teamId => {
+    playPulseSound('click')
+
+    if (teamId === 'all') {
+      setAnalyticsTeams(['all'])
+      return
+    }
+
+    setAnalyticsTeams(prev => {
+      const base = prev.includes('all') ? [] : [...prev]
+      const exists = base.includes(teamId)
+      const next = exists ? base.filter(item => item !== teamId) : [...base, teamId]
+      return next.length ? next : ['all']
+    })
+  }
+
+  const setRangeWithSound = range => {
+    playPulseSound('click')
+    setAnalyticsRange(range)
+  }
+
+  const setDateWithSound = date => {
+    playPulseSound('click')
+    setAnalyticsDate(date)
+  }
+
+  const isAllSelected = analyticsTeams.includes('all')
+  const selectedTeamIds = analytics.selectedTeamIds?.length ? analytics.selectedTeamIds : TEAM_ORDER
+  const selectedTeamsLabel = isAllSelected ? 'All teams' : selectedTeamIds.map(getTeamName).join(' + ')
+
+  return (
+    <section className="pulse-analytics-page">
+      <div className="pulse-hero-card pulse-analytics-hero pulse-analytics-hero-clean">
+        <div>
+          <div className="pulse-hero-title-row">
+            <span style={{ fontSize: 30, lineHeight: 1 }}>📊</span>
+            <div className="pulse-hero-title">Analytics</div>
+          </div>
+          <div className="pulse-hero-sub">{selectedTeamsLabel} · {analytics.range.label}</div>
+        </div>
+      </div>
+
+      {historyLoading ? <div className="pulse-loading">Loading analytics...</div> : null}
+      {historyError ? <div className="pulse-error">{historyError}</div> : null}
+
+      {!historyLoading && !historyError ? (
+        <>
+          <div className="pulse-analytics-controls pulse-analytics-controls-polished">
+            <div className="pulse-analytics-control-block">
+              <span className="pulse-control-label">Range</span>
+              <div className="pulse-range-pills">
+                {[
+                  ['day', 'Day'],
+                  ['week', 'Week'],
+                  ['month', 'Month'],
+                  ['all_time', 'All Time'],
+                ].map(([id, label]) => (
+                  <button key={id} type="button" className={analyticsRange === id ? 'active' : ''} onClick={() => setRangeWithSound(id)}>{label}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pulse-analytics-control-block pulse-analytics-date-control">
+              <span className="pulse-control-label">Day</span>
+              <DateSelectorRow dates={availableDates} selectedDate={analyticsDate} onChange={setDateWithSound} />
+            </div>
+          </div>
+
+          <div className="pulse-team-filter-wrap pulse-team-filter-wrap-analytics">
+            <button type="button" className={`pulse-team-filter ${isAllSelected ? 'active' : ''}`} onClick={() => toggleTeam('all')}>All Teams</button>
+            {TEAM_ORDER.map(teamId => (
+              <button
+                key={teamId}
+                type="button"
+                className={`pulse-team-filter ${!isAllSelected && analyticsTeams.includes(teamId) ? 'active' : ''}`}
+                onClick={() => toggleTeam(teamId)}
+              >
+                <FlagImg src={getTeamFlag(teamId)} size={17} alt="" />
+                {getTeamName(teamId)}
+              </button>
+            ))}
+          </div>
+
+          <section className="lov-kpi-grid lov-kpi-grid-main pulse-analytics-kpis">
+            <LovableKpi title="English" value={analytics.summary.english} tone="blue" />
+            <LovableKpi title="Spanish" value={analytics.summary.spanish} tone="green" />
+            <LovableKpi title="Total Xfers" value={analytics.summary.total} tone="orange" />
+            <LovableKpi title="Active Agents" value={analytics.summary.activeAgents} tone="purple" />
+          </section>
+
+          <div className="pulse-analytics-grid pulse-analytics-grid-main">
+            <div className="pulse-table-wrap pulse-chart-card pulse-chart-card-wide">
+              <div className="pulse-chart-card-head">
+                <div>
+                  <div className="pulse-table-title">Performance · {analyticsRange === 'day' ? 'day' : analyticsRange.replace('_', ' ')}</div>
+                  <div className="pulse-summary-subtitle">English vs Spanish vs Total</div>
+                </div>
+              </div>
+              <SimpleLineChart
+                data={analytics.trend}
+                series={[
+                  { key: 'total', label: 'Total', color: '#e98a34' },
+                  { key: 'english', label: 'English', color: '#38bdf8' },
+                  { key: 'spanish', label: 'Spanish', color: '#34d399' },
+                ]}
+              />
+              <div className="pulse-chart-legend">
+                <span><i style={{ background: '#e98a34' }} />Total</span>
+                <span><i style={{ background: '#38bdf8' }} />English</span>
+                <span><i style={{ background: '#34d399' }} />Spanish</span>
+              </div>
+            </div>
+
+            <div className="pulse-table-wrap pulse-chart-card">
+              <div className="pulse-chart-card-head">
+                <div>
+                  <div className="pulse-table-title">Team profile</div>
+                  <div className="pulse-summary-subtitle">Strengths radar</div>
+                </div>
+              </div>
+              <RadarChart axes={analytics.radarAxes} data={analytics.radarData} />
+            </div>
+          </div>
+
+          <div className="pulse-table-wrap pulse-chart-card pulse-all-teams-card">
+            <div className="pulse-chart-card-head">
+              <div>
+                <div className="pulse-table-title">All teams · compared</div>
+                <div className="pulse-summary-subtitle">Daily totals by team</div>
+              </div>
+              <div className="pulse-mini-tabs">
+                {SORT_OPTIONS.map(option => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={comparisonMetric === option.id ? 'active' : ''}
+                    onClick={() => {
+                      playPulseSound('click')
+                      setComparisonMetric(option.id)
+                    }}
+                  >
+                    {getMetricLabel(option.id)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <MultiTeamLineChart data={analytics.allTeamsTrend} teamIds={selectedTeamIds} metric={comparisonMetric} />
+            <div className="pulse-chart-legend">
+              {selectedTeamIds.map(teamId => (
+                <span key={teamId}><i style={{ background: getTeamColor(teamId) }} />{getTeamName(teamId)}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="pulse-analytics-grid pulse-analytics-grid-secondary">
+            <div className="pulse-table-wrap pulse-chart-card pulse-chart-card-wide">
+              <div className="pulse-chart-card-head">
+                <div>
+                  <div className="pulse-table-title">Hourly · all teams compared</div>
+                  <div className="pulse-summary-subtitle">Avg xfers per agent / hour · goal 3/hr</div>
+                </div>
+              </div>
+              <HourlyPaceChart data={analytics.hourlyCompared} teamIds={selectedTeamIds} />
+              <div className="pulse-chart-legend">
+                {selectedTeamIds.map(teamId => (
+                  <span key={teamId}><i style={{ background: getTeamColor(teamId) }} />{getTeamName(teamId)}</span>
+                ))}
+              </div>
+            </div>
+
+            <div className="pulse-table-wrap pulse-chart-card">
+              <div className="pulse-chart-card-head">
+                <div>
+                  <div className="pulse-table-title">Language mix per team</div>
+                  <div className="pulse-summary-subtitle">English / Spanish / Invalid</div>
+                </div>
+              </div>
+              <LanguageMixChart data={analytics.languageMix} />
+            </div>
+          </div>
+
+          <div className="pulse-table-wrap pulse-chart-card">
+            <div className="pulse-chart-card-head">
+              <div>
+                <div className="pulse-table-title">Team comparison</div>
+                <div className="pulse-summary-subtitle">Quick team totals</div>
+              </div>
+              <div className="pulse-mini-tabs">
+                {SORT_OPTIONS.map(option => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={comparisonMetric === option.id ? 'active' : ''}
+                    onClick={() => {
+                      playPulseSound('click')
+                      setComparisonMetric(option.id)
+                    }}
+                  >
+                    {getMetricLabel(option.id)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <SimpleBarChart data={analytics.teamComparison} metric={comparisonMetric} />
+          </div>
+
+          <div className="pulse-top-blocks-grid pulse-analytics-top-grid">
+            <RankingTopBlock title="Top English" metric="english" rows={analytics.topEnglish} navigate={navigate} />
+            <RankingTopBlock title="Top Spanish" metric="spanish" rows={analytics.topSpanish} navigate={navigate} />
+            <RankingTopBlock title="Top Total" metric="total" rows={analytics.topTotal} navigate={navigate} />
+            <RankingTopBlock title="Goal Days" metric="goalDays" rows={analytics.goalLeaders} navigate={navigate} />
+          </div>
+
+          <AnalyticsAgentsPanel rows={analytics.topTotal.concat(analytics.topEnglish, analytics.topSpanish, analytics.goalLeaders)} navigate={navigate} />
+
+          <AnalyticsAgentTable title="Top 10 English" rows={analytics.topEnglish} metric="english" navigate={navigate} />
+          <AnalyticsAgentTable title="Top 10 Spanish" rows={analytics.topSpanish} metric="spanish" navigate={navigate} />
+          <AnalyticsAgentTable title="Top 10 Goal Days" rows={analytics.goalLeaders} metric="goalDays" navigate={navigate} />
+        </>
+      ) : null}
+    </section>
+  )
+}
+
 function flattenAgentsForRankings(teamData) {
   const agents = []
 
@@ -2003,6 +3147,472 @@ function DashboardResponsivePolishStyle() {
         display: none;
       }
 
+
+      .pulse-analytics-page {
+        width: min(100%, 1380px);
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .pulse-analytics-hero {
+        margin: 0 !important;
+      }
+
+      .pulse-analytics-controls {
+        display: grid;
+        grid-template-columns: minmax(280px, 1fr) minmax(230px, 320px);
+        gap: 14px;
+        align-items: end;
+        width: 100%;
+      }
+
+      .pulse-analytics-control-block {
+        background: linear-gradient(135deg, rgba(255,255,255,.035), rgba(255,138,42,.075));
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 20px;
+        padding: 12px;
+        min-width: 0;
+      }
+
+      .pulse-control-label {
+        display: block;
+        margin: 0 0 8px;
+        color: #8f8178;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      .pulse-range-pills,
+      .pulse-mini-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pulse-range-pills button,
+      .pulse-mini-tabs button,
+      .pulse-team-filter {
+        border: 1px solid rgba(255,255,255,.09);
+        background: rgba(255,255,255,.035);
+        color: #d8cec8;
+        border-radius: 999px;
+        padding: 10px 13px;
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      .pulse-range-pills button.active,
+      .pulse-mini-tabs button.active,
+      .pulse-team-filter.active {
+        background: #ff8a2a;
+        border-color: rgba(255, 138, 42, .8);
+        color: #110905;
+      }
+
+      .pulse-analytics-date-control .lov-date-row {
+        width: 100%;
+        margin: 0 !important;
+      }
+
+      .pulse-analytics-date-control .lov-date-btn {
+        width: 100%;
+        min-width: 0 !important;
+      }
+
+      .pulse-team-filter-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .pulse-team-filter {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .pulse-analytics-kpis {
+        margin-bottom: 0 !important;
+      }
+
+      .lov-kpi-card.purple .lov-kpi-value {
+        color: #c084fc;
+      }
+
+      .pulse-analytics-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(340px, .85fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .pulse-chart-card {
+        min-width: 0;
+        margin: 0 !important;
+        overflow: hidden;
+      }
+
+      .pulse-chart-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 12px;
+      }
+
+      .pulse-chart-scroll {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+
+      .pulse-line-chart {
+        display: block;
+        width: 100%;
+        min-width: 620px;
+        height: auto;
+      }
+
+      .pulse-chart-grid-line {
+        stroke: rgba(255, 255, 255, .08);
+        stroke-dasharray: 5 5;
+      }
+
+      .pulse-chart-axis-text {
+        fill: #a99c94;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .pulse-chart-legend {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        color: #d8cec8;
+        font-weight: 800;
+      }
+
+      .pulse-chart-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .pulse-chart-legend i {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        display: inline-block;
+      }
+
+      .pulse-bar-chart {
+        display: grid;
+        gap: 14px;
+        padding: 8px 0 2px;
+      }
+
+      .pulse-bar-row {
+        display: grid;
+        grid-template-columns: minmax(120px, 160px) minmax(120px, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .pulse-bar-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        color: #f6eee8;
+        font-weight: 800;
+      }
+
+      .pulse-bar-label span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .pulse-bar-track {
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.06);
+        overflow: hidden;
+      }
+
+      .pulse-bar-fill {
+        height: 100%;
+        border-radius: inherit;
+        min-width: 8px;
+        box-shadow: 0 0 24px rgba(255, 138, 42, .22);
+      }
+
+      .pulse-analytics-top-grid {
+        grid-template-columns: repeat(4, minmax(210px, 1fr)) !important;
+      }
+
+      .analytics-table-card {
+        margin: 0 !important;
+      }
+
+      .dash-root {
+        --pulse-accent: #e98a34;
+        --pulse-accent-soft: rgba(233, 138, 52, .16);
+      }
+
+      .lov-hero,
+      .pulse-hero-card {
+        background: radial-gradient(circle at 92% 12%, rgba(233, 138, 52, .17), transparent 34%), linear-gradient(135deg, rgba(255,255,255,.035), rgba(15,10,7,.68)) !important;
+      }
+
+      .lov-nav-pill button.active,
+      .pulse-range-pills button.active,
+      .pulse-mini-tabs button.active,
+      .pulse-team-filter.active,
+      .lov-date-btn.active,
+      .pulse-sort-tab.active,
+      .pulse-tab.active {
+        background: linear-gradient(135deg, #f6a04a, #e98a34) !important;
+        color: #100804 !important;
+      }
+
+      .lov-search-wrap {
+        z-index: 80;
+      }
+
+      .lov-search input,
+      .pulse-dark-search input {
+        color: #f7eee7 !important;
+        -webkit-text-fill-color: #f7eee7 !important;
+        caret-color: #e98a34;
+      }
+
+      .lov-search input::placeholder,
+      .pulse-dark-search input::placeholder {
+        color: rgba(247, 238, 231, .45) !important;
+        -webkit-text-fill-color: rgba(247, 238, 231, .45) !important;
+      }
+
+      .lov-search input:-webkit-autofill,
+      .pulse-dark-search input:-webkit-autofill {
+        box-shadow: 0 0 0 1000px #100b08 inset !important;
+        -webkit-text-fill-color: #f7eee7 !important;
+        transition: background-color 9999s ease-in-out 0s;
+      }
+
+      .lov-search-suggestions {
+        background: linear-gradient(180deg, rgba(17, 11, 8, .98), rgba(7, 5, 4, .99)) !important;
+        border: 1px solid rgba(233, 138, 52, .25) !important;
+        border-radius: 18px !important;
+        box-shadow: 0 24px 70px rgba(0,0,0,.72) !important;
+        overflow: hidden;
+      }
+
+      .lov-search-suggestion {
+        background: transparent !important;
+        color: #f7eee7 !important;
+      }
+
+      .lov-search-suggestion:hover {
+        background: rgba(233, 138, 52, .12) !important;
+      }
+
+      .pulse-analytics-hero-clean {
+        min-height: 120px;
+      }
+
+      .pulse-analytics-controls-polished {
+        grid-template-columns: minmax(320px, 1fr) minmax(260px, 360px);
+      }
+
+      .pulse-team-filter-wrap-analytics {
+        background: rgba(255,255,255,.025);
+        border: 1px solid rgba(255,255,255,.07);
+        border-radius: 22px;
+        padding: 10px;
+      }
+
+      .pulse-analytics-grid-main,
+      .pulse-analytics-grid-secondary {
+        grid-template-columns: minmax(0, 1.55fr) minmax(340px, .85fr);
+      }
+
+      .pulse-all-teams-card {
+        width: 100%;
+      }
+
+      .pulse-multiline-wrap {
+        position: relative;
+        min-height: 290px;
+      }
+
+      .pulse-chart-hover-line {
+        stroke: rgba(255,255,255,.5);
+        stroke-width: 1.5;
+      }
+
+      .pulse-chart-tooltip {
+        position: absolute;
+        right: 18px;
+        top: 58px;
+        min-width: 180px;
+        display: grid;
+        gap: 8px;
+        padding: 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(9, 7, 6, .92);
+        box-shadow: 0 18px 50px rgba(0,0,0,.5);
+        color: #f7eee7;
+        pointer-events: none;
+        z-index: 5;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .pulse-radar-wrap {
+        display: grid;
+        place-items: center;
+        gap: 12px;
+        min-height: 330px;
+      }
+
+      .pulse-radar-chart {
+        width: min(100%, 320px);
+        height: auto;
+      }
+
+      .pulse-radar-ring {
+        fill: transparent;
+        stroke: rgba(255,255,255,.08);
+        stroke-width: 1;
+      }
+
+      .pulse-radar-axis {
+        stroke: rgba(255,255,255,.06);
+        stroke-width: 1;
+      }
+
+      .pulse-radar-label {
+        fill: #c9bdb5;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .pulse-chart-legend.compact {
+        margin-top: 0;
+      }
+
+      .pulse-language-mix {
+        display: grid;
+        gap: 14px;
+        padding-top: 8px;
+      }
+
+      .pulse-language-row {
+        display: grid;
+        grid-template-columns: minmax(130px, 180px) minmax(120px, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .pulse-language-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        color: #f7eee7;
+        font-weight: 800;
+      }
+
+      .pulse-language-label span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .pulse-language-track {
+        height: 14px;
+        overflow: hidden;
+        display: flex;
+        border-radius: 999px;
+        background: rgba(255,255,255,.06);
+      }
+
+      .pulse-language-track span {
+        min-width: 2px;
+        height: 100%;
+      }
+
+      .pulse-language-track .eng { background: #38bdf8; }
+      .pulse-language-track .spa { background: #34d399; }
+      .pulse-language-track .bad { background: #fb7185; }
+
+      .pulse-language-values {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .pulse-hour-goal-line {
+        stroke: rgba(251, 191, 36, .75);
+        stroke-width: 2;
+        stroke-dasharray: 7 7;
+      }
+
+      .pulse-dark-search {
+        min-width: 250px;
+        max-width: 360px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255,255,255,.035);
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 999px;
+        padding: 10px 12px;
+      }
+
+      .pulse-dark-search.mini {
+        min-width: 220px;
+      }
+
+      .pulse-dark-search input {
+        width: 100%;
+        min-width: 0;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        font-weight: 700;
+      }
+
+      .pulse-dark-search button {
+        border: 0;
+        background: rgba(255,255,255,.08);
+        color: #f7eee7;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+
+      .pulse-agents-panel .pulse-chart-card-head {
+        align-items: center;
+      }
+
+      .yellow {
+        color: #fbbf24;
+      }
+
       @media (max-width: 1250px) {
         .lov-kpi-grid-main,
         .pulse-team-summary-grid {
@@ -2056,11 +3666,13 @@ export default function Dashboard() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [rangeMode, setRangeMode] = useState('all_time')
   const [activeView, setActiveView] = useState('overview')
+  const [teamReveal, setTeamReveal] = useState(null)
   const [historyState, setHistoryState] = useState({ insights: null, loading: false, error: '' })
 
   const isToday = selectedDate === todayKey()
   const selectedDateRef = useRef(selectedDate)
   const teamDataRef = useRef({})
+  const goalSoundSeenRef = useRef(new Set())
 
   const setSelectedDateSafe = useCallback(date => {
     selectedDateRef.current = date
@@ -2173,6 +3785,37 @@ export default function Dashboard() {
     }
   }, [isToday, loadToday])
 
+  useEffect(() => {
+    if (!isToday || !teamData || !Object.keys(teamData).length) return
+
+    const reachedNow = new Set()
+
+    TEAM_ORDER.forEach(teamId => {
+      const parsed = teamData[teamId]
+      ;(parsed?.agents || []).forEach(agent => {
+        if (!agent?.ext) return
+        const candidate = {
+          ...agent,
+          teamId,
+          team: teamId,
+          date: selectedDate,
+          total: Number(agent.total || agent.rawTotal || 0),
+          rawTotal: Number(agent.rawTotal || agent.total || 0),
+        }
+
+        if (agentReachedGoal(candidate)) reachedNow.add(`${selectedDate}|${teamId}|${agent.ext}`)
+      })
+    })
+
+    const previous = goalSoundSeenRef.current
+    const hasPrevious = previous.size > 0
+    const hasNewGoal = hasPrevious && [...reachedNow].some(key => !previous.has(key))
+
+    goalSoundSeenRef.current = reachedNow
+
+    if (hasNewGoal) playPulseSound('goal')
+  }, [isToday, selectedDate, teamData])
+
   const dateTabs = useMemo(() => {
     const set = new Set([todayKey(), ...remoteDates])
     return [...set].filter(date => date >= CLEAN_START_DATE).sort((a, b) => b.localeCompare(a))
@@ -2281,6 +3924,8 @@ export default function Dashboard() {
           : 'teams'
 
   const handleSidebarNavigate = useCallback(item => {
+    playPulseSound('click')
+
     if (item.id === 'overview') {
       setActiveView('overview')
       setSelectedTeam('all')
@@ -2313,7 +3958,7 @@ export default function Dashboard() {
     }
 
     if (item.id === 'analytics') {
-      setActiveView('teams')
+      setActiveView('analytics')
       setSelectedTeam('all')
       setRangeMode('all_time')
       setSearchQuery('')
@@ -2334,14 +3979,29 @@ export default function Dashboard() {
     window.alert(`${item.label} is coming soon.`)
   }, [loadToday, navigate, setSelectedDateSafe])
 
-  const handleTeamTabChange = useCallback(teamId => {
+  const openTeamWithReveal = useCallback(teamId => {
+    if (!teamId || teamId === 'all') {
+      playPulseSound('click')
+      setActiveView('overview')
+      setRangeMode('day')
+      setSelectedTeam('all')
+      return
+    }
+
+    playPulseSound('team')
+    setTeamReveal({ teamId, key: `${teamId}-${Date.now()}` })
     setActiveView('overview')
     setRangeMode('day')
     setSelectedTeam(teamId)
   }, [])
 
+  const handleTeamTabChange = useCallback(teamId => {
+    openTeamWithReveal(teamId)
+  }, [openTeamWithReveal])
+
   const handleSuggestionClick = useCallback(item => {
     if (!item) return
+    playPulseSound('click')
 
     if (item.type === 'agent') {
       setSearchQuery('')
@@ -2353,11 +4013,9 @@ export default function Dashboard() {
     if (item.type === 'team') {
       setSearchQuery('')
       setUserMenuOpen(false)
-      setActiveView('overview')
-      setRangeMode('day')
-      setSelectedTeam(item.id)
+      openTeamWithReveal(item.id)
     }
-  }, [navigate])
+  }, [navigate, openTeamWithReveal])
 
   const handleSearchSubmit = useCallback(() => {
     const first = searchSuggestions[0]
@@ -2385,6 +4043,13 @@ export default function Dashboard() {
 
   return (
     <div className={`dash-root ${sidebarCollapsed ? 'lov-sidebar-collapsed' : ''}`}>
+      {teamReveal ? (
+        <TeamRevealOverlay
+          reveal={teamReveal}
+          onDone={() => setTeamReveal(null)}
+        />
+      ) : null}
+
       <div className="lov-shell">
         <LovableSidebar
           collapsed={sidebarCollapsed}
@@ -2395,7 +4060,10 @@ export default function Dashboard() {
         <div className="lov-main">
           <LovableHeader
             sidebarCollapsed={sidebarCollapsed}
-            onToggleSidebar={() => setSidebarCollapsed(prev => !prev)}
+            onToggleSidebar={() => {
+              playPulseSound('click')
+              setSidebarCollapsed(prev => !prev)
+            }}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onSearchSubmit={handleSearchSubmit}
@@ -2408,7 +4076,7 @@ export default function Dashboard() {
 
           <main className="lov-content">
             <DashboardResponsivePolishStyle />
-            {activeView !== 'rankings' ? (
+            {activeView !== 'rankings' && activeView !== 'analytics' ? (
               <section className="lov-hero" style={{ padding: '22px 28px' }}>
                 <div className="lov-hero-left">
                   {activeView === 'teams' ? null : (
@@ -2427,7 +4095,7 @@ export default function Dashboard() {
               </section>
             ) : null}
 
-            {activeView !== 'rankings' ? (
+            {activeView !== 'rankings' && activeView !== 'analytics' ? (
               <section className="lov-kpi-grid lov-kpi-grid-main">
                 <LovableKpi title="English" value={dashboardTotals.english} tone="blue" />
                 <LovableKpi title="Spanish" value={dashboardTotals.spanish} tone="green" />
@@ -2455,6 +4123,14 @@ export default function Dashboard() {
               <div className="pulse-loading">Loading team data...</div>
             ) : error ? (
               <div className="pulse-error">{error}</div>
+            ) : activeView === 'analytics' ? (
+              <AnalyticsPage
+                history={historyState.insights}
+                historyLoading={historyState.loading}
+                historyError={historyState.error}
+                dateTabs={dateTabs}
+                navigate={navigate}
+              />
             ) : activeView === 'teams' ? (
               <TeamsInsightsPage
                 history={historyState.insights}
@@ -2482,11 +4158,7 @@ export default function Dashboard() {
                         team={team}
                         parsed={parsed}
                         sortMetric={sortMetric}
-                        onOpen={teamId => {
-                          setActiveView('overview')
-                          setRangeMode('day')
-                          setSelectedTeam(teamId)
-                        }}
+                        onOpen={teamId => openTeamWithReveal(teamId)}
                         rankIndex={index}
                       />
                     )
