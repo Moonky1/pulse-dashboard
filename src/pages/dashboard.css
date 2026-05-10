@@ -1982,3 +1982,394 @@
   .team-reveal-name { font-size: clamp(34px, 11vw, 52px); }
 }
 
+
+/* =========================================================
+   CHART POLISH PATCH — cleaner analytics, warm neutral UI
+   Fixes: chart padding, cursor tooltips, date menu, reveal animation.
+========================================================= */
+
+.dash-root {
+  --lov-orange: #b9976b !important;
+  --pulse-accent: #b9976b !important;
+  --pulse-warm: #d7b987;
+  --pulse-warm-soft: rgba(215, 185, 135, 0.13);
+  --pulse-card-pad: 22px;
+}
+
+.dash-root .pulse-chart-card {
+  padding: var(--pulse-card-pad) !important;
+  overflow: visible !important;
+  border-radius: 24px !important;
+}
+
+.dash-root .pulse-chart-card .pulse-table-title {
+  padding: 0 !important;
+  border-bottom: 0 !important;
+  font-size: 18px !important;
+  line-height: 1.15 !important;
+}
+
+.dash-root .pulse-chart-card .pulse-summary-subtitle {
+  display: none !important;
+}
+
+.dash-root .pulse-chart-card-head {
+  align-items: center !important;
+  gap: 16px !important;
+  margin-bottom: 18px !important;
+  padding: 0 !important;
+}
+
+.dash-root .pulse-chart-card-head > div:first-child {
+  min-width: 0;
+}
+
+.dash-root .pulse-mini-tabs {
+  flex: 0 0 auto;
+  display: inline-flex;
+  gap: 7px;
+  padding: 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.dash-root .pulse-mini-tabs button {
+  min-width: 76px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #c7c1bb;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.dash-root .pulse-mini-tabs button.active {
+  background: linear-gradient(135deg, #e4c896, #b9976b) !important;
+  border-color: rgba(215,185,135,.7) !important;
+  color: #14100b !important;
+}
+
+.dash-root .pulse-chart-scroll {
+  position: relative !important;
+  width: 100%;
+  padding: 4px 10px 2px !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(215,185,135,.35) rgba(255,255,255,.04);
+}
+
+.dash-root .pulse-soft-chart-wrap {
+  min-height: 318px;
+}
+
+.dash-root .pulse-line-chart {
+  display: block !important;
+  width: 100% !important;
+  min-width: 720px !important;
+  overflow: visible !important;
+}
+
+.dash-root .pulse-chart-axis-text {
+  fill: rgba(232, 224, 216, .76) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.dash-root .pulse-chart-grid-line {
+  stroke: rgba(255,255,255,.075) !important;
+}
+
+.dash-root .pulse-chart-hover-line {
+  stroke: rgba(232,224,216,.62) !important;
+  stroke-width: 1.35 !important;
+}
+
+.dash-root .pulse-chart-tooltip {
+  position: absolute !important;
+  right: auto !important;
+  top: auto !important;
+  min-width: 170px;
+  max-width: 260px;
+  display: grid;
+  gap: 7px;
+  padding: 13px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(6, 7, 8, .94);
+  box-shadow: 0 18px 48px rgba(0,0,0,.58);
+  color: #f8efe6;
+  pointer-events: none;
+  z-index: 35;
+  font-size: 13px;
+  font-weight: 800;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.dash-root .pulse-chart-tooltip.follow-cursor {
+  will-change: transform, left, top;
+}
+
+.dash-root .pulse-chart-tooltip strong {
+  color: #fff7ed;
+  font-size: 13px;
+}
+
+.dash-root .pulse-chart-legend {
+  padding: 2px 12px 0;
+  margin-top: 12px !important;
+}
+
+.dash-root .pulse-radar-wrap {
+  position: relative !important;
+  min-height: 345px !important;
+  padding: 8px 4px 0 !important;
+  overflow: visible !important;
+}
+
+.dash-root .pulse-radar-chart {
+  width: min(100%, 330px) !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.dash-root .pulse-radar-label {
+  fill: rgba(235, 226, 216, .82) !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+}
+
+.dash-root .pulse-radar-ring {
+  stroke: rgba(255,255,255,.085) !important;
+}
+
+.dash-root .radar-tooltip {
+  min-width: 150px;
+}
+
+.dash-root .pulse-bar-chart {
+  gap: 16px !important;
+  padding: 10px 8px 0 !important;
+}
+
+.dash-root .pulse-bar-row {
+  grid-template-columns: minmax(150px, 210px) minmax(220px, 1fr) minmax(62px, auto) !important;
+  gap: 18px !important;
+}
+
+.dash-root .pulse-bar-row strong {
+  text-align: right;
+  padding-right: 2px;
+}
+
+.dash-root .pulse-bar-track,
+.dash-root .pulse-language-track {
+  background: rgba(255,255,255,.07) !important;
+}
+
+.dash-root .pulse-bar-fill {
+  box-shadow: none !important;
+}
+
+.dash-root .pulse-language-mix {
+  gap: 16px !important;
+  padding: 8px 4px 0 !important;
+}
+
+.dash-root .pulse-language-row {
+  grid-template-columns: minmax(150px, 200px) minmax(140px, 1fr) minmax(155px, auto) !important;
+  gap: 14px !important;
+}
+
+.dash-root .pulse-language-values {
+  justify-content: flex-end;
+  gap: 12px !important;
+}
+
+.dash-root .pulse-language-values span {
+  min-width: 36px;
+  text-align: right;
+}
+
+.dash-root .lov-date-btn.active,
+.dash-root .pulse-analytics-date-control .lov-date-btn,
+.dash-root .pulse-range-pills button.active,
+.dash-root .pulse-team-filter.active,
+.dash-root .pulse-mini-tabs button.active,
+.dash-root .pulse-sort-tab.active,
+.dash-root .pulse-tab.active {
+  background: linear-gradient(135deg, #e4c896, #b9976b) !important;
+  border-color: rgba(215,185,135,.65) !important;
+  color: #14100b !important;
+}
+
+.dash-root .pulse-range-pills button,
+.dash-root .pulse-team-filter,
+.dash-root .lov-date-btn {
+  border-color: rgba(255,255,255,.09) !important;
+  background: rgba(255,255,255,.035) !important;
+  color: #d4cec7 !important;
+}
+
+.dash-root .pulse-range-pills button.active,
+.dash-root .pulse-team-filter.active,
+.dash-root .lov-date-btn.active {
+  color: #14100b !important;
+}
+
+/* Natural reveal: no big box, no purple card */
+.team-reveal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: teamRevealOutSoft 1.22s cubic-bezier(.2,.8,.2,1) forwards !important;
+}
+
+.team-reveal-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 4, 5, 0.62) !important;
+  backdrop-filter: blur(13px) saturate(115%);
+  -webkit-backdrop-filter: blur(13px) saturate(115%);
+}
+
+.team-reveal-natural {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px 28px;
+  transform: translateZ(0);
+  animation: teamRevealNaturalIn .62s cubic-bezier(.17,.84,.44,1) both;
+}
+
+.team-reveal-warm-glow {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(520px, 82vw);
+  height: min(280px, 42vh);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--team-reveal-accent), #d7b987 42%) 0%, transparent 58%),
+    radial-gradient(circle at 50% 50%, rgba(215,185,135,.22) 0%, transparent 62%);
+  opacity: .35;
+  filter: blur(34px);
+  z-index: -1;
+}
+
+.team-reveal-flag-wrap {
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  animation: teamRevealFlagFloat .7s cubic-bezier(.17,.84,.44,1) both !important;
+}
+
+.team-reveal-flag-wrap img,
+.team-reveal-flag-wrap span {
+  transform: scale(1.2) !important;
+  filter: drop-shadow(0 18px 34px rgba(0,0,0,.45));
+}
+
+.team-reveal-flag-glow,
+.team-reveal-orb,
+.team-reveal-line,
+.team-reveal-card {
+  display: none !important;
+}
+
+.team-reveal-kicker {
+  margin-top: 8px !important;
+  color: rgba(244, 228, 200, .82) !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  letter-spacing: .10em !important;
+  text-transform: uppercase !important;
+}
+
+.team-reveal-name {
+  margin-top: 0 !important;
+  color: #fff8ee !important;
+  font-size: clamp(44px, 8vw, 96px) !important;
+  line-height: .92 !important;
+  font-style: italic !important;
+  font-weight: 950 !important;
+  letter-spacing: -.07em !important;
+  text-align: center;
+  text-shadow: 0 22px 60px rgba(0,0,0,.62);
+}
+
+@keyframes teamRevealNaturalIn {
+  0% { opacity: 0; transform: translateY(18px) scale(.92); filter: blur(8px); }
+  68% { opacity: 1; transform: translateY(0) scale(1.04); filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes teamRevealFlagFloat {
+  0% { opacity: 0; transform: translateY(18px) rotate(-4deg) scale(.8); }
+  100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+
+@keyframes teamRevealOutSoft {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+@media (max-width: 980px) {
+  .dash-root .pulse-analytics-grid,
+  .dash-root .pulse-analytics-grid-main,
+  .dash-root .pulse-analytics-grid-secondary {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dash-root .pulse-bar-row,
+  .dash-root .pulse-language-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .dash-root .pulse-language-values {
+    justify-content: flex-start;
+  }
+
+  .dash-root .pulse-mini-tabs {
+    width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .dash-root .pulse-chart-card-head {
+    align-items: flex-start !important;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .dash-root .pulse-chart-card {
+    padding: 16px !important;
+    border-radius: 20px !important;
+  }
+
+  .dash-root .pulse-line-chart {
+    min-width: 640px !important;
+  }
+
+  .dash-root .pulse-soft-chart-wrap {
+    min-height: 288px;
+  }
+
+  .team-reveal-name {
+    font-size: clamp(38px, 13vw, 62px) !important;
+  }
+}

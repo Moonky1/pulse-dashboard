@@ -209,7 +209,7 @@ function getMetricColor(metric) {
   if (metric === 'invalid') return '#fb7185'
   if (metric === 'goalDays') return '#fbbf24'
   if (metric === 'lowestXfers') return '#fbbf24'
-  return '#e98a34'
+  return '#d7b987'
 }
 
 function getTeamColor(teamId) {
@@ -351,7 +351,7 @@ function TeamRevealOverlay({ reveal, onDone }) {
 
     const timer = window.setTimeout(() => {
       onDone?.()
-    }, 1550)
+    }, 1220)
 
     return () => window.clearTimeout(timer)
   }, [teamId, reveal?.key, onDone])
@@ -361,18 +361,13 @@ function TeamRevealOverlay({ reveal, onDone }) {
   return (
     <div className="team-reveal-overlay" key={reveal?.key}>
       <div className="team-reveal-bg" />
-      <div className="team-reveal-card" style={{ '--team-reveal-accent': getTeamColor(teamId) }}>
-        <div className="team-reveal-orb team-reveal-orb-one" />
-        <div className="team-reveal-orb team-reveal-orb-two" />
-
+      <div className="team-reveal-natural" style={{ '--team-reveal-accent': getTeamColor(teamId) }}>
+        <div className="team-reveal-warm-glow" />
         <div className="team-reveal-flag-wrap">
-          <div className="team-reveal-flag-glow" />
-          <FlagImg src={team.flag} size={96} alt={team.label} />
+          <FlagImg src={team.flag} size={82} alt={team.label} />
         </div>
-
-        <div className="team-reveal-kicker">Loading team pulse</div>
+        <div className="team-reveal-kicker">Team</div>
         <div className="team-reveal-name">{team.label}</div>
-        <div className="team-reveal-line" />
       </div>
     </div>
   )
@@ -1409,8 +1404,8 @@ function DateSelectorRow({ dates = [], selectedDate, onChange }) {
             overflowX: 'hidden',
             padding: 12,
             borderRadius: 18,
-            border: '1px solid rgba(255, 138, 42, 0.35)',
-            background: 'linear-gradient(180deg, rgba(20, 12, 7, 0.98), rgba(8, 6, 5, 0.98))',
+            border: '1px solid rgba(215, 185, 135, 0.34)',
+            background: 'linear-gradient(180deg, rgba(16, 14, 12, 0.98), rgba(7, 7, 7, 0.98))',
             boxShadow: '0 22px 60px rgba(0, 0, 0, 0.65)',
           }}
         >
@@ -1458,9 +1453,9 @@ function DateSelectorRow({ dates = [], selectedDate, onChange }) {
                       }}
                       style={{
                         width: '100%',
-                        border: active ? '1px solid rgba(255, 138, 42, 0.9)' : '1px solid rgba(255,255,255,0.08)',
-                        background: active ? 'rgba(255, 138, 42, 0.18)' : 'rgba(255,255,255,0.035)',
-                        color: active ? '#ff9b3d' : '#f7eee7',
+                        border: active ? '1px solid rgba(215, 185, 135, 0.75)' : '1px solid rgba(255,255,255,0.08)',
+                        background: active ? 'rgba(215, 185, 135, 0.16)' : 'rgba(255,255,255,0.035)',
+                        color: active ? '#f0d19a' : '#f7eee7',
                         borderRadius: 12,
                         padding: '10px 12px',
                         textAlign: 'left',
@@ -2237,9 +2232,10 @@ function buildAnalyticsInsights(history, selectedTeams = ['all'], rangeMode = 'w
   }
 }
 
-function SimpleLineChart({ data = [], series = [], height = 280 }) {
-  const width = 760
-  const pad = { top: 18, right: 18, bottom: 36, left: 54 }
+function SimpleLineChart({ data = [], series = [], height = 300 }) {
+  const [hoverPoint, setHoverPoint] = useState(null)
+  const width = 840
+  const pad = { top: 28, right: 44, bottom: 44, left: 66 }
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const maxValue = Math.max(1, ...data.flatMap(row => series.map(item => Number(row[item.key] || 0))))
@@ -2252,15 +2248,42 @@ function SimpleLineChart({ data = [], series = [], height = 280 }) {
 
   const yForValue = value => pad.top + innerH - (Number(value || 0) / maxValue) * innerH
 
+  const handleMove = event => {
+    if (!data.length) return
+
+    const svgRect = event.currentTarget.getBoundingClientRect()
+    const wrapperRect = event.currentTarget.closest('.pulse-chart-scroll')?.getBoundingClientRect() || svgRect
+    const x = ((event.clientX - svgRect.left) / Math.max(1, svgRect.width)) * width
+    const pct = Math.min(1, Math.max(0, (x - pad.left) / Math.max(1, innerW)))
+    const index = Math.min(data.length - 1, Math.max(0, Math.round(pct * (data.length - 1))))
+
+    setHoverPoint({
+      index,
+      x: event.clientX - wrapperRect.left,
+      y: event.clientY - wrapperRect.top,
+      flipX: event.clientX - wrapperRect.left > wrapperRect.width * 0.62,
+      flipY: event.clientY - wrapperRect.top > wrapperRect.height * 0.62,
+    })
+  }
+
+  const hoverRow = hoverPoint?.index != null ? data[hoverPoint.index] : null
+
   return (
-    <div className="pulse-chart-scroll">
-      <svg className="pulse-line-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Performance trend">
+    <div className="pulse-chart-scroll pulse-multiline-wrap pulse-soft-chart-wrap">
+      <svg
+        className="pulse-line-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Performance trend"
+        onMouseMove={handleMove}
+        onMouseLeave={() => setHoverPoint(null)}
+      >
         {yTicks.map((tick, index) => {
           const y = yForValue(tick)
           return (
             <g key={`tick-${index}`}>
               <line x1={pad.left} x2={width - pad.right} y1={y} y2={y} className="pulse-chart-grid-line" />
-              <text x={pad.left - 12} y={y + 4} textAnchor="end" className="pulse-chart-axis-text">{tick.toLocaleString()}</text>
+              <text x={pad.left - 16} y={y + 4} textAnchor="end" className="pulse-chart-axis-text">{tick.toLocaleString()}</text>
             </g>
           )
         })}
@@ -2273,7 +2296,7 @@ function SimpleLineChart({ data = [], series = [], height = 280 }) {
 
           return (
             <g key={item.key}>
-              {areaPoints ? <polygon points={areaPoints} fill={item.color} opacity="0.08" /> : null}
+              {areaPoints ? <polygon points={areaPoints} fill={item.color} opacity="0.07" /> : null}
               <polyline points={points} fill="none" stroke={item.color} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
             </g>
           )
@@ -2282,12 +2305,47 @@ function SimpleLineChart({ data = [], series = [], height = 280 }) {
         {data.map((row, index) => {
           if (data.length > 8 && index !== 0 && index !== data.length - 1 && index % Math.ceil(data.length / 4) !== 0) return null
           return (
-            <text key={`x-${row.date}`} x={xForIndex(index)} y={height - 12} textAnchor="middle" className="pulse-chart-axis-text">
+            <text key={`x-${row.date}`} x={xForIndex(index)} y={height - 14} textAnchor="middle" className="pulse-chart-axis-text">
               {row.date?.slice(5).replace('-', '/')}
             </text>
           )
         })}
+
+        {hoverRow ? (
+          <g>
+            <line x1={xForIndex(hoverPoint.index)} x2={xForIndex(hoverPoint.index)} y1={pad.top} y2={pad.top + innerH} className="pulse-chart-hover-line" />
+            {series.map(item => (
+              <circle
+                key={`hover-${item.key}`}
+                cx={xForIndex(hoverPoint.index)}
+                cy={yForValue(hoverRow[item.key])}
+                r="5"
+                fill={item.color}
+                stroke="#050607"
+                strokeWidth="2"
+              />
+            ))}
+          </g>
+        ) : null}
       </svg>
+
+      {hoverRow ? (
+        <div
+          className="pulse-chart-tooltip follow-cursor"
+          style={{
+            left: hoverPoint.x,
+            top: hoverPoint.y,
+            transform: `${hoverPoint.flipX ? 'translate(-104%, 14px)' : 'translate(18px, 14px)'} ${hoverPoint.flipY ? 'translateY(-112%)' : ''}`,
+          }}
+        >
+          <strong>{formatDateLabel(hoverRow.date)}</strong>
+          {series.map(item => (
+            <span key={item.key} style={{ color: item.color }}>
+              {item.label || getMetricLabel(item.key)}: {Number(hoverRow[item.key] || 0).toLocaleString()}
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -2321,10 +2379,10 @@ function SimpleBarChart({ data = [], metric = 'total' }) {
   )
 }
 
-function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total', height = 300 }) {
-  const [hoverIndex, setHoverIndex] = useState(null)
-  const width = 860
-  const pad = { top: 18, right: 24, bottom: 42, left: 58 }
+function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total', height = 330 }) {
+  const [hoverPoint, setHoverPoint] = useState(null)
+  const width = 900
+  const pad = { top: 30, right: 48, bottom: 48, left: 70 }
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const activeTeamIds = (teamIds || TEAM_ORDER).filter(teamId => TEAM_ORDER.includes(teamId))
@@ -2337,31 +2395,40 @@ function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total',
 
   const handleMove = event => {
     if (!data.length) return
-    const rect = event.currentTarget.getBoundingClientRect()
-    const x = ((event.clientX - rect.left) / rect.width) * width
+
+    const svgRect = event.currentTarget.getBoundingClientRect()
+    const wrapperRect = event.currentTarget.closest('.pulse-chart-scroll')?.getBoundingClientRect() || svgRect
+    const x = ((event.clientX - svgRect.left) / Math.max(1, svgRect.width)) * width
     const pct = Math.min(1, Math.max(0, (x - pad.left) / Math.max(1, innerW)))
-    const index = Math.round(pct * (data.length - 1))
-    setHoverIndex(Math.min(data.length - 1, Math.max(0, index)))
+    const index = Math.min(data.length - 1, Math.max(0, Math.round(pct * (data.length - 1))))
+
+    setHoverPoint({
+      index,
+      x: event.clientX - wrapperRect.left,
+      y: event.clientY - wrapperRect.top,
+      flipX: event.clientX - wrapperRect.left > wrapperRect.width * 0.62,
+      flipY: event.clientY - wrapperRect.top > wrapperRect.height * 0.62,
+    })
   }
 
-  const hoverRow = hoverIndex != null ? data[hoverIndex] : null
+  const hoverRow = hoverPoint?.index != null ? data[hoverPoint.index] : null
 
   return (
-    <div className="pulse-chart-scroll pulse-multiline-wrap">
+    <div className="pulse-chart-scroll pulse-multiline-wrap pulse-soft-chart-wrap">
       <svg
         className="pulse-line-chart pulse-multiline-chart"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label="All teams compared"
         onMouseMove={handleMove}
-        onMouseLeave={() => setHoverIndex(null)}
+        onMouseLeave={() => setHoverPoint(null)}
       >
         {yTicks.map((tick, index) => {
           const y = yForValue(tick)
           return (
             <g key={`mt-y-${index}`}>
               <line x1={pad.left} x2={width - pad.right} y1={y} y2={y} className="pulse-chart-grid-line" />
-              <text x={pad.left - 12} y={y + 4} textAnchor="end" className="pulse-chart-axis-text">{tick.toLocaleString()}</text>
+              <text x={pad.left - 16} y={y + 4} textAnchor="end" className="pulse-chart-axis-text">{tick.toLocaleString()}</text>
             </g>
           )
         })}
@@ -2374,7 +2441,7 @@ function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total',
         {data.map((row, index) => {
           if (data.length > 8 && index !== 0 && index !== data.length - 1 && index % Math.ceil(data.length / 4) !== 0) return null
           return (
-            <text key={`mt-x-${row.date}`} x={xForIndex(index)} y={height - 14} textAnchor="middle" className="pulse-chart-axis-text">
+            <text key={`mt-x-${row.date}`} x={xForIndex(index)} y={height - 16} textAnchor="middle" className="pulse-chart-axis-text">
               {row.date?.slice(5).replace('-', '/')}
             </text>
           )
@@ -2382,15 +2449,15 @@ function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total',
 
         {hoverRow ? (
           <g>
-            <line x1={xForIndex(hoverIndex)} x2={xForIndex(hoverIndex)} y1={pad.top} y2={pad.top + innerH} className="pulse-chart-hover-line" />
+            <line x1={xForIndex(hoverPoint.index)} x2={xForIndex(hoverPoint.index)} y1={pad.top} y2={pad.top + innerH} className="pulse-chart-hover-line" />
             {activeTeamIds.map(teamId => (
               <circle
                 key={`dot-${teamId}`}
-                cx={xForIndex(hoverIndex)}
+                cx={xForIndex(hoverPoint.index)}
                 cy={yForValue(hoverRow[metricKey(teamId)] ?? hoverRow[teamId] ?? 0)}
                 r="5"
                 fill={getTeamColor(teamId)}
-                stroke="#080604"
+                stroke="#050607"
                 strokeWidth="2"
               />
             ))}
@@ -2399,7 +2466,14 @@ function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total',
       </svg>
 
       {hoverRow ? (
-        <div className="pulse-chart-tooltip">
+        <div
+          className="pulse-chart-tooltip follow-cursor"
+          style={{
+            left: hoverPoint.x,
+            top: hoverPoint.y,
+            transform: `${hoverPoint.flipX ? 'translate(-104%, 14px)' : 'translate(18px, 14px)'} ${hoverPoint.flipY ? 'translateY(-112%)' : ''}`,
+          }}
+        >
           <strong>{formatDateLabel(hoverRow.date)}</strong>
           {activeTeamIds.map(teamId => (
             <span key={teamId} style={{ color: getTeamColor(teamId) }}>
@@ -2412,10 +2486,11 @@ function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total',
   )
 }
 
-function RadarChart({ axes = [], data = [], size = 300 }) {
+function RadarChart({ axes = [], data = [], size = 320 }) {
+  const [hover, setHover] = useState(null)
   const cx = size / 2
   const cy = size / 2
-  const radius = size * 0.34
+  const radius = size * 0.31
   const angleFor = index => (Math.PI * 2 * index) / Math.max(1, axes.length) - Math.PI / 2
   const pointFor = (index, value = 1) => {
     const angle = angleFor(index)
@@ -2423,6 +2498,19 @@ function RadarChart({ axes = [], data = [], size = 300 }) {
   }
 
   const polygonFor = item => axes.map((axis, index) => pointFor(index, Math.max(0, Math.min(1, Number(item.values?.[axis] || 0))))).map(point => point.join(',')).join(' ')
+
+  const handleMove = (event, item) => {
+    const rect = event.currentTarget.closest('.pulse-radar-wrap')?.getBoundingClientRect()
+    if (!rect) return
+
+    setHover({
+      item,
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+      flipX: event.clientX - rect.left > rect.width * 0.58,
+      flipY: event.clientY - rect.top > rect.height * 0.58,
+    })
+  }
 
   return (
     <div className="pulse-radar-wrap">
@@ -2432,7 +2520,7 @@ function RadarChart({ axes = [], data = [], size = 300 }) {
         ))}
 
         {axes.map((axis, index) => {
-          const [x, y] = pointFor(index, 1.16)
+          const [x, y] = pointFor(index, 1.18)
           const [x2, y2] = pointFor(index, 1)
           return (
             <g key={axis}>
@@ -2442,20 +2530,41 @@ function RadarChart({ axes = [], data = [], size = 300 }) {
           )
         })}
 
-        {data.slice(0, 2).map((item, index) => (
+        {data.slice(0, 4).map((item, index) => (
           <polygon
             key={item.teamId}
             points={polygonFor(item)}
             fill={item.color}
             stroke={item.color}
-            opacity={index === 0 ? 0.32 : 0.18}
+            opacity={index === 0 ? 0.28 : 0.14}
             strokeWidth="3"
+            onMouseMove={event => handleMove(event, item)}
+            onMouseLeave={() => setHover(null)}
+            style={{ cursor: 'crosshair' }}
           />
         ))}
       </svg>
 
+      {hover?.item ? (
+        <div
+          className="pulse-chart-tooltip follow-cursor radar-tooltip"
+          style={{
+            left: hover.x,
+            top: hover.y,
+            transform: `${hover.flipX ? 'translate(-104%, 12px)' : 'translate(18px, 12px)'} ${hover.flipY ? 'translateY(-112%)' : ''}`,
+          }}
+        >
+          <strong>{hover.item.label}</strong>
+          {axes.map(axis => (
+            <span key={axis} style={{ color: hover.item.color }}>
+              {axis}: {Math.round(Number(hover.item.values?.[axis] || 0) * 100)}%
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       <div className="pulse-chart-legend compact">
-        {data.slice(0, 2).map(item => (
+        {data.slice(0, 4).map(item => (
           <span key={item.teamId}><i style={{ background: item.color }} />{item.label}</span>
         ))}
       </div>
@@ -2490,10 +2599,10 @@ function LanguageMixChart({ data = [] }) {
 }
 
 function HourlyPaceChart({ data = [], teamIds = TEAM_ORDER }) {
-  const [hoverIndex, setHoverIndex] = useState(null)
-  const width = 860
-  const height = 260
-  const pad = { top: 20, right: 22, bottom: 42, left: 50 }
+  const [hoverPoint, setHoverPoint] = useState(null)
+  const width = 900
+  const height = 280
+  const pad = { top: 28, right: 44, bottom: 48, left: 64 }
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const activeTeamIds = (teamIds || TEAM_ORDER).filter(teamId => TEAM_ORDER.includes(teamId))
@@ -2504,21 +2613,31 @@ function HourlyPaceChart({ data = [], teamIds = TEAM_ORDER }) {
 
   const handleMove = event => {
     if (!data.length) return
-    const rect = event.currentTarget.getBoundingClientRect()
-    const x = ((event.clientX - rect.left) / rect.width) * width
+
+    const svgRect = event.currentTarget.getBoundingClientRect()
+    const wrapperRect = event.currentTarget.closest('.pulse-chart-scroll')?.getBoundingClientRect() || svgRect
+    const x = ((event.clientX - svgRect.left) / Math.max(1, svgRect.width)) * width
     const pct = Math.min(1, Math.max(0, (x - pad.left) / Math.max(1, innerW)))
-    setHoverIndex(Math.min(data.length - 1, Math.max(0, Math.round(pct * (data.length - 1)))))
+    const index = Math.min(data.length - 1, Math.max(0, Math.round(pct * (data.length - 1))))
+
+    setHoverPoint({
+      index,
+      x: event.clientX - wrapperRect.left,
+      y: event.clientY - wrapperRect.top,
+      flipX: event.clientX - wrapperRect.left > wrapperRect.width * 0.62,
+      flipY: event.clientY - wrapperRect.top > wrapperRect.height * 0.62,
+    })
   }
 
-  const hoverRow = hoverIndex != null ? data[hoverIndex] : null
+  const hoverRow = hoverPoint?.index != null ? data[hoverPoint.index] : null
 
   return (
-    <div className="pulse-chart-scroll pulse-multiline-wrap">
+    <div className="pulse-chart-scroll pulse-multiline-wrap pulse-soft-chart-wrap">
       <svg
         className="pulse-line-chart pulse-hourly-chart"
         viewBox={`0 0 ${width} ${height}`}
         onMouseMove={handleMove}
-        onMouseLeave={() => setHoverIndex(null)}
+        onMouseLeave={() => setHoverPoint(null)}
         role="img"
         aria-label="Hourly pace chart"
       >
@@ -2527,7 +2646,7 @@ function HourlyPaceChart({ data = [], teamIds = TEAM_ORDER }) {
           return (
             <g key={tick}>
               <line x1={pad.left} x2={width - pad.right} y1={y} y2={y} className="pulse-chart-grid-line" />
-              <text x={pad.left - 12} y={y + 4} textAnchor="end" className="pulse-chart-axis-text">{tick}</text>
+              <text x={pad.left - 16} y={y + 4} textAnchor="end" className="pulse-chart-axis-text">{tick}</text>
             </g>
           )
         })}
@@ -2539,14 +2658,36 @@ function HourlyPaceChart({ data = [], teamIds = TEAM_ORDER }) {
         })}
 
         {data.map((row, index) => (
-          <text key={row.hour} x={xForIndex(index)} y={height - 14} textAnchor="middle" className="pulse-chart-axis-text">{row.hour}</text>
+          <text key={row.hour} x={xForIndex(index)} y={height - 16} textAnchor="middle" className="pulse-chart-axis-text">{row.hour}</text>
         ))}
 
-        {hoverRow ? <line x1={xForIndex(hoverIndex)} x2={xForIndex(hoverIndex)} y1={pad.top} y2={pad.top + innerH} className="pulse-chart-hover-line" /> : null}
+        {hoverRow ? (
+          <g>
+            <line x1={xForIndex(hoverPoint.index)} x2={xForIndex(hoverPoint.index)} y1={pad.top} y2={pad.top + innerH} className="pulse-chart-hover-line" />
+            {activeTeamIds.map(teamId => (
+              <circle
+                key={`hour-dot-${teamId}`}
+                cx={xForIndex(hoverPoint.index)}
+                cy={yForValue(hoverRow[teamId])}
+                r="5"
+                fill={getTeamColor(teamId)}
+                stroke="#050607"
+                strokeWidth="2"
+              />
+            ))}
+          </g>
+        ) : null}
       </svg>
 
       {hoverRow ? (
-        <div className="pulse-chart-tooltip">
+        <div
+          className="pulse-chart-tooltip follow-cursor"
+          style={{
+            left: hoverPoint.x,
+            top: hoverPoint.y,
+            transform: `${hoverPoint.flipX ? 'translate(-104%, 14px)' : 'translate(18px, 14px)'} ${hoverPoint.flipY ? 'translateY(-112%)' : ''}`,
+          }}
+        >
           <strong>{hoverRow.hour}</strong>
           {activeTeamIds.map(teamId => (
             <span key={teamId} style={{ color: getTeamColor(teamId) }}>
@@ -2781,19 +2922,18 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
               <div className="pulse-chart-card-head">
                 <div>
                   <div className="pulse-table-title">Performance · {analyticsRange === 'day' ? 'day' : analyticsRange.replace('_', ' ')}</div>
-                  <div className="pulse-summary-subtitle">English vs Spanish vs Total</div>
                 </div>
               </div>
               <SimpleLineChart
                 data={analytics.trend}
                 series={[
-                  { key: 'total', label: 'Total', color: '#e98a34' },
+                  { key: 'total', label: 'Total', color: '#d7b987' },
                   { key: 'english', label: 'English', color: '#38bdf8' },
                   { key: 'spanish', label: 'Spanish', color: '#34d399' },
                 ]}
               />
               <div className="pulse-chart-legend">
-                <span><i style={{ background: '#e98a34' }} />Total</span>
+                <span><i style={{ background: '#d7b987' }} />Total</span>
                 <span><i style={{ background: '#38bdf8' }} />English</span>
                 <span><i style={{ background: '#34d399' }} />Spanish</span>
               </div>
@@ -2803,7 +2943,6 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
               <div className="pulse-chart-card-head">
                 <div>
                   <div className="pulse-table-title">Team profile</div>
-                  <div className="pulse-summary-subtitle">Strengths radar</div>
                 </div>
               </div>
               <RadarChart axes={analytics.radarAxes} data={analytics.radarData} />
@@ -2814,7 +2953,6 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
             <div className="pulse-chart-card-head">
               <div>
                 <div className="pulse-table-title">All teams · compared</div>
-                <div className="pulse-summary-subtitle">Daily totals by team</div>
               </div>
               <div className="pulse-mini-tabs">
                 {SORT_OPTIONS.map(option => (
@@ -2845,7 +2983,6 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
               <div className="pulse-chart-card-head">
                 <div>
                   <div className="pulse-table-title">Hourly · all teams compared</div>
-                  <div className="pulse-summary-subtitle">Avg xfers per agent / hour · goal 3/hr</div>
                 </div>
               </div>
               <HourlyPaceChart data={analytics.hourlyCompared} teamIds={selectedTeamIds} />
@@ -2860,7 +2997,6 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
               <div className="pulse-chart-card-head">
                 <div>
                   <div className="pulse-table-title">Language mix per team</div>
-                  <div className="pulse-summary-subtitle">English / Spanish / Invalid</div>
                 </div>
               </div>
               <LanguageMixChart data={analytics.languageMix} />
@@ -2871,7 +3007,6 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
             <div className="pulse-chart-card-head">
               <div>
                 <div className="pulse-table-title">Team comparison</div>
-                <div className="pulse-summary-subtitle">Quick team totals</div>
               </div>
               <div className="pulse-mini-tabs">
                 {SORT_OPTIONS.map(option => (
@@ -3208,9 +3343,9 @@ function DashboardResponsivePolishStyle() {
       .pulse-range-pills button.active,
       .pulse-mini-tabs button.active,
       .pulse-team-filter.active {
-        background: #ff8a2a;
-        border-color: rgba(255, 138, 42, .8);
-        color: #110905;
+        background: #d7b987;
+        border-color: rgba(215, 185, 135, .72);
+        color: #15110b;
       }
 
       .pulse-analytics-date-control .lov-date-row {
@@ -3364,13 +3499,13 @@ function DashboardResponsivePolishStyle() {
       }
 
       .dash-root {
-        --pulse-accent: #e98a34;
-        --pulse-accent-soft: rgba(233, 138, 52, .16);
+        --pulse-accent: #b9976b;
+        --pulse-accent-soft: rgba(185, 151, 107, .14);
       }
 
       .lov-hero,
       .pulse-hero-card {
-        background: radial-gradient(circle at 92% 12%, rgba(233, 138, 52, .17), transparent 34%), linear-gradient(135deg, rgba(255,255,255,.035), rgba(15,10,7,.68)) !important;
+        background: radial-gradient(circle at 92% 12%, rgba(185,151,107,.12), transparent 34%), linear-gradient(135deg, rgba(255,255,255,.035), rgba(12,11,10,.72)) !important;
       }
 
       .lov-nav-pill button.active,
@@ -3380,8 +3515,8 @@ function DashboardResponsivePolishStyle() {
       .lov-date-btn.active,
       .pulse-sort-tab.active,
       .pulse-tab.active {
-        background: linear-gradient(135deg, #f6a04a, #e98a34) !important;
-        color: #100804 !important;
+        background: linear-gradient(135deg, #e4c896, #b9976b) !important;
+        color: #14100b !important;
       }
 
       .lov-search-wrap {
@@ -3392,7 +3527,7 @@ function DashboardResponsivePolishStyle() {
       .pulse-dark-search input {
         color: #f7eee7 !important;
         -webkit-text-fill-color: #f7eee7 !important;
-        caret-color: #e98a34;
+        caret-color: #d7b987;
       }
 
       .lov-search input::placeholder,
@@ -3410,7 +3545,7 @@ function DashboardResponsivePolishStyle() {
 
       .lov-search-suggestions {
         background: linear-gradient(180deg, rgba(17, 11, 8, .98), rgba(7, 5, 4, .99)) !important;
-        border: 1px solid rgba(233, 138, 52, .25) !important;
+        border: 1px solid rgba(185, 151, 107, .28) !important;
         border-radius: 18px !important;
         box-shadow: 0 24px 70px rgba(0,0,0,.72) !important;
         overflow: hidden;
@@ -3422,7 +3557,7 @@ function DashboardResponsivePolishStyle() {
       }
 
       .lov-search-suggestion:hover {
-        background: rgba(233, 138, 52, .12) !important;
+        background: rgba(185, 151, 107, .14) !important;
       }
 
       .pulse-analytics-hero-clean {
@@ -3646,6 +3781,187 @@ function DashboardResponsivePolishStyle() {
           padding-left: 4px;
         }
       }
+
+      /* Final chart polish overrides */
+      .pulse-chart-card {
+        padding: 22px !important;
+        overflow: visible !important;
+        border-radius: 24px !important;
+      }
+
+      .pulse-chart-card .pulse-table-title {
+        padding: 0 !important;
+        border-bottom: 0 !important;
+        font-size: 18px !important;
+        line-height: 1.15 !important;
+      }
+
+      .pulse-chart-card .pulse-summary-subtitle {
+        display: none !important;
+      }
+
+      .pulse-chart-card-head {
+        align-items: center !important;
+        gap: 16px !important;
+        margin-bottom: 18px !important;
+        padding: 0 !important;
+      }
+
+      .pulse-chart-scroll {
+        position: relative !important;
+        width: 100%;
+        padding: 4px 10px 2px !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+      }
+
+      .pulse-line-chart {
+        min-width: 720px !important;
+        overflow: visible !important;
+      }
+
+      .pulse-chart-tooltip {
+        position: absolute !important;
+        right: auto !important;
+        top: auto !important;
+        min-width: 170px !important;
+        max-width: 260px;
+        z-index: 35 !important;
+        background: rgba(6, 7, 8, .94) !important;
+        border-color: rgba(255,255,255,.10) !important;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+
+      .pulse-bar-row {
+        grid-template-columns: minmax(150px, 210px) minmax(220px, 1fr) minmax(62px, auto) !important;
+        gap: 18px !important;
+      }
+
+      .pulse-language-row {
+        grid-template-columns: minmax(150px, 200px) minmax(140px, 1fr) minmax(155px, auto) !important;
+        gap: 14px !important;
+      }
+
+      .pulse-language-values {
+        justify-content: flex-end !important;
+      }
+
+      .pulse-radar-wrap {
+        position: relative !important;
+        min-height: 345px !important;
+        overflow: visible !important;
+      }
+
+      .pulse-radar-chart {
+        width: min(100%, 330px) !important;
+        overflow: visible !important;
+      }
+
+      .team-reveal-card,
+      .team-reveal-line,
+      .team-reveal-orb,
+      .team-reveal-flag-glow {
+        display: none !important;
+      }
+
+      .team-reveal-overlay {
+        animation: teamRevealOutSoft 1.22s cubic-bezier(.2,.8,.2,1) forwards !important;
+      }
+
+      .team-reveal-bg {
+        background: rgba(3, 4, 5, .62) !important;
+        backdrop-filter: blur(13px) saturate(115%);
+        -webkit-backdrop-filter: blur(13px) saturate(115%);
+      }
+
+      .team-reveal-natural {
+        position: relative;
+        isolation: isolate;
+        display: grid;
+        justify-items: center;
+        gap: 12px;
+        padding: 24px 28px;
+        animation: teamRevealNaturalIn .62s cubic-bezier(.17,.84,.44,1) both;
+      }
+
+      .team-reveal-warm-glow {
+        position: absolute;
+        inset: 50% auto auto 50%;
+        width: min(520px, 82vw);
+        height: min(280px, 42vh);
+        border-radius: 999px;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle at 50% 50%, rgba(215,185,135,.30) 0%, transparent 60%);
+        opacity: .8;
+        filter: blur(34px);
+        z-index: -1;
+      }
+
+      .team-reveal-flag-wrap {
+        width: auto !important;
+        height: auto !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+
+      .team-reveal-flag-wrap img,
+      .team-reveal-flag-wrap span {
+        transform: scale(1.2) !important;
+        filter: drop-shadow(0 18px 34px rgba(0,0,0,.45));
+      }
+
+      .team-reveal-kicker {
+        margin-top: 8px !important;
+        color: rgba(244, 228, 200, .82) !important;
+        font-size: 13px !important;
+        letter-spacing: .10em !important;
+      }
+
+      .team-reveal-name {
+        margin-top: 0 !important;
+        color: #fff8ee !important;
+        font-size: clamp(44px, 8vw, 96px) !important;
+        text-shadow: 0 22px 60px rgba(0,0,0,.62);
+      }
+
+      @keyframes teamRevealNaturalIn {
+        0% { opacity: 0; transform: translateY(18px) scale(.92); filter: blur(8px); }
+        68% { opacity: 1; transform: translateY(0) scale(1.04); filter: blur(0); }
+        100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      }
+
+      @keyframes teamRevealOutSoft {
+        0%, 70% { opacity: 1; }
+        100% { opacity: 0; visibility: hidden; }
+      }
+
+      @media (max-width: 980px) {
+        .pulse-analytics-grid,
+        .pulse-analytics-grid-main,
+        .pulse-analytics-grid-secondary {
+          grid-template-columns: 1fr !important;
+        }
+
+        .pulse-bar-row,
+        .pulse-language-row {
+          grid-template-columns: 1fr !important;
+          gap: 8px !important;
+        }
+
+        .pulse-mini-tabs {
+          width: 100%;
+          overflow-x: auto;
+          justify-content: flex-start;
+        }
+
+        .pulse-chart-card-head {
+          align-items: flex-start !important;
+          flex-direction: column;
+        }
+      }
+
     `}</style>
   )
 }
