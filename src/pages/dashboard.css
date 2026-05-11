@@ -2971,3 +2971,495 @@
     color: rgba(201,192,184,.70) !important;
   }
 }
+
+/* =========================================================
+   MOONKY FINAL VISUAL POLISH PATCH — MOBILE/IPAD + CHARTS
+   Data logic untouched. This only fixes layout, spacing,
+   chart sizing, date controls, header balance and mobile KPI rows.
+========================================================= */
+
+.dash-root {
+  --pulse-warm: #d7b987 !important;
+  --pulse-warm-2: #b9976b !important;
+  --pulse-panel: rgba(18, 20, 23, 0.78) !important;
+  --pulse-panel-strong: rgba(11, 12, 14, 0.92) !important;
+  --pulse-border-soft: rgba(255, 255, 255, 0.085) !important;
+  --pulse-border-warm: rgba(215, 185, 135, 0.24) !important;
+}
+
+/* General spacing: less pushed to the side, calmer cards */
+.dash-root .lov-content {
+  width: min(100%, 1500px) !important;
+  margin-inline: auto !important;
+  padding-left: clamp(18px, 2.2vw, 34px) !important;
+  padding-right: clamp(18px, 2.2vw, 34px) !important;
+}
+
+.dash-root .lov-hero,
+.dash-root .pulse-hero-card,
+.dash-root .pulse-table-wrap,
+.dash-root .pulse-chart-card,
+.dash-root .lov-kpi-card,
+.dash-root .pulse-summary-card,
+.dash-root .pulse-team-card,
+.dash-root .pulse-team-directory-card {
+  background:
+    radial-gradient(circle at 88% 8%, rgba(215,185,135,.10), transparent 32%),
+    linear-gradient(180deg, rgba(24,25,28,.82), rgba(10,11,13,.92)) !important;
+  border-color: var(--pulse-border-soft) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 18px 42px rgba(0,0,0,.26) !important;
+}
+
+/* Header: search a little smaller so nav stays visually centered */
+.dash-root .lov-header {
+  column-gap: 12px !important;
+}
+
+.dash-root .lov-search {
+  max-width: 340px !important;
+}
+
+.dash-root .lov-nav-pill {
+  justify-self: center !important;
+}
+
+.dash-root .lov-header-actions {
+  justify-self: end !important;
+}
+
+/* Date controls: make the day selector match the neutral warm UI */
+.dash-root .lov-date-row {
+  overflow: visible !important;
+  width: 100% !important;
+}
+
+.dash-root .lov-date-btn,
+.dash-root .pulse-analytics-date-control .lov-date-btn,
+.dash-root .lov-date-btn.active {
+  background: linear-gradient(135deg, rgba(215,185,135,.92), rgba(185,151,107,.92)) !important;
+  color: #15100b !important;
+  border: 1px solid rgba(215,185,135,.44) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+.dash-root .pulse-analytics-controls-polished {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px) !important;
+  gap: 14px !important;
+  align-items: stretch !important;
+}
+
+.dash-root .pulse-analytics-control-block {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(215,185,135,.09), transparent 38%),
+    linear-gradient(180deg, rgba(21,22,25,.78), rgba(10,11,13,.92)) !important;
+  border: 1px solid var(--pulse-border-soft) !important;
+  border-radius: 24px !important;
+}
+
+.dash-root .pulse-range-pills {
+  display: flex !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.dash-root .pulse-range-pills button,
+.dash-root .pulse-team-filter,
+.dash-root .pulse-mini-tabs button {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(255,255,255,.09) !important;
+  color: rgba(244,238,230,.82) !important;
+}
+
+.dash-root .pulse-range-pills button.active,
+.dash-root .pulse-team-filter.active,
+.dash-root .pulse-mini-tabs button.active {
+  background: linear-gradient(135deg, #e5c991, #b9976b) !important;
+  border-color: rgba(215,185,135,.56) !important;
+  color: #15100b !important;
+}
+
+/* KPI cards: balanced desktop/tablet */
+.dash-root .lov-kpi-grid-main,
+.dash-root .pulse-analytics-kpis {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: clamp(10px, 1.2vw, 16px) !important;
+  align-items: stretch !important;
+}
+
+.dash-root .lov-kpi-card {
+  min-width: 0 !important;
+  min-height: 118px !important;
+  padding: 20px 22px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+.dash-root .lov-kpi-value {
+  font-size: clamp(28px, 3.2vw, 46px) !important;
+  letter-spacing: -0.055em !important;
+}
+
+/* Team weekly cards: 4 summary cards in one clean row, then 4 blocks together */
+.dash-root .pulse-team-summary-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+
+.dash-root .pulse-team-summary-grid .pulse-summary-card {
+  min-width: 0 !important;
+  min-height: 126px !important;
+  padding: 18px !important;
+}
+
+.dash-root .pulse-team-week-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+}
+
+.dash-root .pulse-team-week-grid .pulse-top-block {
+  min-width: 0 !important;
+  height: 100% !important;
+}
+
+/* Charts: no inner scrollbars, bigger chart area, better padding */
+.dash-root .pulse-chart-card {
+  padding: clamp(18px, 2vw, 28px) !important;
+  overflow: visible !important;
+}
+
+.dash-root .pulse-chart-card-head {
+  width: 100% !important;
+  align-items: center !important;
+  gap: 16px !important;
+  margin-bottom: 12px !important;
+}
+
+.dash-root .pulse-chart-scroll,
+.dash-root .pulse-soft-chart-wrap,
+.dash-root .pulse-multiline-wrap {
+  width: 100% !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  padding: 4px 8px 0 !important;
+  scrollbar-width: none !important;
+}
+
+.dash-root .pulse-chart-scroll::-webkit-scrollbar,
+.dash-root .pulse-soft-chart-wrap::-webkit-scrollbar,
+.dash-root .pulse-multiline-wrap::-webkit-scrollbar {
+  display: none !important;
+}
+
+.dash-root .pulse-line-chart,
+.dash-root .pulse-multiline-chart,
+.dash-root .pulse-hourly-chart {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: clamp(310px, 30vw, 430px) !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+.dash-root .pulse-chart-axis-text {
+  fill: rgba(244,238,230,.72) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.dash-root .pulse-chart-tooltip.follow-cursor {
+  position: absolute !important;
+  z-index: 50 !important;
+  max-width: min(260px, calc(100vw - 44px)) !important;
+  pointer-events: none !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(215,185,135,.20) !important;
+  background: rgba(2,3,5,.94) !important;
+  box-shadow: 0 18px 44px rgba(0,0,0,.48) !important;
+}
+
+/* Radar: bigger, centered, only English/Spanish tooltip with white pointer line */
+.dash-root .pulse-radar-profile-wrap {
+  min-height: 420px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-direction: column !important;
+  padding: 4px 0 0 !important;
+}
+
+.dash-root .pulse-radar-chart {
+  width: min(100%, 390px) !important;
+  height: auto !important;
+  max-height: 390px !important;
+}
+
+.dash-root .pulse-radar-hover-line {
+  stroke: rgba(255,255,255,.95) !important;
+  stroke-width: 1.25 !important;
+}
+
+.dash-root .pulse-radar-label {
+  fill: rgba(244,238,230,.82) !important;
+  font-weight: 800 !important;
+}
+
+/* Team reveal: warmer, natural, no purple box */
+.dash-root .team-reveal-bg {
+  background:
+    radial-gradient(circle at 50% 34%, rgba(215,185,135,.20), transparent 34%),
+    rgba(2,3,5,.72) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+.dash-root .team-reveal-natural {
+  width: min(86vw, 560px) !important;
+  min-height: 290px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.dash-root .team-reveal-warm-glow {
+  background: radial-gradient(circle, rgba(215,185,135,.18), transparent 62%) !important;
+}
+
+.dash-root .team-reveal-name {
+  color: #fff8ed !important;
+  text-shadow: 0 20px 52px rgba(0,0,0,.58) !important;
+}
+
+/* Analytics layout: charts should not shrink */
+.dash-root .pulse-analytics-grid-main {
+  grid-template-columns: minmax(0, 1.65fr) minmax(360px, .85fr) !important;
+  align-items: stretch !important;
+}
+
+.dash-root .pulse-analytics-grid-main > .pulse-chart-card,
+.dash-root .pulse-analytics-grid-secondary > .pulse-chart-card,
+.dash-root .pulse-all-teams-card {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+/* Tablet */
+@media (max-width: 1100px) {
+  .dash-root .pulse-analytics-controls-polished {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dash-root .pulse-analytics-grid-main,
+  .dash-root .pulse-analytics-grid-secondary {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dash-root .pulse-line-chart,
+  .dash-root .pulse-multiline-chart,
+  .dash-root .pulse-hourly-chart {
+    height: clamp(320px, 48vw, 430px) !important;
+  }
+}
+
+/* iPad / phone: KPI cards stay in ONE row, compact but readable */
+@media (max-width: 760px) {
+  .dash-root .lov-content {
+    padding: 18px 12px 34px !important;
+  }
+
+  .dash-root .lov-hero,
+  .dash-root .pulse-hero-card {
+    min-height: 170px !important;
+    padding: 26px 22px !important;
+    border-radius: 26px !important;
+  }
+
+  .dash-root .lov-hero-title,
+  .dash-root .pulse-hero-title {
+    font-size: clamp(36px, 11vw, 56px) !important;
+  }
+
+  .dash-root .lov-kpi-grid,
+  .dash-root .lov-kpi-grid-main,
+  .dash-root .pulse-analytics-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .dash-root .lov-kpi-card {
+    min-height: 88px !important;
+    padding: 12px 8px !important;
+    border-radius: 18px !important;
+  }
+
+  .dash-root .lov-kpi-title {
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    white-space: normal !important;
+  }
+
+  .dash-root .lov-kpi-value {
+    font-size: clamp(20px, 7vw, 30px) !important;
+    line-height: .98 !important;
+    letter-spacing: -0.07em !important;
+  }
+
+  .dash-root .pulse-summary-grid:not(.pulse-team-summary-grid) {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .dash-root .pulse-summary-card {
+    min-height: 94px !important;
+    padding: 12px 10px !important;
+    border-radius: 18px !important;
+  }
+
+  .dash-root .pulse-summary-title {
+    font-size: 10px !important;
+  }
+
+  .dash-root .pulse-summary-value {
+    font-size: clamp(19px, 7vw, 30px) !important;
+    letter-spacing: -0.07em !important;
+  }
+
+  .dash-root .pulse-summary-subtitle {
+    font-size: 10px !important;
+    line-height: 1.25 !important;
+  }
+
+  .dash-root .pulse-team-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .dash-root .pulse-team-summary-grid .pulse-summary-card {
+    min-height: 94px !important;
+    padding: 12px 8px !important;
+  }
+
+  .dash-root .pulse-team-week-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .dash-root .pulse-chart-card {
+    padding: 16px 14px !important;
+    border-radius: 22px !important;
+  }
+
+  .dash-root .pulse-chart-card-head {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+
+  .dash-root .pulse-chart-card .pulse-table-title {
+    font-size: 18px !important;
+  }
+
+  .dash-root .pulse-mini-tabs {
+    width: auto !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    overflow-x: auto !important;
+  }
+
+  .dash-root .pulse-mini-tabs button {
+    min-width: 70px !important;
+    height: 36px !important;
+    font-size: 12px !important;
+  }
+
+  .dash-root .pulse-line-chart,
+  .dash-root .pulse-multiline-chart,
+  .dash-root .pulse-hourly-chart {
+    height: 310px !important;
+  }
+
+  .dash-root .pulse-chart-axis-text {
+    font-size: 10px !important;
+  }
+
+  .dash-root .pulse-radar-profile-wrap {
+    min-height: 360px !important;
+  }
+
+  .dash-root .pulse-radar-chart {
+    width: min(100%, 330px) !important;
+    max-height: 330px !important;
+  }
+
+  .dash-root .pulse-analytics-controls-polished {
+    gap: 10px !important;
+  }
+
+  .dash-root .pulse-analytics-control-block {
+    padding: 16px !important;
+    border-radius: 22px !important;
+  }
+
+  .dash-root .pulse-range-pills {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .dash-root .pulse-range-pills button {
+    min-width: 0 !important;
+    height: 42px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
+  }
+
+  .dash-root .lov-date-btn,
+  .dash-root .pulse-analytics-date-control .lov-date-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+/* very small phones */
+@media (max-width: 420px) {
+  .dash-root .lov-kpi-grid,
+  .dash-root .lov-kpi-grid-main,
+  .dash-root .pulse-analytics-kpis,
+  .dash-root .pulse-team-summary-grid {
+    gap: 6px !important;
+  }
+
+  .dash-root .lov-kpi-card,
+  .dash-root .pulse-team-summary-grid .pulse-summary-card {
+    min-height: 82px !important;
+    padding: 10px 6px !important;
+    border-radius: 16px !important;
+  }
+
+  .dash-root .lov-kpi-value,
+  .dash-root .pulse-summary-value {
+    font-size: clamp(18px, 6.7vw, 27px) !important;
+  }
+
+  .dash-root .lov-kpi-title,
+  .dash-root .pulse-summary-title {
+    font-size: 9px !important;
+  }
+
+  .dash-root .pulse-summary-grid:not(.pulse-team-summary-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .dash-root .pulse-line-chart,
+  .dash-root .pulse-multiline-chart,
+  .dash-root .pulse-hourly-chart {
+    height: 280px !important;
+  }
+}
