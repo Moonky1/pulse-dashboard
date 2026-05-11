@@ -102,7 +102,6 @@ const SIDEBAR_GROUPS = [
   {
     title: 'SYSTEM',
     items: [
-      { id: 'alerts', label: 'Alerts', icon: '🔔' },
       { id: 'settings', label: 'Settings', icon: '⚙️' },
       { id: 'support', label: 'Support', icon: '◎' },
     ],
@@ -1181,6 +1180,8 @@ function LovableHeader({
   userMenuOpen,
   onToggleUserMenu,
   onUserAction,
+  onPulseGo,
+  onAcademy,
 }) {
   return (
     <header className="lov-header">
@@ -1245,18 +1246,13 @@ function LovableHeader({
         ) : null}
       </div>
 
-      <div className="lov-live-pill">● Today — LIVE</div>
-
-      <nav className="lov-nav-pill">
+      <nav className="lov-nav-pill" aria-label="Primary navigation">
         <button type="button" className="active">Home</button>
-        <button type="button">Pulse GO</button>
-        <button type="button">Academy</button>
+        <button type="button" onClick={onPulseGo}>Pulse GO</button>
+        <button type="button" onClick={onAcademy}>Academy</button>
       </nav>
 
       <div className="lov-header-actions">
-        <button type="button" className="lov-icon-btn">◔</button>
-        <button type="button" className="lov-icon-btn">🔔</button>
-
         <div className="lov-user-wrap">
           <button type="button" className="lov-user" onClick={onToggleUserMenu}>
             <div>
@@ -2172,36 +2168,27 @@ function buildAnalyticsInsights(history, selectedTeams = ['all'], rangeMode = 'w
     ? null
     : teamComparison.find(team => team.teamId === selectedTeamForProfile) || null
 
-  const radarTeams = selectedTeamIds.length === 1
-    ? [selectedTeamIds[0]]
-    : TEAM_ORDER.filter(teamId => byTeam.has(teamId))
+  const radarTeams = selectedTeamIds.filter(teamId => byTeam.has(teamId))
+  const radarAxes = radarTeams.length ? radarTeams : TEAM_ORDER.filter(teamId => byTeam.has(teamId))
+  const radarMaxEnglish = Math.max(1, ...radarAxes.map(teamId => Number(byTeam.get(teamId)?.english || 0)))
+  const radarMaxSpanish = Math.max(1, ...radarAxes.map(teamId => Number(byTeam.get(teamId)?.spanish || 0)))
 
-  const radarAxes = ['English', 'Spanish', 'Total', 'Goal', 'Active', 'Best']
-  const radarMax = {
-    English: Math.max(1, ...teamComparison.map(t => Number(t.english || 0))),
-    Spanish: Math.max(1, ...teamComparison.map(t => Number(t.spanish || 0))),
-    Total: Math.max(1, ...teamComparison.map(t => Number(t.total || 0))),
-    Goal: Math.max(1, ...teamComparison.map(t => Number(t.goalDays || 0))),
-    Active: Math.max(1, ...teamComparison.map(t => Number(t.activeAgents || 0))),
-    Best: Math.max(1, ...teamComparison.map(t => Number(t.bestTotal || 0))),
-  }
-
-  const radarData = radarTeams
-    .map(teamId => byTeam.get(teamId))
-    .filter(Boolean)
-    .map(team => ({
-      teamId: team.teamId,
-      label: team.teamLabel,
-      color: getTeamColor(team.teamId),
-      values: {
-        English: Number(team.english || 0) / radarMax.English,
-        Spanish: Number(team.spanish || 0) / radarMax.Spanish,
-        Total: Number(team.total || 0) / radarMax.Total,
-        Goal: Number(team.goalDays || 0) / radarMax.Goal,
-        Active: Number(team.activeAgents || 0) / radarMax.Active,
-        Best: Number(team.bestTotal || 0) / radarMax.Best,
-      },
-    }))
+  const radarData = [
+    {
+      key: 'english',
+      label: 'English',
+      color: '#38bdf8',
+      values: Object.fromEntries(radarAxes.map(teamId => [teamId, Number(byTeam.get(teamId)?.english || 0) / radarMaxEnglish])),
+      rawValues: Object.fromEntries(radarAxes.map(teamId => [teamId, Number(byTeam.get(teamId)?.english || 0)])),
+    },
+    {
+      key: 'spanish',
+      label: 'Spanish',
+      color: '#34d399',
+      values: Object.fromEntries(radarAxes.map(teamId => [teamId, Number(byTeam.get(teamId)?.spanish || 0) / radarMaxSpanish])),
+      rawValues: Object.fromEntries(radarAxes.map(teamId => [teamId, Number(byTeam.get(teamId)?.spanish || 0)])),
+    },
+  ]
 
   const selectedDateRows = dailyTeams.filter(row => selectedTeamIds.includes(row.teamId) && row.date === anchorDate)
   const currentDayRows = selectedDateRows.length ? selectedDateRows : teamRows.filter(row => row.date === range.end)
@@ -2510,64 +2497,95 @@ function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total',
 
 function RadarChart({ axes = [], data = [], size = 320 }) {
   const [hover, setHover] = useState(null)
+  const teamAxes = (axes || []).filter(teamId => TEAM_ORDER.includes(teamId))
   const cx = size / 2
   const cy = size / 2
   const radius = size * 0.31
-  const angleFor = index => (Math.PI * 2 * index) / Math.max(1, axes.length) - Math.PI / 2
+
+  const angleFor = index => (Math.PI * 2 * index) / Math.max(1, teamAxes.length) - Math.PI / 2
   const pointFor = (index, value = 1) => {
     const angle = angleFor(index)
     return [cx + Math.cos(angle) * radius * value, cy + Math.sin(angle) * radius * value]
   }
 
-  const polygonFor = item => axes.map((axis, index) => pointFor(index, Math.max(0, Math.min(1, Number(item.values?.[axis] || 0))))).map(point => point.join(',')).join(' ')
+  const polygonFor = item => teamAxes
+    .map((teamId, index) => pointFor(index, Math.max(0, Math.min(1, Number(item.values?.[teamId] || 0)))))
+    .map(point => point.join(','))
+    .join(' ')
 
-  const handleMove = (event, item) => {
-    const rect = event.currentTarget.closest('.pulse-radar-wrap')?.getBoundingClientRect()
-    if (!rect) return
+  const handleMove = event => {
+    const wrapper = event.currentTarget.closest('.pulse-radar-wrap')
+    const rect = wrapper?.getBoundingClientRect()
+    if (!rect || !teamAxes.length) return
+
+    const svgRect = event.currentTarget.getBoundingClientRect()
+    const pointerX = ((event.clientX - svgRect.left) / Math.max(1, svgRect.width)) * size
+    const pointerY = ((event.clientY - svgRect.top) / Math.max(1, svgRect.height)) * size
+
+    let angle = Math.atan2(pointerY - cy, pointerX - cx) + Math.PI / 2
+    if (angle < 0) angle += Math.PI * 2
+    const index = Math.round(angle / (Math.PI * 2 / teamAxes.length)) % teamAxes.length
+    const teamId = teamAxes[index]
+    const [axisX, axisY] = pointFor(index, 1)
+
+    const english = data.find(item => item.key === 'english')
+    const spanish = data.find(item => item.key === 'spanish')
 
     setHover({
-      item,
+      index,
+      teamId,
+      axisX,
+      axisY,
       x: event.clientX - rect.left,
       y: event.clientY - rect.top,
       flipX: event.clientX - rect.left > rect.width * 0.58,
       flipY: event.clientY - rect.top > rect.height * 0.58,
+      english: Number(english?.rawValues?.[teamId] || 0),
+      spanish: Number(spanish?.rawValues?.[teamId] || 0),
     })
   }
 
   return (
-    <div className="pulse-radar-wrap">
-      <svg viewBox={`0 0 ${size} ${size}`} className="pulse-radar-chart" role="img" aria-label="Team profile radar">
+    <div className="pulse-radar-wrap pulse-radar-profile-wrap">
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        className="pulse-radar-chart"
+        role="img"
+        aria-label="Team profile radar"
+        onMouseMove={handleMove}
+        onMouseLeave={() => setHover(null)}
+      >
         {[0.25, 0.5, 0.75, 1].map(level => (
-          <polygon key={level} points={axes.map((axis, index) => pointFor(index, level).join(',')).join(' ')} className="pulse-radar-ring" />
+          <polygon key={level} points={teamAxes.map((axis, index) => pointFor(index, level).join(',')).join(' ')} className="pulse-radar-ring" />
         ))}
 
-        {axes.map((axis, index) => {
-          const [x, y] = pointFor(index, 1.18)
+        {teamAxes.map((teamId, index) => {
+          const [x, y] = pointFor(index, 1.2)
           const [x2, y2] = pointFor(index, 1)
           return (
-            <g key={axis}>
+            <g key={teamId}>
               <line x1={cx} y1={cy} x2={x2} y2={y2} className="pulse-radar-axis" />
-              <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="pulse-radar-label">{axis}</text>
+              <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="pulse-radar-label">{getTeamName(teamId)}</text>
             </g>
           )
         })}
 
-        {data.slice(0, 4).map((item, index) => (
-          <polygon
-            key={item.teamId}
-            points={polygonFor(item)}
-            fill={item.color}
-            stroke={item.color}
-            opacity={index === 0 ? 0.28 : 0.14}
-            strokeWidth="3"
-            onMouseMove={event => handleMove(event, item)}
-            onMouseLeave={() => setHover(null)}
-            style={{ cursor: 'crosshair' }}
-          />
+        {data.map(item => (
+          <g key={item.key}>
+            <polygon points={polygonFor(item)} fill={item.color} opacity={item.key === 'english' ? 0.18 : 0.22} />
+            <polyline points={polygonFor(item)} fill="none" stroke={item.color} strokeWidth="3" strokeLinejoin="round" />
+          </g>
         ))}
+
+        {hover ? (
+          <g>
+            <line x1={cx} y1={cy} x2={hover.axisX} y2={hover.axisY} className="pulse-radar-hover-line" />
+            <circle cx={hover.axisX} cy={hover.axisY} r="5" fill="#ffffff" stroke={getTeamColor(hover.teamId)} strokeWidth="2" />
+          </g>
+        ) : null}
       </svg>
 
-      {hover?.item ? (
+      {hover ? (
         <div
           className="pulse-chart-tooltip follow-cursor radar-tooltip"
           style={{
@@ -2576,19 +2594,15 @@ function RadarChart({ axes = [], data = [], size = 320 }) {
             transform: `${hover.flipX ? 'translate(-104%, 12px)' : 'translate(18px, 12px)'} ${hover.flipY ? 'translateY(-112%)' : ''}`,
           }}
         >
-          <strong>{hover.item.label}</strong>
-          {axes.map(axis => (
-            <span key={axis} style={{ color: hover.item.color }}>
-              {axis}: {Math.round(Number(hover.item.values?.[axis] || 0) * 100)}%
-            </span>
-          ))}
+          <strong>{getTeamName(hover.teamId)}</strong>
+          <span style={{ color: '#38bdf8' }}>English: {hover.english.toLocaleString()}</span>
+          <span style={{ color: '#34d399' }}>Spanish: {hover.spanish.toLocaleString()}</span>
         </div>
       ) : null}
 
-      <div className="pulse-chart-legend compact">
-        {data.slice(0, 4).map(item => (
-          <span key={item.teamId}><i style={{ background: item.color }} />{item.label}</span>
-        ))}
+      <div className="pulse-chart-legend compact pulse-radar-legend-two">
+        <span><i style={{ background: '#38bdf8' }} />English</span>
+        <span><i style={{ background: '#34d399' }} />Spanish</span>
       </div>
     </div>
   )
@@ -4014,7 +4028,7 @@ export default function Dashboard() {
   const [teamData, setTeamData] = useState({})
   const [remoteDates, setRemoteDates] = useState([])
   const [lastUpdate, setLastUpdate] = useState(null)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 760)
   const [searchQuery, setSearchQuery] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [rangeMode, setRangeMode] = useState('all_time')
@@ -4410,6 +4424,15 @@ export default function Dashboard() {
           onNavigate={handleSidebarNavigate}
         />
 
+        {!sidebarCollapsed ? (
+          <button
+            type="button"
+            className="lov-mobile-sidebar-backdrop"
+            aria-label="Close sidebar"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        ) : null}
+
         <div className="lov-main">
           <LovableHeader
             sidebarCollapsed={sidebarCollapsed}
@@ -4425,6 +4448,14 @@ export default function Dashboard() {
             userMenuOpen={userMenuOpen}
             onToggleUserMenu={() => setUserMenuOpen(prev => !prev)}
             onUserAction={handleUserAction}
+            onPulseGo={() => {
+              playPulseSound('click')
+              navigate('/go')
+            }}
+            onAcademy={() => {
+              playPulseSound('click')
+              window.alert('Academy is coming soon.')
+            }}
           />
 
           <main className="lov-content">

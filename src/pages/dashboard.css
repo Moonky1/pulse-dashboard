@@ -2617,3 +2617,357 @@
     border-radius: 22px;
   }
 }
+
+/* =========================================================
+   MOBILE / TABLET + HEADER + RADAR PROFILE FIX
+   - Sidebar opens properly on phone/tablet
+   - Header cleaner: no green LIVE pill, no clock/bell buttons
+   - Search smaller so Home/Pulse GO/Academy stays centered
+   - Radar profile is English vs Spanish by team, with white pointer line
+========================================================= */
+
+.dash-root .lov-live-pill {
+  display: none !important;
+}
+
+.dash-root .lov-header {
+  display: grid !important;
+  grid-template-columns: 44px minmax(220px, 360px) minmax(330px, auto) auto !important;
+  align-items: center !important;
+  column-gap: 14px !important;
+  row-gap: 10px !important;
+}
+
+.dash-root .lov-search-wrap {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.dash-root .lov-search {
+  max-width: 360px !important;
+  width: 100% !important;
+  height: 40px !important;
+}
+
+.dash-root .lov-nav-pill {
+  justify-self: center !important;
+  min-width: min(100%, 360px) !important;
+  justify-content: center !important;
+}
+
+.dash-root .lov-nav-pill button {
+  min-width: 104px !important;
+  padding: 0 16px !important;
+}
+
+.dash-root .lov-header-actions {
+  justify-self: end !important;
+  margin-left: 0 !important;
+}
+
+.dash-root .lov-mobile-sidebar-backdrop {
+  display: none;
+}
+
+.dash-root .pulse-radar-profile-wrap {
+  min-height: 360px !important;
+  padding: 14px 8px 4px !important;
+}
+
+.dash-root .pulse-radar-profile-wrap .pulse-radar-chart {
+  width: min(100%, 360px) !important;
+  max-height: 330px !important;
+}
+
+.dash-root .pulse-radar-hover-line {
+  stroke: rgba(255,255,255,.92) !important;
+  stroke-width: 1.55 !important;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 7px rgba(255,255,255,.22));
+}
+
+.dash-root .pulse-radar-profile-wrap .radar-tooltip {
+  min-width: 148px !important;
+  max-width: 210px !important;
+}
+
+.dash-root .pulse-radar-legend-two {
+  justify-content: center !important;
+  margin-top: 8px !important;
+}
+
+.dash-root .team-reveal-overlay {
+  background: rgba(0,0,0,.44) !important;
+  backdrop-filter: blur(8px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(1.08) !important;
+}
+
+.dash-root .team-reveal-bg,
+.dash-root .team-reveal-warm-glow {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(215,185,135,.18), transparent 30%),
+    radial-gradient(circle at 24% 72%, rgba(251,146,60,.10), transparent 34%) !important;
+  filter: blur(28px) !important;
+}
+
+.dash-root .team-reveal-natural {
+  width: min(78vw, 540px) !important;
+  min-height: 310px !important;
+  padding: 34px 26px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.dash-root .team-reveal-flag-wrap {
+  width: 120px !important;
+  height: 82px !important;
+  margin-bottom: 18px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.dash-root .team-reveal-flag-wrap img {
+  width: 96px !important;
+  height: auto !important;
+}
+
+.dash-root .team-reveal-kicker {
+  color: rgba(235,226,216,.78) !important;
+  letter-spacing: .20em !important;
+}
+
+.dash-root .team-reveal-name {
+  color: #fff8ee !important;
+  text-shadow: 0 18px 48px rgba(0,0,0,.62) !important;
+}
+
+/* iPad / medium screens */
+@media (max-width: 1180px) {
+  .dash-root .lov-header {
+    grid-template-columns: 44px minmax(220px, 310px) minmax(300px, auto) auto !important;
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  .dash-root .lov-search {
+    max-width: 310px !important;
+  }
+
+  .dash-root .lov-nav-pill button {
+    min-width: 92px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .dash-root .lov-shell,
+  .dash-root.lov-sidebar-collapsed .lov-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dash-root .lov-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    z-index: 80 !important;
+    width: min(82vw, 300px) !important;
+    height: 100dvh !important;
+    padding: 22px 14px 16px !important;
+    transform: translateX(0) !important;
+    transition: transform .22s ease, opacity .22s ease !important;
+    box-shadow: 28px 0 80px rgba(0,0,0,.48) !important;
+  }
+
+  .dash-root.lov-sidebar-collapsed .lov-sidebar {
+    transform: translateX(-110%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .dash-root .lov-sidebar .lov-brand {
+    justify-content: flex-start !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .dash-root .lov-sidebar .lov-brand span,
+  .dash-root .lov-sidebar .lov-sidebar-title,
+  .dash-root .lov-sidebar .lov-sidebar-label,
+  .dash-root .lov-sidebar .lov-sidebar-status strong,
+  .dash-root .lov-sidebar .lov-sidebar-status > span {
+    display: initial !important;
+  }
+
+  .dash-root .lov-sidebar .lov-sidebar-title {
+    display: block !important;
+  }
+
+  .dash-root .lov-sidebar .lov-sidebar-item {
+    justify-content: flex-start !important;
+    padding: 0 12px !important;
+  }
+
+  .dash-root .lov-sidebar .lov-sidebar-icon {
+    width: 18px !important;
+    flex: 0 0 18px !important;
+  }
+
+  .dash-root .lov-sidebar .lov-sidebar-status {
+    padding: 14px !important;
+    display: block !important;
+  }
+
+  .dash-root .lov-sidebar .lov-status-dot-row {
+    margin-bottom: 6px !important;
+  }
+
+  .dash-root .lov-mobile-sidebar-backdrop {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 70 !important;
+    border: 0 !important;
+    background: rgba(0,0,0,.46) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+
+  .dash-root.lov-sidebar-collapsed .lov-mobile-sidebar-backdrop {
+    display: none !important;
+  }
+
+  .dash-root .lov-header {
+    grid-template-columns: 44px minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "menu search user"
+      "nav nav nav" !important;
+  }
+
+  .dash-root .lov-menu-toggle { grid-area: menu; }
+  .dash-root .lov-search-wrap { grid-area: search; }
+  .dash-root .lov-nav-pill { grid-area: nav; }
+  .dash-root .lov-header-actions { grid-area: user; }
+
+  .dash-root .lov-search {
+    max-width: 100% !important;
+  }
+
+  .dash-root .lov-user {
+    width: 44px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+
+  .dash-root .lov-user > div:first-child {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .dash-root .lov-sidebar {
+    display: flex !important;
+  }
+
+  .dash-root .lov-header {
+    position: sticky !important;
+    top: 0 !important;
+    grid-template-columns: 44px minmax(0, 1fr) 44px !important;
+    grid-template-areas:
+      "menu search user"
+      "nav nav nav" !important;
+    gap: 12px !important;
+    padding: 14px 16px !important;
+    min-height: auto !important;
+  }
+
+  .dash-root .lov-nav-pill {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 5px !important;
+  }
+
+  .dash-root .lov-nav-pill button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 0 8px !important;
+    height: 38px !important;
+    font-size: 13px !important;
+  }
+
+  .dash-root .lov-search {
+    height: 40px !important;
+    border-radius: 15px !important;
+    padding: 0 12px !important;
+  }
+
+  .dash-root .lov-search input {
+    font-size: 13px !important;
+  }
+
+  .dash-root .lov-content {
+    padding: 20px 14px 34px !important;
+  }
+
+  .dash-root .lov-hero {
+    min-height: 190px !important;
+    padding: 28px 24px !important;
+    border-radius: 26px !important;
+  }
+
+  .dash-root .lov-hero-title {
+    font-size: clamp(38px, 12vw, 58px) !important;
+  }
+
+  .dash-root .lov-kpi-grid,
+  .dash-root .lov-kpi-grid-main,
+  .dash-root .pulse-analytics-kpis {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .dash-root .lov-kpi-card {
+    min-height: 132px !important;
+    padding: 22px !important;
+  }
+
+  .dash-root .pulse-radar-profile-wrap {
+    min-height: 330px !important;
+  }
+
+  .dash-root .pulse-radar-profile-wrap .pulse-radar-chart {
+    width: min(100%, 310px) !important;
+  }
+
+  .dash-root .team-reveal-natural {
+    width: min(92vw, 420px) !important;
+    min-height: 270px !important;
+  }
+
+  .dash-root .team-reveal-flag-wrap img {
+    width: 82px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .dash-root .lov-header {
+    grid-template-columns: 42px minmax(0, 1fr) 42px !important;
+    padding: 12px 14px !important;
+  }
+
+  .dash-root .lov-icon-btn,
+  .dash-root .lov-user {
+    width: 42px !important;
+    height: 42px !important;
+    flex-basis: 42px !important;
+  }
+
+  .dash-root .lov-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .dash-root .lov-search input::placeholder {
+    color: rgba(201,192,184,.70) !important;
+  }
+}
