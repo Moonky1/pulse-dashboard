@@ -19,24 +19,24 @@ const TOPICS = [
 const LANGUAGE_OPTIONS = [
   {
     id: 'en',
-    label: 'English Focus',
+    label: 'English Questions',
     icon: '🇺🇸',
     color: '#38bdf8',
-    desc: 'English script, objections, product and transfer rules',
+    desc: 'Questions and answers displayed in English',
   },
   {
     id: 'es',
-    label: 'Spanish Focus',
+    label: 'Spanish Questions',
     icon: '🇪🇸',
     color: '#f97316',
-    desc: 'Spanish script, Spanish transfers and SPANIS/SPXFER rules',
+    desc: 'Preguntas y respuestas mostradas en español',
   },
   {
     id: 'mixed',
     label: 'Mixed',
     icon: '🔀',
     color: '#a855f7',
-    desc: 'English + Spanish focus in the same game',
+    desc: 'A mix of English and Spanish questions',
   },
 ]
 
@@ -284,7 +284,7 @@ export default function GoQuiz() {
         <>
           <div className="gqz-hero">
             <h1 className="gqz-title">{experience.icon} {experience.label}</h1>
-            <p className="gqz-sub">Pick the focus before starting. Questions remain in English, but content can focus on Spanish workflow.</p>
+            <p className="gqz-sub">Pick the question language before starting. Spanish mode shows the questions and answers in Spanish.</p>
           </div>
 
           <div className="gqz-grid">
@@ -308,7 +308,7 @@ export default function GoQuiz() {
         <>
           <div className="gqz-hero">
             <h1 className="gqz-title">🌎 Choose Language Mix</h1>
-            <p className="gqz-sub">Questions are written in English. Pick the content focus before choosing a topic.</p>
+            <p className="gqz-sub">Pick if the questions should appear in English, Spanish, or mixed before choosing a topic.</p>
           </div>
 
           <div className="gqz-grid">
