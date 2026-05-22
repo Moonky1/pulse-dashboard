@@ -31,6 +31,64 @@ function rankList(pl) {
     .sort((a, b) => (b.score || 0) - (a.score || 0))
 }
 
+const PULSE_GO_LB_KEY = 'pulse_go_leaderboard'
+
+function savePulseGoLeaderboard(players = [], roomCode = '') {
+  if (typeof window === 'undefined') return
+  if (!Array.isArray(players) || players.length === 0) return
+
+  try {
+    const currentRaw = localStorage.getItem(PULSE_GO_LB_KEY)
+    const current = currentRaw ? JSON.parse(currentRaw) : []
+    const map = new Map()
+
+    if (Array.isArray(current)) {
+      current.forEach((item) => {
+        if (!item?.name) return
+
+        map.set(item.name, {
+          id: item.id || item.name,
+          name: item.name,
+          avatar: item.avatar || '👑',
+          points: Number(item.points || 0),
+          bestScore: Number(item.bestScore || 0),
+          games: Number(item.games || 0),
+          lastScore: Number(item.lastScore || 0),
+          lastRoom: item.lastRoom || '',
+          updatedAt: item.updatedAt || '',
+        })
+      })
+    }
+
+    players.forEach((player) => {
+      if (!player?.name) return
+
+      const score = Number(player.score || 0)
+      const prev = map.get(player.name)
+
+      map.set(player.name, {
+        id: prev?.id || player.name,
+        name: player.name,
+        avatar: player.avatar || prev?.avatar || '👑',
+        points: Number(prev?.points || 0) + score,
+        bestScore: Math.max(Number(prev?.bestScore || 0), score),
+        games: Number(prev?.games || 0) + 1,
+        lastScore: score,
+        lastRoom: roomCode,
+        updatedAt: new Date().toISOString(),
+      })
+    })
+
+    const next = Array.from(map.values())
+      .sort((a, b) => Number(b.points || 0) - Number(a.points || 0))
+      .slice(0, 50)
+
+    localStorage.setItem(PULSE_GO_LB_KEY, JSON.stringify(next))
+  } catch (err) {
+    console.warn('Could not save Pulse GO leaderboard:', err)
+  }
+}
+
 // Server-synced time remaining
 function calcTL(startedAt) {
   if (!startedAt) return Q_TIME
@@ -176,6 +234,7 @@ export default function GoQuizRoom() {
   const autoFired = useRef(false)
   const tickRef = useRef(null)
   const rCountRef = useRef(null)
+  const leaderboardSaved = useRef(false)
 
   sessRef.current = sess
 
@@ -391,6 +450,15 @@ export default function GoQuizRoom() {
   const tColor = tDisp <= 5 ? '#ef4444' : tDisp <= 10 ? '#f59e0b' : '#f97316'
   const tPct = Math.max(0, (tLeft / Q_TIME) * 100)
   const isCorrect = !isHost && picked === currentQ?.correct
+
+  useEffect(() => {
+    if (state !== 'finished') return
+    if (leaderboardSaved.current) return
+    if (!list.length) return
+
+    savePulseGoLeaderboard(list, code)
+    leaderboardSaved.current = true
+  }, [state, code, list.length])
 
   // ══════════════════════════════════════════════
   // RENDER

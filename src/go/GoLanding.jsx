@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './GoLanding.css'
 
+const LEADERBOARD_KEY = 'pulse_go_leaderboard'
+
 function readLeaderboard() {
   if (typeof window === 'undefined') return []
 
-  const keys = ['pulse_go_leaderboard', 'pulseGoLeaderboard', 'pulse_go_scores']
+  const keys = [LEADERBOARD_KEY, 'pulseGoLeaderboard', 'pulse_go_scores']
 
   for (const key of keys) {
     try {
@@ -21,6 +23,9 @@ function readLeaderboard() {
             name: item.name || item.player || item.agent || 'Unknown',
             avatar: item.avatar || '👑',
             points: Number(item.points || item.score || item.total || 0),
+            games: Number(item.games || 0),
+            bestScore: Number(item.bestScore || 0),
+            lastScore: Number(item.lastScore || 0),
           }))
           .filter((item) => item.name)
           .sort((a, b) => b.points - a.points)
@@ -33,6 +38,9 @@ function readLeaderboard() {
             name,
             avatar: value?.avatar || '👑',
             points: Number(value?.points || value?.score || value?.total || 0),
+            games: Number(value?.games || 0),
+            bestScore: Number(value?.bestScore || 0),
+            lastScore: Number(value?.lastScore || 0),
           }))
           .filter((item) => item.name)
           .sort((a, b) => b.points - a.points)
@@ -56,6 +64,7 @@ export default function GoLanding() {
   const [visible, setVisible] = useState(false)
   const [code, setCode] = useState('')
   const [leaders, setLeaders] = useState([])
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   const particles = useMemo(
     () =>
@@ -74,6 +83,29 @@ export default function GoLanding() {
     setLeaders(readLeaderboard())
     return () => clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    const refreshLeaderboard = () => setLeaders(readLeaderboard())
+
+    window.addEventListener('storage', refreshLeaderboard)
+    window.addEventListener('focus', refreshLeaderboard)
+
+    return () => {
+      window.removeEventListener('storage', refreshLeaderboard)
+      window.removeEventListener('focus', refreshLeaderboard)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!showLeaderboard) return
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setShowLeaderboard(false)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showLeaderboard])
 
   useEffect(() => {
     const title = titleRef.current
@@ -111,7 +143,12 @@ export default function GoLanding() {
     }
   }
 
-  const displayedLeaders = leaders.slice(0, 5)
+  const openLeaderboard = () => {
+    setLeaders(readLeaderboard())
+    setShowLeaderboard(true)
+  }
+
+  const displayedLeaders = leaders.slice(0, 10)
 
   return (
     <div className="gol-wrap">
@@ -169,50 +206,14 @@ export default function GoLanding() {
             <button className="gol-action ghost" onClick={() => navigate('/go/academy')}>
               Open Academy
             </button>
+
+            <button className="gol-action ghost" onClick={openLeaderboard}>
+              Leaderboard
+            </button>
           </div>
         </section>
 
-        <section className="gol-dashboard-grid">
-          <div className="gol-leaderboard">
-            <div className="gol-panel-head">
-              <div>
-                <span className="gol-panel-kicker">Leaderboard</span>
-                <h2>Top Pulse GO</h2>
-              </div>
-
-              <span className="gol-panel-badge">Live soon</span>
-            </div>
-
-            <div className="gol-leader-list">
-              {displayedLeaders.length > 0 ? (
-                displayedLeaders.map((player, index) => (
-                  <div key={player.id} className="gol-leader-row">
-                    <span className={`gol-rank rank-${index + 1}`}>#{index + 1}</span>
-
-                    <div className="gol-player">
-                      <span className="gol-avatar">{player.avatar}</span>
-                      <div>
-                        <strong>{player.name}</strong>
-                        <small>Training score</small>
-                      </div>
-                    </div>
-
-                    <b>{formatPoints(player.points)}</b>
-                  </div>
-                ))
-              ) : (
-                <div className="gol-empty-leaderboard">
-                  <span>🏆</span>
-                  <strong>No scores yet</strong>
-                  <p>
-                    Once we connect game results, players will earn points here from quizzes,
-                    certification mode, and training games.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
+        <section className="gol-room-section">
           <div className="gol-room-card">
             <div className="gol-panel-head small">
               <div>
@@ -256,6 +257,55 @@ export default function GoLanding() {
           </div>
         </section>
       </main>
+
+      {showLeaderboard && (
+        <div className="gol-modal-backdrop" onMouseDown={() => setShowLeaderboard(false)}>
+          <section className="gol-leader-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="gol-modal-head">
+              <div>
+                <span className="gol-panel-kicker">Leaderboard</span>
+                <h2>Top Pulse GO</h2>
+              </div>
+
+              <button className="gol-modal-close" onClick={() => setShowLeaderboard(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="gol-leader-list">
+              {displayedLeaders.length > 0 ? (
+                displayedLeaders.map((player, index) => (
+                  <div key={player.id} className="gol-leader-row">
+                    <span className={`gol-rank rank-${index + 1}`}>#{index + 1}</span>
+
+                    <div className="gol-player">
+                      <span className="gol-avatar">{player.avatar}</span>
+                      <div>
+                        <strong>{player.name}</strong>
+                        <small>
+                          {player.games > 0
+                            ? `${player.games} game${player.games !== 1 ? 's' : ''} · best ${formatPoints(player.bestScore)}`
+                            : 'Training score'}
+                        </small>
+                      </div>
+                    </div>
+
+                    <b>{formatPoints(player.points)}</b>
+                  </div>
+                ))
+              ) : (
+                <div className="gol-empty-leaderboard">
+                  <span>🏆</span>
+                  <strong>No scores yet</strong>
+                  <p>
+                    Play a hosted room or training game. Scores saved on this device will appear here.
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
