@@ -364,7 +364,7 @@ export default function GoLearnDetail() {
     return (
       <div className="go-page" style={{ padding: 40, textAlign: 'center' }}>
         <p>Category not found.</p>
-        <button className="go-btn go-btn-outline" onClick={() => nav('/go/learn')}>Back to Learn</button>
+        <button className="go-btn go-btn-outline" onClick={() => nav('/go/academy')}>Back to Academy</button>
       </div>
     )
   }
@@ -388,7 +388,7 @@ export default function GoLearnDetail() {
           <span>Pulse</span>
           <span className="go-badge">GO</span>
         </a>
-        <button className="go-nav-back" onClick={() => nav('/go/learn')}>← Learn</button>
+        <button className="go-nav-back" onClick={() => nav('/go/academy')}>← Academy</button>
       </nav>
       <div className="go-detail-page">
         <div className="go-detail-header">

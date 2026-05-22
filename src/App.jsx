@@ -18,7 +18,7 @@ import GoPresent     from './go/GoPresent'
 
 const PrivateRoute = ({ children }) => {
   const user = localStorage.getItem('pulse_user')
-  return user ? children : <Navigate to="/signin" replace/>
+  return user ? children : <Navigate to="/signin" replace />
 }
 
 export default function App() {
@@ -36,7 +36,9 @@ export default function App() {
 
         {/* ── Pulse Go ── */}
         <Route path="/go"              element={<GoLanding />} />
-        <Route path="/go/learn"        element={<GoLearn />} />
+        <Route path="/go/academy"      element={<GoLearn />} />
+        <Route path="/go/academy/:id"  element={<GoLearnDetail />} />
+        <Route path="/go/learn"        element={<Navigate to="/go/academy" replace />} />
         <Route path="/go/learn/:id"    element={<GoLearnDetail />} />
         <Route path="/go/quiz"         element={<GoQuiz />} />
         <Route path="/go/quiz/play"    element={<GoQuizPlay />} />
