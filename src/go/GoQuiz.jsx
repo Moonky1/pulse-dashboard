@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { quizQuestions } from './goContent'
+import { gameModes, quizQuestions } from './goContent'
 import './GoQuiz.css'
 
 const API = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
@@ -36,9 +36,17 @@ const LANGUAGE_OPTIONS = [
     label: 'Mixed',
     icon: '🔀',
     color: '#a855f7',
-    desc: 'English + Spanish content in the same quiz',
+    desc: 'English + Spanish focus in the same game',
   },
 ]
+
+const CLASSIC_MODE = {
+  id: 'classic',
+  label: 'Classic Quiz',
+  icon: '🧠',
+  color: '#f97316',
+  desc: 'Solo practice or live Kahoot-style room',
+}
 
 function shuffle(arr) {
   const a = [...arr]
@@ -87,9 +95,6 @@ function getQuestionPool(topicId, languageMode) {
 
   const exact = byTopic.filter((q) => q.language === language)
 
-  // Keep the selected topic first. If that topic has fewer than 10 questions
-  // for that language, fill with same-topic mixed questions instead of pulling
-  // unrelated material.
   if (exact.length >= QUESTION_COUNT) return exact
 
   const sameTopicFill = byTopic.filter((q) => !exact.some((picked) => picked.id === q.id))
@@ -104,19 +109,43 @@ function getQuestionIds(topicId, languageMode, count = QUESTION_COUNT) {
 
 export default function GoQuiz() {
   const nav = useNavigate()
-  const [mode, setMode] = useState(null) // null | solo | host
-  const [language, setLanguage] = useState(null) // null | en | es | mixed
+  const [experience, setExperience] = useState(null)
+  const [classicType, setClassicType] = useState(null) // solo | host
+  const [language, setLanguage] = useState(null)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
 
-  const handleMode = (nextMode) => {
-    setMode(nextMode)
+  const modeCards = useMemo(() => {
+    const nonClassic = gameModes.filter((mode) => mode.id !== 'classic')
+    return [CLASSIC_MODE, ...nonClassic]
+  }, [])
+
+  const resetToHome = () => {
+    setExperience(null)
+    setClassicType(null)
     setLanguage(null)
     setError('')
   }
 
+  const handleExperience = (item) => {
+    setExperience(item)
+    setClassicType(null)
+    setLanguage(null)
+    setError('')
+  }
+
+  const startSoloGame = (modeId, lang) => {
+    const params = new URLSearchParams({
+      mode: modeId,
+      lang: lang || 'mixed',
+    })
+
+    nav(`/go/quiz/play?${params.toString()}`)
+  }
+
   const handleSoloTopic = (topicId) => {
     const params = new URLSearchParams({
+      mode: 'classic',
       topic: topicId,
       lang: language || 'mixed',
     })
@@ -129,7 +158,6 @@ export default function GoQuiz() {
     setError('')
 
     try {
-      const code = 'KK' + Math.floor(1000 + Math.random() * 9000)
       const questionIds = getQuestionIds(topicId, language || 'mixed', QUESTION_COUNT)
 
       const createRoom = async (roomCode) => {
@@ -146,6 +174,7 @@ export default function GoQuiz() {
         return res.json()
       }
 
+      const code = 'KK' + Math.floor(1000 + Math.random() * 9000)
       const data = await createRoom(code)
 
       if (data.success) {
@@ -153,7 +182,6 @@ export default function GoQuiz() {
         return
       }
 
-      // Retry once with a new code in case there is a room-code collision.
       const code2 = 'KK' + Math.floor(1000 + Math.random() * 9000)
       const data2 = await createRoom(code2)
 
@@ -169,7 +197,26 @@ export default function GoQuiz() {
     }
   }
 
-  const backLabel = language ? 'Topics' : mode ? 'Mode' : 'Home'
+  const backLabel = language ? (experience?.id === 'classic' ? 'Topics' : 'Language') : classicType ? 'Game Type' : experience ? 'Games' : 'Home'
+
+  const handleBack = () => {
+    if (language) {
+      setLanguage(null)
+      return
+    }
+
+    if (classicType) {
+      setClassicType(null)
+      return
+    }
+
+    if (experience) {
+      resetToHome()
+      return
+    }
+
+    nav('/go')
+  }
 
   return (
     <div className="gqz-page">
@@ -179,42 +226,51 @@ export default function GoQuiz() {
           <span className="gqz-nav-badge">GO</span>
         </div>
 
-        <button
-          className="gqz-nav-back"
-          onClick={() => {
-            if (language) {
-              setLanguage(null)
-              return
-            }
-
-            if (mode) {
-              setMode(null)
-              return
-            }
-
-            nav('/go')
-          }}
-        >
+        <button className="gqz-nav-back" onClick={handleBack}>
           ← {backLabel}
         </button>
       </nav>
 
-      {!mode && (
+      {!experience && (
         <>
           <div className="gqz-hero">
-            <h1 className="gqz-title">🧠 Quiz</h1>
-            <p className="gqz-sub">Practice solo or compete live with your team</p>
+            <h1 className="gqz-title">🎮 Choose a Game</h1>
+            <p className="gqz-sub">Quiz, practice, battle objections, certify agents, or simulate customer calls</p>
+          </div>
+
+          <div className="gqz-grid gqz-game-grid">
+            {modeCards.map((item) => (
+              <button
+                key={item.id}
+                className="gqz-card"
+                style={{ '--topic-color': item.color }}
+                onClick={() => handleExperience(item)}
+              >
+                <span className="gqz-card-icon">{item.icon}</span>
+                <span className="gqz-card-label">{item.label}</span>
+                <span className="gqz-card-desc">{item.desc}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {experience?.id === 'classic' && !classicType && (
+        <>
+          <div className="gqz-hero">
+            <h1 className="gqz-title">🧠 Classic Quiz</h1>
+            <p className="gqz-sub">Practice solo or create a live room for your team</p>
           </div>
 
           <div className="gqz-mode-grid">
-            <button className="gqz-mode-card solo" onClick={() => handleMode('solo')}>
+            <button className="gqz-mode-card solo" onClick={() => setClassicType('solo')}>
               <span className="gqz-mode-icon">👤</span>
               <span className="gqz-mode-title">Solo Practice</span>
               <span className="gqz-mode-desc">10 questions, 30 seconds each. Practice at your own pace.</span>
               <span className="gqz-mode-cta">Start →</span>
             </button>
 
-            <button className="gqz-mode-card host" onClick={() => handleMode('host')}>
+            <button className="gqz-mode-card host" onClick={() => setClassicType('host')}>
               <span className="gqz-mode-icon">🎮</span>
               <span className="gqz-mode-title">Host a Game</span>
               <span className="gqz-mode-desc">Create a live room. Share the code. Up to 40 players compete together.</span>
@@ -224,13 +280,35 @@ export default function GoQuiz() {
         </>
       )}
 
-      {mode && !language && (
+      {experience && experience.id !== 'classic' && !language && (
+        <>
+          <div className="gqz-hero">
+            <h1 className="gqz-title">{experience.icon} {experience.label}</h1>
+            <p className="gqz-sub">Pick the focus before starting. Questions remain in English, but content can focus on Spanish workflow.</p>
+          </div>
+
+          <div className="gqz-grid">
+            {LANGUAGE_OPTIONS.map((item) => (
+              <button
+                key={item.id}
+                className="gqz-card"
+                style={{ '--topic-color': item.color }}
+                onClick={() => startSoloGame(experience.id, item.id)}
+              >
+                <span className="gqz-card-icon">{item.icon}</span>
+                <span className="gqz-card-label">{item.label}</span>
+                <span className="gqz-card-desc">{item.desc}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {experience?.id === 'classic' && classicType && !language && (
         <>
           <div className="gqz-hero">
             <h1 className="gqz-title">🌎 Choose Language Mix</h1>
-            <p className="gqz-sub">
-              Questions are written in English. Pick the content focus before choosing a topic.
-            </p>
+            <p className="gqz-sub">Questions are written in English. Pick the content focus before choosing a topic.</p>
           </div>
 
           <div className="gqz-grid">
@@ -250,30 +328,19 @@ export default function GoQuiz() {
         </>
       )}
 
-      {mode && language && (
+      {experience?.id === 'classic' && classicType && language && (
         <>
           <div className="gqz-hero">
-            <h1 className="gqz-title">
-              {mode === 'solo' ? '📚 Choose a Topic' : '🎮 Choose a Topic to Host'}
-            </h1>
+            <h1 className="gqz-title">{classicType === 'solo' ? '📚 Choose a Topic' : '🎮 Choose a Topic to Host'}</h1>
             <p className="gqz-sub">
-              {mode === 'solo'
+              {classicType === 'solo'
                 ? 'Select what you want to be quizzed on'
                 : 'All players will be quizzed on this topic'}
             </p>
           </div>
 
-          {error && (
-            <div style={{ textAlign: 'center', color: '#ef4444', marginBottom: 16, fontSize: 14 }}>
-              ⚠️ {error}
-            </div>
-          )}
-
-          {creating && (
-            <div style={{ textAlign: 'center', color: '#f97316', marginBottom: 24, fontSize: 16 }}>
-              Creating room... ⏳
-            </div>
-          )}
+          {error && <div className="gqz-error">⚠️ {error}</div>}
+          {creating && <div className="gqz-loading">Creating room... ⏳</div>}
 
           <div className="gqz-grid">
             {TOPICS.map((t) => (
@@ -281,7 +348,7 @@ export default function GoQuiz() {
                 key={t.id}
                 className="gqz-card"
                 style={{ '--topic-color': t.color }}
-                onClick={() => (mode === 'solo' ? handleSoloTopic(t.id) : handleHostTopic(t.id))}
+                onClick={() => (classicType === 'solo' ? handleSoloTopic(t.id) : handleHostTopic(t.id))}
                 disabled={creating}
               >
                 <span className="gqz-card-icon">{t.icon}</span>

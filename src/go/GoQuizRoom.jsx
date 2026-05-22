@@ -710,4 +710,4 @@ export default function GoQuizRoom() {
       <p className="grm-muted">Syncing... ({state})</p>
     </div>
   )
-}
+} 
