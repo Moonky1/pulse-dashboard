@@ -1,65 +1,77 @@
-import { useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './GoLanding.css'
 
-const NAV_ITEMS = [
-  { label: 'Pulse GO', path: '/go' },
-  { label: 'Academy', path: '/go/academy' },
-  { label: 'Quiz', path: '/go/quiz' },
-  { label: 'Present', path: '/go/present' },
-]
+function readLeaderboard() {
+  if (typeof window === 'undefined') return []
 
-const FEATURES = [
-  {
-    icon: '⚡',
-    title: 'Live Quizzes',
-    desc: 'Kahoot-style rooms with fast scoring and team competition.',
-  },
-  {
-    icon: '🎮',
-    title: 'Training Games',
-    desc: 'Objection battles, dispositions, valid XFER drills, and more.',
-  },
-  {
-    icon: '🎓',
-    title: 'Academy',
-    desc: 'Scripts, rebuttals, call flow, product rules, and dialer guides.',
-  },
-]
+  const keys = ['pulse_go_leaderboard', 'pulseGoLeaderboard', 'pulse_go_scores']
 
-function GoTopNav({ navigate }) {
-  return (
-    <nav className="gol-nav">
-      <button className="gol-nav-left" onClick={() => navigate('/dashboard')}>
-        ← Dashboard
-      </button>
+  for (const key of keys) {
+    try {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
 
-      <div className="gol-nav-tabs" aria-label="Pulse GO navigation">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.path}
-            className={`gol-nav-tab ${item.path === '/go' ? 'active' : ''}`}
-            onClick={() => navigate(item.path)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </nav>
-  )
+      const parsed = JSON.parse(raw)
+
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item, index) => ({
+            id: item.id || item.name || index,
+            name: item.name || item.player || item.agent || 'Unknown',
+            avatar: item.avatar || '👑',
+            points: Number(item.points || item.score || item.total || 0),
+          }))
+          .filter((item) => item.name)
+          .sort((a, b) => b.points - a.points)
+      }
+
+      if (parsed && typeof parsed === 'object') {
+        return Object.entries(parsed)
+          .map(([name, value], index) => ({
+            id: name || index,
+            name,
+            avatar: value?.avatar || '👑',
+            points: Number(value?.points || value?.score || value?.total || 0),
+          }))
+          .filter((item) => item.name)
+          .sort((a, b) => b.points - a.points)
+      }
+    } catch {
+      // Ignore invalid localStorage data
+    }
+  }
+
+  return []
+}
+
+function formatPoints(value) {
+  return Number(value || 0).toLocaleString()
 }
 
 export default function GoLanding() {
   const navigate = useNavigate()
+  const titleRef = useRef(null)
+
   const [visible, setVisible] = useState(false)
   const [code, setCode] = useState('')
-  const titleRef = useRef(null)
-  const canvasRef = useRef(null)
+  const [leaders, setLeaders] = useState([])
 
-  const particles = useMemo(() => Array.from({ length: 28 }, (_, i) => i), [])
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 24 }, (_, i) => ({
+        id: i,
+        x: `${4 + ((i * 17) % 92)}%`,
+        y: `${8 + ((i * 29) % 84)}%`,
+        delay: `${i * 0.13}s`,
+        speed: `${4.4 + (i % 7) * 0.35}s`,
+      })),
+    []
+  )
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 100)
+    const t = setTimeout(() => setVisible(true), 120)
+    setLeaders(readLeaderboard())
     return () => clearTimeout(t)
   }, [])
 
@@ -71,11 +83,12 @@ export default function GoLanding() {
       const rect = title.getBoundingClientRect()
       const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)
       const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)
-      title.style.transform = `perspective(700px) rotateX(${-dy * 5}deg) rotateY(${dx * 5}deg) scale(1.015)`
+
+      title.style.transform = `perspective(700px) rotateX(${-dy * 5}deg) rotateY(${dx * 5}deg)`
     }
 
     const onLeave = () => {
-      title.style.transform = 'perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)'
+      title.style.transform = 'perspective(700px) rotateX(0deg) rotateY(0deg)'
     }
 
     title.addEventListener('mousemove', onMove)
@@ -85,134 +98,162 @@ export default function GoLanding() {
       title.removeEventListener('mousemove', onMove)
       title.removeEventListener('mouseleave', onLeave)
     }
-  }, [visible])
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext('2d')
-    let raf
-    const pts = []
-
-    const resize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-    }
-
-    const onMove = (e) => {
-      for (let i = 0; i < 2; i += 1) {
-        pts.push({
-          x: e.clientX + (Math.random() - 0.5) * 18,
-          y: e.clientY + (Math.random() - 0.5) * 18,
-          size: Math.random() * 2.8 + 0.8,
-          life: 1,
-          vx: (Math.random() - 0.5) * 1.2,
-          vy: (Math.random() - 0.5) * 1.2 - 0.4,
-        })
-      }
-    }
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      for (let i = pts.length - 1; i >= 0; i -= 1) {
-        const p = pts[i]
-        p.life -= 0.03
-        p.x += p.vx
-        p.y += p.vy
-
-        if (p.life <= 0) {
-          pts.splice(i, 1)
-          continue
-        }
-
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(217, 156, 84, ${p.life * 0.55})`
-        ctx.fill()
-      }
-
-      raf = requestAnimationFrame(draw)
-    }
-
-    resize()
-    draw()
-    window.addEventListener('resize', resize)
-    window.addEventListener('mousemove', onMove)
-
-    return () => {
-      window.removeEventListener('resize', resize)
-      window.removeEventListener('mousemove', onMove)
-      cancelAnimationFrame(raf)
-    }
   }, [])
 
   const handleEnter = () => {
-    const trimmed = code.trim().toUpperCase()
-    if (trimmed.length >= 4) navigate(`/go/quiz/${trimmed}`)
+    const clean = code.trim().toUpperCase().replace(/\s+/g, '')
+    if (!clean) return
+
+    const roomCode = clean.startsWith('KK') ? clean : `KK${clean}`
+
+    if (roomCode.length >= 6) {
+      navigate(`/go/quiz/${roomCode}`)
+    }
   }
+
+  const displayedLeaders = leaders.slice(0, 5)
 
   return (
     <div className="gol-wrap">
-      <canvas ref={canvasRef} className="gol-canvas" />
       <div className="gol-grid" />
-      <div className="gol-spotlight one" />
-      <div className="gol-spotlight two" />
+      <div className="gol-glow gol-glow-one" />
+      <div className="gol-glow gol-glow-two" />
+
       <div className="gol-particles">
-        {particles.map((i) => (
-          <span key={i} className="gol-particle" style={{ '--i': i }} />
+        {particles.map((p) => (
+          <span
+            key={p.id}
+            className="gol-particle"
+            style={{
+              left: p.x,
+              top: p.y,
+              animationDelay: p.delay,
+              animationDuration: p.speed,
+            }}
+          />
         ))}
       </div>
 
-      <GoTopNav navigate={navigate} />
+      <nav className="gol-nav">
+        <div className="gol-nav-tabs">
+          <button className="gol-nav-tab" onClick={() => navigate('/dashboard')}>
+            Dashboard
+          </button>
+
+          <button className="gol-nav-tab active" onClick={() => navigate('/go')}>
+            Pulse GO
+          </button>
+
+          <button className="gol-nav-tab" onClick={() => navigate('/go/academy')}>
+            Academy
+          </button>
+        </div>
+      </nav>
 
       <main className={`gol-hero ${visible ? 'visible' : ''}`}>
-        <div className="gol-eyebrow">✨ Training hub</div>
+        <section className="gol-hero-main">
+          <h1 className="gol-title" ref={titleRef}>
+            <span>PULSE</span>
+            <strong>GO</strong>
+          </h1>
 
-        <h1 className="gol-title" ref={titleRef}>
-          <span>PULSE</span>
-          <span className="gol-title-badge">GO</span>
-        </h1>
+          <p className="gol-sub">
+            Train faster, compete with your team, and track learning performance in one place.
+          </p>
 
-        <p className="gol-sub">
-          Live, Kahoot-style training rooms for Kampaign Kings. Run quizzes,
-          drills, and team battles in real time.
-        </p>
-
-        <section className="gol-feature-grid" aria-label="Pulse GO features">
-          {FEATURES.map((feature) => (
-            <button
-              key={feature.title}
-              className="gol-feature-card"
-              onClick={() => feature.title === 'Academy' ? navigate('/go/academy') : navigate('/go/quiz')}
-            >
-              <span className="gol-feature-icon">{feature.icon}</span>
-              <span className="gol-feature-title">{feature.title}</span>
-              <span className="gol-feature-desc">{feature.desc}</span>
+          <div className="gol-hero-actions">
+            <button className="gol-action primary" onClick={() => navigate('/go/quiz')}>
+              Start Training →
             </button>
-          ))}
+
+            <button className="gol-action ghost" onClick={() => navigate('/go/academy')}>
+              Open Academy
+            </button>
+          </div>
         </section>
 
-        <section className="gol-card" aria-label="Join a room">
-          <span className="gol-card-label">Enter a room code</span>
-          <div className="gol-input-wrap">
-            <span>KK</span>
-            <input
-              className="gol-input"
-              type="text"
-              placeholder="1234"
-              value={code.replace(/^KK/i, '')}
-              onChange={(e) => setCode(`KK${e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()}`)}
-              onKeyDown={(e) => e.key === 'Enter' && handleEnter()}
-              maxLength={6}
-              autoComplete="off"
-            />
+        <section className="gol-dashboard-grid">
+          <div className="gol-leaderboard">
+            <div className="gol-panel-head">
+              <div>
+                <span className="gol-panel-kicker">Leaderboard</span>
+                <h2>Top Pulse GO</h2>
+              </div>
+
+              <span className="gol-panel-badge">Live soon</span>
+            </div>
+
+            <div className="gol-leader-list">
+              {displayedLeaders.length > 0 ? (
+                displayedLeaders.map((player, index) => (
+                  <div key={player.id} className="gol-leader-row">
+                    <span className={`gol-rank rank-${index + 1}`}>#{index + 1}</span>
+
+                    <div className="gol-player">
+                      <span className="gol-avatar">{player.avatar}</span>
+                      <div>
+                        <strong>{player.name}</strong>
+                        <small>Training score</small>
+                      </div>
+                    </div>
+
+                    <b>{formatPoints(player.points)}</b>
+                  </div>
+                ))
+              ) : (
+                <div className="gol-empty-leaderboard">
+                  <span>🏆</span>
+                  <strong>No scores yet</strong>
+                  <p>
+                    Once we connect game results, players will earn points here from quizzes,
+                    certification mode, and training games.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-          <button className="gol-btn-primary" onClick={handleEnter} disabled={code.trim().length < 4}>
-            Join Room →
-          </button>
-          <p className="gol-card-note">Or start training from Quiz or Academy above.</p>
+
+          <div className="gol-room-card">
+            <div className="gol-panel-head small">
+              <div>
+                <span className="gol-panel-kicker">Join room</span>
+                <h2>Enter a code</h2>
+              </div>
+            </div>
+
+            <div className="gol-input-wrap">
+              <span>KK</span>
+              <input
+                className="gol-input"
+                type="text"
+                placeholder="1234"
+                value={code}
+                onChange={(e) => {
+                  const next = e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, '')
+                    .replace(/^KK/, '')
+                    .slice(0, 6)
+
+                  setCode(next)
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleEnter()}
+                autoComplete="off"
+              />
+            </div>
+
+            <button
+              className="gol-btn-primary"
+              onClick={handleEnter}
+              disabled={code.trim().length < 4}
+            >
+              Join Room →
+            </button>
+
+            <p className="gol-card-note">
+              Use a room code from a hosted Pulse GO game.
+            </p>
+          </div>
         </section>
       </main>
     </div>
