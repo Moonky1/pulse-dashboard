@@ -4,15 +4,7 @@ import { quizQuestions } from './goContent'
 import './GoQuizPlay.css'
 
 const QUESTION_COUNT = 10
-const TIME_PER_Q = 20
-
-const LEGACY_TOPIC_IDS = {
-  script: [1, 2, 13, 15, 16, 17, 18, 19, 20, 21, 22],
-  objections: [5, 9, 11, 12, 23, 24, 25, 26, 27, 28, 29, 30],
-  product: [3, 6, 14, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
-  callflow: [10, 41, 42, 43, 44, 45, 46, 47],
-  dosdonts: [4, 7, 8, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65],
-}
+const TIME_PER_Q = 30
 
 const OPTION_STYLES = [
   { color: '#ef4444', shape: '▲' },
@@ -49,27 +41,47 @@ function normalizeTopic(raw) {
   return 'all'
 }
 
-function buildQuestionSet(topicId) {
+function normalizeLanguage(raw) {
+  const value = (raw || 'mixed').toLowerCase()
+
+  if (value === 'english') return 'en'
+  if (value === 'spanish') return 'es'
+  if (value === 'en') return 'en'
+  if (value === 'es') return 'es'
+
+  return 'mixed'
+}
+
+function buildPool(topicId, languageMode) {
   const normalizedTopic = normalizeTopic(topicId)
+  const normalizedLanguage = normalizeLanguage(languageMode)
 
-  let pool = []
+  const topicPool = normalizedTopic === 'all'
+    ? quizQuestions
+    : quizQuestions.filter((q) => q.topic === normalizedTopic)
 
-  if (normalizedTopic === 'all') {
-    pool = quizQuestions
-  } else {
-    pool = quizQuestions.filter((q) => q.topic === normalizedTopic)
+  if (normalizedLanguage === 'mixed') return topicPool
 
-    if (pool.length === 0 && LEGACY_TOPIC_IDS[normalizedTopic]) {
-      pool = quizQuestions.filter((q) => LEGACY_TOPIC_IDS[normalizedTopic].includes(q.id))
-    }
-  }
+  const exactLanguage = topicPool.filter((q) => q.language === normalizedLanguage)
 
+  if (exactLanguage.length >= QUESTION_COUNT) return exactLanguage
+
+  const sameTopicFill = topicPool.filter(
+    (q) => !exactLanguage.some((picked) => picked.id === q.id)
+  )
+
+  return [...exactLanguage, ...sameTopicFill]
+}
+
+function buildQuestionSet(topicId, languageMode) {
+  const pool = buildPool(topicId, languageMode)
   let finalPool = [...pool]
 
   if (finalPool.length < QUESTION_COUNT) {
     const remaining = quizQuestions.filter(
       (q) => !finalPool.some((picked) => picked.id === q.id)
     )
+
     finalPool = [...finalPool, ...shuffle(remaining)]
   }
 
@@ -102,6 +114,7 @@ function useSound() {
     if (!ctx.current) {
       ctx.current = new (window.AudioContext || window.webkitAudioContext)()
     }
+
     return ctx.current
   }
 
@@ -145,9 +158,10 @@ export default function GoQuizPlay() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const topicId = params.get('topic') || 'all'
+  const languageMode = params.get('lang') || 'mixed'
   const sound = useSound()
 
-  const [questions] = useState(() => buildQuestionSet(topicId))
+  const [questions] = useState(() => buildQuestionSet(topicId, languageMode))
   const [idx, setIdx] = useState(0)
   const [selected, setSelected] = useState(null)
   const [answered, setAnswered] = useState(false)
@@ -296,12 +310,14 @@ export default function GoQuizPlay() {
             >
               🔄 Try Again
             </button>
+
             <button
               className="gqp-btn-outline"
               onClick={() => navigate('/go/quiz')}
             >
               Change Topic
             </button>
+
             <button
               className="gqp-btn-outline"
               onClick={() => navigate('/go/learn')}

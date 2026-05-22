@@ -5,86 +5,162 @@ import './GoQuiz.css'
 
 const API = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 
-const TOPIC_TAGS = {
-  all: null,
-  script:      [1, 2, 13, 15],
-  objections:  [5, 9, 11, 12],
-  product:     [3, 6, 7, 11, 14],
-  callflow:    [2, 8, 10, 12],
-  'dosdонts':  [4, 7, 8, 13, 15],
-}
+const QUESTION_COUNT = 10
 
 const TOPICS = [
-  { id: 'all',      label: 'All Topics',        icon: '⚡', color: '#f97316', desc: 'Mixed from everything' },
-  { id: 'script',   label: 'Script',            icon: '📋', color: '#ef4444', desc: 'EN & ES script lines' },
-  { id: 'objections', label: 'Objections',      icon: '🛡️', color: '#3b82f6', desc: 'Rebuttals & responses' },
-  { id: 'product',  label: 'Product Knowledge', icon: '📦', color: '#22c55e', desc: 'Coverage & exclusions' },
-  { id: 'callflow', label: 'Call Flow',         icon: '📞', color: '#a855f7', desc: 'Transfer protocol' },
-  { id: 'dosdонts', label: "Do's & Don'ts",     icon: '⚠️', color: '#f59e0b', desc: 'Rules & compliance' },
+  { id: 'all', label: 'All Topics', icon: '⚡', color: '#f97316', desc: 'Mixed from everything' },
+  { id: 'script', label: 'Script', icon: '📋', color: '#ef4444', desc: 'Opening lines & script control' },
+  { id: 'objections', label: 'Objections', icon: '🛡️', color: '#3b82f6', desc: 'Rebuttals & responses' },
+  { id: 'product', label: 'Product Knowledge', icon: '📦', color: '#22c55e', desc: 'Coverage & exclusions' },
+  { id: 'callflow', label: 'Call Flow', icon: '📞', color: '#a855f7', desc: 'Transfer protocol' },
+  { id: 'dosdonts', label: "Do's & Don'ts", icon: '⚠️', color: '#f59e0b', desc: 'Rules & compliance' },
+]
+
+const LANGUAGE_OPTIONS = [
+  {
+    id: 'en',
+    label: 'English Focus',
+    icon: '🇺🇸',
+    color: '#38bdf8',
+    desc: 'English script, objections, product and transfer rules',
+  },
+  {
+    id: 'es',
+    label: 'Spanish Focus',
+    icon: '🇪🇸',
+    color: '#f97316',
+    desc: 'Spanish script, Spanish transfers and SPANIS/SPXFER rules',
+  },
+  {
+    id: 'mixed',
+    label: 'Mixed',
+    icon: '🔀',
+    color: '#a855f7',
+    desc: 'English + Spanish content in the same quiz',
+  },
 ]
 
 function shuffle(arr) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]]
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
 }
 
-function getQuestionIds(topicId, count = 10) {
-  const ids = TOPIC_TAGS[topicId]
-  const pool = ids
-    ? quizQuestions.filter(q => ids.includes(q.id))
-    : quizQuestions
+function normalizeTopic(raw) {
+  const value = (raw || 'all').toLowerCase()
+
+  if (value === 'all') return 'all'
+  if (value === 'script') return 'script'
+  if (value === 'objections') return 'objections'
+  if (value === 'product') return 'product'
+  if (value === 'product-knowledge') return 'product'
+  if (value === 'callflow') return 'callflow'
+  if (value === 'call-flow') return 'callflow'
+  if (value === 'dosdonts') return 'dosdonts'
+  if (value === 'dos-donts') return 'dosdonts'
+  if (value === 'dosdонts') return 'dosdonts'
+
+  return 'all'
+}
+
+function normalizeLanguage(raw) {
+  const value = (raw || 'mixed').toLowerCase()
+  if (value === 'english') return 'en'
+  if (value === 'spanish') return 'es'
+  if (value === 'en') return 'en'
+  if (value === 'es') return 'es'
+  return 'mixed'
+}
+
+function getQuestionPool(topicId, languageMode) {
+  const topic = normalizeTopic(topicId)
+  const language = normalizeLanguage(languageMode)
+
+  const byTopic = topic === 'all'
+    ? quizQuestions
+    : quizQuestions.filter((q) => q.topic === topic)
+
+  if (language === 'mixed') return byTopic
+
+  const exact = byTopic.filter((q) => q.language === language)
+
+  // Keep the selected topic first. If that topic has fewer than 10 questions
+  // for that language, fill with same-topic mixed questions instead of pulling
+  // unrelated material.
+  if (exact.length >= QUESTION_COUNT) return exact
+
+  const sameTopicFill = byTopic.filter((q) => !exact.some((picked) => picked.id === q.id))
+  return [...exact, ...sameTopicFill]
+}
+
+function getQuestionIds(topicId, languageMode, count = QUESTION_COUNT) {
+  const pool = getQuestionPool(topicId, languageMode)
   const base = pool.length >= count ? pool : quizQuestions
-  return shuffle(base).slice(0, count).map(q => q.id)
+  return shuffle(base).slice(0, count).map((q) => q.id)
 }
 
 export default function GoQuiz() {
   const nav = useNavigate()
-  const [mode, setMode] = useState(null) // null | 'solo' | 'host'
+  const [mode, setMode] = useState(null) // null | solo | host
+  const [language, setLanguage] = useState(null) // null | en | es | mixed
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
 
+  const handleMode = (nextMode) => {
+    setMode(nextMode)
+    setLanguage(null)
+    setError('')
+  }
+
   const handleSoloTopic = (topicId) => {
-    nav(`/go/quiz/play?topic=${topicId}`)
+    const params = new URLSearchParams({
+      topic: topicId,
+      lang: language || 'mixed',
+    })
+
+    nav(`/go/quiz/play?${params.toString()}`)
   }
 
   const handleHostTopic = async (topicId) => {
     setCreating(true)
     setError('')
+
     try {
       const code = 'KK' + Math.floor(1000 + Math.random() * 9000)
-      const questionIds = getQuestionIds(topicId, 10)
-      const res = await fetch(
-        API + '?' + new URLSearchParams({
-          action: 'quizCreate',
-          code,
-          topic: topicId,
-          questionIds: JSON.stringify(questionIds),
-        })
-      )
-      const data = await res.json()
-      if (data.success) {
-        nav(`/go/quiz/${code}?host=true`)
-      } else {
-        // Try again with new code if collision
-        const code2 = 'KK' + Math.floor(1000 + Math.random() * 9000)
-        const res2 = await fetch(
+      const questionIds = getQuestionIds(topicId, language || 'mixed', QUESTION_COUNT)
+
+      const createRoom = async (roomCode) => {
+        const res = await fetch(
           API + '?' + new URLSearchParams({
             action: 'quizCreate',
-            code: code2,
+            code: roomCode,
             topic: topicId,
+            language: language || 'mixed',
             questionIds: JSON.stringify(questionIds),
           })
         )
-        const data2 = await res2.json()
-        if (data2.success) {
-          nav(`/go/quiz/${code2}?host=true`)
-        } else {
-          setError('Could not create room. Try again.')
-        }
+
+        return res.json()
+      }
+
+      const data = await createRoom(code)
+
+      if (data.success) {
+        nav(`/go/quiz/${code}?host=true`)
+        return
+      }
+
+      // Retry once with a new code in case there is a room-code collision.
+      const code2 = 'KK' + Math.floor(1000 + Math.random() * 9000)
+      const data2 = await createRoom(code2)
+
+      if (data2.success) {
+        nav(`/go/quiz/${code2}?host=true`)
+      } else {
+        setError('Could not create room. Try again.')
       }
     } catch {
       setError('Connection error. Check your internet.')
@@ -93,6 +169,8 @@ export default function GoQuiz() {
     }
   }
 
+  const backLabel = language ? 'Topics' : mode ? 'Mode' : 'Home'
+
   return (
     <div className="gqz-page">
       <nav className="gqz-nav">
@@ -100,29 +178,43 @@ export default function GoQuiz() {
           <span className="gqz-nav-text">Pulse</span>
           <span className="gqz-nav-badge">GO</span>
         </div>
+
         <button
           className="gqz-nav-back"
-          onClick={() => mode ? setMode(null) : nav('/go')}
+          onClick={() => {
+            if (language) {
+              setLanguage(null)
+              return
+            }
+
+            if (mode) {
+              setMode(null)
+              return
+            }
+
+            nav('/go')
+          }}
         >
-          ← {mode ? 'Back' : 'Home'}
+          ← {backLabel}
         </button>
       </nav>
 
-      {/* ── Main Mode Selection ── */}
       {!mode && (
         <>
           <div className="gqz-hero">
             <h1 className="gqz-title">🧠 Quiz</h1>
             <p className="gqz-sub">Practice solo or compete live with your team</p>
           </div>
+
           <div className="gqz-mode-grid">
-            <button className="gqz-mode-card solo" onClick={() => setMode('solo')}>
+            <button className="gqz-mode-card solo" onClick={() => handleMode('solo')}>
               <span className="gqz-mode-icon">👤</span>
               <span className="gqz-mode-title">Solo Practice</span>
-              <span className="gqz-mode-desc">10 questions, 20 seconds each. Practice at your own pace.</span>
+              <span className="gqz-mode-desc">10 questions, 30 seconds each. Practice at your own pace.</span>
               <span className="gqz-mode-cta">Start →</span>
             </button>
-            <button className="gqz-mode-card host" onClick={() => setMode('host')}>
+
+            <button className="gqz-mode-card host" onClick={() => handleMode('host')}>
               <span className="gqz-mode-icon">🎮</span>
               <span className="gqz-mode-title">Host a Game</span>
               <span className="gqz-mode-desc">Create a live room. Share the code. Up to 40 players compete together.</span>
@@ -132,8 +224,33 @@ export default function GoQuiz() {
         </>
       )}
 
-      {/* ── Topic Selection ── */}
-      {mode && (
+      {mode && !language && (
+        <>
+          <div className="gqz-hero">
+            <h1 className="gqz-title">🌎 Choose Language Mix</h1>
+            <p className="gqz-sub">
+              Questions are written in English. Pick the content focus before choosing a topic.
+            </p>
+          </div>
+
+          <div className="gqz-grid">
+            {LANGUAGE_OPTIONS.map((item) => (
+              <button
+                key={item.id}
+                className="gqz-card"
+                style={{ '--topic-color': item.color }}
+                onClick={() => setLanguage(item.id)}
+              >
+                <span className="gqz-card-icon">{item.icon}</span>
+                <span className="gqz-card-label">{item.label}</span>
+                <span className="gqz-card-desc">{item.desc}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {mode && language && (
         <>
           <div className="gqz-hero">
             <h1 className="gqz-title">
@@ -164,7 +281,7 @@ export default function GoQuiz() {
                 key={t.id}
                 className="gqz-card"
                 style={{ '--topic-color': t.color }}
-                onClick={() => mode === 'solo' ? handleSoloTopic(t.id) : handleHostTopic(t.id)}
+                onClick={() => (mode === 'solo' ? handleSoloTopic(t.id) : handleHostTopic(t.id))}
                 disabled={creating}
               >
                 <span className="gqz-card-icon">{t.icon}</span>
