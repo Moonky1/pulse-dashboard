@@ -4,22 +4,56 @@ import './GoLanding.css'
 
 export default function GoLanding() {
   const navigate = useNavigate()
+  const wrapRef = useRef(null)
   const titleRef = useRef(null)
 
   const [visible, setVisible] = useState(false)
   const [code, setCode] = useState('')
+  const [ripples, setRipples] = useState([])
 
-  const particles = useMemo(
+  const nodes = useMemo(
     () =>
       Array.from({ length: 24 }, (_, i) => ({
         id: i,
-        x: `${4 + ((i * 17) % 92)}%`,
-        y: `${8 + ((i * 29) % 84)}%`,
-        delay: `${i * 0.13}s`,
-        speed: `${4.4 + (i % 7) * 0.35}s`,
+        x: 5 + ((i * 19) % 91),
+        y: 7 + ((i * 31) % 84),
+        size: 2 + (i % 3),
+        delay: `${i * 0.12}s`,
+        speed: `${4.8 + (i % 6) * 0.45}s`,
       })),
     []
   )
+
+  const lines = useMemo(() => {
+    const pairs = []
+
+    for (let i = 0; i < nodes.length; i += 1) {
+      const nextA = nodes[(i + 3) % nodes.length]
+      const nextB = nodes[(i + 7) % nodes.length]
+
+      if (i % 2 === 0) {
+        pairs.push({
+          id: `a-${i}`,
+          x1: nodes[i].x,
+          y1: nodes[i].y,
+          x2: nextA.x,
+          y2: nextA.y,
+        })
+      }
+
+      if (i % 5 === 0) {
+        pairs.push({
+          id: `b-${i}`,
+          x1: nodes[i].x,
+          y1: nodes[i].y,
+          x2: nextB.x,
+          y2: nextB.y,
+        })
+      }
+    }
+
+    return pairs
+  }, [nodes])
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 120)
@@ -35,11 +69,11 @@ export default function GoLanding() {
       const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)
       const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)
 
-      title.style.transform = `perspective(700px) rotateX(${-dy * 5}deg) rotateY(${dx * 5}deg)`
+      title.style.transform = `perspective(760px) rotateX(${-dy * 5}deg) rotateY(${dx * 5}deg)`
     }
 
     const onLeave = () => {
-      title.style.transform = 'perspective(700px) rotateX(0deg) rotateY(0deg)'
+      title.style.transform = 'perspective(760px) rotateX(0deg) rotateY(0deg)'
     }
 
     title.addEventListener('mousemove', onMove)
@@ -50,6 +84,38 @@ export default function GoLanding() {
       title.removeEventListener('mouseleave', onLeave)
     }
   }, [])
+
+  const handleMouseMove = (e) => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+
+    const rect = wrap.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    wrap.style.setProperty('--mx', `${x}px`)
+    wrap.style.setProperty('--my', `${y}px`)
+    wrap.style.setProperty('--mxp', `${(x / rect.width) * 100}%`)
+    wrap.style.setProperty('--myp', `${(y / rect.height) * 100}%`)
+  }
+
+  const handlePointerDown = (e) => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+
+    const rect = wrap.getBoundingClientRect()
+    const ripple = {
+      id: Date.now(),
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    }
+
+    setRipples((prev) => [...prev.slice(-5), ripple])
+
+    window.setTimeout(() => {
+      setRipples((prev) => prev.filter((item) => item.id !== ripple.id))
+    }, 950)
+  }
 
   const handleEnter = () => {
     const clean = code.trim().toUpperCase().replace(/\s+/g, '')
@@ -63,21 +129,54 @@ export default function GoLanding() {
   }
 
   return (
-    <div className="gol-wrap">
+    <div
+      ref={wrapRef}
+      className="gol-wrap"
+      onMouseMove={handleMouseMove}
+      onPointerDown={handlePointerDown}
+    >
+      <div className="gol-bg-base" />
       <div className="gol-grid" />
-      <div className="gol-glow gol-glow-one" />
-      <div className="gol-glow gol-glow-two" />
+      <div className="gol-radar" />
+      <div className="gol-cursor-glow" />
 
-      <div className="gol-particles">
-        {particles.map((p) => (
+      <svg className="gol-constellation" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {lines.map((line) => (
+          <line
+            key={line.id}
+            x1={line.x1}
+            y1={line.y1}
+            x2={line.x2}
+            y2={line.y2}
+          />
+        ))}
+      </svg>
+
+      <div className="gol-nodes">
+        {nodes.map((node) => (
           <span
-            key={p.id}
-            className="gol-particle"
+            key={node.id}
+            className="gol-node"
             style={{
-              left: p.x,
-              top: p.y,
-              animationDelay: p.delay,
-              animationDuration: p.speed,
+              left: `${node.x}%`,
+              top: `${node.y}%`,
+              width: `${node.size}px`,
+              height: `${node.size}px`,
+              animationDelay: node.delay,
+              animationDuration: node.speed,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="gol-ripples">
+        {ripples.map((ripple) => (
+          <span
+            key={ripple.id}
+            className="gol-ripple"
+            style={{
+              left: `${ripple.x}px`,
+              top: `${ripple.y}px`,
             }}
           />
         ))}
@@ -127,7 +226,7 @@ export default function GoLanding() {
           </div>
         </section>
 
-        <section className="gol-dashboard-grid gol-dashboard-grid-single">
+        <section className="gol-room-section">
           <div className="gol-room-card">
             <div className="gol-panel-head small">
               <div>

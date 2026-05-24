@@ -1,101 +1,169 @@
 :root {
-  --pg-bg: #07090d;
-  --pg-bg-soft: #0b111a;
-  --pg-panel: rgba(12, 18, 28, 0.78);
-  --pg-panel-strong: rgba(16, 24, 38, 0.88);
+  --pg-bg: #05070b;
+  --pg-bg-soft: #090d14;
+  --pg-panel: rgba(10, 16, 26, 0.7);
+  --pg-panel-strong: rgba(14, 22, 36, 0.88);
   --pg-border: rgba(125, 170, 230, 0.14);
   --pg-border-strong: rgba(125, 170, 230, 0.28);
   --pg-text: #f4f7fb;
   --pg-muted: #a7b4c6;
   --pg-dim: #64748b;
-  --pg-blue: #5ea1ff;
+  --pg-blue: #79c7ff;
   --pg-cyan: #68e0ff;
-  --pg-gold: #d8b06a;
+  --pg-gold: #e0bd72;
   --pg-gold-2: #b88746;
   --pg-purple: #9b7cff;
+  --pg-orange: #f59e0b;
   --pg-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
 }
 
 .gol-wrap {
+  --mx: 50vw;
+  --my: 50vh;
+  --mxp: 50%;
+  --myp: 50%;
+
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 24%, rgba(94, 161, 255, 0.16), transparent 31%),
-    radial-gradient(circle at 70% 36%, rgba(216, 176, 106, 0.1), transparent 28%),
-    radial-gradient(circle at 28% 58%, rgba(104, 224, 255, 0.06), transparent 32%),
-    #07090d;
+  background: #05070b;
   color: var(--pg-text);
   font-family: 'DM Sans', sans-serif;
   user-select: none;
   -webkit-user-select: none;
 }
 
+.gol-bg-base,
 .gol-grid,
-.gol-glow,
-.gol-particles {
+.gol-radar,
+.gol-cursor-glow,
+.gol-constellation,
+.gol-nodes,
+.gol-ripples {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-.gol-grid {
+.gol-bg-base {
   z-index: 0;
+  background:
+    radial-gradient(circle at var(--mxp) var(--myp), rgba(121, 199, 255, 0.17), transparent 18%),
+    radial-gradient(circle at 22% 52%, rgba(245, 158, 11, 0.13), transparent 28%),
+    radial-gradient(circle at 78% 76%, rgba(155, 124, 255, 0.12), transparent 30%),
+    linear-gradient(180deg, #05070b 0%, #070a11 55%, #05070b 100%);
+  transition: background 0.08s linear;
+}
+
+.gol-grid {
+  z-index: 1;
   background-image:
     linear-gradient(rgba(125, 170, 230, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(125, 170, 230, 0.045) 1px, transparent 1px);
-  background-size: 68px 68px;
-  mask-image: radial-gradient(ellipse 82% 76% at 50% 38%, black 34%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 82% 76% at 50% 38%, black 34%, transparent 100%);
+  background-size: 70px 70px;
+  mask-image: radial-gradient(ellipse 84% 76% at 50% 39%, black 34%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 84% 76% at 50% 39%, black 34%, transparent 100%);
 }
 
-.gol-glow {
-  z-index: 0;
-}
-
-.gol-glow-one {
-  width: 560px;
-  height: 560px;
-  top: 18%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(94, 161, 255, 0.16), transparent 64%);
-}
-
-.gol-glow-two {
-  width: 390px;
-  height: 390px;
-  top: 55%;
-  right: 12%;
-  background: radial-gradient(circle, rgba(216, 176, 106, 0.1), transparent 70%);
-}
-
-.gol-particles {
+.gol-radar {
   z-index: 1;
+  opacity: 0.44;
+  background:
+    radial-gradient(circle at 17% 50%, transparent 0 70px, rgba(224, 189, 114, 0.13) 71px 72px, transparent 73px 118px, rgba(224, 189, 114, 0.095) 119px 120px, transparent 121px 170px, rgba(224, 189, 114, 0.07) 171px 172px, transparent 173px 230px, rgba(224, 189, 114, 0.045) 231px 232px, transparent 233px),
+    linear-gradient(115deg, rgba(245, 158, 11, 0.1), transparent 28%),
+    linear-gradient(300deg, rgba(155, 124, 255, 0.1), transparent 30%);
 }
 
-.gol-particle {
+.gol-cursor-glow {
+  z-index: 2;
+  background:
+    radial-gradient(circle at var(--mx) var(--my), rgba(104, 224, 255, 0.22), transparent 0 95px),
+    radial-gradient(circle at var(--mx) var(--my), rgba(224, 189, 114, 0.12), transparent 0 180px);
+  mix-blend-mode: screen;
+  opacity: 0.95;
+  transition: background 0.04s linear;
+}
+
+.gol-constellation {
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  opacity: 0.55;
+}
+
+.gol-constellation line {
+  stroke: rgba(224, 189, 114, 0.22);
+  stroke-width: 0.06;
+  animation: golLinePulse 3.6s ease-in-out infinite alternate;
+}
+
+@keyframes golLinePulse {
+  from {
+    opacity: 0.18;
+  }
+
+  to {
+    opacity: 0.72;
+  }
+}
+
+.gol-nodes {
+  z-index: 3;
+}
+
+.gol-node {
   position: absolute;
-  width: 2px;
-  height: 2px;
+  display: block;
   border-radius: 999px;
-  background: var(--pg-cyan);
-  opacity: 0.18;
-  animation-name: golFloat;
+  background: #e8d56b;
+  box-shadow:
+    0 0 12px rgba(232, 213, 107, 0.55),
+    0 0 24px rgba(104, 224, 255, 0.12);
+  opacity: 0.65;
+  animation-name: golNodeFloat;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
   animation-direction: alternate;
 }
 
-@keyframes golFloat {
+@keyframes golNodeFloat {
   from {
-    opacity: 0.08;
-    transform: translateY(0) scale(1);
+    opacity: 0.32;
+    transform: translate3d(0, 0, 0) scale(0.9);
   }
 
   to {
-    opacity: 0.58;
-    transform: translateY(-34px) scale(1.9);
+    opacity: 0.92;
+    transform: translate3d(8px, -22px, 0) scale(1.45);
+  }
+}
+
+.gol-ripples {
+  z-index: 4;
+}
+
+.gol-ripple {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(224, 189, 114, 0.7);
+  background: rgba(121, 199, 255, 0.1);
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: golRipple 0.92s ease-out forwards;
+}
+
+@keyframes golRipple {
+  0% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(0.15);
+    box-shadow: 0 0 0 rgba(224, 189, 114, 0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(12);
+    box-shadow: 0 0 38px rgba(224, 189, 114, 0.26);
   }
 }
 
@@ -105,13 +173,13 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 70px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 18px;
-  background: rgba(7, 9, 13, 0.72);
-  border-bottom: 1px solid rgba(125, 170, 230, 0.09);
+  background: rgba(5, 7, 11, 0.42);
+  border-bottom: 1px solid rgba(125, 170, 230, 0.08);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   z-index: 100;
@@ -123,40 +191,48 @@
   gap: 7px;
   padding: 6px;
   border-radius: 999px;
-  background: rgba(11, 17, 26, 0.86);
+  background: rgba(9, 13, 20, 0.48);
   border: 1px solid rgba(125, 170, 230, 0.13);
-  box-shadow: 0 18px 58px rgba(0, 0, 0, 0.36);
+  box-shadow:
+    0 18px 58px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .gol-nav-tab {
   border: 0;
   background: transparent;
-  color: #94a3b8;
+  color: rgba(218, 231, 248, 0.72);
   padding: 10px 23px;
   border-radius: 999px;
   font-family: 'Sora', sans-serif;
   font-size: 13px;
   font-weight: 900;
   cursor: pointer;
-  transition: color 0.18s, background 0.18s, box-shadow 0.18s, transform 0.18s;
+  transition:
+    color 0.18s,
+    background 0.18s,
+    box-shadow 0.18s,
+    transform 0.18s;
 }
 
 .gol-nav-tab:hover {
-  color: #e9f3ff;
-  background: rgba(94, 161, 255, 0.09);
+  color: #f8fbff;
+  background: rgba(121, 199, 255, 0.09);
   transform: translateY(-1px);
 }
 
 .gol-nav-tab.active {
-  color: #09111c;
-  background: linear-gradient(135deg, #86c5ff, #d8b06a);
-  box-shadow: 0 12px 28px rgba(94, 161, 255, 0.2);
+  color: #07101c;
+  background: linear-gradient(135deg, #8ed0ff, #e0bd72);
+  box-shadow:
+    0 12px 28px rgba(121, 199, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 /* Hero */
 .gol-hero {
   position: relative;
-  z-index: 3;
+  z-index: 10;
   width: min(1050px, calc(100% - 34px));
   min-height: 100vh;
   margin: 0 auto;
@@ -208,13 +284,13 @@
   place-items: center;
   padding: 0.11em 0.25em 0.15em;
   border-radius: 0.18em;
-  color: #09111c;
+  color: #07101c;
   font-size: 0.38em;
   letter-spacing: -0.03em;
-  background: linear-gradient(135deg, #86c5ff, #d8b06a);
+  background: linear-gradient(135deg, #8ed0ff, #e0bd72);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.16) inset,
-    0 20px 55px rgba(94, 161, 255, 0.18);
+    0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+    0 20px 55px rgba(121, 199, 255, 0.18);
 }
 
 .gol-sub {
@@ -242,20 +318,26 @@
   font-size: 13px;
   font-weight: 900;
   cursor: pointer;
-  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s, background 0.18s;
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s,
+    border-color 0.18s,
+    background 0.18s;
 }
 
 .gol-action.primary {
   border: 0;
   color: #07101c;
-  background: linear-gradient(135deg, #86c5ff, #d8b06a);
-  box-shadow: 0 18px 38px rgba(94, 161, 255, 0.16);
+  background: linear-gradient(135deg, #8ed0ff, #e0bd72);
+  box-shadow: 0 18px 38px rgba(121, 199, 255, 0.16);
 }
 
 .gol-action.ghost {
   border: 1px solid rgba(125, 170, 230, 0.18);
-  background: rgba(11, 17, 26, 0.78);
+  background: rgba(9, 13, 20, 0.56);
   color: #d8e6f7;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .gol-action:hover {
@@ -263,12 +345,12 @@
 }
 
 .gol-action.primary:hover {
-  box-shadow: 0 18px 44px rgba(94, 161, 255, 0.24);
+  box-shadow: 0 18px 44px rgba(121, 199, 255, 0.24);
 }
 
 .gol-action.ghost:hover {
-  border-color: rgba(216, 176, 106, 0.38);
-  background: rgba(18, 28, 43, 0.9);
+  border-color: rgba(224, 189, 114, 0.38);
+  background: rgba(18, 28, 43, 0.76);
 }
 
 /* Room card only */
@@ -277,15 +359,31 @@
 }
 
 .gol-room-card {
-  border: 1px solid var(--pg-border);
+  border: 1px solid rgba(125, 170, 230, 0.17);
   border-radius: 24px;
   background:
-    linear-gradient(135deg, rgba(94, 161, 255, 0.075), rgba(216, 176, 106, 0.035)),
-    rgba(12, 18, 28, 0.8);
+    linear-gradient(135deg, rgba(121, 199, 255, 0.08), rgba(224, 189, 114, 0.04)),
+    rgba(10, 16, 26, 0.72);
   box-shadow: var(--pg-shadow);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.gol-room-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--mxp) var(--myp), rgba(121, 199, 255, 0.1), transparent 34%);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.gol-room-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .gol-panel-head {
@@ -310,8 +408,7 @@
   text-transform: uppercase;
 }
 
-.gol-panel-head h2,
-.gol-modal-head h2 {
+.gol-panel-head h2 {
   margin: 0;
   color: #f8fbff;
   font-family: 'Sora', sans-serif;
@@ -330,7 +427,7 @@
   padding: 0 18px;
   border-radius: 15px;
   border: 1px solid rgba(125, 170, 230, 0.17);
-  background: rgba(7, 12, 20, 0.62);
+  background: rgba(4, 8, 15, 0.64);
 }
 
 .gol-input-wrap span {
@@ -365,7 +462,7 @@
   margin-top: 13px;
   border: 0;
   border-radius: 14px;
-  background: linear-gradient(135deg, #86c5ff, #d8b06a);
+  background: linear-gradient(135deg, #8ed0ff, #e0bd72);
   color: #07101c;
   font-family: 'Sora', sans-serif;
   font-size: 14px;
@@ -376,7 +473,7 @@
 
 .gol-btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 16px 38px rgba(94, 161, 255, 0.18);
+  box-shadow: 0 16px 38px rgba(121, 199, 255, 0.18);
 }
 
 .gol-btn-primary:disabled {
@@ -391,182 +488,6 @@
   font-weight: 800;
   line-height: 1.45;
   text-align: center;
-}
-
-/* Leaderboard modal */
-.gol-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 250;
-  display: grid;
-  place-items: center;
-  padding: 18px;
-  background: rgba(2, 6, 12, 0.66);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.gol-leader-modal {
-  width: min(620px, 100%);
-  max-height: min(78vh, 680px);
-  overflow: auto;
-  border: 1px solid rgba(125, 170, 230, 0.18);
-  border-radius: 26px;
-  background:
-    linear-gradient(135deg, rgba(94, 161, 255, 0.09), rgba(216, 176, 106, 0.04)),
-    rgba(12, 18, 28, 0.96);
-  box-shadow: 0 34px 120px rgba(0, 0, 0, 0.62);
-  padding: 22px;
-}
-
-.gol-modal-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
-.gol-modal-close {
-  width: 36px;
-  height: 36px;
-  border: 1px solid rgba(125, 170, 230, 0.16);
-  border-radius: 12px;
-  background: rgba(7, 12, 20, 0.62);
-  color: #d8e6f7;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  transition: transform 0.18s, border-color 0.18s, background 0.18s;
-}
-
-.gol-modal-close:hover {
-  transform: translateY(-1px);
-  border-color: rgba(216, 176, 106, 0.36);
-  background: rgba(18, 28, 43, 0.9);
-}
-
-.gol-leader-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.gol-leader-row {
-  min-height: 62px;
-  display: grid;
-  grid-template-columns: 52px 1fr auto;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(125, 170, 230, 0.1);
-  background: rgba(7, 12, 20, 0.48);
-}
-
-.gol-rank {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  color: #dbeafe;
-  background: rgba(94, 161, 255, 0.1);
-  border: 1px solid rgba(94, 161, 255, 0.18);
-  font-family: 'Sora', sans-serif;
-  font-size: 12px;
-  font-weight: 950;
-}
-
-.gol-rank.rank-1 {
-  color: #27180a;
-  background: linear-gradient(135deg, #ffe2a8, #d8b06a);
-  border-color: rgba(216, 176, 106, 0.42);
-}
-
-.gol-rank.rank-2 {
-  color: #07101c;
-  background: linear-gradient(135deg, #cde8ff, #86c5ff);
-  border-color: rgba(134, 197, 255, 0.42);
-}
-
-.gol-rank.rank-3 {
-  color: #160f2e;
-  background: linear-gradient(135deg, #d6c9ff, #9b7cff);
-  border-color: rgba(155, 124, 255, 0.42);
-}
-
-.gol-player {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.gol-avatar {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: rgba(216, 176, 106, 0.1);
-}
-
-.gol-player strong {
-  display: block;
-  color: #f8fbff;
-  font-size: 14px;
-  font-weight: 950;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.gol-player small {
-  display: block;
-  color: #718198;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.gol-leader-row b {
-  color: #d8b06a;
-  font-family: 'Sora', sans-serif;
-  font-size: 14px;
-  font-weight: 950;
-}
-
-.gol-empty-leaderboard {
-  min-height: 220px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 8px;
-  padding: 28px;
-  text-align: center;
-  border-radius: 18px;
-  border: 1px dashed rgba(125, 170, 230, 0.18);
-  background: rgba(7, 12, 20, 0.38);
-}
-
-.gol-empty-leaderboard span {
-  font-size: 40px;
-}
-
-.gol-empty-leaderboard strong {
-  color: #f8fbff;
-  font-family: 'Sora', sans-serif;
-  font-size: 18px;
-  font-weight: 950;
-}
-
-.gol-empty-leaderboard p {
-  max-width: 360px;
-  margin: 0;
-  color: #8796aa;
-  font-size: 13px;
-  line-height: 1.5;
-  font-weight: 750;
 }
 
 /* Responsive */
@@ -628,17 +549,4 @@
     border-radius: 20px;
     padding: 18px;
   }
-
-  .gol-leader-row {
-    grid-template-columns: 44px 1fr auto;
-    gap: 9px;
-  }
-}
-.gol-dashboard-grid-single {
-  grid-template-columns: minmax(320px, 430px);
-  justify-content: center;
-}
-
-.gol-dashboard-grid-single .gol-room-card {
-  width: 100%;
 }
