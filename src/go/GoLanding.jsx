@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './GoLanding.css'
 
@@ -6,54 +6,12 @@ export default function GoLanding() {
   const navigate = useNavigate()
   const wrapRef = useRef(null)
   const titleRef = useRef(null)
+  const rafRef = useRef(null)
+  const pointerRef = useRef({ x: 0, y: 0 })
 
   const [visible, setVisible] = useState(false)
   const [code, setCode] = useState('')
   const [ripples, setRipples] = useState([])
-
-  const nodes = useMemo(
-    () =>
-      Array.from({ length: 26 }, (_, i) => ({
-        id: i,
-        x: 5 + ((i * 19) % 91),
-        y: 7 + ((i * 31) % 84),
-        size: 2 + (i % 3),
-        delay: `${i * 0.12}s`,
-        speed: `${5.2 + (i % 6) * 0.5}s`,
-      })),
-    []
-  )
-
-  const lines = useMemo(() => {
-    const pairs = []
-
-    for (let i = 0; i < nodes.length; i += 1) {
-      const nextA = nodes[(i + 3) % nodes.length]
-      const nextB = nodes[(i + 7) % nodes.length]
-
-      if (i % 2 === 0) {
-        pairs.push({
-          id: `a-${i}`,
-          x1: nodes[i].x,
-          y1: nodes[i].y,
-          x2: nextA.x,
-          y2: nextA.y,
-        })
-      }
-
-      if (i % 5 === 0) {
-        pairs.push({
-          id: `b-${i}`,
-          x1: nodes[i].x,
-          y1: nodes[i].y,
-          x2: nextB.x,
-          y2: nextB.y,
-        })
-      }
-    }
-
-    return pairs
-  }, [nodes])
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 120)
@@ -69,7 +27,7 @@ export default function GoLanding() {
       const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)
       const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)
 
-      title.style.transform = `perspective(760px) rotateX(${-dy * 4}deg) rotateY(${dx * 4}deg)`
+      title.style.transform = `perspective(760px) rotateX(${-dy * 3}deg) rotateY(${dx * 3}deg)`
     }
 
     const onLeave = () => {
@@ -85,18 +43,30 @@ export default function GoLanding() {
     }
   }, [])
 
+  useEffect(() => {
+    const tick = () => {
+      const wrap = wrapRef.current
+      if (wrap) {
+        wrap.style.setProperty('--mx', `${pointerRef.current.x}px`)
+        wrap.style.setProperty('--my', `${pointerRef.current.y}px`)
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+
+    rafRef.current = requestAnimationFrame(tick)
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
+  }, [])
+
   const handleMouseMove = (e) => {
     const wrap = wrapRef.current
     if (!wrap) return
 
     const rect = wrap.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    wrap.style.setProperty('--mx', `${x}px`)
-    wrap.style.setProperty('--my', `${y}px`)
-    wrap.style.setProperty('--mxp', `${(x / rect.width) * 100}%`)
-    wrap.style.setProperty('--myp', `${(y / rect.height) * 100}%`)
+    pointerRef.current.x = e.clientX - rect.left
+    pointerRef.current.y = e.clientY - rect.top
   }
 
   const handlePointerDown = (e) => {
@@ -106,16 +76,16 @@ export default function GoLanding() {
     const rect = wrap.getBoundingClientRect()
 
     const ripple = {
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     }
 
-    setRipples((prev) => [...prev.slice(-5), ripple])
+    setRipples((prev) => [...prev.slice(-2), ripple])
 
     window.setTimeout(() => {
       setRipples((prev) => prev.filter((item) => item.id !== ripple.id))
-    }, 950)
+    }, 850)
   }
 
   const handleEnter = () => {
@@ -137,39 +107,24 @@ export default function GoLanding() {
       onPointerDown={handlePointerDown}
     >
       <div className="gol-bg-base" />
-      <div className="gol-aurora gol-aurora-one" />
-      <div className="gol-aurora gol-aurora-two" />
-      <div className="gol-aurora gol-aurora-three" />
+      <div className="gol-bg-noise" />
       <div className="gol-grid" />
-      <div className="gol-radar" />
+      <div className="gol-sun-wrap">
+        <div className="gol-sun-halo" />
+        <div className="gol-sun-rays" />
+        <div className="gol-sun-ring gol-sun-ring-1" />
+        <div className="gol-sun-ring gol-sun-ring-2" />
+        <div className="gol-sun-ring gol-sun-ring-3" />
+        <div className="gol-sun-core" />
+      </div>
+
+      <div className="gol-ambient gol-ambient-left" />
+      <div className="gol-ambient gol-ambient-right" />
       <div className="gol-cursor-glow" />
 
-      <svg className="gol-constellation" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {lines.map((line) => (
-          <line
-            key={line.id}
-            x1={line.x1}
-            y1={line.y1}
-            x2={line.x2}
-            y2={line.y2}
-          />
-        ))}
-      </svg>
-
-      <div className="gol-nodes">
-        {nodes.map((node) => (
-          <span
-            key={node.id}
-            className="gol-node"
-            style={{
-              left: `${node.x}%`,
-              top: `${node.y}%`,
-              width: `${node.size}px`,
-              height: `${node.size}px`,
-              animationDelay: node.delay,
-              animationDuration: node.speed,
-            }}
-          />
+      <div className="gol-stars">
+        {Array.from({ length: 18 }).map((_, i) => (
+          <span key={i} className={`gol-star gol-star-${(i % 6) + 1}`} />
         ))}
       </div>
 

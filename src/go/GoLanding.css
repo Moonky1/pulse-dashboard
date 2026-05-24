@@ -1,31 +1,30 @@
 :root {
-  --pg-bg: #04060a;
-  --pg-bg-soft: #080d14;
-  --pg-panel: rgba(9, 15, 24, 0.66);
-  --pg-panel-strong: rgba(13, 21, 34, 0.88);
-  --pg-border: rgba(167, 198, 255, 0.14);
-  --pg-border-strong: rgba(190, 176, 255, 0.3);
+  --pg-bg: #04070e;
+  --pg-bg-2: #08101d;
   --pg-text: #f7f8fb;
-  --pg-muted: #b8c3d6;
-  --pg-dim: #718096;
-  --pg-ice: #9fdcff;
-  --pg-lavender: #b9a7ff;
-  --pg-mint: #9ff6df;
-  --pg-champagne: #ddd2a3;
-  --pg-orchid: #d7a6ff;
-  --pg-shadow: 0 28px 90px rgba(0, 0, 0, 0.52);
+  --pg-muted: #bcc7d8;
+  --pg-dim: #7d8ba1;
+  --pg-border: rgba(157, 195, 255, 0.14);
+  --pg-border-strong: rgba(198, 220, 255, 0.22);
+  --pg-ice: #9cd6ff;
+  --pg-ice-2: #d5e8ff;
+  --pg-gold: #ffd88a;
+  --pg-gold-2: #ffb84d;
+  --pg-orange: #ff8e2b;
+  --pg-purple: #bca7ff;
+  --pg-shadow: 0 22px 80px rgba(0, 0, 0, 0.48);
 }
 
 .gol-wrap {
   --mx: 50vw;
   --my: 50vh;
-  --mxp: 50%;
-  --myp: 50%;
 
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-  background: var(--pg-bg);
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 190, 95, 0.08), transparent 28%),
+    linear-gradient(180deg, #03060c 0%, #07101c 48%, #03060c 100%);
   color: var(--pg-text);
   font-family: 'DM Sans', sans-serif;
   user-select: none;
@@ -33,12 +32,12 @@
 }
 
 .gol-bg-base,
-.gol-aurora,
+.gol-bg-noise,
 .gol-grid,
-.gol-radar,
+.gol-sun-wrap,
+.gol-ambient,
 .gol-cursor-glow,
-.gol-constellation,
-.gol-nodes,
+.gol-stars,
 .gol-ripples {
   position: absolute;
   inset: 0;
@@ -48,207 +47,243 @@
 .gol-bg-base {
   z-index: 0;
   background:
-    radial-gradient(circle at 50% 25%, rgba(159, 220, 255, 0.09), transparent 32%),
-    radial-gradient(circle at 28% 58%, rgba(185, 167, 255, 0.08), transparent 34%),
-    linear-gradient(180deg, #04060a 0%, #070b12 52%, #04060a 100%);
+    radial-gradient(circle at 50% 35%, rgba(132, 181, 255, 0.05), transparent 28%),
+    radial-gradient(circle at 25% 70%, rgba(74, 111, 201, 0.05), transparent 25%),
+    radial-gradient(circle at 75% 78%, rgba(98, 66, 184, 0.045), transparent 26%);
 }
 
-/* Moving background layers */
-.gol-aurora {
-  z-index: 1;
-  opacity: 0.62;
-  filter: blur(8px);
-  transform: translate3d(0, 0, 0);
-}
-
-.gol-aurora-one {
-  background:
-    radial-gradient(ellipse at 24% 46%, rgba(159, 220, 255, 0.12), transparent 34%),
-    radial-gradient(ellipse at 72% 65%, rgba(185, 167, 255, 0.1), transparent 36%);
-  animation: golAuroraOne 13s ease-in-out infinite alternate;
-}
-
-.gol-aurora-two {
-  background:
-    radial-gradient(ellipse at 18% 22%, rgba(221, 210, 163, 0.11), transparent 30%),
-    radial-gradient(ellipse at 85% 34%, rgba(159, 246, 223, 0.075), transparent 33%);
-  animation: golAuroraTwo 16s ease-in-out infinite alternate;
-}
-
-.gol-aurora-three {
-  background:
-    radial-gradient(ellipse at 55% 72%, rgba(215, 166, 255, 0.07), transparent 32%),
-    radial-gradient(ellipse at 48% 18%, rgba(159, 220, 255, 0.055), transparent 28%);
-  animation: golAuroraThree 20s ease-in-out infinite alternate;
-}
-
-@keyframes golAuroraOne {
-  from {
-    transform: translate3d(-22px, 8px, 0) scale(1);
-  }
-
-  to {
-    transform: translate3d(28px, -18px, 0) scale(1.07);
-  }
-}
-
-@keyframes golAuroraTwo {
-  from {
-    transform: translate3d(24px, -10px, 0) scale(1.02);
-  }
-
-  to {
-    transform: translate3d(-26px, 22px, 0) scale(1.08);
-  }
-}
-
-@keyframes golAuroraThree {
-  from {
-    transform: translate3d(-12px, -18px, 0) scale(1);
-  }
-
-  to {
-    transform: translate3d(18px, 18px, 0) scale(1.1);
-  }
+.gol-bg-noise {
+  z-index: 0;
+  opacity: 0.08;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.7) 0.6px, transparent 0.7px),
+    radial-gradient(circle at 80% 30%, rgba(255,255,255,0.6) 0.6px, transparent 0.7px),
+    radial-gradient(circle at 60% 80%, rgba(255,255,255,0.45) 0.6px, transparent 0.7px);
+  background-size: 180px 180px, 220px 220px, 260px 260px;
 }
 
 .gol-grid {
-  z-index: 2;
+  z-index: 1;
   background-image:
-    linear-gradient(rgba(167, 198, 255, 0.038) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(167, 198, 255, 0.038) 1px, transparent 1px);
-  background-size: 70px 70px;
-  mask-image: radial-gradient(ellipse 86% 78% at 50% 39%, black 34%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 86% 78% at 50% 39%, black 34%, transparent 100%);
+    linear-gradient(rgba(150, 190, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150, 190, 255, 0.035) 1px, transparent 1px);
+  background-size: 78px 78px;
+  mask-image: radial-gradient(ellipse 88% 78% at 50% 38%, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 88% 78% at 50% 38%, black 40%, transparent 100%);
 }
 
-.gol-radar {
-  z-index: 3;
-  opacity: 0.26;
-  background:
-    radial-gradient(circle at 16% 54%, transparent 0 72px, rgba(221, 210, 163, 0.12) 73px 74px, transparent 75px 122px, rgba(221, 210, 163, 0.085) 123px 124px, transparent 125px 176px, rgba(221, 210, 163, 0.06) 177px 178px, transparent 179px 238px, rgba(221, 210, 163, 0.04) 239px 240px, transparent 241px),
-    linear-gradient(115deg, rgba(221, 210, 163, 0.07), transparent 30%),
-    linear-gradient(300deg, rgba(185, 167, 255, 0.08), transparent 34%);
-  animation: golRadarDrift 18s ease-in-out infinite alternate;
+/* ===== Detailed sun ===== */
+.gol-sun-wrap {
+  z-index: 2;
+  left: -220px;
+  top: 180px;
+  right: auto;
+  bottom: auto;
+  width: 700px;
+  height: 700px;
+  opacity: 0.95;
+  animation: golSunFloat 16s ease-in-out infinite alternate;
 }
 
-@keyframes golRadarDrift {
+@keyframes golSunFloat {
   from {
-    transform: translate3d(-10px, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
-
   to {
-    transform: translate3d(20px, 8px, 0) scale(1.03);
+    transform: translate3d(24px, -12px, 0) scale(1.03);
   }
 }
 
-/* Subtle mouse effect */
-.gol-cursor-glow {
-  z-index: 4;
-  background:
-    radial-gradient(circle at var(--mx) var(--my), rgba(159, 220, 255, 0.11), transparent 0 115px),
-    radial-gradient(circle at var(--mx) var(--my), rgba(185, 167, 255, 0.055), transparent 0 210px);
-  mix-blend-mode: screen;
-  opacity: 0.8;
-  transition: background 0.04s linear;
-}
-
-.gol-constellation {
-  z-index: 5;
-  width: 100%;
-  height: 100%;
-  opacity: 0.42;
-  animation: golConstellationDrift 24s ease-in-out infinite alternate;
-}
-
-.gol-constellation line {
-  stroke: rgba(221, 210, 163, 0.22);
-  stroke-width: 0.06;
-  animation: golLinePulse 3.8s ease-in-out infinite alternate;
-}
-
-@keyframes golConstellationDrift {
-  from {
-    transform: translate3d(-10px, -6px, 0) scale(1);
-  }
-
-  to {
-    transform: translate3d(14px, 10px, 0) scale(1.015);
-  }
-}
-
-@keyframes golLinePulse {
-  from {
-    opacity: 0.15;
-  }
-
-  to {
-    opacity: 0.55;
-  }
-}
-
-.gol-nodes {
-  z-index: 6;
-}
-
-.gol-node {
+.gol-sun-halo,
+.gol-sun-rays,
+.gol-sun-core,
+.gol-sun-ring {
   position: absolute;
-  display: block;
-  border-radius: 999px;
-  background: #ddd2a3;
-  box-shadow:
-    0 0 10px rgba(221, 210, 163, 0.48),
-    0 0 24px rgba(159, 220, 255, 0.08);
-  opacity: 0.56;
-  animation-name: golNodeFloat;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
+  border-radius: 50%;
 }
 
-@keyframes golNodeFloat {
+.gol-sun-halo {
+  inset: 0;
+  background:
+    radial-gradient(circle, rgba(255, 171, 59, 0.18) 0%, rgba(255, 155, 42, 0.12) 20%, rgba(255, 138, 25, 0.07) 38%, transparent 68%);
+  filter: blur(8px);
+}
+
+.gol-sun-rays {
+  inset: 40px;
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255, 179, 74, 0.14) 0deg 4deg,
+      rgba(255, 179, 74, 0.03) 4deg 11deg
+    );
+  filter: blur(1px);
+  opacity: 0.55;
+  animation: golSunRotate 28s linear infinite;
+}
+
+@keyframes golSunRotate {
   from {
-    opacity: 0.28;
-    transform: translate3d(0, 0, 0) scale(0.9);
+    transform: rotate(0deg);
   }
-
   to {
-    opacity: 0.86;
-    transform: translate3d(8px, -20px, 0) scale(1.35);
+    transform: rotate(360deg);
   }
 }
 
-/* Click circles */
+.gol-sun-ring {
+  border: 1px solid rgba(255, 184, 77, 0.12);
+}
+
+.gol-sun-ring-1 {
+  inset: 110px;
+}
+
+.gol-sun-ring-2 {
+  inset: 160px;
+  border-color: rgba(255, 210, 128, 0.1);
+}
+
+.gol-sun-ring-3 {
+  inset: 220px;
+  border-color: rgba(255, 230, 177, 0.08);
+}
+
+.gol-sun-core {
+  inset: 250px;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255, 247, 217, 0.96) 0%, rgba(255, 226, 157, 0.95) 22%, rgba(255, 186, 75, 0.94) 52%, rgba(255, 126, 28, 0.88) 78%, rgba(255, 111, 0, 0.72) 100%);
+  box-shadow:
+    0 0 50px rgba(255, 170, 58, 0.34),
+    0 0 110px rgba(255, 157, 58, 0.18);
+}
+
+/* Ambient moving colors */
+.gol-ambient {
+  z-index: 2;
+  filter: blur(36px);
+  opacity: 0.34;
+}
+
+.gol-ambient-left {
+  background: radial-gradient(circle, rgba(96, 147, 255, 0.18), transparent 65%);
+  width: 520px;
+  height: 520px;
+  left: 260px;
+  top: 140px;
+  animation: golAmbientLeft 18s ease-in-out infinite alternate;
+}
+
+.gol-ambient-right {
+  background: radial-gradient(circle, rgba(143, 113, 255, 0.12), transparent 65%);
+  width: 440px;
+  height: 440px;
+  right: 120px;
+  bottom: 60px;
+  animation: golAmbientRight 22s ease-in-out infinite alternate;
+}
+
+@keyframes golAmbientLeft {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(28px, 20px, 0);
+  }
+}
+
+@keyframes golAmbientRight {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-22px, -18px, 0);
+  }
+}
+
+/* very light mouse reaction */
+.gol-cursor-glow {
+  z-index: 3;
+  background:
+    radial-gradient(circle 120px at var(--mx) var(--my), rgba(156, 214, 255, 0.08), transparent 100%);
+  transition: background 0.06s linear;
+  mix-blend-mode: screen;
+}
+
+/* stars */
+.gol-stars {
+  z-index: 4;
+}
+
+.gol-star {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 231, 175, 0.9);
+  box-shadow: 0 0 10px rgba(255, 219, 135, 0.35);
+  animation: golStarTwinkle 4.8s ease-in-out infinite;
+}
+
+.gol-star-1 { top: 12%; left: 9%; animation-delay: 0s; }
+.gol-star-2 { top: 18%; left: 32%; animation-delay: 1s; }
+.gol-star-3 { top: 20%; left: 62%; animation-delay: 2s; }
+.gol-star-4 { top: 27%; left: 82%; animation-delay: 0.7s; }
+.gol-star-5 { top: 35%; left: 24%; animation-delay: 1.6s; }
+.gol-star-6 { top: 40%; left: 72%; animation-delay: 2.4s; }
+
+.gol-stars .gol-star:nth-child(7)  { top: 46%; left: 15%; animation-delay: .5s; }
+.gol-stars .gol-star:nth-child(8)  { top: 52%; left: 48%; animation-delay: 1.1s; }
+.gol-stars .gol-star:nth-child(9)  { top: 56%; left: 78%; animation-delay: 2.2s; }
+.gol-stars .gol-star:nth-child(10) { top: 62%; left: 19%; animation-delay: .9s; }
+.gol-stars .gol-star:nth-child(11) { top: 66%; left: 61%; animation-delay: 1.8s; }
+.gol-stars .gol-star:nth-child(12) { top: 73%; left: 84%; animation-delay: 2.7s; }
+.gol-stars .gol-star:nth-child(13) { top: 77%; left: 12%; animation-delay: .4s; }
+.gol-stars .gol-star:nth-child(14) { top: 81%; left: 43%; animation-delay: 1.4s; }
+.gol-stars .gol-star:nth-child(15) { top: 84%; left: 70%; animation-delay: 2.3s; }
+.gol-stars .gol-star:nth-child(16) { top: 25%; left: 53%; animation-delay: .8s; }
+.gol-stars .gol-star:nth-child(17) { top: 58%; left: 89%; animation-delay: 1.9s; }
+.gol-stars .gol-star:nth-child(18) { top: 90%; left: 32%; animation-delay: 2.6s; }
+
+@keyframes golStarTwinkle {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+/* click ripple */
 .gol-ripples {
-  z-index: 7;
+  z-index: 5;
 }
 
 .gol-ripple {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 999px;
-  border: 1px solid rgba(221, 210, 163, 0.72);
-  background: rgba(159, 220, 255, 0.08);
+  border: 1px solid rgba(255, 217, 138, 0.62);
+  background: rgba(255, 200, 90, 0.06);
   transform: translate(-50%, -50%) scale(0.2);
-  animation: golRipple 0.92s ease-out forwards;
+  animation: golRipple 0.82s ease-out forwards;
 }
 
 @keyframes golRipple {
   0% {
-    opacity: 0.8;
-    transform: translate(-50%, -50%) scale(0.15);
-    box-shadow: 0 0 0 rgba(221, 210, 163, 0);
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(0.2);
   }
-
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(12);
-    box-shadow: 0 0 34px rgba(221, 210, 163, 0.22);
+    transform: translate(-50%, -50%) scale(10.5);
   }
 }
 
-/* Top nav */
+/* Nav */
 .gol-nav {
   position: fixed;
   top: 0;
@@ -259,10 +294,10 @@
   align-items: center;
   justify-content: center;
   padding: 0 18px;
-  background: rgba(4, 6, 10, 0.38);
-  border-bottom: 1px solid rgba(167, 198, 255, 0.075);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: rgba(4, 7, 14, 0.34);
+  border-bottom: 1px solid rgba(166, 197, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   z-index: 100;
 }
 
@@ -272,42 +307,33 @@
   gap: 7px;
   padding: 6px;
   border-radius: 999px;
-  background: rgba(8, 13, 20, 0.48);
-  border: 1px solid rgba(167, 198, 255, 0.12);
-  box-shadow:
-    0 18px 58px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  background: rgba(8, 13, 22, 0.46);
+  border: 1px solid rgba(157, 195, 255, 0.11);
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.28);
 }
 
 .gol-nav-tab {
   border: 0;
   background: transparent;
-  color: rgba(225, 232, 245, 0.68);
+  color: rgba(228, 234, 245, 0.72);
   padding: 10px 23px;
   border-radius: 999px;
   font-family: 'Sora', sans-serif;
   font-size: 13px;
   font-weight: 900;
   cursor: pointer;
-  transition:
-    color 0.18s,
-    background 0.18s,
-    box-shadow 0.18s,
-    transform 0.18s;
+  transition: color 0.18s, background 0.18s, transform 0.18s;
 }
 
 .gol-nav-tab:hover {
-  color: #f8fbff;
-  background: rgba(159, 220, 255, 0.08);
+  color: #fff;
+  background: rgba(156, 214, 255, 0.08);
   transform: translateY(-1px);
 }
 
 .gol-nav-tab.active {
-  color: #05070b;
-  background: linear-gradient(135deg, #a8ddff, #ddd2a3);
-  box-shadow:
-    0 12px 28px rgba(159, 220, 255, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  color: #07101b;
+  background: linear-gradient(135deg, #dff0ff, #ffe19f);
 }
 
 /* Hero */
@@ -324,8 +350,8 @@
   justify-content: center;
   gap: 42px;
   opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.65s ease, transform 0.65s ease;
+  transform: translateY(16px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
 }
 
 .gol-hero.visible {
@@ -349,10 +375,8 @@
   letter-spacing: -0.088em;
   font-weight: 950;
   color: #f7f8fb;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.1),
-    0 30px 90px rgba(0, 0, 0, 0.52);
-  transition: transform 0.14s ease;
+  text-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+  transition: transform 0.12s ease;
   will-change: transform;
 }
 
@@ -365,19 +389,19 @@
   place-items: center;
   padding: 0.11em 0.25em 0.15em;
   border-radius: 0.18em;
-  color: #05070b;
+  color: #05070c;
   font-size: 0.38em;
   letter-spacing: -0.03em;
-  background: linear-gradient(135deg, #a8ddff, #ddd2a3 58%, #b9a7ff);
+  background: linear-gradient(135deg, #fff2cf, #ffcf70, #ffb978);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.18) inset,
-    0 20px 55px rgba(185, 167, 255, 0.14);
+    0 0 0 1px rgba(255, 255, 255, 0.16) inset,
+    0 12px 36px rgba(255, 172, 72, 0.22);
 }
 
 .gol-sub {
-  max-width: 700px;
+  max-width: 760px;
   margin: 26px auto 0;
-  color: #c6cfdd;
+  color: #cad3df;
   font-size: clamp(17px, 2vw, 20px);
   line-height: 1.5;
   font-weight: 750;
@@ -395,48 +419,38 @@
   min-height: 46px;
   padding: 0 22px;
   border-radius: 999px;
-  border: 1px solid rgba(167, 198, 255, 0.18);
-  background: rgba(8, 13, 20, 0.54);
-  color: #dfe7f5;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(157, 195, 255, 0.16);
+  background: rgba(9, 15, 24, 0.54);
+  color: #e4ebf6;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   font-family: 'Sora', sans-serif;
   font-size: 13px;
   font-weight: 900;
   cursor: pointer;
-  transition:
-    transform 0.18s,
-    box-shadow 0.18s,
-    border-color 0.18s,
-    background 0.18s,
-    color 0.18s;
+  transition: transform 0.18s, border-color 0.18s, background 0.18s;
 }
 
 .gol-action:hover {
   transform: translateY(-2px);
-  color: #ffffff;
-  border-color: rgba(221, 210, 163, 0.36);
-  background:
-    linear-gradient(135deg, rgba(159, 220, 255, 0.1), rgba(185, 167, 255, 0.07)),
-    rgba(12, 19, 30, 0.74);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+  border-color: rgba(255, 216, 138, 0.36);
+  background: rgba(13, 21, 34, 0.78);
 }
 
 /* Room card */
 .gol-room-section {
-  width: min(430px, 100%);
+  width: min(480px, 100%);
 }
 
 .gol-room-card {
-  border: 1px solid rgba(167, 198, 255, 0.16);
+  border: 1px solid rgba(157, 195, 255, 0.14);
   border-radius: 24px;
   background:
-    linear-gradient(135deg, rgba(159, 220, 255, 0.07), rgba(185, 167, 255, 0.035)),
-    rgba(9, 15, 24, 0.72);
+    linear-gradient(180deg, rgba(18, 31, 50, 0.78), rgba(10, 19, 32, 0.82));
   box-shadow: var(--pg-shadow);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  padding: 24px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 26px;
   position: relative;
   overflow: hidden;
 }
@@ -445,7 +459,9 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at var(--mxp) var(--myp), rgba(159, 220, 255, 0.06), transparent 36%);
+  background:
+    linear-gradient(135deg, rgba(116, 181, 255, 0.09), transparent 40%),
+    linear-gradient(315deg, rgba(255, 190, 95, 0.08), transparent 42%);
   pointer-events: none;
 }
 
@@ -462,13 +478,9 @@
   text-align: center;
 }
 
-.gol-panel-head.small {
-  margin-bottom: 18px;
-}
-
 .gol-panel-kicker {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   color: var(--pg-ice);
   font-size: 12px;
   font-weight: 950;
@@ -480,26 +492,25 @@
   margin: 0;
   color: #f8fbff;
   font-family: 'Sora', sans-serif;
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 950;
   letter-spacing: -0.045em;
 }
 
-/* Room input */
 .gol-input-wrap {
-  height: 58px;
+  height: 60px;
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: 12px;
   padding: 0 18px;
-  border-radius: 15px;
-  border: 1px solid rgba(167, 198, 255, 0.17);
-  background: rgba(4, 8, 15, 0.64);
+  border-radius: 16px;
+  border: 1px solid rgba(157, 195, 255, 0.15);
+  background: rgba(4, 8, 15, 0.76);
 }
 
 .gol-input-wrap span {
-  color: var(--pg-champagne);
+  color: var(--pg-gold);
   font-family: 'Sora', sans-serif;
   font-size: 22px;
   font-weight: 950;
@@ -521,17 +532,17 @@
 }
 
 .gol-input::placeholder {
-  color: rgba(184, 195, 214, 0.31);
+  color: rgba(184, 195, 214, 0.28);
 }
 
 .gol-btn-primary {
   width: 100%;
-  min-height: 48px;
-  margin-top: 13px;
+  min-height: 50px;
+  margin-top: 14px;
   border: 0;
   border-radius: 14px;
-  background: linear-gradient(135deg, #a8ddff, #ddd2a3 58%, #b9a7ff);
-  color: #05070b;
+  background: linear-gradient(135deg, #e3f2ff, #ffd98e, #ffbd73);
+  color: #06101a;
   font-family: 'Sora', sans-serif;
   font-size: 14px;
   font-weight: 950;
@@ -541,7 +552,7 @@
 
 .gol-btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 16px 38px rgba(159, 220, 255, 0.16);
+  box-shadow: 0 14px 34px rgba(255, 183, 92, 0.18);
 }
 
 .gol-btn-primary:disabled {
@@ -551,17 +562,23 @@
 
 .gol-card-note {
   margin: 14px 0 0;
-  color: #7e8da4;
+  color: #8795ab;
   font-size: 12px;
   font-weight: 800;
   line-height: 1.45;
   text-align: center;
 }
 
-/* Responsive */
 @media (max-width: 900px) {
   .gol-title {
     font-size: clamp(58px, 16vw, 100px);
+  }
+
+  .gol-sun-wrap {
+    left: -270px;
+    top: 220px;
+    width: 620px;
+    height: 620px;
   }
 }
 
@@ -569,7 +586,7 @@
   .gol-nav {
     height: auto;
     min-height: 66px;
-    padding: 10px 10px;
+    padding: 10px;
   }
 
   .gol-nav-tabs {
@@ -616,5 +633,17 @@
   .gol-room-card {
     border-radius: 20px;
     padding: 18px;
+  }
+
+  .gol-sun-wrap {
+    left: -300px;
+    top: 260px;
+    width: 560px;
+    height: 560px;
+    opacity: 0.78;
+  }
+
+  .gol-ambient-right {
+    display: none;
   }
 }
