@@ -13,13 +13,13 @@ export default function GoLanding() {
 
   const nodes = useMemo(
     () =>
-      Array.from({ length: 24 }, (_, i) => ({
+      Array.from({ length: 26 }, (_, i) => ({
         id: i,
         x: 5 + ((i * 19) % 91),
         y: 7 + ((i * 31) % 84),
         size: 2 + (i % 3),
         delay: `${i * 0.12}s`,
-        speed: `${4.8 + (i % 6) * 0.45}s`,
+        speed: `${5.2 + (i % 6) * 0.5}s`,
       })),
     []
   )
@@ -69,7 +69,7 @@ export default function GoLanding() {
       const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)
       const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)
 
-      title.style.transform = `perspective(760px) rotateX(${-dy * 5}deg) rotateY(${dx * 5}deg)`
+      title.style.transform = `perspective(760px) rotateX(${-dy * 4}deg) rotateY(${dx * 4}deg)`
     }
 
     const onLeave = () => {
@@ -104,6 +104,7 @@ export default function GoLanding() {
     if (!wrap) return
 
     const rect = wrap.getBoundingClientRect()
+
     const ripple = {
       id: Date.now(),
       x: e.clientX - rect.left,
@@ -136,6 +137,9 @@ export default function GoLanding() {
       onPointerDown={handlePointerDown}
     >
       <div className="gol-bg-base" />
+      <div className="gol-aurora gol-aurora-one" />
+      <div className="gol-aurora gol-aurora-two" />
+      <div className="gol-aurora gol-aurora-three" />
       <div className="gol-grid" />
       <div className="gol-radar" />
       <div className="gol-cursor-glow" />
@@ -211,14 +215,14 @@ export default function GoLanding() {
 
           <div className="gol-hero-actions">
             <button
-              className="gol-action primary"
+              className="gol-action"
               onClick={() => navigate('/go/quiz?mode=host')}
             >
               Host a Game →
             </button>
 
             <button
-              className="gol-action ghost"
+              className="gol-action"
               onClick={() => navigate('/go/quiz?mode=solo')}
             >
               Practice
