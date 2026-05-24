@@ -634,3 +634,11 @@
     gap: 9px;
   }
 }
+.gol-dashboard-grid-single {
+  grid-template-columns: minmax(320px, 430px);
+  justify-content: center;
+}
+
+.gol-dashboard-grid-single .gol-room-card {
+  width: 100%;
+}

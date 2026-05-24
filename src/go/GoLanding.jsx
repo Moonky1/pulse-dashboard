@@ -2,69 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './GoLanding.css'
 
-const LEADERBOARD_KEY = 'pulse_go_leaderboard'
-
-function readLeaderboard() {
-  if (typeof window === 'undefined') return []
-
-  const keys = [LEADERBOARD_KEY, 'pulseGoLeaderboard', 'pulse_go_scores']
-
-  for (const key of keys) {
-    try {
-      const raw = localStorage.getItem(key)
-      if (!raw) continue
-
-      const parsed = JSON.parse(raw)
-
-      if (Array.isArray(parsed)) {
-        return parsed
-          .map((item, index) => ({
-            id: item.id || item.name || index,
-            name: item.name || item.player || item.agent || 'Unknown',
-            avatar: item.avatar || '👑',
-            points: Number(item.points || item.score || item.total || 0),
-            games: Number(item.games || 0),
-            bestScore: Number(item.bestScore || 0),
-            lastScore: Number(item.lastScore || 0),
-          }))
-          .filter((item) => item.name)
-          .sort((a, b) => b.points - a.points)
-      }
-
-      if (parsed && typeof parsed === 'object') {
-        return Object.entries(parsed)
-          .map(([name, value], index) => ({
-            id: name || index,
-            name,
-            avatar: value?.avatar || '👑',
-            points: Number(value?.points || value?.score || value?.total || 0),
-            games: Number(value?.games || 0),
-            bestScore: Number(value?.bestScore || 0),
-            lastScore: Number(value?.lastScore || 0),
-          }))
-          .filter((item) => item.name)
-          .sort((a, b) => b.points - a.points)
-      }
-    } catch {
-      // Ignore invalid localStorage data
-    }
-  }
-
-  return []
-}
-
-function formatPoints(value) {
-  return Number(value || 0).toLocaleString()
-}
-
 export default function GoLanding() {
   const navigate = useNavigate()
   const titleRef = useRef(null)
 
   const [visible, setVisible] = useState(false)
   const [code, setCode] = useState('')
-  const [leaders, setLeaders] = useState([])
-  const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   const particles = useMemo(
     () =>
@@ -80,32 +23,8 @@ export default function GoLanding() {
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 120)
-    setLeaders(readLeaderboard())
     return () => clearTimeout(t)
   }, [])
-
-  useEffect(() => {
-    const refreshLeaderboard = () => setLeaders(readLeaderboard())
-
-    window.addEventListener('storage', refreshLeaderboard)
-    window.addEventListener('focus', refreshLeaderboard)
-
-    return () => {
-      window.removeEventListener('storage', refreshLeaderboard)
-      window.removeEventListener('focus', refreshLeaderboard)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!showLeaderboard) return
-
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') setShowLeaderboard(false)
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [showLeaderboard])
 
   useEffect(() => {
     const title = titleRef.current
@@ -142,13 +61,6 @@ export default function GoLanding() {
       navigate(`/go/quiz/${roomCode}`)
     }
   }
-
-  const openLeaderboard = () => {
-    setLeaders(readLeaderboard())
-    setShowLeaderboard(true)
-  }
-
-  const displayedLeaders = leaders.slice(0, 10)
 
   return (
     <div className="gol-wrap">
@@ -195,25 +107,27 @@ export default function GoLanding() {
           </h1>
 
           <p className="gol-sub">
-            Train faster, compete with your team, and track learning performance in one place.
+            Train faster, compete with your team, and sharpen every call skill in one place.
           </p>
 
           <div className="gol-hero-actions">
-            <button className="gol-action primary" onClick={() => navigate('/go/quiz')}>
-              Start Training →
+            <button
+              className="gol-action primary"
+              onClick={() => navigate('/go/quiz?mode=host')}
+            >
+              Host a Game →
             </button>
 
-            <button className="gol-action ghost" onClick={() => navigate('/go/academy')}>
-              Open Academy
-            </button>
-
-            <button className="gol-action ghost" onClick={openLeaderboard}>
-              Leaderboard
+            <button
+              className="gol-action ghost"
+              onClick={() => navigate('/go/quiz?mode=solo')}
+            >
+              Practice
             </button>
           </div>
         </section>
 
-        <section className="gol-room-section">
+        <section className="gol-dashboard-grid gol-dashboard-grid-single">
           <div className="gol-room-card">
             <div className="gol-panel-head small">
               <div>
@@ -257,55 +171,6 @@ export default function GoLanding() {
           </div>
         </section>
       </main>
-
-      {showLeaderboard && (
-        <div className="gol-modal-backdrop" onMouseDown={() => setShowLeaderboard(false)}>
-          <section className="gol-leader-modal" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="gol-modal-head">
-              <div>
-                <span className="gol-panel-kicker">Leaderboard</span>
-                <h2>Top Pulse GO</h2>
-              </div>
-
-              <button className="gol-modal-close" onClick={() => setShowLeaderboard(false)}>
-                ×
-              </button>
-            </div>
-
-            <div className="gol-leader-list">
-              {displayedLeaders.length > 0 ? (
-                displayedLeaders.map((player, index) => (
-                  <div key={player.id} className="gol-leader-row">
-                    <span className={`gol-rank rank-${index + 1}`}>#{index + 1}</span>
-
-                    <div className="gol-player">
-                      <span className="gol-avatar">{player.avatar}</span>
-                      <div>
-                        <strong>{player.name}</strong>
-                        <small>
-                          {player.games > 0
-                            ? `${player.games} game${player.games !== 1 ? 's' : ''} · best ${formatPoints(player.bestScore)}`
-                            : 'Training score'}
-                        </small>
-                      </div>
-                    </div>
-
-                    <b>{formatPoints(player.points)}</b>
-                  </div>
-                ))
-              ) : (
-                <div className="gol-empty-leaderboard">
-                  <span>🏆</span>
-                  <strong>No scores yet</strong>
-                  <p>
-                    Play a hosted room or training game. Scores saved on this device will appear here.
-                  </p>
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
-      )}
     </div>
   )
 }
