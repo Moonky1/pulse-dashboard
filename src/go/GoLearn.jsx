@@ -92,7 +92,7 @@ export default function GoLearn() {
             <button
               key={cat.id}
               className="academy-card"
-              onClick={() => nav(`/go/academy/${cat.id}`)}
+              onClick={() => nav(`/academy/${cat.id}`)}
             >
               <span className="academy-card-icon">{cat.icon}</span>
               <span className="academy-card-count">

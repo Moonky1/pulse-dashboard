@@ -218,7 +218,7 @@ export default function GoLanding() {
             Pulse GO
           </button>
 
-          <button className="pgl-nav-link" onClick={() => navigate('/go/learn')}>
+          <button className="pgl-nav-link" onClick={() => navigate('/academy')}>
             Academy
           </button>
         </div>
