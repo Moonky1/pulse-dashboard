@@ -526,3 +526,135 @@
     animation: none;
   }
 }
+/* Academy page uses the exact same Pulse GO visual system */
+
+.academy-content {
+  padding-top: 170px;
+}
+
+.academy-title {
+  margin-bottom: 58px;
+}
+
+.academy-grid {
+  width: min(980px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.academy-card {
+  min-height: 190px;
+  padding: 26px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(16, 22, 35, 0.82), rgba(9, 14, 25, 0.93));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: #f7f8fc;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  font-family: 'DM Sans', sans-serif;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.academy-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.04), transparent 30%),
+    radial-gradient(circle at 88% 100%, rgba(158, 214, 255, 0.06), transparent 35%);
+  pointer-events: none;
+}
+
+.academy-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(185, 214, 255, 0.2);
+  background:
+    linear-gradient(180deg, rgba(20, 28, 44, 0.9), rgba(10, 16, 29, 0.96));
+}
+
+.academy-card-icon {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  font-size: 24px;
+}
+
+.academy-card-body {
+  position: relative;
+  z-index: 1;
+}
+
+.academy-card-body h2 {
+  margin: 0 0 9px;
+  font-family: 'Sora', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  color: #f8f9fd;
+}
+
+.academy-card-body p {
+  margin: 0;
+  color: #aeb8ca;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
+.academy-card-arrow {
+  position: absolute;
+  z-index: 1;
+  left: 26px;
+  bottom: 22px;
+  color: #b9d6ff;
+  font-family: 'Sora', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  opacity: 0.9;
+}
+
+@media (max-width: 960px) {
+  .academy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .academy-content {
+    padding-top: 130px;
+  }
+
+  .academy-title {
+    margin-bottom: 34px;
+  }
+
+  .academy-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .academy-card {
+    min-height: 170px;
+    padding: 22px;
+    border-radius: 22px;
+  }
+}
