@@ -22,6 +22,10 @@
   --my: 50vh;
   --mxp: 50%;
   --myp: 50%;
+  --cube-rx: 0deg;
+  --cube-ry: 0deg;
+  --cube-tx: 0px;
+  --cube-ty: 0px;
 
   min-height: 100vh;
   position: relative;
@@ -55,10 +59,10 @@
 
 .gol-grid {
   z-index: 1;
-  opacity: 0.44;
+  opacity: 0.42;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.043) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.043) 1px, transparent 1px);
   background-size: 84px 84px;
   mask-image: linear-gradient(to bottom, transparent 0%, black 16%, black 78%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 16%, black 78%, transparent 100%);
@@ -69,31 +73,31 @@
   top: auto;
   height: 36%;
   background:
-    radial-gradient(ellipse at 72% 62%, rgba(255, 255, 255, 0.16), transparent 18%),
-    radial-gradient(ellipse at 72% 68%, rgba(158, 214, 255, 0.09), transparent 34%),
-    linear-gradient(100deg, transparent 10%, rgba(255, 255, 255, 0.055) 50%, transparent 86%);
+    radial-gradient(ellipse at 72% 62%, rgba(255, 255, 255, 0.15), transparent 18%),
+    radial-gradient(ellipse at 72% 68%, rgba(158, 214, 255, 0.08), transparent 34%),
+    linear-gradient(100deg, transparent 10%, rgba(255, 255, 255, 0.052) 50%, transparent 86%);
   transform: skewY(-5deg);
   filter: blur(1px);
-  opacity: 0.72;
+  opacity: 0.68;
   animation: golFloorDrift 11s ease-in-out infinite alternate;
 }
 
 @keyframes golFloorDrift {
   from {
     transform: translate3d(-12px, 0, 0) skewY(-5deg);
-    opacity: 0.58;
+    opacity: 0.56;
   }
 
   to {
     transform: translate3d(20px, -6px, 0) skewY(-5deg);
-    opacity: 0.76;
+    opacity: 0.74;
   }
 }
 
 .gol-cursor-glow {
   z-index: 3;
   background:
-    radial-gradient(circle 115px at var(--mx) var(--my), rgba(158, 214, 255, 0.07), transparent 100%);
+    radial-gradient(circle 120px at var(--mx) var(--my), rgba(158, 214, 255, 0.055), transparent 100%);
   mix-blend-mode: screen;
 }
 
@@ -137,13 +141,13 @@
 
 @keyframes golStar {
   0%, 100% {
-    opacity: 0.22;
+    opacity: 0.2;
     transform: scale(0.8);
   }
 
   50% {
-    opacity: 0.86;
-    transform: scale(1.35);
+    opacity: 0.78;
+    transform: scale(1.28);
   }
 }
 
@@ -157,15 +161,15 @@
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: rgba(158, 214, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  background: rgba(158, 214, 255, 0.07);
   transform: translate(-50%, -50%) scale(0.2);
-  animation: golRipple 0.78s ease-out forwards;
+  animation: golRipple 0.76s ease-out forwards;
 }
 
 @keyframes golRipple {
   0% {
-    opacity: 0.75;
+    opacity: 0.72;
     transform: translate(-50%, -50%) scale(0.2);
   }
 
@@ -253,19 +257,6 @@
 .gol-copy {
   position: relative;
   z-index: 4;
-}
-
-.gol-eyebrow {
-  width: fit-content;
-  margin-bottom: 22px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  color: #d8dbe2;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  font-family: 'Sora', sans-serif;
-  font-size: 12px;
-  font-weight: 850;
 }
 
 .gol-title {
@@ -464,15 +455,6 @@
   cursor: not-allowed;
 }
 
-.gol-card-note {
-  margin: 14px 0 0;
-  color: #7f8794;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.45;
-  text-align: center;
-}
-
 /* 3D Cube Visual */
 .gol-visual {
   position: relative;
@@ -502,6 +484,11 @@
   display: grid;
   place-items: center;
   transform-style: preserve-3d;
+  transform:
+    translate3d(var(--cube-tx), var(--cube-ty), 0)
+    rotateX(var(--cube-rx))
+    rotateY(var(--cube-ry));
+  will-change: transform;
 }
 
 .gol-cube-shadow {
@@ -533,14 +520,11 @@
   }
 }
 
-.gol-cube {
+.gol-cube-spinner {
   position: absolute;
   inset: 0;
-  margin: auto;
-  width: 1px;
-  height: 1px;
   transform-style: preserve-3d;
-  animation: golCubeSpin 18s linear infinite;
+  animation: golCubeSpin 24s linear infinite;
 }
 
 @keyframes golCubeSpin {
@@ -551,6 +535,15 @@
   to {
     transform: rotateX(-18deg) rotateY(360deg) rotateZ(7deg);
   }
+}
+
+.gol-cube {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 1px;
+  height: 1px;
+  transform-style: preserve-3d;
 }
 
 .gol-cubie {
@@ -633,25 +626,6 @@
 .gol-face.top    { transform: rotateX(90deg) translateZ(var(--half)); }
 .gol-face.bottom { transform: rotateX(-90deg) translateZ(var(--half)); }
 
-.gol-visual-caption {
-  position: absolute;
-  bottom: 28px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.gol-visual-caption span {
-  padding: 7px 11px;
-  border-radius: 999px;
-  color: #cfd5df;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  font-size: 12px;
-  font-weight: 850;
-}
-
 /* Responsive */
 @media (max-width: 1040px) {
   .gol-hero {
@@ -712,10 +686,6 @@
     gap: 30px;
   }
 
-  .gol-eyebrow {
-    margin-bottom: 18px;
-  }
-
   .gol-title {
     flex-direction: column;
     gap: 10px;
@@ -752,16 +722,16 @@
   .gol-cube-stage {
     width: 340px;
     height: 340px;
-    transform: scale(0.72);
+    transform:
+      scale(0.72)
+      translate3d(var(--cube-tx), var(--cube-ty), 0)
+      rotateX(var(--cube-rx))
+      rotateY(var(--cube-ry));
   }
 
   .gol-cube-light {
     width: 420px;
     height: 300px;
-  }
-
-  .gol-visual-caption {
-    display: none;
   }
 }
 
@@ -769,7 +739,7 @@
   .gol-floor-light,
   .gol-star,
   .gol-cube-orbit,
-  .gol-cube {
+  .gol-cube-spinner {
     animation: none;
   }
 }

@@ -7,6 +7,10 @@ export default function GoLanding() {
   const wrapRef = useRef(null)
   const titleRef = useRef(null)
   const rafRef = useRef(null)
+  const cubeFrameRef = useRef(null)
+
+  const targetRef = useRef({ x: 0, y: 0 })
+  const currentRef = useRef({ x: 0, y: 0 })
 
   const [visible, setVisible] = useState(false)
   const [code, setCode] = useState('')
@@ -65,6 +69,34 @@ export default function GoLanding() {
     }
   }, [])
 
+  useEffect(() => {
+    const animateCube = () => {
+      const wrap = wrapRef.current
+      if (!wrap) return
+
+      currentRef.current.x += (targetRef.current.x - currentRef.current.x) * 0.12
+      currentRef.current.y += (targetRef.current.y - currentRef.current.y) * 0.12
+
+      const rx = currentRef.current.y * -9
+      const ry = currentRef.current.x * 15
+      const tx = currentRef.current.x * 14
+      const ty = currentRef.current.y * 10
+
+      wrap.style.setProperty('--cube-rx', `${rx}deg`)
+      wrap.style.setProperty('--cube-ry', `${ry}deg`)
+      wrap.style.setProperty('--cube-tx', `${tx}px`)
+      wrap.style.setProperty('--cube-ty', `${ty}px`)
+
+      cubeFrameRef.current = requestAnimationFrame(animateCube)
+    }
+
+    cubeFrameRef.current = requestAnimationFrame(animateCube)
+
+    return () => {
+      if (cubeFrameRef.current) cancelAnimationFrame(cubeFrameRef.current)
+    }
+  }, [])
+
   const handleMouseMove = (e) => {
     const wrap = wrapRef.current
     if (!wrap) return
@@ -72,6 +104,9 @@ export default function GoLanding() {
     const rect = wrap.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
+
+    targetRef.current.x = (x / rect.width - 0.5) * 2
+    targetRef.current.y = (y / rect.height - 0.5) * 2
 
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
 
@@ -99,7 +134,7 @@ export default function GoLanding() {
 
     window.setTimeout(() => {
       setRipples((prev) => prev.filter((item) => item.id !== ripple.id))
-    }, 780)
+    }, 760)
   }
 
   const handleEnter = () => {
@@ -162,8 +197,6 @@ export default function GoLanding() {
 
       <main className={`gol-hero ${visible ? 'visible' : ''}`}>
         <section className="gol-copy">
-          <div className="gol-eyebrow">Kampaign Kings training hub</div>
-
           <h1 className="gol-title" ref={titleRef}>
             <span>PULSE</span>
             <strong>GO</strong>
@@ -226,47 +259,40 @@ export default function GoLanding() {
               >
                 Join Room →
               </button>
-
-              <p className="gol-card-note">
-                Use a room code from a hosted Pulse GO game.
-              </p>
             </div>
           </section>
         </section>
 
         <section className="gol-visual" aria-hidden="true">
           <div className="gol-cube-light" />
+
           <div className="gol-cube-stage">
             <div className="gol-cube-shadow" />
 
             <div className="gol-cube-orbit">
-              <div className="gol-cube">
-                {cubeCells.map((cell) => (
-                  <div
-                    key={cell.id}
-                    className={`gol-cubie tone-${cell.tone} edge-${cell.edgeCount}`}
-                    style={{
-                      '--x': cell.x,
-                      '--y': cell.y,
-                      '--z': cell.z,
-                    }}
-                  >
-                    <span className="gol-face front" />
-                    <span className="gol-face back" />
-                    <span className="gol-face right" />
-                    <span className="gol-face left" />
-                    <span className="gol-face top" />
-                    <span className="gol-face bottom" />
-                  </div>
-                ))}
+              <div className="gol-cube-spinner">
+                <div className="gol-cube">
+                  {cubeCells.map((cell) => (
+                    <div
+                      key={cell.id}
+                      className={`gol-cubie tone-${cell.tone} edge-${cell.edgeCount}`}
+                      style={{
+                        '--x': cell.x,
+                        '--y': cell.y,
+                        '--z': cell.z,
+                      }}
+                    >
+                      <span className="gol-face front" />
+                      <span className="gol-face back" />
+                      <span className="gol-face right" />
+                      <span className="gol-face left" />
+                      <span className="gol-face top" />
+                      <span className="gol-face bottom" />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="gol-visual-caption">
-            <span>Live rounds</span>
-            <span>Skill drills</span>
-            <span>Team practice</span>
           </div>
         </section>
       </main>
