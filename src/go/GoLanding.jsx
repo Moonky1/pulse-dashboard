@@ -1,299 +1,186 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './GoLanding.css'
 
 export default function GoLanding() {
   const navigate = useNavigate()
-  const wrapRef = useRef(null)
-  const titleRef = useRef(null)
+  const pageRef = useRef(null)
   const rafRef = useRef(null)
-  const cubeFrameRef = useRef(null)
 
-  const targetRef = useRef({ x: 0, y: 0 })
-  const currentRef = useRef({ x: 0, y: 0 })
+  const targetRef = useRef({ x: 0.5, y: 0.55 })
+  const currentRef = useRef({ x: 0.5, y: 0.55 })
 
-  const [visible, setVisible] = useState(false)
   const [code, setCode] = useState('')
-  const [ripples, setRipples] = useState([])
-
-  const cubeCells = useMemo(() => {
-    const cells = []
-
-    for (let x = -1; x <= 1; x += 1) {
-      for (let y = -1; y <= 1; y += 1) {
-        for (let z = -1; z <= 1; z += 1) {
-          const edgeCount = [x, y, z].filter((v) => Math.abs(v) === 1).length
-
-          cells.push({
-            id: `${x}-${y}-${z}`,
-            x,
-            y,
-            z,
-            edgeCount,
-            tone: Math.abs(x + y + z + 5) % 5,
-          })
-        }
-      }
-    }
-
-    return cells
-  }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 120)
-    return () => clearTimeout(t)
-  }, [])
+    const tick = () => {
+      const page = pageRef.current
+      if (!page) return
 
-  useEffect(() => {
-    const title = titleRef.current
-    if (!title) return
+      currentRef.current.x += (targetRef.current.x - currentRef.current.x) * 0.08
+      currentRef.current.y += (targetRef.current.y - currentRef.current.y) * 0.08
 
-    const onMove = (e) => {
-      const rect = title.getBoundingClientRect()
-      const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)
-      const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)
+      const px = `${currentRef.current.x * 100}%`
+      const py = `${currentRef.current.y * 100}%`
 
-      title.style.transform = `perspective(760px) rotateX(${-dy * 3}deg) rotateY(${dx * 3}deg)`
+      const shiftX = (currentRef.current.x - 0.5) * 30
+      const shiftY = (currentRef.current.y - 0.5) * 18
+
+      page.style.setProperty('--mx', px)
+      page.style.setProperty('--my', py)
+      page.style.setProperty('--orb-x', `${shiftX}px`)
+      page.style.setProperty('--orb-y', `${shiftY}px`)
+
+      rafRef.current = requestAnimationFrame(tick)
     }
 
-    const onLeave = () => {
-      title.style.transform = 'perspective(760px) rotateX(0deg) rotateY(0deg)'
-    }
-
-    title.addEventListener('mousemove', onMove)
-    title.addEventListener('mouseleave', onLeave)
+    rafRef.current = requestAnimationFrame(tick)
 
     return () => {
-      title.removeEventListener('mousemove', onMove)
-      title.removeEventListener('mouseleave', onLeave)
-    }
-  }, [])
-
-  useEffect(() => {
-    const animateCube = () => {
-      const wrap = wrapRef.current
-      if (!wrap) return
-
-      currentRef.current.x += (targetRef.current.x - currentRef.current.x) * 0.12
-      currentRef.current.y += (targetRef.current.y - currentRef.current.y) * 0.12
-
-      const rx = currentRef.current.y * -9
-      const ry = currentRef.current.x * 15
-      const tx = currentRef.current.x * 14
-      const ty = currentRef.current.y * 10
-
-      wrap.style.setProperty('--cube-rx', `${rx}deg`)
-      wrap.style.setProperty('--cube-ry', `${ry}deg`)
-      wrap.style.setProperty('--cube-tx', `${tx}px`)
-      wrap.style.setProperty('--cube-ty', `${ty}px`)
-
-      cubeFrameRef.current = requestAnimationFrame(animateCube)
-    }
-
-    cubeFrameRef.current = requestAnimationFrame(animateCube)
-
-    return () => {
-      if (cubeFrameRef.current) cancelAnimationFrame(cubeFrameRef.current)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [])
 
   const handleMouseMove = (e) => {
-    const wrap = wrapRef.current
-    if (!wrap) return
+    const page = pageRef.current
+    if (!page) return
 
-    const rect = wrap.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const rect = page.getBoundingClientRect()
+    const x = (e.clientX - rect.left) / rect.width
+    const y = (e.clientY - rect.top) / rect.height
 
-    targetRef.current.x = (x / rect.width - 0.5) * 2
-    targetRef.current.y = (y / rect.height - 0.5) * 2
-
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-
-    rafRef.current = requestAnimationFrame(() => {
-      wrap.style.setProperty('--mx', `${x}px`)
-      wrap.style.setProperty('--my', `${y}px`)
-      wrap.style.setProperty('--mxp', `${(x / rect.width) * 100}%`)
-      wrap.style.setProperty('--myp', `${(y / rect.height) * 100}%`)
-    })
+    targetRef.current.x = Math.max(0, Math.min(1, x))
+    targetRef.current.y = Math.max(0, Math.min(1, y))
   }
 
-  const handlePointerDown = (e) => {
-    const wrap = wrapRef.current
-    if (!wrap) return
-
-    const rect = wrap.getBoundingClientRect()
-
-    const ripple = {
-      id: Date.now() + Math.random(),
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    }
-
-    setRipples((prev) => [...prev.slice(-2), ripple])
-
-    window.setTimeout(() => {
-      setRipples((prev) => prev.filter((item) => item.id !== ripple.id))
-    }, 760)
+  const handleMouseLeave = () => {
+    targetRef.current.x = 0.5
+    targetRef.current.y = 0.55
   }
 
-  const handleEnter = () => {
-    const clean = code.trim().toUpperCase().replace(/\s+/g, '')
-    if (!clean) return
+  const handleJoinRoom = () => {
+    const clean = code
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .replace(/^KK/, '')
+      .slice(0, 6)
 
-    const roomCode = clean.startsWith('KK') ? clean : `KK${clean}`
+    if (clean.length < 4) return
 
-    if (roomCode.length >= 6) {
-      navigate(`/go/quiz/${roomCode}`)
-    }
+    navigate(`/go/quiz/KK${clean}`)
+  }
+
+  const handleHostGame = () => {
+    navigate('/go/quiz?mode=host')
+  }
+
+  const handlePractice = () => {
+    navigate('/go/quiz?mode=solo')
   }
 
   return (
     <div
-      ref={wrapRef}
-      className="gol-wrap"
+      ref={pageRef}
+      className="pgl-page"
       onMouseMove={handleMouseMove}
-      onPointerDown={handlePointerDown}
+      onMouseLeave={handleMouseLeave}
     >
-      <div className="gol-bg" />
-      <div className="gol-grid" />
-      <div className="gol-floor-light" />
-      <div className="gol-cursor-glow" />
+      <div className="pgl-bg" />
+      <div className="pgl-grid" />
+      <div className="pgl-noise" />
+      <div className="pgl-cursor-glow" />
 
-      <div className="gol-stars">
-        {Array.from({ length: 22 }).map((_, i) => (
-          <span key={i} className={`gol-star gol-star-${i + 1}`} />
+      <div className="pgl-orb-wrap" aria-hidden="true">
+        <div className="pgl-orb-ambient" />
+        <div className="pgl-orb-ring pgl-orb-ring-1" />
+        <div className="pgl-orb-ring pgl-orb-ring-2" />
+        <div className="pgl-orb-ring pgl-orb-ring-3" />
+        <div className="pgl-orb-ring pgl-orb-ring-4" />
+        <div className="pgl-orb-wave pgl-orb-wave-1" />
+        <div className="pgl-orb-wave pgl-orb-wave-2" />
+        <div className="pgl-orb-wave pgl-orb-wave-3" />
+        <div className="pgl-orb-glow" />
+        <div className="pgl-orb-core" />
+        <div className="pgl-orb-horizon" />
+        <div className="pgl-orb-reflection" />
+      </div>
+
+      <div className="pgl-stars" aria-hidden="true">
+        {Array.from({ length: 18 }).map((_, i) => (
+          <span key={i} className={`pgl-star pgl-star-${i + 1}`} />
         ))}
       </div>
 
-      <div className="gol-ripples">
-        {ripples.map((ripple) => (
-          <span
-            key={ripple.id}
-            className="gol-ripple"
-            style={{
-              left: `${ripple.x}px`,
-              top: `${ripple.y}px`,
-            }}
-          />
-        ))}
-      </div>
-
-      <nav className="gol-nav">
-        <div className="gol-nav-tabs">
-          <button className="gol-nav-tab" onClick={() => navigate('/dashboard')}>
+      <nav className="pgl-nav">
+        <div className="pgl-nav-pill">
+          <button className="pgl-nav-link" onClick={() => navigate('/dashboard')}>
             Dashboard
           </button>
 
-          <button className="gol-nav-tab active" onClick={() => navigate('/go')}>
+          <button className="pgl-nav-link pgl-nav-link-active" onClick={() => navigate('/go')}>
             Pulse GO
           </button>
 
-          <button className="gol-nav-tab" onClick={() => navigate('/go/academy')}>
+          <button className="pgl-nav-link" onClick={() => navigate('/go/learn')}>
             Academy
           </button>
         </div>
       </nav>
 
-      <main className={`gol-hero ${visible ? 'visible' : ''}`}>
-        <section className="gol-copy">
-          <h1 className="gol-title" ref={titleRef}>
-            <span>PULSE</span>
-            <strong>GO</strong>
-          </h1>
+      <main className="pgl-hero">
+        <h1 className="pgl-title">
+          <span className="pgl-title-main">PULSE</span>
+          <span className="pgl-title-go">GO</span>
+        </h1>
 
-          <p className="gol-sub">
-            Host live training rooms or practice solo with fast, competitive call-flow drills.
-          </p>
+        <p className="pgl-subtitle">
+          Train faster, compete with your team, and sharpen every call skill in one place.
+        </p>
 
-          <div className="gol-hero-actions">
-            <button
-              className="gol-action"
-              onClick={() => navigate('/go/quiz?mode=host')}
-            >
-              Host a Game →
-            </button>
+        <div className="pgl-actions">
+          <button className="pgl-action-btn" onClick={handleHostGame}>
+            Host a Game →
+          </button>
 
-            <button
-              className="gol-action"
-              onClick={() => navigate('/go/quiz?mode=solo')}
-            >
-              Practice
-            </button>
+          <button className="pgl-action-btn" onClick={handlePractice}>
+            Practice
+          </button>
+        </div>
+
+        <section className="pgl-room-card">
+          <span className="pgl-room-kicker">Join room</span>
+          <h2 className="pgl-room-title">Enter a code</h2>
+
+          <div className="pgl-code-box">
+            <span className="pgl-code-prefix">KK</span>
+            <input
+              type="text"
+              className="pgl-code-input"
+              placeholder="1234"
+              value={code}
+              onChange={(e) => {
+                const clean = e.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, '')
+                  .replace(/^KK/, '')
+                  .slice(0, 6)
+
+                setCode(clean)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleJoinRoom()
+              }}
+              autoComplete="off"
+            />
           </div>
 
-          <section className="gol-room-section">
-            <div className="gol-room-card">
-              <div className="gol-panel-head">
-                <div>
-                  <span className="gol-panel-kicker">Join room</span>
-                  <h2>Enter a code</h2>
-                </div>
-              </div>
-
-              <div className="gol-input-wrap">
-                <span>KK</span>
-                <input
-                  className="gol-input"
-                  type="text"
-                  placeholder="1234"
-                  value={code}
-                  onChange={(e) => {
-                    const next = e.target.value
-                      .toUpperCase()
-                      .replace(/[^A-Z0-9]/g, '')
-                      .replace(/^KK/, '')
-                      .slice(0, 6)
-
-                    setCode(next)
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleEnter()}
-                  autoComplete="off"
-                />
-              </div>
-
-              <button
-                className="gol-btn-primary"
-                onClick={handleEnter}
-                disabled={code.trim().length < 4}
-              >
-                Join Room →
-              </button>
-            </div>
-          </section>
-        </section>
-
-        <section className="gol-visual" aria-hidden="true">
-          <div className="gol-cube-light" />
-
-          <div className="gol-cube-stage">
-            <div className="gol-cube-shadow" />
-
-            <div className="gol-cube-orbit">
-              <div className="gol-cube-spinner">
-                <div className="gol-cube">
-                  {cubeCells.map((cell) => (
-                    <div
-                      key={cell.id}
-                      className={`gol-cubie tone-${cell.tone} edge-${cell.edgeCount}`}
-                      style={{
-                        '--x': cell.x,
-                        '--y': cell.y,
-                        '--z': cell.z,
-                      }}
-                    >
-                      <span className="gol-face front" />
-                      <span className="gol-face back" />
-                      <span className="gol-face right" />
-                      <span className="gol-face left" />
-                      <span className="gol-face top" />
-                      <span className="gol-face bottom" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <button
+            className="pgl-join-btn"
+            onClick={handleJoinRoom}
+            disabled={code.trim().length < 4}
+          >
+            Join Room →
+          </button>
         </section>
       </main>
     </div>
