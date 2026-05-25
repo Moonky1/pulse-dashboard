@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './GoLanding.css'
 
@@ -7,11 +7,33 @@ export default function GoLanding() {
   const wrapRef = useRef(null)
   const titleRef = useRef(null)
   const rafRef = useRef(null)
-  const pointerRef = useRef({ x: 0, y: 0 })
 
   const [visible, setVisible] = useState(false)
   const [code, setCode] = useState('')
   const [ripples, setRipples] = useState([])
+
+  const cubeCells = useMemo(() => {
+    const cells = []
+
+    for (let x = -1; x <= 1; x += 1) {
+      for (let y = -1; y <= 1; y += 1) {
+        for (let z = -1; z <= 1; z += 1) {
+          const edgeCount = [x, y, z].filter((v) => Math.abs(v) === 1).length
+
+          cells.push({
+            id: `${x}-${y}-${z}`,
+            x,
+            y,
+            z,
+            edgeCount,
+            tone: Math.abs(x + y + z + 5) % 5,
+          })
+        }
+      }
+    }
+
+    return cells
+  }, [])
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 120)
@@ -43,30 +65,22 @@ export default function GoLanding() {
     }
   }, [])
 
-  useEffect(() => {
-    const tick = () => {
-      const wrap = wrapRef.current
-      if (wrap) {
-        wrap.style.setProperty('--mx', `${pointerRef.current.x}px`)
-        wrap.style.setProperty('--my', `${pointerRef.current.y}px`)
-      }
-      rafRef.current = requestAnimationFrame(tick)
-    }
-
-    rafRef.current = requestAnimationFrame(tick)
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    }
-  }, [])
-
   const handleMouseMove = (e) => {
     const wrap = wrapRef.current
     if (!wrap) return
 
     const rect = wrap.getBoundingClientRect()
-    pointerRef.current.x = e.clientX - rect.left
-    pointerRef.current.y = e.clientY - rect.top
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+
+    rafRef.current = requestAnimationFrame(() => {
+      wrap.style.setProperty('--mx', `${x}px`)
+      wrap.style.setProperty('--my', `${y}px`)
+      wrap.style.setProperty('--mxp', `${(x / rect.width) * 100}%`)
+      wrap.style.setProperty('--myp', `${(y / rect.height) * 100}%`)
+    })
   }
 
   const handlePointerDown = (e) => {
@@ -85,7 +99,7 @@ export default function GoLanding() {
 
     window.setTimeout(() => {
       setRipples((prev) => prev.filter((item) => item.id !== ripple.id))
-    }, 850)
+    }, 780)
   }
 
   const handleEnter = () => {
@@ -106,25 +120,14 @@ export default function GoLanding() {
       onMouseMove={handleMouseMove}
       onPointerDown={handlePointerDown}
     >
-      <div className="gol-bg-base" />
-      <div className="gol-bg-noise" />
+      <div className="gol-bg" />
       <div className="gol-grid" />
-      <div className="gol-sun-wrap">
-        <div className="gol-sun-halo" />
-        <div className="gol-sun-rays" />
-        <div className="gol-sun-ring gol-sun-ring-1" />
-        <div className="gol-sun-ring gol-sun-ring-2" />
-        <div className="gol-sun-ring gol-sun-ring-3" />
-        <div className="gol-sun-core" />
-      </div>
-
-      <div className="gol-ambient gol-ambient-left" />
-      <div className="gol-ambient gol-ambient-right" />
+      <div className="gol-floor-light" />
       <div className="gol-cursor-glow" />
 
       <div className="gol-stars">
-        {Array.from({ length: 18 }).map((_, i) => (
-          <span key={i} className={`gol-star gol-star-${(i % 6) + 1}`} />
+        {Array.from({ length: 22 }).map((_, i) => (
+          <span key={i} className={`gol-star gol-star-${i + 1}`} />
         ))}
       </div>
 
@@ -158,14 +161,16 @@ export default function GoLanding() {
       </nav>
 
       <main className={`gol-hero ${visible ? 'visible' : ''}`}>
-        <section className="gol-hero-main">
+        <section className="gol-copy">
+          <div className="gol-eyebrow">Kampaign Kings training hub</div>
+
           <h1 className="gol-title" ref={titleRef}>
             <span>PULSE</span>
             <strong>GO</strong>
           </h1>
 
           <p className="gol-sub">
-            Train faster, compete with your team, and sharpen every call skill in one place.
+            Host live training rooms or practice solo with fast, competitive call-flow drills.
           </p>
 
           <div className="gol-hero-actions">
@@ -183,49 +188,85 @@ export default function GoLanding() {
               Practice
             </button>
           </div>
+
+          <section className="gol-room-section">
+            <div className="gol-room-card">
+              <div className="gol-panel-head">
+                <div>
+                  <span className="gol-panel-kicker">Join room</span>
+                  <h2>Enter a code</h2>
+                </div>
+              </div>
+
+              <div className="gol-input-wrap">
+                <span>KK</span>
+                <input
+                  className="gol-input"
+                  type="text"
+                  placeholder="1234"
+                  value={code}
+                  onChange={(e) => {
+                    const next = e.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, '')
+                      .replace(/^KK/, '')
+                      .slice(0, 6)
+
+                    setCode(next)
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleEnter()}
+                  autoComplete="off"
+                />
+              </div>
+
+              <button
+                className="gol-btn-primary"
+                onClick={handleEnter}
+                disabled={code.trim().length < 4}
+              >
+                Join Room →
+              </button>
+
+              <p className="gol-card-note">
+                Use a room code from a hosted Pulse GO game.
+              </p>
+            </div>
+          </section>
         </section>
 
-        <section className="gol-room-section">
-          <div className="gol-room-card">
-            <div className="gol-panel-head small">
-              <div>
-                <span className="gol-panel-kicker">Join room</span>
-                <h2>Enter a code</h2>
+        <section className="gol-visual" aria-hidden="true">
+          <div className="gol-cube-light" />
+          <div className="gol-cube-stage">
+            <div className="gol-cube-shadow" />
+
+            <div className="gol-cube-orbit">
+              <div className="gol-cube">
+                {cubeCells.map((cell) => (
+                  <div
+                    key={cell.id}
+                    className={`gol-cubie tone-${cell.tone} edge-${cell.edgeCount}`}
+                    style={{
+                      '--x': cell.x,
+                      '--y': cell.y,
+                      '--z': cell.z,
+                    }}
+                  >
+                    <span className="gol-face front" />
+                    <span className="gol-face back" />
+                    <span className="gol-face right" />
+                    <span className="gol-face left" />
+                    <span className="gol-face top" />
+                    <span className="gol-face bottom" />
+                  </div>
+                ))}
               </div>
             </div>
+          </div>
 
-            <div className="gol-input-wrap">
-              <span>KK</span>
-              <input
-                className="gol-input"
-                type="text"
-                placeholder="1234"
-                value={code}
-                onChange={(e) => {
-                  const next = e.target.value
-                    .toUpperCase()
-                    .replace(/[^A-Z0-9]/g, '')
-                    .replace(/^KK/, '')
-                    .slice(0, 6)
-
-                  setCode(next)
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && handleEnter()}
-                autoComplete="off"
-              />
-            </div>
-
-            <button
-              className="gol-btn-primary"
-              onClick={handleEnter}
-              disabled={code.trim().length < 4}
-            >
-              Join Room →
-            </button>
-
-            <p className="gol-card-note">
-              Use a room code from a hosted Pulse GO game.
-            </p>
+          <div className="gol-visual-caption">
+            <span>Live rounds</span>
+            <span>Skill drills</span>
+            <span>Team practice</span>
           </div>
         </section>
       </main>
