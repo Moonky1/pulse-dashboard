@@ -1,31 +1,25 @@
 :root {
-  --pgl-bg: #050713;
-  --pgl-bg-2: #06091a;
+  --pgl-bg: #040812;
+  --pgl-bg-2: #07101e;
   --pgl-text: #f7f8fc;
-  --pgl-muted: #b8bfd0;
-  --pgl-line: rgba(255, 255, 255, 0.05);
-  --pgl-border: rgba(255, 255, 255, 0.095);
-  --pgl-card: rgba(12, 16, 27, 0.78);
-  --pgl-card-strong: rgba(10, 13, 22, 0.92);
-  --pgl-nav: rgba(10, 13, 22, 0.58);
-  --pgl-purple-1: #f3eaff;
-  --pgl-purple-2: #dabaff;
-  --pgl-purple-3: #b57dff;
-  --pgl-purple-4: #824eff;
-  --pgl-purple-5: #5638dc;
-  --pgl-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+  --pgl-muted: #b9c3d4;
+  --pgl-border: rgba(255, 255, 255, 0.1);
+  --pgl-card: rgba(11, 16, 28, 0.82);
+  --pgl-card-strong: rgba(8, 12, 22, 0.94);
+  --pgl-blue: #9ed6ff;
+  --pgl-ice: #d8e8ff;
+  --pgl-gold: #e8d9a2;
+  --pgl-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
 }
 
 .pgl-page {
-  --mx: 50%;
-  --my: 45%;
-  --orb-shift-x: 0px;
-  --orb-shift-y: 0px;
+  --mx: 50vw;
+  --my: 50vh;
 
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  background: linear-gradient(180deg, var(--pgl-bg) 0%, var(--pgl-bg-2) 100%);
+  background: var(--pgl-bg);
   color: var(--pgl-text);
   font-family: 'DM Sans', sans-serif;
   isolation: isolate;
@@ -33,9 +27,10 @@
 
 .pgl-bg,
 .pgl-grid,
+.pgl-soft-glow,
 .pgl-cursor-glow,
 .pgl-stars,
-.pgl-orb-scene {
+.pgl-ripples {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -44,33 +39,112 @@
 .pgl-bg {
   z-index: 0;
   background:
-    radial-gradient(circle at 50% 14%, rgba(109, 76, 255, 0.08), transparent 18%),
-    radial-gradient(circle at 50% 60%, rgba(91, 57, 255, 0.06), transparent 34%),
-    linear-gradient(180deg, #050713 0%, #060817 44%, #050814 100%);
+    radial-gradient(circle at 50% 22%, rgba(158, 214, 255, 0.08), transparent 22%),
+    radial-gradient(circle at 18% 72%, rgba(232, 217, 162, 0.06), transparent 24%),
+    radial-gradient(circle at 82% 72%, rgba(110, 162, 255, 0.055), transparent 26%),
+    linear-gradient(180deg, #040812 0%, #07101e 52%, #040812 100%);
 }
 
 .pgl-grid {
   z-index: 1;
-  opacity: 0.34;
+  opacity: 0.32;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.032) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 82px 82px;
+  mask-image: radial-gradient(ellipse at 50% 40%, black 0%, transparent 82%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 40%, black 0%, transparent 82%);
+}
+
+.pgl-soft-glow {
+  z-index: 2;
+  background:
+    radial-gradient(ellipse at 50% 64%, rgba(158, 214, 255, 0.11), transparent 34%),
+    radial-gradient(ellipse at 50% 76%, rgba(232, 217, 162, 0.055), transparent 34%);
+  opacity: 0.9;
+  animation: pglGlowDrift 10s ease-in-out infinite alternate;
+}
+
+@keyframes pglGlowDrift {
+  from {
+    transform: translate3d(-12px, 0, 0) scale(1);
+    opacity: 0.68;
+  }
+
+  to {
+    transform: translate3d(14px, -8px, 0) scale(1.03);
+    opacity: 0.95;
+  }
 }
 
 .pgl-cursor-glow {
-  z-index: 2;
+  z-index: 3;
   background:
-    radial-gradient(circle 160px at var(--mx) var(--my), rgba(160, 130, 255, 0.08), transparent 70%);
+    radial-gradient(circle 150px at var(--mx) var(--my), rgba(158, 214, 255, 0.105), transparent 72%);
   mix-blend-mode: screen;
 }
 
+.pgl-stars {
+  z-index: 4;
+}
+
+.pgl-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.24);
+  opacity: 0.45;
+  animation: pglStarPulse 4.2s ease-in-out infinite;
+}
+
+@keyframes pglStarPulse {
+  0%, 100% {
+    opacity: 0.22;
+    transform: scale(0.85);
+  }
+
+  50% {
+    opacity: 0.82;
+    transform: scale(1.35);
+  }
+}
+
+.pgl-ripples {
+  z-index: 50;
+}
+
+.pgl-ripple {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(216, 232, 255, 0.65);
+  background: rgba(158, 214, 255, 0.08);
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: pglRipple 0.65s ease-out forwards;
+}
+
+@keyframes pglRipple {
+  0% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(8.8);
+  }
+}
+
+/* NAV */
 .pgl-nav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 20;
+  z-index: 30;
   display: flex;
   justify-content: center;
   padding: 24px 16px 0;
@@ -82,17 +156,17 @@
   gap: 6px;
   padding: 6px;
   border-radius: 999px;
-  background: var(--pgl-nav);
+  background: rgba(10, 14, 24, 0.58);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.24);
 }
 
 .pgl-nav-link {
   border: none;
   background: transparent;
-  color: rgba(244, 246, 252, 0.72);
+  color: rgba(244, 247, 252, 0.72);
   padding: 13px 28px;
   border-radius: 999px;
   font-family: 'Sora', sans-serif;
@@ -104,15 +178,16 @@
 
 .pgl-nav-link:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .pgl-nav-link-active {
-  color: #0b0f18;
-  background: linear-gradient(135deg, #f5f5f4 0%, #e2dfec 52%, #bcccff 100%);
-  box-shadow: 0 10px 30px rgba(160, 145, 255, 0.12);
+  color: #07101d;
+  background: linear-gradient(135deg, #f6f6f2 0%, #e1e5ef 50%, #b9d6ff 100%);
+  box-shadow: 0 10px 30px rgba(158, 214, 255, 0.12);
 }
 
+/* CONTENT */
 .pgl-content {
   position: relative;
   z-index: 10;
@@ -131,8 +206,8 @@
   gap: 18px;
   margin: 0;
   font-family: 'Sora', sans-serif;
-  letter-spacing: -0.08em;
   line-height: 0.92;
+  letter-spacing: -0.08em;
 }
 
 .pgl-title-main {
@@ -151,10 +226,10 @@
   font-size: clamp(31px, 4.8vw, 62px);
   font-weight: 900;
   color: #0c1019;
-  background: linear-gradient(135deg, #f5f5f4 0%, #e2dfec 48%, #bcccff 100%);
+  background: linear-gradient(135deg, #f6f6f2 0%, #e1e5ef 48%, #b9d6ff 100%);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.14) inset,
-    0 14px 36px rgba(106, 90, 255, 0.12);
+    0 14px 36px rgba(158, 214, 255, 0.12);
 }
 
 .pgl-subtitle {
@@ -163,7 +238,7 @@
   font-size: clamp(18px, 2vw, 22px);
   line-height: 1.35;
   font-weight: 650;
-  color: #c0c6d4;
+  color: #c0c8d6;
   white-space: nowrap;
 }
 
@@ -193,10 +268,11 @@
 
 .pgl-action-btn:hover {
   transform: translateY(-2px);
-  background: rgba(16, 20, 33, 0.9);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(16, 22, 36, 0.9);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
+/* JOIN CARD */
 .pgl-room-card {
   position: relative;
   z-index: 11;
@@ -206,7 +282,7 @@
   border-radius: 30px;
   border: 1px solid var(--pgl-border);
   background:
-    linear-gradient(180deg, rgba(17, 22, 35, 0.82), rgba(10, 13, 23, 0.92));
+    linear-gradient(180deg, rgba(16, 22, 35, 0.82), rgba(9, 14, 25, 0.93));
   box-shadow: var(--pgl-shadow);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -218,8 +294,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.04), transparent 28%),
-    radial-gradient(circle at 85% 100%, rgba(152, 173, 255, 0.08), transparent 35%);
+    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.045), transparent 28%),
+    radial-gradient(circle at 85% 100%, rgba(158, 214, 255, 0.08), transparent 35%);
   pointer-events: none;
 }
 
@@ -259,7 +335,7 @@
   padding: 0 18px;
   border-radius: 19px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(2, 5, 12, 0.82);
+  background: rgba(2, 6, 14, 0.82);
 }
 
 .pgl-code-prefix {
@@ -294,14 +370,14 @@
   margin-top: 16px;
   border: none;
   border-radius: 17px;
-  background: linear-gradient(135deg, #f5f5f4 0%, #dddbe8 46%, #b6caff 100%);
+  background: linear-gradient(135deg, #f6f6f2 0%, #e1e5ef 46%, #b9d6ff 100%);
   color: #0c1018;
   font-family: 'Sora', sans-serif;
   font-size: 15px;
   font-weight: 900;
   cursor: pointer;
   transition: transform 0.18s ease, opacity 0.18s ease;
-  box-shadow: 0 14px 34px rgba(112, 102, 255, 0.1);
+  box-shadow: 0 14px 34px rgba(158, 214, 255, 0.1);
 }
 
 .pgl-join-btn:hover:not(:disabled) {
@@ -313,392 +389,7 @@
   cursor: not-allowed;
 }
 
-/* ORB SCENE */
-.pgl-orb-scene {
-  z-index: 3;
-  transform: translate3d(var(--orb-shift-x), var(--orb-shift-y), 0);
-  will-change: transform;
-}
-
-.pgl-orb-ambient {
-  position: absolute;
-  left: 50%;
-  top: 185px;
-  width: min(980px, 92vw);
-  height: 820px;
-  transform: translateX(-50%);
-  background:
-    radial-gradient(ellipse at 50% 44%, rgba(255, 255, 255, 0.07), transparent 16%),
-    radial-gradient(ellipse at 50% 53%, rgba(205, 166, 255, 0.16), transparent 27%),
-    radial-gradient(ellipse at 50% 58%, rgba(144, 86, 255, 0.18), transparent 38%),
-    radial-gradient(ellipse at 50% 65%, rgba(92, 57, 255, 0.16), transparent 52%);
-  filter: blur(38px);
-  animation: pglAmbientBreath 7s ease-in-out infinite;
-}
-
-.pgl-orb-smoke {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  filter: blur(26px);
-  mix-blend-mode: screen;
-  opacity: 0.9;
-}
-
-.pgl-orb-smoke-1 {
-  top: 250px;
-  width: min(900px, 90vw);
-  height: 500px;
-  background:
-    radial-gradient(ellipse at 50% 52%, rgba(255, 255, 255, 0.1), transparent 20%),
-    radial-gradient(ellipse at 44% 52%, rgba(198, 145, 255, 0.38), transparent 30%),
-    radial-gradient(ellipse at 58% 48%, rgba(123, 77, 255, 0.34), transparent 34%),
-    radial-gradient(ellipse at 50% 68%, rgba(77, 52, 210, 0.24), transparent 44%);
-  animation: pglSmokeOne 12s ease-in-out infinite;
-}
-
-.pgl-orb-smoke-2 {
-  top: 290px;
-  width: min(1040px, 98vw);
-  height: 560px;
-  background:
-    radial-gradient(ellipse at 50% 56%, rgba(150, 104, 255, 0.18), transparent 28%),
-    radial-gradient(ellipse at 42% 66%, rgba(101, 66, 230, 0.16), transparent 34%),
-    radial-gradient(ellipse at 62% 60%, rgba(111, 90, 255, 0.14), transparent 38%);
-  animation: pglSmokeTwo 15s ease-in-out infinite;
-}
-
-.pgl-orb-smoke-3 {
-  top: 335px;
-  width: min(1120px, 100vw);
-  height: 600px;
-  background:
-    radial-gradient(ellipse at 50% 62%, rgba(100, 72, 255, 0.1), transparent 30%),
-    radial-gradient(ellipse at 38% 70%, rgba(92, 64, 220, 0.08), transparent 36%),
-    radial-gradient(ellipse at 63% 72%, rgba(144, 88, 255, 0.08), transparent 40%);
-  animation: pglSmokeThree 18s ease-in-out infinite;
-}
-
-.pgl-orb-halo {
-  position: absolute;
-  left: 50%;
-  top: 318px;
-  width: min(760px, 82vw);
-  height: min(760px, 82vw);
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.76) 0%, rgba(255, 255, 255, 0.16) 16%, rgba(197, 141, 255, 0.34) 30%, rgba(111, 73, 255, 0.26) 45%, transparent 66%);
-  filter: blur(28px);
-  opacity: 0.95;
-  animation: pglHaloPulse 5.8s ease-in-out infinite;
-}
-
-.pgl-orb-ring {
-  position: absolute;
-  left: 50%;
-  border-radius: 50%;
-  transform: translateX(-50%);
-  border: 1px solid rgba(183, 138, 255, 0.12);
-  animation: pglRingFloat 9s ease-in-out infinite;
-}
-
-.pgl-orb-ring-1 {
-  top: 348px;
-  width: min(440px, 54vw);
-  height: min(440px, 54vw);
-}
-
-.pgl-orb-ring-2 {
-  top: 305px;
-  width: min(600px, 68vw);
-  height: min(600px, 68vw);
-  opacity: 0.38;
-  animation-delay: -2s;
-}
-
-.pgl-orb-ring-3 {
-  top: 255px;
-  width: min(760px, 82vw);
-  height: min(760px, 82vw);
-  opacity: 0.22;
-  animation-delay: -4s;
-}
-
-.pgl-orb-ring-4 {
-  top: 210px;
-  width: min(920px, 94vw);
-  height: min(920px, 94vw);
-  opacity: 0.1;
-  animation-delay: -6s;
-}
-
-.pgl-orb-core-glow {
-  position: absolute;
-  left: 50%;
-  top: 420px;
-  width: min(460px, 55vw);
-  height: min(280px, 34vw);
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(ellipse at 50% 58%, rgba(255, 255, 255, 0.86), rgba(233, 197, 255, 0.68) 24%, rgba(161, 98, 255, 0.5) 44%, rgba(90, 61, 240, 0.16) 66%, transparent 76%);
-  filter: blur(16px);
-  animation: pglCoreGlow 5s ease-in-out infinite;
-}
-
-.pgl-orb-core {
-  position: absolute;
-  left: 50%;
-  top: 448px;
-  width: min(290px, 36vw);
-  height: min(290px, 36vw);
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255,255,255,1) 0 16%, rgba(247, 237, 255, 0.96) 28%, rgba(210, 158, 255, 0.95) 43%, rgba(164, 95, 255, 0.82) 58%, rgba(102, 63, 245, 0.38) 76%, transparent 90%);
-  filter: blur(4px);
-  animation: pglCorePulse 4.6s ease-in-out infinite;
-}
-
-.pgl-orb-reflection {
-  position: absolute;
-  left: 50%;
-  top: 620px;
-  width: min(620px, 76vw);
-  height: 150px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(ellipse at 50% 20%, rgba(244, 231, 255, 0.28), rgba(164, 97, 255, 0.14) 34%, rgba(86, 54, 214, 0.06) 52%, transparent 70%);
-  filter: blur(24px);
-  opacity: 0.78;
-  animation: pglReflectionPulse 6.2s ease-in-out infinite;
-}
-
-.pgl-orbits {
-  position: absolute;
-  inset: 0;
-}
-
-.pgl-orbit {
-  position: absolute;
-  left: 50%;
-  top: 508px;
-  width: var(--orbit-size);
-  height: calc(var(--orbit-size) * 0.48);
-  margin-left: calc(var(--orbit-size) / -2);
-  margin-top: calc((var(--orbit-size) * 0.48) / -2);
-  border-radius: 50%;
-  transform: rotate(var(--orbit-angle));
-  animation: pglOrbitSpin var(--orbit-duration) linear infinite;
-  animation-delay: var(--orbit-delay);
-}
-
-.pgl-orbit::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.035);
-  opacity: 0.18;
-}
-
-.pgl-orbit-dot {
-  position: absolute;
-  top: 50%;
-  left: -1px;
-  width: var(--orbit-dot);
-  height: var(--orbit-dot);
-  margin-top: calc(var(--orbit-dot) / -2);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.32);
-  animation: pglOrbitFlicker 3.2s ease-in-out infinite;
-}
-
-.pgl-drift-particles {
-  position: absolute;
-  inset: 0;
-}
-
-.pgl-drift-particle {
-  position: absolute;
-  width: var(--drift-size);
-  height: var(--drift-size);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
-  opacity: 0;
-  animation: pglParticleDrift var(--drift-duration) ease-in-out infinite;
-  animation-delay: var(--drift-delay);
-}
-
-/* Stars */
-.pgl-stars {
-  z-index: 5;
-}
-
-.pgl-star {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.24);
-  animation: pglStarPulse 4.4s ease-in-out infinite;
-}
-
-/* Animations */
-@keyframes pglAmbientBreath {
-  0%, 100% {
-    opacity: 0.72;
-    transform: translateX(-50%) scale(1);
-  }
-  50% {
-    opacity: 0.98;
-    transform: translateX(-50%) scale(1.05);
-  }
-}
-
-@keyframes pglSmokeOne {
-  0%, 100% {
-    transform: translateX(-50%) scale(1) translateY(0);
-    opacity: 0.84;
-  }
-  50% {
-    transform: translateX(-50%) scale(1.04) translateY(-10px);
-    opacity: 1;
-  }
-}
-
-@keyframes pglSmokeTwo {
-  0%, 100% {
-    transform: translateX(-50%) scale(0.98) translateY(0);
-    opacity: 0.58;
-  }
-  50% {
-    transform: translateX(-50%) scale(1.05) translateY(-16px);
-    opacity: 0.84;
-  }
-}
-
-@keyframes pglSmokeThree {
-  0%, 100% {
-    transform: translateX(-50%) scale(1) translateY(0);
-    opacity: 0.38;
-  }
-  50% {
-    transform: translateX(-50%) scale(1.08) translateY(-14px);
-    opacity: 0.6;
-  }
-}
-
-@keyframes pglHaloPulse {
-  0%, 100% {
-    opacity: 0.84;
-    filter: blur(28px);
-  }
-  50% {
-    opacity: 1;
-    filter: blur(22px);
-  }
-}
-
-@keyframes pglRingFloat {
-  0%, 100% {
-    transform: translateX(-50%) scale(1);
-    opacity: 0.22;
-  }
-  50% {
-    transform: translateX(-50%) scale(1.02);
-    opacity: 0.36;
-  }
-}
-
-@keyframes pglCoreGlow {
-  0%, 100% {
-    transform: translateX(-50%) scale(1);
-    opacity: 0.88;
-  }
-  50% {
-    transform: translateX(-50%) scale(1.04);
-    opacity: 1;
-  }
-}
-
-@keyframes pglCorePulse {
-  0%, 100% {
-    transform: translateX(-50%) scale(1);
-    opacity: 0.94;
-  }
-  50% {
-    transform: translateX(-50%) scale(1.03);
-    opacity: 1;
-  }
-}
-
-@keyframes pglReflectionPulse {
-  0%, 100% {
-    opacity: 0.56;
-    transform: translateX(-50%) scaleX(1) scaleY(1);
-  }
-  50% {
-    opacity: 0.82;
-    transform: translateX(-50%) scaleX(1.05) scaleY(1.04);
-  }
-}
-
-@keyframes pglOrbitSpin {
-  from {
-    transform: rotate(var(--orbit-angle));
-  }
-  to {
-    transform: rotate(calc(var(--orbit-angle) + 360deg));
-  }
-}
-
-@keyframes pglOrbitFlicker {
-  0%, 100% {
-    opacity: 0.35;
-    transform: scale(0.85);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.25);
-  }
-}
-
-@keyframes pglParticleDrift {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, 0, 0) scale(0.6);
-  }
-  15% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 0.95;
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(var(--dx), var(--dy), 0) scale(1.1);
-  }
-}
-
-@keyframes pglStarPulse {
-  0%, 100% {
-    opacity: 0.22;
-    transform: scale(0.85);
-  }
-  50% {
-    opacity: 0.86;
-    transform: scale(1.35);
-  }
-}
-
-/* Responsive */
+/* RESPONSIVE */
 @media (max-width: 960px) {
   .pgl-title {
     flex-direction: column;
@@ -708,33 +399,6 @@
   .pgl-subtitle {
     white-space: normal;
     max-width: 640px;
-  }
-
-  .pgl-orb-ambient {
-    top: 220px;
-    width: 95vw;
-  }
-
-  .pgl-orb-halo {
-    top: 360px;
-    width: min(720px, 90vw);
-    height: min(720px, 90vw);
-  }
-
-  .pgl-orb-core {
-    top: 500px;
-  }
-
-  .pgl-orb-core-glow {
-    top: 468px;
-  }
-
-  .pgl-orbit {
-    top: 560px;
-  }
-
-  .pgl-orb-reflection {
-    top: 680px;
   }
 }
 
@@ -799,74 +463,12 @@
   .pgl-code-input {
     font-size: 20px;
   }
-
-  .pgl-orb-ambient {
-    top: 260px;
-    width: 100vw;
-    height: 680px;
-  }
-
-  .pgl-orb-smoke-1,
-  .pgl-orb-smoke-2,
-  .pgl-orb-smoke-3 {
-    width: 100vw;
-  }
-
-  .pgl-orb-smoke-1 {
-    top: 320px;
-    height: 420px;
-  }
-
-  .pgl-orb-smoke-2 {
-    top: 350px;
-    height: 460px;
-  }
-
-  .pgl-orb-smoke-3 {
-    top: 390px;
-    height: 500px;
-  }
-
-  .pgl-orb-halo {
-    top: 420px;
-    width: min(520px, 94vw);
-    height: min(520px, 94vw);
-  }
-
-  .pgl-orb-core-glow {
-    top: 510px;
-    width: min(360px, 72vw);
-    height: min(220px, 40vw);
-  }
-
-  .pgl-orb-core {
-    top: 550px;
-    width: min(220px, 44vw);
-    height: min(220px, 44vw);
-  }
-
-  .pgl-orbit {
-    top: 610px;
-  }
-
-  .pgl-orb-reflection {
-    top: 700px;
-    width: 82vw;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pgl-orb-ambient,
-  .pgl-orb-smoke,
-  .pgl-orb-halo,
-  .pgl-orb-ring,
-  .pgl-orb-core-glow,
-  .pgl-orb-core,
-  .pgl-orb-reflection,
-  .pgl-orbit,
-  .pgl-orbit-dot,
-  .pgl-drift-particle,
-  .pgl-star {
+  .pgl-soft-glow,
+  .pgl-star,
+  .pgl-ripple {
     animation: none;
   }
 }
