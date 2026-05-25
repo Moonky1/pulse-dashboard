@@ -17,14 +17,14 @@ export default function GoLanding() {
       const page = pageRef.current
       if (!page) return
 
-      currentRef.current.x += (targetRef.current.x - currentRef.current.x) * 0.08
-      currentRef.current.y += (targetRef.current.y - currentRef.current.y) * 0.08
+      currentRef.current.x += (targetRef.current.x - currentRef.current.x) * 0.075
+      currentRef.current.y += (targetRef.current.y - currentRef.current.y) * 0.075
 
       const px = `${currentRef.current.x * 100}%`
       const py = `${currentRef.current.y * 100}%`
 
-      const shiftX = (currentRef.current.x - 0.5) * 30
-      const shiftY = (currentRef.current.y - 0.5) * 18
+      const shiftX = (currentRef.current.x - 0.5) * 38
+      const shiftY = (currentRef.current.y - 0.5) * 22
 
       page.style.setProperty('--mx', px)
       page.style.setProperty('--my', py)
@@ -91,18 +91,20 @@ export default function GoLanding() {
       <div className="pgl-cursor-glow" />
 
       <div className="pgl-orb-wrap" aria-hidden="true">
-        <div className="pgl-orb-ambient" />
-        <div className="pgl-orb-ring pgl-orb-ring-1" />
-        <div className="pgl-orb-ring pgl-orb-ring-2" />
-        <div className="pgl-orb-ring pgl-orb-ring-3" />
-        <div className="pgl-orb-ring pgl-orb-ring-4" />
-        <div className="pgl-orb-wave pgl-orb-wave-1" />
-        <div className="pgl-orb-wave pgl-orb-wave-2" />
-        <div className="pgl-orb-wave pgl-orb-wave-3" />
-        <div className="pgl-orb-glow" />
-        <div className="pgl-orb-core" />
-        <div className="pgl-orb-horizon" />
-        <div className="pgl-orb-reflection" />
+        <div className="pgl-orb-motion">
+          <div className="pgl-orb-ambient" />
+          <div className="pgl-orb-ring pgl-orb-ring-1" />
+          <div className="pgl-orb-ring pgl-orb-ring-2" />
+          <div className="pgl-orb-ring pgl-orb-ring-3" />
+          <div className="pgl-orb-ring pgl-orb-ring-4" />
+          <div className="pgl-orb-wave pgl-orb-wave-1" />
+          <div className="pgl-orb-wave pgl-orb-wave-2" />
+          <div className="pgl-orb-wave pgl-orb-wave-3" />
+          <div className="pgl-orb-glow" />
+          <div className="pgl-orb-core" />
+          <div className="pgl-orb-horizon" />
+          <div className="pgl-orb-reflection" />
+        </div>
       </div>
 
       <div className="pgl-stars" aria-hidden="true">
@@ -134,7 +136,7 @@ export default function GoLanding() {
         </h1>
 
         <p className="pgl-subtitle">
-          Train faster, compete with your team, and sharpen every call skill in one place.
+          Live rooms, solo practice, and sharper call-flow drills.
         </p>
 
         <div className="pgl-actions">
