@@ -3,24 +3,32 @@ import { useNavigate } from 'react-router-dom'
 import './GoLanding.css'
 
 const STARS = [
-  { top: '10%', left: '8%' },
-  { top: '15%', left: '24%' },
-  { top: '12%', left: '52%' },
-  { top: '18%', left: '78%' },
-  { top: '30%', left: '14%' },
-  { top: '34%', left: '33%' },
-  { top: '27%', left: '64%' },
-  { top: '36%', left: '84%' },
-  { top: '49%', left: '11%' },
-  { top: '47%', left: '27%' },
-  { top: '51%', left: '72%' },
-  { top: '61%', left: '16%' },
-  { top: '59%', left: '41%' },
-  { top: '63%', left: '86%' },
-  { top: '74%', left: '12%' },
-  { top: '77%', left: '34%' },
-  { top: '82%', left: '68%' },
-  { top: '85%', left: '88%' },
+  { top: '12%', left: '10%' },
+  { top: '16%', left: '28%' },
+  { top: '14%', left: '48%' },
+  { top: '18%', left: '72%' },
+  { top: '24%', left: '84%' },
+  { top: '32%', left: '18%' },
+  { top: '36%', left: '38%' },
+  { top: '30%', left: '62%' },
+  { top: '41%', left: '78%' },
+  { top: '52%', left: '14%' },
+  { top: '58%', left: '28%' },
+  { top: '55%', left: '70%' },
+  { top: '66%', left: '18%' },
+  { top: '72%', left: '42%' },
+  { top: '69%', left: '82%' },
+  { top: '83%', left: '20%' },
+  { top: '86%', left: '58%' },
+  { top: '80%', left: '88%' },
+]
+
+const SHOOTING_STARS = [
+  { top: '18%', left: '78%', delay: '0s', duration: '6.5s' },
+  { top: '28%', left: '64%', delay: '2.4s', duration: '7.5s' },
+  { top: '12%', left: '58%', delay: '4.8s', duration: '6.8s' },
+  { top: '34%', left: '86%', delay: '7.2s', duration: '8s' },
+  { top: '22%', left: '72%', delay: '9.4s', duration: '7.2s' },
 ]
 
 export default function GoLanding() {
@@ -42,21 +50,18 @@ export default function GoLanding() {
       }
 
       const ctx = audioRef.current
-
-      if (ctx.state === 'suspended') {
-        ctx.resume()
-      }
+      if (ctx.state === 'suspended') ctx.resume()
 
       const now = ctx.currentTime
       const oscillator = ctx.createOscillator()
       const gain = ctx.createGain()
 
       oscillator.type = 'sine'
-      oscillator.frequency.setValueAtTime(540, now)
-      oscillator.frequency.exponentialRampToValueAtTime(260, now + 0.08)
+      oscillator.frequency.setValueAtTime(520, now)
+      oscillator.frequency.exponentialRampToValueAtTime(300, now + 0.07)
 
       gain.gain.setValueAtTime(0.0001, now)
-      gain.gain.exponentialRampToValueAtTime(0.055, now + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.045, now + 0.01)
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09)
 
       oscillator.connect(gain)
@@ -65,7 +70,7 @@ export default function GoLanding() {
       oscillator.start(now)
       oscillator.stop(now + 0.1)
     } catch {
-      // Browser blocked or unsupported audio. Ignore silently.
+      // ignore
     }
   }
 
@@ -127,12 +132,34 @@ export default function GoLanding() {
     navigate(`/go/quiz/KK${clean}`)
   }
 
+  const handlePreventCopy = (e) => {
+    if (!e.target.closest('.pgl-code-input')) {
+      e.preventDefault()
+    }
+  }
+
+  const handlePreventContextMenu = (e) => {
+    if (!e.target.closest('.pgl-code-input')) {
+      e.preventDefault()
+    }
+  }
+
+  const handleDragStart = (e) => {
+    if (!e.target.closest('.pgl-code-input')) {
+      e.preventDefault()
+    }
+  }
+
   return (
     <div
       ref={pageRef}
       className="pgl-page"
       onMouseMove={handleMouseMove}
       onPointerDown={handlePointerDown}
+      onCopy={handlePreventCopy}
+      onCut={handlePreventCopy}
+      onContextMenu={handlePreventContextMenu}
+      onDragStart={handleDragStart}
     >
       <div className="pgl-bg" />
       <div className="pgl-grid" />
@@ -148,6 +175,21 @@ export default function GoLanding() {
               top: star.top,
               left: star.left,
               animationDelay: `${index * 0.35}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="pgl-shooting-stars" aria-hidden="true">
+        {SHOOTING_STARS.map((item, index) => (
+          <span
+            key={index}
+            className="pgl-shooting-star"
+            style={{
+              top: item.top,
+              left: item.left,
+              animationDelay: item.delay,
+              animationDuration: item.duration,
             }}
           />
         ))}
@@ -183,14 +225,10 @@ export default function GoLanding() {
       </nav>
 
       <main className="pgl-content">
-        <h1 className="pgl-title">
+        <h1 className="pgl-title" draggable="false">
           <span className="pgl-title-main">PULSE</span>
           <span className="pgl-title-go">GO</span>
         </h1>
-
-        <p className="pgl-subtitle">
-          Live rooms, solo practice, and sharper call-flow drills.
-        </p>
 
         <div className="pgl-actions">
           <button className="pgl-action-btn" onClick={handleHostGame}>
@@ -227,6 +265,7 @@ export default function GoLanding() {
                 if (e.key === 'Enter') handleJoinRoom()
               }}
               autoComplete="off"
+              spellCheck="false"
             />
           </div>
 
