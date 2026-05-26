@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   learnCategories,
@@ -9,394 +9,578 @@ import {
   dosAndDonts,
   dialer,
 } from './goContent'
-import './go.css'
+import './GoLanding.css'
 
-/* ─── Training Image Component ─── */
-function TrainingImg({ src, alt, caption }) {
-  return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-      <img
-        src={`/training/${src}`}
-        alt={alt}
-        style={{
-          width: '100%',
-          maxWidth: 760,
-          borderRadius: 10,
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-          display: 'block',
-        }}
-        onError={e => {
-          e.target.style.display = 'none'
-          e.target.nextSibling.style.display = 'flex'
-        }}
-      />
-      <div style={{
-        display: 'none', width: '100%', maxWidth: 760,
-        minHeight: 100, background: '#161a23',
-        border: '2px dashed rgba(249,115,22,0.3)', borderRadius: 10,
-        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: 6, color: '#6b7280', fontSize: 14, padding: 20,
-      }}>
-        <span>📷 {alt}</span>
-        <small style={{ opacity: 0.5 }}>Add file to: public/training/{src}</small>
-      </div>
-      {caption && (
-        <div style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: '#f1f5f9',
-          textAlign: 'center',
-          maxWidth: 720,
-          lineHeight: 1.6,
-          background: 'rgba(249,115,22,0.1)',
-          border: '1px solid rgba(249,115,22,0.2)',
-          borderRadius: 8,
-          padding: '8px 16px',
-        }}>
-          {caption}
-        </div>
-      )}
-    </div>
-  )
+const STARS = [
+  { top: '12%', left: '10%' },
+  { top: '16%', left: '28%' },
+  { top: '14%', left: '48%' },
+  { top: '18%', left: '78%' },
+  { top: '24%', left: '84%' },
+  { top: '32%', left: '18%' },
+  { top: '36%', left: '38%' },
+  { top: '30%', left: '62%' },
+  { top: '41%', left: '78%' },
+  { top: '52%', left: '14%' },
+  { top: '58%', left: '28%' },
+  { top: '55%', left: '70%' },
+  { top: '66%', left: '18%' },
+  { top: '72%', left: '42%' },
+  { top: '69%', left: '82%' },
+  { top: '83%', left: '20%' },
+  { top: '86%', left: '58%' },
+  { top: '80%', left: '88%' },
+]
+
+const SHOOTING_STARS = [
+  { top: '18%', left: '78%', delay: '0s', duration: '6.5s' },
+  { top: '28%', left: '64%', delay: '2.4s', duration: '7.5s' },
+  { top: '12%', left: '58%', delay: '4.8s', duration: '6.8s' },
+  { top: '34%', left: '86%', delay: '7.2s', duration: '8s' },
+  { top: '22%', left: '72%', delay: '9.4s', duration: '7.2s' },
+]
+
+const VISUAL_GUIDES = [
+  {
+    title: 'Campaign Login',
+    desc: 'Where agents enter the campaign system.',
+    img: '/training/vici-campaign-login.png',
+  },
+  {
+    title: 'Phone Login',
+    desc: 'Phone login and extension setup.',
+    img: '/training/vici-phone-login.png',
+  },
+  {
+    title: 'Welcome Screen',
+    desc: 'Main screen after logging in.',
+    img: '/training/vici-welcome.png',
+  },
+  {
+    title: 'Go Active',
+    desc: 'Where agents activate calling status.',
+    img: '/training/vici-go-active.png',
+  },
+  {
+    title: 'Lead Form',
+    desc: 'Customer information and lead fields.',
+    img: '/training/vici-lead-form.png',
+  },
+  {
+    title: 'Live Call',
+    desc: 'Live call controls and call handling.',
+    img: '/training/vici-live-call.png',
+  },
+  {
+    title: 'Transfer Functions',
+    desc: 'Transfer and conference controls.',
+    img: '/training/vici-transfer-functions.png',
+  },
+  {
+    title: 'Dispositions',
+    desc: 'Disposition list and call outcome tags.',
+    img: '/training/vici-dispositions.png',
+  },
+  {
+    title: 'Full Dispositions',
+    desc: 'Expanded disposition reference.',
+    img: '/training/vici-dispositions-full.png',
+  },
+  {
+    title: 'Pause Codes',
+    desc: 'Break, lunch, restroom, tech, callbacks, and manage.',
+    img: '/training/vici-pauses-codes.png',
+  },
+  {
+    title: 'IP Validation',
+    desc: 'Validation screen for access troubleshooting.',
+    img: '/training/vici-ip-validation.png',
+  },
+]
+
+function getCategoryType(cat) {
+  if (cat.id === 'dialer-guide') return 'dialer'
+  return cat.type || 'general'
 }
 
-/* ─── Script View ─── */
-function ScriptView({ lang }) {
-  const script = scripts[lang]
+function AcademyBackground({ children, active = 'Academy' }) {
+  const navigate = useNavigate()
+  const pageRef = useRef(null)
+  const rafRef = useRef(null)
+  const audioRef = useRef(null)
+
+  const [ripples, setRipples] = useState([])
+
+  const playClickSound = () => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext
+      if (!AudioContext) return
+
+      if (!audioRef.current) audioRef.current = new AudioContext()
+
+      const ctx = audioRef.current
+      if (ctx.state === 'suspended') ctx.resume()
+
+      const now = ctx.currentTime
+      const oscillator = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(520, now)
+      oscillator.frequency.exponentialRampToValueAtTime(300, now + 0.07)
+
+      gain.gain.setValueAtTime(0.0001, now)
+      gain.gain.exponentialRampToValueAtTime(0.045, now + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09)
+
+      oscillator.connect(gain)
+      gain.connect(ctx.destination)
+
+      oscillator.start(now)
+      oscillator.stop(now + 0.1)
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleMouseMove = (e) => {
+    const page = pageRef.current
+    if (!page) return
+
+    const rect = page.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+
+    rafRef.current = requestAnimationFrame(() => {
+      page.style.setProperty('--mx', `${x}px`)
+      page.style.setProperty('--my', `${y}px`)
+    })
+  }
+
+  const handlePointerDown = (e) => {
+    const page = pageRef.current
+    if (!page) return
+
+    const rect = page.getBoundingClientRect()
+    const ripple = {
+      id: Date.now() + Math.random(),
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    }
+
+    setRipples((prev) => [...prev.slice(-4), ripple])
+
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((item) => item.id !== ripple.id))
+    }, 650)
+
+    if (!e.target.closest('input')) playClickSound()
+  }
+
   return (
-    <div>
-      <div className="go-block-title">📋 {script.flag} {script.title}</div>
-      <div className="go-script-steps">
-        {script.steps.map((step) => (
-          <div key={step.id} className={`go-step-card type-${step.type}`}>
-            <div className="go-step-label">{step.label}</div>
-            {step.type !== 'action' && <span className="go-step-number">{step.id}</span>}
-            <div className="go-step-text">{step.text}</div>
-            {step.tip && <div className="go-step-tip">💡 {step.tip}</div>}
-          </div>
+    <div
+      ref={pageRef}
+      className="pgl-page"
+      onMouseMove={handleMouseMove}
+      onPointerDown={handlePointerDown}
+    >
+      <div className="pgl-bg" />
+      <div className="pgl-grid" />
+      <div className="pgl-soft-glow" />
+      <div className="pgl-cursor-glow" />
+
+      <div className="pgl-stars" aria-hidden="true">
+        {STARS.map((star, index) => (
+          <span
+            key={index}
+            className="pgl-star"
+            style={{
+              top: star.top,
+              left: star.left,
+              animationDelay: `${index * 0.35}s`,
+            }}
+          />
         ))}
       </div>
+
+      <div className="pgl-shooting-stars" aria-hidden="true">
+        {SHOOTING_STARS.map((item, index) => (
+          <span
+            key={index}
+            className="pgl-shooting-star"
+            style={{
+              top: item.top,
+              left: item.left,
+              animationDelay: item.delay,
+              animationDuration: item.duration,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="pgl-ripples" aria-hidden="true">
+        {ripples.map((ripple) => (
+          <span
+            key={ripple.id}
+            className="pgl-ripple"
+            style={{
+              left: `${ripple.x}px`,
+              top: `${ripple.y}px`,
+            }}
+          />
+        ))}
+      </div>
+
+      <button className="academy-back-top" onClick={() => navigate('/academy')}>
+        ← Back
+      </button>
+
+      <nav className="pgl-nav">
+        <div className="pgl-nav-pill">
+          <button className="pgl-nav-link" onClick={() => navigate('/dashboard')}>
+            Dashboard
+          </button>
+
+          <button className="pgl-nav-link" onClick={() => navigate('/go')}>
+            Pulse GO
+          </button>
+
+          <button
+            className={`pgl-nav-link ${active === 'Academy' ? 'pgl-nav-link-active' : ''}`}
+            onClick={() => navigate('/academy')}
+          >
+            Academy
+          </button>
+        </div>
+      </nav>
+
+      {children}
     </div>
   )
 }
 
-/* ─── Objections View ─── */
-function ObjectionsView({ lang }) {
-  const [open, setOpen] = useState(null)
+function PageHeader({ category }) {
   return (
-    <div className="go-objection-list">
-      {objections.map((obj) => (
-        <div
-          key={obj.id}
-          className={`go-objection-card ${open === obj.id ? 'open' : ''}`}
-          onClick={() => setOpen(open === obj.id ? null : obj.id)}
-        >
-          <div className="go-objection-header">
-            <span className="go-objection-emoji">{obj.emoji}</span>
-            <span className="go-objection-title">{lang === 'es' ? obj.titleEs : obj.title}</span>
-            <span className="go-objection-goal">{obj.goal}</span>
-            <span className="go-objection-chevron">▼</span>
+    <section className="academy-detail-hero academy-main-card">
+      <span className="academy-detail-icon">{category.icon}</span>
+
+      <div>
+        <span className="academy-card-kicker">Academy</span>
+        <h1>{category.title}</h1>
+        <p>{category.description}</p>
+      </div>
+    </section>
+  )
+}
+
+function ScriptView({ lang }) {
+  const script = scripts[lang]
+
+  return (
+    <div className="academy-detail-stack">
+      {script.steps.map((step) => (
+        <article key={step.id} className="academy-glass-card academy-topic-card">
+          <div className="academy-topic-number">{String(step.id).padStart(2, '0')}</div>
+
+          <div className="academy-topic-body">
+            <span className="academy-result-sub">{step.type}</span>
+            <h2>{step.label}</h2>
+            <p>{step.text}</p>
+
+            {step.tip && (
+              <div className="academy-note-card">
+                <strong>Coach tip</strong>
+                <span>{step.tip}</span>
+              </div>
+            )}
           </div>
-          <div className="go-objection-body">
-            <div className="go-rebuttal-label">{lang === 'es' ? 'Respuesta' : 'Rebuttal'}</div>
-            <div className="go-rebuttal-text">{lang === 'es' ? obj.rebuttalEs : obj.rebuttalEn}</div>
-            {obj.note && <div className="go-rebuttal-note">⚠️ {obj.note}</div>}
-          </div>
-        </div>
+        </article>
       ))}
     </div>
   )
 }
 
-/* ─── Product Knowledge View ─── */
+function ObjectionsView({ lang }) {
+  return (
+    <div className="academy-detail-grid">
+      {objections.map((obj) => {
+        const title = lang === 'es' ? obj.titleEs : obj.title
+        const rebuttal = lang === 'es' ? obj.rebuttalEs : obj.rebuttalEn
+
+        return (
+          <article key={obj.id} className="academy-glass-card academy-topic-card">
+            <span className="academy-card-icon">{obj.emoji}</span>
+
+            <div className="academy-topic-body">
+              <span className="academy-result-sub">{obj.goal}</span>
+              <h2>{title}</h2>
+              <p>{rebuttal}</p>
+            </div>
+          </article>
+        )
+      })}
+    </div>
+  )
+}
+
 function ProductView() {
   return (
-    <div>
-      <div className="go-block-title">📊 Know the Difference</div>
-      <div className="go-product-comparison" style={{ marginBottom: 32 }}>
+    <div className="academy-detail-stack">
+      <section className="academy-detail-grid">
         {productKnowledge.comparison.items.map((item) => (
-          <div key={item.name} className="go-product-col">
-            <div className="go-product-col-title" style={{ borderColor: item.color, color: item.color }}>
-              {item.name}
+          <article key={item.name} className="academy-glass-card academy-topic-card">
+            <span className="academy-card-icon">📦</span>
+
+            <div className="academy-topic-body">
+              <span className="academy-result-sub">Comparison</span>
+              <h2>{item.name}</h2>
+
+              <ul className="academy-clean-list">
+                {item.points.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
             </div>
-            <ul>{item.points.map((p, i) => <li key={i}>{p}</li>)}</ul>
-          </div>
+          </article>
         ))}
-      </div>
-      <div className="go-block-title">🔍 Coverage Eligibility</div>
-      <div className="go-coverage-grid">
-        <div className="go-coverage-box can">
-          <div className="go-coverage-title">✓ What We Cover</div>
-          <ul>{productKnowledge.canCover.items.map((item, i) => <li key={i}>{item}</li>)}</ul>
-        </div>
-        <div className="go-coverage-box cannot">
-          <div className="go-coverage-title">✗ What We Cannot Cover</div>
-          <ul>{productKnowledge.cannotCover.items.map((item, i) => <li key={i}>{item}</li>)}</ul>
-        </div>
-      </div>
-      <div className="go-block-title" style={{ marginTop: 24 }}>⏱️ Duration & Service Process</div>
-      <div className="go-protocol-list">
-        {productKnowledge.duration.points.map((p, i) => (
-          <div key={i} className="go-protocol-item">
-            <div className="go-protocol-num">{i + 1}</div>
-            <div className="go-protocol-text">{p}</div>
+      </section>
+
+      <section className="academy-two-columns">
+        <article className="academy-glass-card academy-topic-card">
+          <span className="academy-card-icon">✅</span>
+          <div className="academy-topic-body">
+            <h2>{productKnowledge.canCover.title}</h2>
+            <ul className="academy-clean-list">
+              {productKnowledge.canCover.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </div>
-        ))}
-      </div>
+        </article>
+
+        <article className="academy-glass-card academy-topic-card">
+          <span className="academy-card-icon">🚫</span>
+          <div className="academy-topic-body">
+            <h2>{productKnowledge.cannotCover.title}</h2>
+            <ul className="academy-clean-list">
+              {productKnowledge.cannotCover.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </article>
+      </section>
     </div>
   )
 }
 
-/* ─── Call Flow View ─── */
 function CallFlowView() {
   return (
-    <div>
-      <div className="go-block-title">📞 4-Step Call Flow</div>
-      <div className="go-flow-steps">
+    <div className="academy-detail-stack">
+      <section className="academy-detail-grid">
         {callFlow.steps.map((step) => (
-          <div key={step.id} className="go-flow-step">
-            <div className="go-flow-number">{step.id}</div>
-            <div className="go-flow-content">
-              <div className="go-flow-title">{step.icon} {step.title}</div>
-              <div className="go-flow-desc">{step.description}</div>
-              <div className="go-flow-points">
-                {step.keyPoints.map((kp, i) => <span key={i} className="go-flow-point">{kp}</span>)}
-              </div>
+          <article key={step.id} className="academy-glass-card academy-topic-card">
+            <span className="academy-card-icon">{step.icon}</span>
+
+            <div className="academy-topic-body">
+              <span className="academy-result-sub">Step {step.id}</span>
+              <h2>{step.title}</h2>
+              <p>{step.description}</p>
+
+              <ul className="academy-clean-list">
+                {step.keyPoints.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
             </div>
-          </div>
+          </article>
         ))}
-      </div>
-      <div className="go-block-title">🔄 Transfer Protocol</div>
-      <div className="go-protocol-list" style={{ marginBottom: 32 }}>
-        {callFlow.transferProtocol.map((step, i) => (
-          <div key={i} className="go-protocol-item">
-            <div className="go-protocol-num">{i + 1}</div>
-            <div className="go-protocol-text">{step}</div>
-          </div>
-        ))}
-      </div>
-      <div className="go-block-title">⏳ While Waiting for an Advisor</div>
-      <div className="go-waiting-list">
-        {callFlow.waitingQuestions.map((q, i) => (
-          <div key={i} className="go-waiting-item">{q}</div>
-        ))}
-      </div>
+      </section>
+
+      <article className="academy-main-card academy-wide-card">
+        <span className="academy-card-kicker">Transfer protocol</span>
+        <h2>Clean handoff checklist</h2>
+
+        <div className="academy-mini-grid">
+          {callFlow.transferProtocol.map((step, index) => (
+            <div key={step} className="academy-mini-card">
+              <strong>{String(index + 1).padStart(2, '0')}</strong>
+              <span>{step}</span>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="academy-main-card academy-wide-card">
+        <span className="academy-card-kicker">While waiting</span>
+        <h2>Questions to keep control</h2>
+
+        <div className="academy-mini-grid">
+          {callFlow.waitingQuestions.map((question) => (
+            <div key={question} className="academy-mini-card">
+              <span>{question}</span>
+            </div>
+          ))}
+        </div>
+      </article>
     </div>
   )
 }
 
-/* ─── Do's & Don'ts View ─── */
 function DosDontsView() {
   return (
-    <div>
-      <div className="go-block-title">🚫 What NOT to Say</div>
-      <div className="go-dont-list">
-        {dosAndDonts.donts.map((item, i) => (
-          <div key={i} className="go-dont-item">
-            <div className="go-dont-rule">{item.rule}</div>
-            <div className="go-dont-detail">{item.detail}</div>
-          </div>
+    <div className="academy-detail-stack">
+      <section className="academy-detail-grid">
+        {dosAndDonts.donts.map((item) => (
+          <article key={item.rule} className="academy-glass-card academy-topic-card">
+            <span className="academy-card-icon">⚠️</span>
+
+            <div className="academy-topic-body">
+              <span className="academy-result-sub">Do not</span>
+              <h2>{item.rule}</h2>
+              <p>{item.detail}</p>
+            </div>
+          </article>
         ))}
-      </div>
-      <div className="go-block-title">📄 Reading the Form</div>
-      <div className="go-coverage-grid" style={{ marginBottom: 32 }}>
-        <div className="go-coverage-box can">
-          <div className="go-coverage-title">✓ Use These</div>
-          <ul>{dosAndDonts.formFields.use.map((f, i) => <li key={i}>{f}</li>)}</ul>
+      </section>
+
+      <section className="academy-two-columns">
+        <article className="academy-glass-card academy-topic-card">
+          <span className="academy-card-icon">✅</span>
+          <div className="academy-topic-body">
+            <h2>Use these fields</h2>
+            <ul className="academy-clean-list">
+              {dosAndDonts.formFields.use.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </article>
+
+        <article className="academy-glass-card academy-topic-card">
+          <span className="academy-card-icon">🚫</span>
+          <div className="academy-topic-body">
+            <h2>Ignore these fields</h2>
+            <ul className="academy-clean-list">
+              {dosAndDonts.formFields.ignore.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <article className="academy-main-card academy-wide-card">
+        <span className="academy-card-kicker">Delivery standards</span>
+        <h2>What every opener must keep consistent</h2>
+
+        <div className="academy-mini-grid">
+          {dosAndDonts.deliveryStandards.map((item) => (
+            <div key={item} className="academy-mini-card">
+              <span>{item}</span>
+            </div>
+          ))}
         </div>
-        <div className="go-coverage-box cannot">
-          <div className="go-coverage-title">✗ Ignore These</div>
-          <ul>{dosAndDonts.formFields.ignore.map((f, i) => <li key={i}>{f}</li>)}</ul>
-        </div>
-      </div>
-      <div className="go-block-title">🎙️ Script Delivery Standards</div>
-      <div className="go-protocol-list" style={{ marginBottom: 32 }}>
-        {dosAndDonts.deliveryStandards.map((s, i) => (
-          <div key={i} className="go-protocol-item">
-            <div className="go-protocol-num">{i + 1}</div>
-            <div className="go-protocol-text">{s}</div>
-          </div>
-        ))}
-      </div>
-      <div className="go-block-title">📟 Disposition Codes</div>
-      <div className="go-disposition-grid">
-        {dialer.dispositions.map((d) => (
-          <div key={d.code} className={`go-disposition-item ${d.flag || ''}`}>
-            <div className="go-disposition-code">{d.code}</div>
-            <div className="go-disposition-label">{d.label}</div>
-            <div className="go-disposition-desc">{d.description}</div>
-          </div>
-        ))}
-      </div>
-      <div className="go-block-title" style={{ marginTop: 32 }}>⏸️ Pause Codes</div>
-      <div className="go-disposition-grid">
-        {dialer.pauseCodes.map((p) => (
-          <div key={p.code} className="go-disposition-item">
-            <div className="go-disposition-code">{p.label}</div>
-            <div className="go-disposition-label">{p.code}</div>
-            <div className="go-disposition-desc">{p.desc} ({p.time})</div>
-          </div>
-        ))}
-      </div>
+      </article>
     </div>
   )
 }
 
-/* ─── Dialer Guide View ─── */
 function DialerGuideView() {
   return (
-    <div>
+    <div className="academy-detail-stack">
+      <article className="academy-main-card academy-wide-card">
+        <span className="academy-card-kicker">Visual guide</span>
+        <h2>Vici dialer walkthrough</h2>
+      </article>
 
-      {/* Step 0: IP Validation */}
-      <div className="go-block-title">🌐 Step 0 — Validate Your IP (Every Day)</div>
-      <div style={{
-        marginBottom: 16, fontSize: 13, color: '#f59e0b',
-        background: 'rgba(245,158,11,0.08)', padding: '10px 14px', borderRadius: 8, lineHeight: 1.6,
-      }}>
-        ⚠️ Do this EVERY DAY before logging in. Go to the <strong>validation URL provided by your supervisor</strong> and confirm your IP is validated before starting any calls.
-      </div>
-      <TrainingImg
-        src="vici-ip-validation.png"
-        alt="Agent Validation Portal"
-        caption="Submit and confirm your IP address appears as validated — do this before anything else each day"
-      />
+      <section className="academy-visual-grid">
+        {VISUAL_GUIDES.map((item) => (
+          <article key={item.img} className="academy-visual-card">
+            <img src={item.img} alt={item.title} />
+            <div>
+              <h2>{item.title}</h2>
+              <p>{item.desc}</p>
+            </div>
+          </article>
+        ))}
+      </section>
 
-      {/* Step 1: Welcome */}
-      <div className="go-block-title" style={{ marginTop: 32 }}>🔐 Step 1 — Welcome Screen</div>
-      <TrainingImg
-        src="vici-welcome.png"
-        alt="Dialer Welcome Screen"
-        caption="Click 'Agent Login' to proceed — do NOT click Admin"
-      />
+      <article className="academy-main-card academy-wide-card">
+        <span className="academy-card-kicker">Dispositions</span>
+        <h2>Call result tags</h2>
 
-      {/* Step 2: Phone Login */}
-      <div className="go-block-title" style={{ marginTop: 24 }}>📞 Step 2 — Phone Login</div>
-      <TrainingImg
-        src="vici-phone-login.png"
-        alt="Dialer Phone Login"
-        caption="Enter your assigned Phone Login (extension) and Phone Password, then click SUBMIT"
-      />
+        <div className="academy-mini-grid">
+          {dialer.dispositions.map((item) => (
+            <div key={item.code} className="academy-mini-card">
+              <strong>{item.code}</strong>
+              <span>{item.label}</span>
+              <small>{item.description}</small>
+            </div>
+          ))}
+        </div>
+      </article>
 
-      {/* Step 3: Campaign Login */}
-      <div className="go-block-title" style={{ marginTop: 24 }}>🎯 Step 3 — Campaign Login</div>
-      <TrainingImg
-        src="vici-campaign-login.png"
-        alt="Dialer Campaign Login"
-        caption="Enter your credentials and select your campaign — use openers2 or openers3 as instructed by your supervisor"
-      />
+      <article className="academy-main-card academy-wide-card">
+        <span className="academy-card-kicker">Pause codes</span>
+        <h2>Correct pause usage</h2>
 
-      {/* Go Active */}
-      <div className="go-block-title" style={{ marginTop: 24 }}>📡 Main Dialer Screen — Go Active</div>
-      <TrainingImg
-        src="vici-go-active.png"
-        alt="Dialer Main Screen - YOU ARE PAUSED"
-        caption="Once logged in you will see YOU ARE PAUSED. To transfer a call, click TRANSFER - CONF on the left panel"
-      />
-
-      {/* Pause Codes — filename fixed: vici-pauses-codes.png */}
-      <div className="go-block-title" style={{ marginTop: 24 }}>⏸️ Pause Codes</div>
-      <TrainingImg
-        src="vici-pauses-codes.png"
-        alt="Dialer Pause Codes"
-        caption="Always use the correct pause code — Break = 10min max | RR = 5min max | Lunch = 1hr | Manage = only when supervisor requests"
-      />
-
-      {/* How to Transfer - English */}
-      <div className="go-block-title" style={{ marginTop: 24 }}>🇺🇸 How to Transfer — English</div>
-      <TrainingImg
-        src="vici-live-call.png"
-        alt="Live Call Screen"
-        caption="Step 1 — During a LIVE CALL, click TRANSFER - CONF on the left panel"
-      />
-      <TrainingImg
-        src="vici-transfer-functions.png"
-        alt="Transfer Conference Functions"
-        caption="Step 2 — Click DIAL WITH CUSTOMER → wait for SA to pick up and speak first → Step 3 — Click LEAVE 3-WAY CALL (stay at least 15 seconds before leaving)"
-      />
-
-      {/* How to Transfer - Spanish */}
-      <div className="go-block-title" style={{ marginTop: 24 }}>🇪🇸 How to Transfer — Spanish</div>
-      <div style={{
-        fontSize: 13, color: '#f97316', background: 'rgba(249,115,22,0.08)',
-        padding: '8px 14px', borderRadius: 8, marginBottom: 12, fontWeight: 600,
-      }}>
-        ⚡ For Spanish: Select <strong>BlindSpanishXfer</strong> from the dropdown BEFORE clicking Dial with Customer
-      </div>
-      <TrainingImg
-        src="vici-live-call.png"
-        alt="Live Call - Spanish Transfer"
-        caption="Step 1 — Click TRANSFER - CONF on the left panel"
-      />
-      <TrainingImg
-        src="vici-transfer-functions.png"
-        alt="Transfer Functions - Spanish"
-        caption="Step 2 — Select BlindSpanishXfer from the dropdown → DIAL WITH CUSTOMER → wait for SA to pick up → Step 3 — LEAVE 3-WAY CALL"
-      />
-
-      {/* Lead Form */}
-      <div className="go-block-title" style={{ marginTop: 24 }}>📋 How to Read the Lead Form</div>
-      <TrainingImg
-        src="vici-lead-form.png"
-        alt="Lead Form"
-        caption="✓ USE: First/Last Name, Origination Date, Loan Balance — ✗ NEVER mention: Address, Finance Company, Terms of Loan"
-      />
-
-      {/* Dispositions */}
-      <div className="go-block-title" style={{ marginTop: 24 }}>📊 Disposition Screen</div>
-      <TrainingImg
-        src="vici-dispositions.png"
-        alt="Call Dispositions"
-        caption="Use ONLY these dispositions — XFER = successful transfer ✓ | NI = not interested | CALLBK = call back | SPXFER = Spanish transfer"
-      />
-
+        <div className="academy-mini-grid">
+          {dialer.pauseCodes.map((item) => (
+            <div key={item.code} className="academy-mini-card">
+              <strong>{item.label}</strong>
+              <span>{item.code}</span>
+              <small>{item.time} · {item.desc}</small>
+            </div>
+          ))}
+        </div>
+      </article>
     </div>
   )
 }
 
-/* ─── Main Detail Page ─── */
 export default function GoLearnDetail() {
   const { id } = useParams()
-  const nav = useNavigate()
+  const navigate = useNavigate()
 
-  const category = learnCategories.find((c) => c.id === id)
+  const category = useMemo(
+    () => learnCategories.find((item) => item.id === id),
+    [id]
+  )
+
   if (!category) {
     return (
-      <div className="go-page" style={{ padding: 40, textAlign: 'center' }}>
-        <p>Category not found.</p>
-        <button className="go-btn go-btn-outline" onClick={() => nav('/academy')}>Back to Academy</button>
-      </div>
+      <AcademyBackground>
+        <main className="pgl-content academy-detail-content">
+          <section className="academy-main-card academy-wide-card">
+            <span className="academy-card-kicker">Not found</span>
+            <h1>Academy section not found</h1>
+            <p>This section does not exist yet.</p>
+            <button className="pgl-action-btn" onClick={() => navigate('/academy')}>
+              Back to Academy
+            </button>
+          </section>
+        </main>
+      </AcademyBackground>
     )
   }
 
-  const renderContent = () => {
-    switch (category.type) {
-      case 'script':     return <ScriptView lang={category.ref} />
-      case 'objections': return <ObjectionsView lang={category.ref} />
-      case 'product':    return <ProductView />
-      case 'callflow':   return <CallFlowView />
-      case 'dosdонts':   return <DosDontsView />
-      case 'dialer':     return <DialerGuideView />
-      default:           return <p>Content coming soon.</p>
-    }
-  }
+  const type = getCategoryType(category)
 
   return (
-    <div className="go-page">
-      <nav className="go-nav">
-        <a className="go-nav-logo" href="/go">
-          <span>Pulse</span>
-          <span className="go-badge">GO</span>
-        </a>
-        <button className="go-nav-back" onClick={() => nav('/academy')}>← Academy</button>
-      </nav>
-      <div className="go-detail-page">
-        <div className="go-detail-header">
-          <h1 className="go-detail-title">{category.icon} {category.title}</h1>
-          <p className="go-detail-sub">{category.description}</p>
-        </div>
-        {renderContent()}
-      </div>
-    </div>
+    <AcademyBackground>
+      <main className="pgl-content academy-detail-content">
+        <PageHeader category={category} />
+
+        {type === 'script' && <ScriptView lang={category.ref} />}
+        {type === 'objections' && <ObjectionsView lang={category.ref} />}
+        {type === 'product' && <ProductView />}
+        {type === 'callflow' && <CallFlowView />}
+        {type === 'dosdonts' && <DosDontsView />}
+        {type === 'dialer' && <DialerGuideView />}
+      </main>
+    </AcademyBackground>
   )
 }

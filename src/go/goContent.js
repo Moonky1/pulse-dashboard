@@ -1407,7 +1407,7 @@ export const learnCategories = [
     title: 'Dialer Guide',
     description: 'Dispositions, pause codes, and dialer handling',
     color: '#1e40af',
-    type: 'dosdonts',
+    type: 'dialer',
     ref: null,
   },
 ]

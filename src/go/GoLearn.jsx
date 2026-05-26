@@ -46,8 +46,8 @@ const FILTERS = [
   { id: 'objections', label: 'Objections' },
   { id: 'product', label: 'Product' },
   { id: 'callflow', label: 'Call Flow' },
+  { id: 'dosdonts', label: "Do's & Don'ts" },
   { id: 'dialer', label: 'Dialer' },
-  { id: 'compliance', label: 'Compliance' },
 ]
 
 function normalizeText(value) {
@@ -57,10 +57,15 @@ function normalizeText(value) {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
-function trimText(value, max = 155) {
+function trimText(value, max = 145) {
   const clean = String(value || '').replace(/\s+/g, ' ').trim()
   if (clean.length <= max) return clean
   return `${clean.slice(0, max).trim()}...`
+}
+
+function getCategoryType(cat) {
+  if (cat.id === 'dialer-guide') return 'dialer'
+  return cat.type || 'general'
 }
 
 function buildSearchIndex() {
@@ -69,14 +74,13 @@ function buildSearchIndex() {
   learnCategories.forEach((cat) => {
     index.push({
       id: `category-${cat.id}`,
-      type: cat.type === 'dosdonts' && cat.id === 'dialer-guide' ? 'dialer' : cat.type,
-      categoryId: cat.id,
+      type: getCategoryType(cat),
+      route: `/academy/${cat.id}`,
       icon: cat.icon,
       title: cat.title,
-      subtitle: 'Academy category',
+      subtitle: 'Academy section',
       description: cat.description,
       keywords: [cat.title, cat.description, cat.id, cat.type, cat.ref].join(' '),
-      route: `/academy/${cat.id}`,
     })
   })
 
@@ -87,13 +91,12 @@ function buildSearchIndex() {
       index.push({
         id: `script-${lang}-${step.id}`,
         type: 'script',
-        categoryId,
+        route: `/academy/${categoryId}`,
         icon: script.flag,
-        title: `${step.label}`,
+        title: step.label,
         subtitle: script.title,
         description: step.tip ? `${step.text} ${step.tip}` : step.text,
         keywords: [script.title, step.label, step.text, step.tip, lang].join(' '),
-        route: `/academy/${categoryId}`,
       })
     })
   })
@@ -102,25 +105,23 @@ function buildSearchIndex() {
     index.push({
       id: `objection-en-${obj.id}`,
       type: 'objections',
-      categoryId: 'objections-en',
+      route: '/academy/objections-en',
       icon: obj.emoji,
       title: obj.title,
-      subtitle: 'English objection rebuttal',
+      subtitle: 'English objection',
       description: `${obj.goal}. ${obj.rebuttalEn}`,
-      keywords: [obj.title, obj.goal, obj.rebuttalEn, obj.id, 'rebuttal objection english'].join(' '),
-      route: '/academy/objections-en',
+      keywords: [obj.title, obj.goal, obj.rebuttalEn, 'english objection rebuttal'].join(' '),
     })
 
     index.push({
       id: `objection-es-${obj.id}`,
       type: 'objections',
-      categoryId: 'objections-es',
+      route: '/academy/objections-es',
       icon: obj.emoji,
       title: obj.titleEs,
-      subtitle: 'Spanish objection rebuttal',
+      subtitle: 'Spanish objection',
       description: `${obj.goal}. ${obj.rebuttalEs}`,
-      keywords: [obj.titleEs, obj.goal, obj.rebuttalEs, obj.id, 'rebuttal objection spanish español'].join(' '),
-      route: '/academy/objections-es',
+      keywords: [obj.titleEs, obj.goal, obj.rebuttalEs, 'spanish objection rebuttal español'].join(' '),
     })
   })
 
@@ -128,153 +129,116 @@ function buildSearchIndex() {
     index.push({
       id: `product-${item.name}`,
       type: 'product',
-      categoryId: 'product-knowledge',
+      route: '/academy/product-knowledge',
       icon: '📦',
       title: item.name,
       subtitle: 'Product knowledge',
       description: item.points.join(' · '),
-      keywords: [item.name, item.points.join(' '), 'coverage product warranty insurance'].join(' '),
-      route: '/academy/product-knowledge',
+      keywords: [item.name, item.points.join(' '), 'coverage warranty insurance'].join(' '),
     })
   })
 
-  productKnowledge.canCover.items.forEach((item, indexNumber) => {
+  productKnowledge.canCover.items.forEach((item, idx) => {
     index.push({
-      id: `can-cover-${indexNumber}`,
+      id: `cover-${idx}`,
       type: 'product',
-      categoryId: 'product-knowledge',
+      route: '/academy/product-knowledge',
       icon: '✅',
       title: 'What we cover',
       subtitle: 'Coverage eligibility',
       description: item,
-      keywords: [item, 'cover coverage eligible warranty'].join(' '),
-      route: '/academy/product-knowledge',
+      keywords: [item, 'coverage cover eligible'].join(' '),
     })
   })
 
-  productKnowledge.cannotCover.items.forEach((item, indexNumber) => {
+  productKnowledge.cannotCover.items.forEach((item, idx) => {
     index.push({
-      id: `cannot-cover-${indexNumber}`,
+      id: `cannot-cover-${idx}`,
       type: 'product',
-      categoryId: 'product-knowledge',
+      route: '/academy/product-knowledge',
       icon: '🚫',
       title: 'What we cannot cover',
       subtitle: 'Coverage exclusions',
       description: item,
       keywords: [item, 'cannot cover exclusion not eligible'].join(' '),
-      route: '/academy/product-knowledge',
     })
   })
 
   callFlow.steps.forEach((step) => {
     index.push({
-      id: `call-flow-${step.id}`,
+      id: `callflow-${step.id}`,
       type: 'callflow',
-      categoryId: 'call-flow',
+      route: '/academy/call-flow',
       icon: step.icon,
       title: step.title,
       subtitle: 'Call flow',
       description: `${step.description} ${step.keyPoints.join(' · ')}`,
-      keywords: [step.title, step.description, step.keyPoints.join(' '), 'call flow transfer'].join(' '),
-      route: '/academy/call-flow',
+      keywords: [step.title, step.description, step.keyPoints.join(' '), 'transfer flow'].join(' '),
     })
   })
 
-  callFlow.transferProtocol.forEach((step, indexNumber) => {
+  callFlow.transferProtocol.forEach((step, idx) => {
     index.push({
-      id: `transfer-protocol-${indexNumber}`,
+      id: `transfer-${idx}`,
       type: 'callflow',
-      categoryId: 'call-flow',
+      route: '/academy/call-flow',
       icon: '🔄',
-      title: `Transfer protocol step ${indexNumber + 1}`,
+      title: `Transfer protocol ${idx + 1}`,
       subtitle: 'Transfer protocol',
       description: step,
-      keywords: [step, 'transfer protocol service advisor SA 15 seconds'].join(' '),
-      route: '/academy/call-flow',
+      keywords: [step, 'transfer protocol service advisor 15 seconds'].join(' '),
     })
   })
 
-  callFlow.waitingQuestions.forEach((question, indexNumber) => {
+  callFlow.waitingQuestions.forEach((question, idx) => {
     index.push({
-      id: `waiting-question-${indexNumber}`,
+      id: `waiting-${idx}`,
       type: 'callflow',
-      categoryId: 'call-flow',
-      icon: '⏳',
-      title: 'While waiting for an advisor',
-      subtitle: 'Waiting questions',
-      description: question,
-      keywords: [question, 'waiting advisor questions'].join(' '),
       route: '/academy/call-flow',
+      icon: '⏳',
+      title: 'Waiting question',
+      subtitle: 'While waiting for the advisor',
+      description: question,
+      keywords: [question, 'waiting service advisor'].join(' '),
     })
   })
 
-  dosAndDonts.donts.forEach((item, indexNumber) => {
+  dosAndDonts.donts.forEach((item, idx) => {
     index.push({
-      id: `dont-${indexNumber}`,
-      type: 'compliance',
-      categoryId: 'dos-donts',
+      id: `dont-${idx}`,
+      type: 'dosdonts',
+      route: '/academy/dos-donts',
       icon: '⚠️',
       title: item.rule,
       subtitle: "Do's and Don'ts",
       description: item.detail,
-      keywords: [item.rule, item.detail, 'compliance dont do not'].join(' '),
-      route: '/academy/dos-donts',
+      keywords: [item.rule, item.detail, 'compliance do not dont'].join(' '),
     })
   })
 
-  dosAndDonts.formFields.use.forEach((item, indexNumber) => {
+  dosAndDonts.deliveryStandards.forEach((item, idx) => {
     index.push({
-      id: `form-use-${indexNumber}`,
-      type: 'compliance',
-      categoryId: 'dos-donts',
-      icon: '✅',
-      title: 'Use this form field',
-      subtitle: 'Reading the form',
-      description: item,
-      keywords: [item, 'form field use'].join(' '),
+      id: `standard-${idx}`,
+      type: 'dosdonts',
       route: '/academy/dos-donts',
-    })
-  })
-
-  dosAndDonts.formFields.ignore.forEach((item, indexNumber) => {
-    index.push({
-      id: `form-ignore-${indexNumber}`,
-      type: 'compliance',
-      categoryId: 'dos-donts',
-      icon: '🚫',
-      title: 'Ignore this form field',
-      subtitle: 'Reading the form',
-      description: item,
-      keywords: [item, 'form field ignore never mention'].join(' '),
-      route: '/academy/dos-donts',
-    })
-  })
-
-  dosAndDonts.deliveryStandards.forEach((item, indexNumber) => {
-    index.push({
-      id: `delivery-standard-${indexNumber}`,
-      type: 'compliance',
-      categoryId: 'dos-donts',
       icon: '🎙️',
       title: 'Delivery standard',
       subtitle: "Do's and Don'ts",
       description: item,
       keywords: [item, 'delivery standard script compliance'].join(' '),
-      route: '/academy/dos-donts',
     })
   })
 
   dialer.dispositions.forEach((item) => {
     index.push({
-      id: `disposition-${item.code}`,
+      id: `disp-${item.code}`,
       type: 'dialer',
-      categoryId: 'dialer-guide',
+      route: '/academy/dialer-guide',
       icon: '🖥️',
       title: item.code,
       subtitle: item.label,
       description: item.description,
-      keywords: [item.code, item.label, item.description, 'disposition dialer'].join(' '),
-      route: '/academy/dialer-guide',
+      keywords: [item.code, item.label, item.description, 'dialer disposition'].join(' '),
     })
   })
 
@@ -282,13 +246,12 @@ function buildSearchIndex() {
     index.push({
       id: `pause-${item.label}`,
       type: 'dialer',
-      categoryId: 'dialer-guide',
+      route: '/academy/dialer-guide',
       icon: '⏸️',
       title: item.label,
       subtitle: item.code,
       description: `${item.desc} · ${item.time}`,
-      keywords: [item.label, item.code, item.desc, item.time, 'pause code dialer'].join(' '),
-      route: '/academy/dialer-guide',
+      keywords: [item.label, item.code, item.desc, item.time, 'pause code'].join(' '),
     })
   })
 
@@ -299,7 +262,7 @@ function scoreResult(item, query) {
   const q = normalizeText(query)
   const title = normalizeText(item.title)
   const subtitle = normalizeText(item.subtitle)
-  const description = normalizeText(item.description)
+  const desc = normalizeText(item.description)
   const keywords = normalizeText(item.keywords)
 
   let score = 0
@@ -307,7 +270,7 @@ function scoreResult(item, query) {
   if (title === q) score += 120
   if (title.includes(q)) score += 70
   if (subtitle.includes(q)) score += 35
-  if (description.includes(q)) score += 25
+  if (desc.includes(q)) score += 25
   if (keywords.includes(q)) score += 40
 
   q.split(' ')
@@ -315,7 +278,7 @@ function scoreResult(item, query) {
     .forEach((word) => {
       if (title.includes(word)) score += 18
       if (subtitle.includes(word)) score += 10
-      if (description.includes(word)) score += 8
+      if (desc.includes(word)) score += 8
       if (keywords.includes(word)) score += 12
     })
 
@@ -328,48 +291,30 @@ export default function GoLearn() {
   const rafRef = useRef(null)
   const audioRef = useRef(null)
 
-  const [ripples, setRipples] = useState([])
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
+  const [ripples, setRipples] = useState([])
 
   const searchIndex = useMemo(() => buildSearchIndex(), [])
 
   const results = useMemo(() => {
-    const cleanQuery = query.trim()
-
-    if (!cleanQuery) return []
+    const clean = query.trim()
+    if (!clean) return []
 
     return searchIndex
-      .map((item) => ({
-        ...item,
-        score: scoreResult(item, cleanQuery),
-      }))
+      .map((item) => ({ ...item, score: scoreResult(item, clean) }))
       .filter((item) => item.score > 0)
       .filter((item) => activeFilter === 'all' || item.type === activeFilter)
       .sort((a, b) => b.score - a.score)
       .slice(0, 18)
   }, [activeFilter, query, searchIndex])
 
-  const visibleCategories = useMemo(() => {
-    if (activeFilter === 'all') return learnCategories
-
-    return learnCategories.filter((cat) => {
-      if (activeFilter === 'dialer') return cat.id === 'dialer-guide'
-      if (activeFilter === 'compliance') return cat.id === 'dos-donts'
-      if (activeFilter === 'product') return cat.id === 'product-knowledge'
-      if (activeFilter === 'callflow') return cat.id === 'call-flow'
-      return cat.type === activeFilter
-    })
-  }, [activeFilter])
-
   const playClickSound = () => {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext
       if (!AudioContext) return
 
-      if (!audioRef.current) {
-        audioRef.current = new AudioContext()
-      }
+      if (!audioRef.current) audioRef.current = new AudioContext()
 
       const ctx = audioRef.current
       if (ctx.state === 'suspended') ctx.resume()
@@ -392,7 +337,7 @@ export default function GoLearn() {
       oscillator.start(now)
       oscillator.stop(now + 0.1)
     } catch {
-      // Browser blocked or unsupported audio.
+      // ignore
     }
   }
 
@@ -429,31 +374,11 @@ export default function GoLearn() {
       setRipples((prev) => prev.filter((item) => item.id !== ripple.id))
     }, 650)
 
-    if (!e.target.closest('input')) {
-      playClickSound()
-    }
+    if (!e.target.closest('input')) playClickSound()
   }
 
   const handlePreventCopy = (e) => {
-    if (!e.target.closest('.academy-search-input')) {
-      e.preventDefault()
-    }
-  }
-
-  const handlePreventContextMenu = (e) => {
-    if (!e.target.closest('.academy-search-input')) {
-      e.preventDefault()
-    }
-  }
-
-  const handleDragStart = (e) => {
-    if (!e.target.closest('.academy-search-input')) {
-      e.preventDefault()
-    }
-  }
-
-  const openCategory = (categoryId) => {
-    navigate(`/academy/${categoryId}`)
+    if (!e.target.closest('.academy-search-input')) e.preventDefault()
   }
 
   return (
@@ -464,8 +389,8 @@ export default function GoLearn() {
       onPointerDown={handlePointerDown}
       onCopy={handlePreventCopy}
       onCut={handlePreventCopy}
-      onContextMenu={handlePreventContextMenu}
-      onDragStart={handleDragStart}
+      onContextMenu={handlePreventCopy}
+      onDragStart={handlePreventCopy}
     >
       <div className="pgl-bg" />
       <div className="pgl-grid" />
@@ -530,20 +455,22 @@ export default function GoLearn() {
         </div>
       </nav>
 
-      <main className="pgl-content academy-content">
+      <main className="pgl-content academy-home-content">
         <h1 className="pgl-title academy-title" draggable="false">
           <span className="pgl-title-main">ACADEMY</span>
         </h1>
 
-        <section className="academy-search-panel">
-          <div className="academy-search-box">
+        <section className="academy-main-card">
+          <span className="academy-card-kicker">Search academy</span>
+
+          <div className="academy-search-box academy-search-box-large">
             <span className="academy-search-icon">⌕</span>
 
             <input
               className="academy-search-input"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search scripts, SPXFER, objections, 15 seconds..."
+              placeholder="Search SPXFER, 15 seconds, not interested, pause codes..."
               autoComplete="off"
               spellCheck="false"
             />
@@ -573,21 +500,20 @@ export default function GoLearn() {
             <div className="academy-results-top">
               <span>
                 {results.length > 0
-                  ? `${results.length} result${results.length === 1 ? '' : 's'} found`
+                  ? `${results.length} result${results.length === 1 ? '' : 's'}`
                   : 'No results found'}
               </span>
-              <small>Search reads the Academy training content</small>
             </div>
 
             {results.length > 0 ? (
-              <div className="academy-results-list">
+              <div className="academy-results-grid">
                 {results.map((item) => (
                   <button
                     key={item.id}
-                    className="academy-result-card"
+                    className="academy-glass-card academy-result-card"
                     onClick={() => navigate(item.route)}
                   >
-                    <span className="academy-result-icon">{item.icon}</span>
+                    <span className="academy-card-icon">{item.icon}</span>
 
                     <span className="academy-result-body">
                       <span className="academy-result-title">{item.title}</span>
@@ -595,37 +521,22 @@ export default function GoLearn() {
                       <span className="academy-result-desc">{trimText(item.description)}</span>
                     </span>
 
-                    <span className="academy-result-arrow">→</span>
+                    <span className="academy-card-arrow">→</span>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="academy-empty-state">
+              <div className="academy-main-card academy-empty-state">
                 <span>🔎</span>
                 <h2>No match yet</h2>
-                <p>Try keywords like “SPXFER”, “CALLBK”, “not interested”, “15 seconds”, “insurance”, or “pause code”.</p>
+                <p>Try: SPXFER, CALLBK, 15 seconds, insurance, not interested, pause code.</p>
               </div>
             )}
           </section>
         ) : (
-          <div className="academy-grid">
-            {visibleCategories.map((cat) => (
-              <button
-                key={cat.id}
-                className="academy-card"
-                onClick={() => openCategory(cat.id)}
-              >
-                <span className="academy-card-icon">{cat.icon}</span>
-
-                <div className="academy-card-body">
-                  <h2>{cat.title}</h2>
-                  <p>{cat.description}</p>
-                </div>
-
-                <span className="academy-card-arrow">→</span>
-              </button>
-            ))}
-          </div>
+          <p className="academy-empty-hint">
+            Start typing to search scripts, rebuttals, compliance rules, product notes, and dialer guides.
+          </p>
         )}
       </main>
     </div>
