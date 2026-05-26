@@ -10,42 +10,42 @@ const TOPICS = [
     id: 'all',
     label: 'All Topics',
     icon: '⚡',
-    color: '#f97316',
+    color: '#b9d6ff',
     desc: 'Mixed from everything',
   },
   {
     id: 'script',
     label: 'Script',
     icon: '📋',
-    color: '#ef4444',
+    color: '#d8e8ff',
     desc: 'Opening lines & script control',
   },
   {
     id: 'objections',
     label: 'Objections',
     icon: '🛡️',
-    color: '#3b82f6',
+    color: '#9ed6ff',
     desc: 'Rebuttals & responses',
   },
   {
     id: 'product',
     label: 'Product Knowledge',
     icon: '📦',
-    color: '#22c55e',
+    color: '#c7d2fe',
     desc: 'Coverage & exclusions',
   },
   {
     id: 'callflow',
     label: 'Call Flow',
     icon: '📞',
-    color: '#a855f7',
+    color: '#d8b4fe',
     desc: 'Transfer protocol',
   },
   {
     id: 'dosdonts',
     label: "Do's & Don'ts",
     icon: '⚠️',
-    color: '#f59e0b',
+    color: '#e1e5ef',
     desc: 'Rules & compliance',
   },
 ]
@@ -56,21 +56,21 @@ const LANGUAGE_OPTIONS = [
     icon: 'US',
     title: 'English Questions',
     desc: 'Questions and answers displayed in English',
-    color: '#38bdf8',
+    color: '#9ed6ff',
   },
   {
     id: 'es',
     icon: 'ES',
     title: 'Spanish Questions',
     desc: 'Preguntas y respuestas mostradas en español',
-    color: '#f97316',
+    color: '#d8e8ff',
   },
   {
     id: 'mixed',
     icon: '🔀',
     title: 'Mixed',
     desc: 'A mix of English and Spanish questions',
-    color: '#a855f7',
+    color: '#c7d2fe',
   },
 ]
 
@@ -165,6 +165,57 @@ function getQuestionIds(topicId, lang, count = 10) {
 
 function makeRoomCode() {
   return 'KK' + Math.floor(1000 + Math.random() * 9000)
+}
+
+function VisualBg() {
+  return (
+    <>
+      <div className="gqz-bg" />
+      <div className="gqz-grid-bg" />
+      <div className="gqz-soft-glow" />
+      <div className="gqz-stars" aria-hidden="true">
+        {Array.from({ length: 18 }).map((_, index) => (
+          <span key={index} className={`gqz-star s${index + 1}`} />
+        ))}
+      </div>
+      <div className="gqz-shooting-stars" aria-hidden="true">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <span key={index} className={`gqz-shooting-star ss${index + 1}`} />
+        ))}
+      </div>
+    </>
+  )
+}
+
+function TopNav({ active = 'Pulse GO' }) {
+  const nav = useNavigate()
+
+  return (
+    <nav className="gqz-top-nav">
+      <div className="gqz-nav-pill">
+        <button
+          className={`gqz-nav-link ${active === 'Dashboard' ? 'active' : ''}`}
+          onClick={() => nav('/dashboard')}
+        >
+          Dashboard
+        </button>
+
+        <button
+          className={`gqz-nav-link ${active === 'Pulse GO' ? 'active' : ''}`}
+          onClick={() => nav('/go')}
+        >
+          Pulse GO
+        </button>
+
+        <button
+          className={`gqz-nav-link ${active === 'Academy' ? 'active' : ''}`}
+          onClick={() => nav('/academy')}
+        >
+          Academy
+        </button>
+      </div>
+    </nav>
+  )
 }
 
 export default function GoQuiz() {
@@ -262,32 +313,24 @@ export default function GoQuiz() {
 
   return (
     <div className="gqz-page">
-      <nav className="gqz-nav">
-        <div
-          className="gqz-nav-brand"
-          onClick={() => nav('/go')}
-          style={{ cursor: 'pointer' }}
-        >
-          <span className="gqz-nav-text">Pulse</span>
-          <span className="gqz-nav-badge">GO</span>
-        </div>
+      <VisualBg />
+      <TopNav active="Pulse GO" />
 
-        <button className="gqz-nav-back" onClick={goBack}>
-          ← {language ? 'Language' : mode ? 'Mode' : 'Home'}
-        </button>
-      </nav>
+      <button className="gqz-back-top" onClick={goBack}>
+        ← {language ? 'Language' : mode ? 'Mode' : 'Home'}
+      </button>
 
       {!mode && (
-        <>
-          <div className="gqz-hero">
-            <h1 className="gqz-title">🧠 Training Mode</h1>
+        <main className="gqz-shell">
+          <section className="gqz-hero">
+            <h1 className="gqz-title">Training Mode</h1>
             <p className="gqz-sub">
-              Choose if you want to practice alone or host a live game.
+              Choose how you want to train with Pulse GO.
             </p>
-          </div>
+          </section>
 
           <div className="gqz-mode-grid">
-            <button className="gqz-mode-card host" onClick={() => setMode('host')}>
+            <button className="gqz-mode-card" onClick={() => setMode('host')}>
               <span className="gqz-mode-icon">🎮</span>
               <span className="gqz-mode-title">Host a Game</span>
               <span className="gqz-mode-desc">
@@ -296,26 +339,26 @@ export default function GoQuiz() {
               <span className="gqz-mode-cta">Create Room →</span>
             </button>
 
-            <button className="gqz-mode-card solo" onClick={() => setMode('solo')}>
+            <button className="gqz-mode-card" onClick={() => setMode('solo')}>
               <span className="gqz-mode-icon">👤</span>
               <span className="gqz-mode-title">Practice</span>
               <span className="gqz-mode-desc">
-                Train at your own pace with instant feedback after every question.
+                Train at your own pace with instant feedback.
               </span>
               <span className="gqz-mode-cta">Start →</span>
             </button>
           </div>
-        </>
+        </main>
       )}
 
       {mode && !language && (
-        <>
-          <div className="gqz-hero">
-            <h1 className="gqz-title">🌎 Choose Language Mix</h1>
+        <main className="gqz-shell">
+          <section className="gqz-hero">
+            <h1 className="gqz-title">Choose Language Mix</h1>
             <p className="gqz-sub">
-              Pick if the questions should appear in English, Spanish, or mixed before choosing a topic.
+              Pick English, Spanish, or a mixed game before choosing the topic.
             </p>
-          </div>
+          </section>
 
           <div className="gqz-grid gqz-game-grid">
             {LANGUAGE_OPTIONS.map((item) => (
@@ -331,21 +374,21 @@ export default function GoQuiz() {
               </button>
             ))}
           </div>
-        </>
+        </main>
       )}
 
       {mode && language && (
-        <>
-          <div className="gqz-hero">
+        <main className="gqz-shell">
+          <section className="gqz-hero">
             <h1 className="gqz-title">
-              {mode === 'host' ? '🎮 Host a Topic' : '📚 Choose a Topic'}
+              {mode === 'host' ? 'Host a Topic' : 'Choose a Topic'}
             </h1>
             <p className="gqz-sub">
               {mode === 'host'
-                ? 'All players will be quizzed on this topic.'
+                ? 'All players will answer questions from this topic.'
                 : 'Select what you want to practice.'}
             </p>
-          </div>
+          </section>
 
           {error && <div className="gqz-error">⚠️ {error}</div>}
 
@@ -371,12 +414,12 @@ export default function GoQuiz() {
             ))}
           </div>
 
-          <div style={{ textAlign: 'center', paddingBottom: 40 }}>
-            <button className="gqz-nav-back" onClick={resetToMode}>
+          <div className="gqz-bottom-action">
+            <button className="gqz-secondary-btn" onClick={resetToMode}>
               Change Mode
             </button>
           </div>
-        </>
+        </main>
       )}
     </div>
   )
