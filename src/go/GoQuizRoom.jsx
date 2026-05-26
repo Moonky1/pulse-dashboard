@@ -276,6 +276,7 @@ export default function GoQuizRoom() {
   const [resultCount, setResultCount] = useState(RESULT_SEC)
   const [busy, setBusy] = useState(false)
   const [kickBusy, setKickBusy] = useState('')
+  const [cancelBusy, setCancelBusy] = useState(false)
 
   const actionLockRef = useRef(false)
   const timerRef = useRef(null)
@@ -641,6 +642,12 @@ export default function GoQuizRoom() {
       return
     }
 
+    if (loadedRoom.state === 'cancelled') {
+      setJoinError('This game was closed by the host.')
+      setJoinBusy(false)
+      return
+    }
+
     if (loadedRoom.state !== 'lobby') {
       setJoinError('Game already started.')
       setJoinBusy(false)
@@ -762,6 +769,34 @@ export default function GoQuizRoom() {
     setKickBusy('')
   }
 
+  const cancelGame = async () => {
+    if (!isHost || !room || cancelBusy) return
+
+    const ok = window.confirm('Cancel this game for everyone? Players will be sent back to Pulse GO.')
+    if (!ok) return
+
+    setCancelBusy(true)
+
+    const { data, error } = await supabase
+      .from('pulse_go_rooms')
+      .update({
+        state: 'cancelled',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('code', code)
+      .select('*')
+      .single()
+
+    if (error) {
+      alert(error.message || 'Could not cancel the game.')
+    } else {
+      setRoom(data)
+      snd.kick()
+    }
+
+    setCancelBusy(false)
+  }
+
   const handleAnswer = async (answerIndex) => {
     if (!room || room.state !== 'question') return
     if (!currentPlayer || currentPlayer.is_kicked) return
@@ -855,6 +890,22 @@ export default function GoQuizRoom() {
   const timePct = Math.max(0, Math.min(100, (timeLeft / Q_TIME) * 100))
   const state = room?.state || 'lobby'
   const isCorrect = !isHost && picked === currentQ?.correct
+  const showCancelButton = isHost && room && !['cancelled', 'finished'].includes(state)
+
+  const cancelButton = showCancelButton ? (
+    <button
+      className="grm-cancel-game"
+      onPointerDown={cancelGame}
+      disabled={cancelBusy}
+    >
+      {cancelBusy ? 'Cancelling...' : 'Cancel Game'}
+    </button>
+  ) : null
+
+  const goHomeAfterClosed = () => {
+    localStorage.removeItem(`pulse_go_player_${code}`)
+    nav('/go')
+  }
 
   if (loading) {
     return (
@@ -889,6 +940,22 @@ export default function GoQuizRoom() {
           <p className="grm-err">Room not found. Ask the host to create it again.</p>
           <button className="grm-btn-join" onPointerDown={() => nav('/go')}>
             Back Home
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (state === 'cancelled') {
+    return (
+      <div className="grm grm-cancelled">
+        <div className="grm-closed-card">
+          <div className="grm-closed-icon">🚫</div>
+          <h1>Game Closed</h1>
+          <p>The host closed this Pulse GO game. Start again from the home screen.</p>
+
+          <button onPointerDown={goHomeAfterClosed}>
+            Back to Pulse GO
           </button>
         </div>
       </div>
@@ -946,6 +1013,8 @@ export default function GoQuizRoom() {
   if (state === 'lobby') {
     return (
       <div className="grm grm-lobby">
+        {cancelButton}
+
         <div className="grm-lobby-bar">
           Join at <b>pulse-kk.com/go</b> &nbsp;·&nbsp; Code:{' '}
           <span className="grm-lobby-code">{code}</span>
@@ -1010,6 +1079,8 @@ export default function GoQuizRoom() {
   if (state === 'question') {
     return (
       <div className="grm grm-q">
+        {cancelButton}
+
         <div className="grm-tbar">
           <div className="grm-tfill" style={{ width: `${timePct}%`, background: timeColor }} />
         </div>
@@ -1115,6 +1186,8 @@ export default function GoQuizRoom() {
   if (state === 'showAnswer') {
     return (
       <div className="grm grm-answer">
+        {cancelButton}
+
         {!isHost && (
           <div className={`grm-result-banner ${isCorrect ? 'ok' : 'no'}`}>
             {isCorrect ? '✅ Correct!' : picked === null ? "⏱️ Time's up!" : '❌ Wrong'}

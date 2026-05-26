@@ -470,18 +470,16 @@ export const dosAndDonts = {
 export const dialer = {
   dispositions: [
     { code: 'A', label: 'Answering Machine', description: 'Voicemail or automated system' },
-    { code: 'BLANK', label: 'No Info on File', description: 'No usable customer info' },
-    { code: 'CALLBK', label: 'Call Back', description: 'Customer requested callback' },
+    { code: 'BLANK', label: 'Blank File', description: 'No usable customer information on the file' },
+    { code: 'CALLBK', label: 'Call Back', description: 'Customer requested a callback' },
     { code: 'DAIR', label: 'Dead Air', description: 'Call connected but nobody responded' },
-    { code: 'DC', label: 'Disconnected Number', description: 'Number no longer in service' },
-    { code: 'DNC', label: 'Do Not Call', description: 'Customer asked to be removed' },
-    { code: 'LANG', label: 'Language Barrier', description: 'Could not communicate due to language' },
-    { code: 'NI', label: 'Not Interested', description: 'Customer declined' },
-    { code: 'SPANIS', label: 'Spanish Speaker', description: 'Spanish speaker routing' },
-    { code: 'SPXFER', label: 'Spanish Xfer', description: 'Transferred to Spanish Service Advisor' },
-    { code: 'WRGNUM', label: 'Wrong Number', description: 'Number does not match file' },
-    { code: 'WRGVEH', label: 'Wrong Vehicle Info', description: 'Vehicle info on file is incorrect' },
-    { code: 'XFER', label: 'Call Transferred', description: 'Successful transfer to Service Advisor' },
+    { code: 'DNC', label: 'Do Not Call', description: 'Customer asked to be removed or not called again' },
+    { code: 'NI', label: 'Not Interested', description: 'Customer declined or refused to continue' },
+    { code: 'SPANIS', label: 'Spanish Speaker', description: 'Blind Spanish speaker route / Spanish routing without a direct closer handoff' },
+    { code: 'SPXFER', label: 'Spanish Xfer', description: 'Direct Spanish transfer to a Spanish Service Advisor / closer' },
+    { code: 'WN', label: 'Wrong Number', description: 'Number does not belong to the intended customer/file' },
+    { code: 'WRNGVE', label: 'Wrong Vehicle', description: 'Vehicle information on file is incorrect or does not match' },
+    { code: 'XFER', label: 'Call Transferred', description: 'Successful transfer to a Service Advisor' },
   ],
 
   pauseCodes: [
@@ -1259,7 +1257,7 @@ export const quizQuestions = [
     options: [
       "SPXFER",
       "XFER",
-      "LANG",
+      "CALLBK",
       "SPANIS",
     ],
     correct: 3,
@@ -1274,7 +1272,7 @@ export const quizQuestions = [
       "When the rep directly transfers a Spanish-speaking customer to a Spanish closer",
       "When the customer only speaks Spanish and no transfer happens",
       "Whenever the opener hears Spanish on the line",
-      "When the call is a language barrier with no handoff",
+      "When there is no direct Spanish closer transfer",
     ],
     correct: 0,
     explanation: "SPXFER is only for direct Spanish transfer to a closer/advisor.",
@@ -2956,450 +2954,450 @@ export const dispositionTrainerQuestions = [
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Customer requests a callback later today. Which disposition fits?",
+    "question": "Call goes to voicemail or an answering machine. Which disposition fits best?",
     "options": [
+      "A",
       "CALLBK",
-      "XFER",
-      "NI",
-      "SPANIS"
+      "DAIR",
+      "NI"
     ],
     "correct": 0,
-    "explanation": "Callback requests should be tagged as CALLBK."
+    "explanation": "A is for voicemail or answering machine."
   },
   {
     "id": "di-002",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Customer asks to be removed from the calling list. Which disposition fits?",
+    "question": "The file has no usable customer information to validate the call. Which disposition fits best?",
     "options": [
-      "DNC",
-      "XFER",
+      "WN",
       "NI",
-      "SPANIS"
+      "BLANK",
+      "DAIR"
     ],
-    "correct": 0,
-    "explanation": "Removal requests must be tagged as DNC."
+    "correct": 2,
+    "explanation": "BLANK is for a blank file or no usable customer information."
   },
   {
     "id": "di-003",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Call goes to voicemail or answering machine. Which disposition fits?",
+    "question": "Customer says, “Call me back later today.” Which disposition fits best?",
     "options": [
-      "A",
-      "XFER",
       "NI",
-      "SPANIS"
+      "CALLBK",
+      "XFER",
+      "DNC"
     ],
-    "correct": 0,
-    "explanation": "Voicemail or answering machine is A."
+    "correct": 1,
+    "explanation": "CALLBK is used when the customer requests a callback."
   },
   {
     "id": "di-004",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "The call connects, but nobody responds after several greetings. Which disposition fits?",
+    "question": "The call connects, but there is silence after several greetings. Which disposition fits best?",
     "options": [
-      "DAIR",
-      "XFER",
+      "A",
       "NI",
-      "SPANIS"
+      "CALLBK",
+      "DAIR"
     ],
-    "correct": 0,
-    "explanation": "Connected silence is Dead Air."
+    "correct": 3,
+    "explanation": "DAIR is for dead air: connected call, no response."
   },
   {
     "id": "di-005",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "The number belongs to someone unrelated to the file. Which disposition fits?",
+    "question": "Customer says, “Take me off your list and do not call again.” Which disposition fits best?",
     "options": [
-      "WRGNUM",
-      "XFER",
+      "DNC",
       "NI",
-      "SPANIS"
+      "CALLBK",
+      "BLANK"
     ],
     "correct": 0,
-    "explanation": "Wrong person/number is WRGNUM."
+    "explanation": "DNC is required when the customer asks not to be called again."
   },
   {
     "id": "di-006",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Vehicle details on file do not match what the customer owns. Which disposition fits?",
+    "question": "Customer clearly refuses to continue and says they are not interested. Which disposition fits best?",
     "options": [
-      "WRGVEH",
-      "XFER",
+      "DNC",
+      "CALLBK",
       "NI",
-      "SPANIS"
+      "XFER"
     ],
-    "correct": 0,
-    "explanation": "Incorrect vehicle info is WRGVEH."
+    "correct": 2,
+    "explanation": "NI is for a customer who declines and does not continue."
   },
   {
     "id": "di-007",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Customer declines and gives no callback request. Which disposition fits?",
+    "question": "Customer only speaks Spanish, and it is a blind Spanish route without a direct closer handoff. Which disposition fits best?",
     "options": [
-      "NI",
-      "XFER",
+      "SPXFER",
       "SPANIS",
-      "CALLBK"
+      "XFER",
+      "NI"
     ],
-    "correct": 0,
-    "explanation": "A simple decline without callback is NI."
+    "correct": 1,
+    "explanation": "SPANIS is for blind Spanish speaker routing."
   },
   {
     "id": "di-008",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Customer only speaks Spanish and it is a blind Spanish route. Which disposition fits?",
+    "question": "You directly transfer a Spanish-speaking customer to a Spanish Service Advisor, and the handoff is completed. Which disposition fits best?",
     "options": [
       "SPANIS",
       "XFER",
-      "NI",
-      "CALLBK"
+      "CALLBK",
+      "SPXFER"
     ],
-    "correct": 0,
-    "explanation": "Blind Spanish routing uses SPANIS."
+    "correct": 3,
+    "explanation": "SPXFER is only for a direct Spanish transfer to a Spanish Service Advisor / closer."
   },
   {
     "id": "di-009",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "You directly transfer a Spanish-speaking customer to a Spanish closer. Which disposition fits?",
+    "question": "The person who answers says this is the wrong number and no one by that name is there. Which disposition fits best?",
     "options": [
-      "SPXFER",
-      "XFER",
+      "WN",
+      "WRNGVE",
       "NI",
-      "SPANIS"
+      "BLANK"
     ],
     "correct": 0,
-    "explanation": "Direct Spanish closer transfer uses SPXFER."
+    "explanation": "WN is for wrong number."
   },
   {
     "id": "di-010",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Successful English handoff to Service Advisor. Which disposition fits?",
+    "question": "The customer says the vehicle on file is not their vehicle. Which disposition fits best?",
     "options": [
-      "XFER",
+      "WN",
       "NI",
-      "SPANIS",
-      "CALLBK"
+      "WRNGVE",
+      "BLANK"
     ],
-    "correct": 0,
-    "explanation": "A clean English transfer uses XFER."
+    "correct": 2,
+    "explanation": "WRNGVE is for wrong vehicle information."
   },
   {
     "id": "di-011",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Phone number is disconnected or no longer in service. Which disposition fits?",
+    "question": "The customer gave approval, the SA joined, both parties started talking, and the handoff was clean. Which disposition fits best?",
     "options": [
-      "DC",
+      "CALLBK",
       "XFER",
       "NI",
-      "SPANIS"
+      "SPXFER"
     ],
-    "correct": 0,
-    "explanation": "Disconnected number is DC."
+    "correct": 1,
+    "explanation": "XFER is for a successful call transferred to a Service Advisor."
   },
   {
     "id": "di-012",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "There is no usable customer info on the file. Which disposition fits?",
+    "question": "The customer reaches the Service Advisor but asks the advisor to call them back later. Which disposition fits best?",
     "options": [
-      "BLANK",
       "XFER",
       "NI",
-      "SPANIS"
+      "SPXFER",
+      "CALLBK"
     ],
-    "correct": 0,
-    "explanation": "No usable information is BLANK."
+    "correct": 3,
+    "explanation": "If the customer requests a callback, do not count it as XFER."
   },
   {
     "id": "di-013",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Customer cannot communicate due to language barrier and no transfer occurs. Which disposition fits?",
+    "question": "The customer says, “I do not want this,” but does not ask to be removed from the list. Which disposition fits best?",
     "options": [
-      "LANG",
-      "XFER",
       "NI",
-      "SPANIS"
+      "DNC",
+      "CALLBK",
+      "BLANK"
     ],
     "correct": 0,
-    "explanation": "Use LANG for unresolved language barrier."
+    "explanation": "Use NI for refusal without a do-not-call request."
   },
   {
     "id": "di-014",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Customer asks for another call tomorrow morning. Which disposition fits?",
+    "question": "A Spanish-speaking customer is routed as blind Spanish, but there was no direct Spanish closer transfer. Which disposition fits best?",
     "options": [
-      "CALLBK",
+      "SPXFER",
       "XFER",
-      "NI",
-      "SPANIS"
+      "SPANIS",
+      "WN"
     ],
-    "correct": 0,
-    "explanation": "Specific future call request is CALLBK."
+    "correct": 2,
+    "explanation": "SPANIS is the correct blind Spanish speaker disposition."
   },
   {
     "id": "di-015",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "en",
-    "question": "Customer says they never want calls again. Which disposition fits?",
+    "question": "The customer is directly connected to a Spanish closer, but you accidentally consider using SPANIS. What is the correct disposition?",
     "options": [
-      "DNC",
-      "XFER",
-      "NI",
-      "SPANIS"
+      "SPANIS",
+      "SPXFER",
+      "CALLBK",
+      "NI"
     ],
-    "correct": 0,
-    "explanation": "Do-not-call request is DNC."
+    "correct": 1,
+    "explanation": "A direct Spanish closer handoff is SPXFER, not SPANIS."
   },
   {
     "id": "di-016",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "Cliente pide llamada más tarde. ¿Qué disposition corresponde?",
+    "question": "La llamada entra a buzón de voz o contestadora. ¿Qué disposition corresponde?",
     "options": [
       "CALLBK",
-      "XFER",
+      "DAIR",
       "NI",
-      "SPANIS"
+      "A"
     ],
-    "correct": 0,
-    "explanation": "Una llamada de regreso se marca CALLBK."
+    "correct": 3,
+    "explanation": "A se usa para buzón de voz o contestadora."
   },
   {
     "id": "di-017",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "Cliente pide que no lo llamen más. ¿Qué disposition corresponde?",
+    "question": "El file no tiene información útil del cliente para validar la llamada. ¿Qué disposition corresponde?",
     "options": [
-      "DNC",
-      "XFER",
+      "BLANK",
+      "WN",
       "NI",
-      "SPANIS"
+      "DAIR"
     ],
     "correct": 0,
-    "explanation": "Solicitud de no llamar es DNC."
+    "explanation": "BLANK se usa cuando el file no tiene información útil."
   },
   {
     "id": "di-018",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "La llamada cae a buzón de voz. ¿Qué disposition corresponde?",
+    "question": "El cliente dice: “Llámeme más tarde hoy.” ¿Qué disposition corresponde?",
     "options": [
-      "A",
-      "XFER",
       "NI",
-      "SPANIS"
+      "XFER",
+      "CALLBK",
+      "DNC"
     ],
-    "correct": 0,
-    "explanation": "Buzón o contestadora es A."
+    "correct": 2,
+    "explanation": "CALLBK se usa cuando el cliente pide callback."
   },
   {
     "id": "di-019",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "La llamada conecta, pero nadie responde. ¿Qué disposition corresponde?",
+    "question": "La llamada conecta, saludas varias veces, pero nadie responde. ¿Qué disposition corresponde?",
     "options": [
+      "A",
       "DAIR",
-      "XFER",
       "NI",
-      "SPANIS"
+      "CALLBK"
     ],
-    "correct": 0,
-    "explanation": "Silencio en llamada conectada es DAIR."
+    "correct": 1,
+    "explanation": "DAIR es dead air: llamada conectada sin respuesta."
   },
   {
     "id": "di-020",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "La persona dice que es número equivocado. ¿Qué disposition corresponde?",
+    "question": "El cliente dice: “Quítenme de la lista y no vuelvan a llamar.” ¿Qué disposition corresponde?",
     "options": [
-      "WRGNUM",
-      "XFER",
       "NI",
-      "SPANIS"
+      "CALLBK",
+      "BLANK",
+      "DNC"
     ],
-    "correct": 0,
-    "explanation": "Número equivocado es WRGNUM."
+    "correct": 3,
+    "explanation": "DNC es obligatorio cuando el cliente pide no ser llamado otra vez."
   },
   {
     "id": "di-021",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "La información del vehículo no coincide. ¿Qué disposition corresponde?",
+    "question": "El cliente rechaza la llamada y dice que no está interesado, pero no pide ser removido. ¿Qué disposition corresponde?",
     "options": [
-      "WRGVEH",
-      "XFER",
       "NI",
-      "SPANIS"
+      "DNC",
+      "CALLBK",
+      "XFER"
     ],
     "correct": 0,
-    "explanation": "Vehículo incorrecto es WRGVEH."
+    "explanation": "NI se usa cuando el cliente no está interesado y no continúa."
   },
   {
     "id": "di-022",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "Cliente no está interesado y no pide callback. ¿Qué disposition corresponde?",
+    "question": "El cliente solo habla español y se hace blind Spanish routing sin transferir directamente con un closer. ¿Qué disposition corresponde?",
     "options": [
-      "NI",
+      "SPXFER",
       "XFER",
       "SPANIS",
-      "CALLBK"
+      "NI"
     ],
-    "correct": 0,
-    "explanation": "Rechazo sin callback es NI."
+    "correct": 2,
+    "explanation": "SPANIS se usa para blind Spanish speaker routing."
   },
   {
     "id": "di-023",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "Cliente habla español y se hace blind Spanish route. ¿Qué disposition corresponde?",
+    "question": "Transfieres directamente a un cliente hispanohablante con un Spanish Service Advisor y el handoff se completa. ¿Qué disposition corresponde?",
     "options": [
       "SPANIS",
+      "SPXFER",
       "XFER",
-      "NI",
       "CALLBK"
     ],
-    "correct": 0,
-    "explanation": "Blind Spanish route usa SPANIS."
+    "correct": 1,
+    "explanation": "SPXFER es solo para transferencia directa en español al Service Advisor / closer."
   },
   {
     "id": "di-024",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "Cliente hispanohablante es transferido directamente al closer en español. ¿Qué disposition corresponde?",
+    "question": "La persona que contesta dice que es número equivocado y que ese cliente no vive ahí. ¿Qué disposition corresponde?",
     "options": [
-      "SPXFER",
-      "XFER",
+      "WRNGVE",
       "NI",
-      "SPANIS"
+      "BLANK",
+      "WN"
     ],
-    "correct": 0,
-    "explanation": "Transfer directo en español usa SPXFER."
+    "correct": 3,
+    "explanation": "WN se usa para wrong number."
   },
   {
     "id": "di-025",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "Handoff inglés exitoso al Service Advisor. ¿Qué disposition corresponde?",
+    "question": "El cliente dice que el vehículo del file no es su vehículo. ¿Qué disposition corresponde?",
     "options": [
-      "XFER",
+      "WRNGVE",
+      "WN",
       "NI",
-      "SPANIS",
-      "CALLBK"
+      "BLANK"
     ],
     "correct": 0,
-    "explanation": "Transfer limpio inglés usa XFER."
+    "explanation": "WRNGVE se usa para wrong vehicle information."
   },
   {
     "id": "di-026",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "Número desconectado o fuera de servicio. ¿Qué disposition corresponde?",
+    "question": "El cliente aprobó, el SA entró, ambas partes hablaron y el handoff fue correcto. ¿Qué disposition corresponde?",
     "options": [
-      "DC",
-      "XFER",
+      "CALLBK",
       "NI",
-      "SPANIS"
+      "XFER",
+      "SPXFER"
     ],
-    "correct": 0,
-    "explanation": "Número desconectado es DC."
+    "correct": 2,
+    "explanation": "XFER se usa para una transferencia exitosa al Service Advisor."
   },
   {
     "id": "di-027",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "No hay información útil en el registro. ¿Qué disposition corresponde?",
+    "question": "El cliente llega con el Service Advisor, pero le pide al advisor que lo llame después. ¿Qué disposition corresponde?",
     "options": [
-      "BLANK",
       "XFER",
+      "CALLBK",
       "NI",
-      "SPANIS"
+      "SPXFER"
     ],
-    "correct": 0,
-    "explanation": "Sin información útil es BLANK."
+    "correct": 1,
+    "explanation": "Si el cliente pide callback, no debe contarse como XFER."
   },
   {
     "id": "di-028",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "No se puede comunicar por barrera de idioma y no hay transfer. ¿Qué disposition corresponde?",
+    "question": "El cliente dice: “No quiero esto,” pero no pide ser removido de la lista. ¿Qué disposition corresponde?",
     "options": [
-      "LANG",
-      "XFER",
-      "NI",
-      "SPANIS"
+      "DNC",
+      "CALLBK",
+      "BLANK",
+      "NI"
     ],
-    "correct": 0,
-    "explanation": "Barrera de idioma sin resolución es LANG."
+    "correct": 3,
+    "explanation": "NI aplica para rechazo sin solicitud de do-not-call."
   },
   {
     "id": "di-029",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "Cliente pide que le llamen mañana. ¿Qué disposition corresponde?",
+    "question": "Cliente hispanohablante fue enviado como blind Spanish, sin handoff directo con Spanish closer. ¿Qué disposition corresponde?",
     "options": [
-      "CALLBK",
+      "SPANIS",
+      "SPXFER",
       "XFER",
-      "NI",
-      "SPANIS"
+      "WN"
     ],
     "correct": 0,
-    "explanation": "Callback programado es CALLBK."
+    "explanation": "SPANIS es la disposition correcta para blind Spanish speaker route."
   },
   {
     "id": "di-030",
     "mode": "disposition-trainer",
     "topic": "dosdonts",
     "language": "es",
-    "question": "Cliente dice: “borren mi número”. ¿Qué disposition corresponde?",
+    "question": "El cliente fue conectado directamente con un Spanish closer. ¿Cuál es la disposition correcta?",
     "options": [
-      "DNC",
-      "XFER",
-      "NI",
-      "SPANIS"
+      "SPANIS",
+      "CALLBK",
+      "SPXFER",
+      "NI"
     ],
-    "correct": 0,
-    "explanation": "Pedir remover número es DNC."
+    "correct": 2,
+    "explanation": "La transferencia directa con Spanish closer es SPXFER, no SPANIS."
   }
 ]
 
@@ -3942,7 +3940,7 @@ export const transferOrderChallenges = [
       "Person says the customer is not there",
       "Confirm it is the wrong number politely",
       "Avoid pitching the offer",
-      "Use WRGNUM",
+      "Use WN",
       "Move to the next call"
     ],
     "explanation": "Wrong numbers should not be forced into the pitch."
@@ -4213,10 +4211,10 @@ export const transferOrderChallenges = [
       "Persona dice número equivocado",
       "Confirmar con respeto",
       "No hacer pitch",
-      "Usar WRGNUM",
+      "Usar WN",
       "Continuar con siguiente llamada"
     ],
-    "explanation": "WRGNUM aplica cuando el número no corresponde."
+    "explanation": "WN aplica cuando el número no corresponde."
   },
   {
     "id": "tp-025",
@@ -4229,9 +4227,9 @@ export const transferOrderChallenges = [
       "Reconocer posible información vieja",
       "Preguntar por vehículo actual",
       "Verificar si funciona",
-      "Usar WRGVEH si la info no coincide"
+      "Usar WRNGVE si la info no coincide"
     ],
-    "explanation": "WRGVEH aplica a información incorrecta del vehículo."
+    "explanation": "WRNGVE aplica a información incorrecta del vehículo."
   },
   {
     "id": "tp-026",
