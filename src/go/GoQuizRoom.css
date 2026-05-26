@@ -824,64 +824,10 @@
     grid-template-columns: repeat(4, 1fr);
   }
 }
-/* Pulse GO clean starfield override
-   Paste this at the bottom of GoQuiz.css, GoQuizPlay.css, and GoQuizRoom.css.
-   It keeps the same clean visual language as /go without adding too many dots. */
 
-.gqz-page,
-.gqp-page,
-.grm {
-  position: relative;
-  min-height: 100vh;
-  overflow-x: hidden;
-  background:
-    radial-gradient(circle at 50% 8%, rgba(39, 103, 255, 0.16), transparent 32%),
-    radial-gradient(circle at 50% 45%, rgba(18, 38, 78, 0.10), transparent 42%),
-    linear-gradient(180deg, #040816 0%, #050913 100%) !important;
-  color: #f8fafc;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.gqz-page::before,
-.gqp-page::before,
-.grm::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.5;
-  background:
-    radial-gradient(circle, rgba(255,255,255,0.78) 0 1px, transparent 1.6px) 8% 18% / 220px 220px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.70) 0 1px, transparent 1.6px) 22% 42% / 240px 240px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.70) 0 1px, transparent 1.6px) 35% 22% / 260px 260px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.68) 0 1px, transparent 1.6px) 52% 30% / 240px 240px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.76) 0 1px, transparent 1.6px) 68% 18% / 220px 220px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.68) 0 1px, transparent 1.6px) 82% 38% / 250px 250px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.72) 0 1px, transparent 1.6px) 14% 70% / 240px 240px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.66) 0 1px, transparent 1.6px) 32% 78% / 260px 260px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.72) 0 1px, transparent 1.6px) 56% 66% / 240px 240px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.68) 0 1px, transparent 1.6px) 76% 74% / 250px 250px no-repeat,
-    radial-gradient(circle, rgba(255,255,255,0.68) 0 1px, transparent 1.6px) 90% 56% / 230px 230px no-repeat;
-}
-
-.gqz-page > *,
-.gqp-page > *,
-.grm > * {
-  position: relative;
-  z-index: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gqz-page::before,
-  .gqp-page::before,
-  .grm::before {
-    animation: none !important;
-  }
-}
 /* =========================================================
-   PULSE GO CLEAN BACKGROUND PATCH
-   Fix: reduce white dots and disable old dense stars
+   PULSE GO VISUAL SYNC — EXACT SAME BACKGROUND LANGUAGE AS /go
+   Keep this at the very bottom of GoQuiz.css, GoQuizPlay.css and GoQuizRoom.css.
    ========================================================= */
 
 .gq-bg-stars,
@@ -891,46 +837,87 @@
   display: none !important;
 }
 
-.gq-page {
+.gq-page,
+.gqp-page,
+.grm {
+  --pgl-bg: #040812;
+  --pgl-bg-2: #07101e;
+  --pgl-text: #f7f8fc;
+  --pgl-border: rgba(255, 255, 255, 0.08);
+  --pgl-card: rgba(11, 16, 28, 0.82);
+  --pgl-blue: #9ed6ff;
+  --pgl-ice: #d8e8ff;
+  --pgl-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+
+  position: relative !important;
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
   background:
-    radial-gradient(circle at 50% 18%, rgba(86, 126, 210, 0.13), transparent 34%),
-    radial-gradient(circle at 50% 55%, rgba(18, 38, 78, 0.10), transparent 48%),
-    linear-gradient(180deg, #040816 0%, #050913 100%) !important;
+    radial-gradient(circle at 50% 22%, rgba(158, 214, 255, 0.07), transparent 22%),
+    radial-gradient(circle at 18% 72%, rgba(169, 194, 255, 0.04), transparent 24%),
+    radial-gradient(circle at 82% 72%, rgba(110, 162, 255, 0.04), transparent 26%),
+    linear-gradient(180deg, #040812 0%, #07101e 52%, #040812 100%) !important;
+  color: var(--pgl-text) !important;
+  font-family: 'DM Sans', sans-serif !important;
+  isolation: isolate !important;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
-.gq-page::before {
-  content: "" !important;
+.gq-page::before,
+.gqp-page::before,
+.grm::after {
+  content: '' !important;
   position: fixed !important;
   inset: 0 !important;
+  z-index: 0 !important;
   pointer-events: none !important;
-  opacity: 0.48 !important;
+  opacity: 0.28 !important;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) !important;
+  background-size: 82px 82px !important;
+  background-position: 0 0 !important;
+  mask-image: radial-gradient(ellipse at 50% 40%, black 0%, transparent 82%) !important;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 40%, black 0%, transparent 82%) !important;
+}
+
+.gq-page::after,
+.gqp-page::after,
+.grm::before {
+  content: '' !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  opacity: 0.52 !important;
   background:
-    radial-gradient(circle at 7% 17%, rgba(255,255,255,0.72) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 15% 55%, rgba(255,255,255,0.52) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 24% 28%, rgba(255,255,255,0.62) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 34% 16%, rgba(255,255,255,0.50) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 44% 38%, rgba(255,255,255,0.45) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 54% 20%, rgba(255,255,255,0.55) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 63% 55%, rgba(255,255,255,0.42) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 74% 26%, rgba(255,255,255,0.58) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 83% 50%, rgba(255,255,255,0.44) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 92% 18%, rgba(255,255,255,0.62) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 18% 78%, rgba(255,255,255,0.45) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 38% 84%, rgba(255,255,255,0.36) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 58% 76%, rgba(255,255,255,0.44) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 79% 82%, rgba(255,255,255,0.38) 0 1px, transparent 1.8px) !important;
+    radial-gradient(circle at 8% 16%, rgba(255,255,255,0.76) 0 1.15px, transparent 1.9px),
+    radial-gradient(circle at 17% 56%, rgba(255,255,255,0.40) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 27% 24%, rgba(255,255,255,0.56) 0 1.1px, transparent 1.9px),
+    radial-gradient(circle at 38% 42%, rgba(255,255,255,0.32) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 48% 18%, rgba(255,255,255,0.50) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 58% 70%, rgba(255,255,255,0.36) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 71% 32%, rgba(255,255,255,0.48) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 82% 62%, rgba(255,255,255,0.34) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 92% 22%, rgba(255,255,255,0.48) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 84% 86%, rgba(255,255,255,0.28) 0 1px, transparent 1.8px) !important;
   background-repeat: no-repeat !important;
   background-size: 100% 100% !important;
 }
 
-.gq-page::after {
-  content: "" !important;
-  position: fixed !important;
-  inset: 0 !important;
-  pointer-events: none !important;
-  opacity: 0.18 !important;
-  background:
-    linear-gradient(115deg, transparent 0 62%, rgba(185,214,255,0.13) 62.2%, transparent 64%),
-    linear-gradient(115deg, transparent 0 76%, rgba(185,214,255,0.10) 76.2%, transparent 77.5%) !important;
-  background-size: 100% 100% !important;
+.gq-page > *,
+.gqp-page > *,
+.grm > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .gq-page::after,
+  .gqp-page::after,
+  .grm::before {
+    opacity: 0.42 !important;
+  }
 }
