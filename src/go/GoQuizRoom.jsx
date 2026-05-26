@@ -102,22 +102,38 @@ function buildQuestionIds(topic, lang, seed) {
 
   let pool = quizQuestions.filter((q) => {
     const topicOk = wantedTopic === 'all' || normalizeTopic(q.topic) === wantedTopic
-    const langOk = wantedLang === 'mixed' || String(q.language || 'en') === wantedLang
-    return topicOk && langOk
+
+    if (wantedLang === 'mixed') return topicOk
+
+    return topicOk && String(q.language || 'en') === wantedLang
   })
 
-  if (pool.length < QUESTION_COUNT && wantedLang !== 'mixed') {
-    const sameTopicAnyLang = quizQuestions.filter((q) => {
-      const topicOk = wantedTopic === 'all' || normalizeTopic(q.topic) === wantedTopic
-      return topicOk && !pool.some((item) => item.id === q.id)
-    })
-
-    pool = [...pool, ...sameTopicAnyLang]
+  // Important:
+  // English mode = English only.
+  // Spanish mode = Spanish only.
+  // Never refill Spanish mode with English questions or English mode with Spanish questions.
+  if (pool.length === 0 && wantedLang !== 'mixed' && wantedTopic !== 'all') {
+    pool = quizQuestions.filter((q) => String(q.language || 'en') === wantedLang)
   }
 
-  if (pool.length < QUESTION_COUNT) {
-    const extra = quizQuestions.filter((q) => !pool.some((item) => item.id === q.id))
-    pool = [...pool, ...extra]
+  if (pool.length === 0) {
+    pool = quizQuestions.filter((q) => {
+      if (wantedLang === 'mixed') return true
+      return String(q.language || 'en') === wantedLang
+    })
+  }
+
+  if (pool.length > 0 && pool.length < QUESTION_COUNT) {
+    const expanded = []
+    let round = 0
+
+    while (expanded.length < QUESTION_COUNT) {
+      expanded.push(...deterministicShuffle(pool, `${seed}:repeat:${round}`))
+      round += 1
+      if (round > 20) break
+    }
+
+    pool = expanded
   }
 
   return deterministicShuffle(pool, seed)
