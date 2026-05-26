@@ -1,177 +1,155 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { quizQuestions } from './goContent'
 import './GoQuizPlay.css'
 
 const QUESTION_COUNT = 10
-const TIME_PER_Q = 30
-const TIMER_INTERVAL_MS = 120
+const TIME_PER_QUESTION = 30
 
-const OPTION_STYLES = [
-  { color: '#ef4444', shape: '▲' },
-  { color: '#3b82f6', shape: '◆' },
-  { color: '#f59e0b', shape: '●' },
-  { color: '#22c55e', shape: '■' },
+const OPTION_META = [
+  { letter: 'A', shape: '▲', color: '#ef4444' },
+  { letter: 'B', shape: '◆', color: '#3b82f6' },
+  { letter: 'C', shape: '●', color: '#f59e0b' },
+  { letter: 'D', shape: '■', color: '#22c55e' },
 ]
 
-const LETTERS = ['A', 'B', 'C', 'D']
+function shuffle(array) {
+  const copy = [...array]
 
-function shuffle(arr) {
-  const a = [...arr]
-
-  for (let i = a.length - 1; i > 0; i -= 1) {
+  for (let i = copy.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
 
-  return a
+  return copy
 }
 
-function normalizeTopic(raw) {
-  const value = String(raw || 'all').toLowerCase()
+function normalizeTopic(value) {
+  const clean = String(value || 'all').toLowerCase()
 
-  if (value === 'all') return 'all'
-  if (value === 'script') return 'script'
-  if (value === 'objections') return 'objections'
-  if (value === 'product') return 'product'
-  if (value === 'product-knowledge') return 'product'
-  if (value === 'callflow') return 'callflow'
-  if (value === 'call-flow') return 'callflow'
-  if (value === 'dosdonts') return 'dosdonts'
-  if (value === 'dos-donts') return 'dosdonts'
-  if (value === 'dosdонts') return 'dosdonts'
+  if (clean === 'all') return 'all'
+  if (clean === 'script') return 'script'
+  if (clean === 'objections') return 'objections'
+  if (clean === 'product') return 'product'
+  if (clean === 'product-knowledge') return 'product'
+  if (clean === 'callflow') return 'callflow'
+  if (clean === 'call-flow') return 'callflow'
+  if (clean === 'dosdonts') return 'dosdonts'
+  if (clean === 'dos-donts') return 'dosdonts'
 
   return 'all'
 }
 
-function normalizeLanguage(raw) {
-  const value = String(raw || 'mixed').toLowerCase()
+function normalizeLang(value) {
+  const clean = String(value || 'mixed').toLowerCase()
 
-  if (value === 'english') return 'en'
-  if (value === 'spanish') return 'es'
-  if (value === 'en') return 'en'
-  if (value === 'es') return 'es'
-
+  if (clean === 'en' || clean === 'english') return 'en'
+  if (clean === 'es' || clean === 'spanish') return 'es'
   return 'mixed'
 }
 
-function buildPool(topicId, languageMode) {
-  const normalizedTopic = normalizeTopic(topicId)
-  const normalizedLanguage = normalizeLanguage(languageMode)
+function buildQuestionSet(topic, lang) {
+  const wantedTopic = normalizeTopic(topic)
+  const wantedLang = normalizeLang(lang)
 
-  const topicPool =
-    normalizedTopic === 'all'
-      ? quizQuestions
-      : quizQuestions.filter((q) => normalizeTopic(q.topic) === normalizedTopic)
+  let pool = quizQuestions.filter((q) => {
+    const topicOk = wantedTopic === 'all' || normalizeTopic(q.topic) === wantedTopic
+    const langOk = wantedLang === 'mixed' || String(q.language || 'en') === wantedLang
+    return topicOk && langOk
+  })
 
-  if (normalizedLanguage === 'mixed') return topicPool
+  if (pool.length < QUESTION_COUNT && wantedLang !== 'mixed') {
+    const sameTopicAnyLang = quizQuestions.filter((q) => {
+      const topicOk = wantedTopic === 'all' || normalizeTopic(q.topic) === wantedTopic
+      return topicOk && !pool.some((item) => item.id === q.id)
+    })
 
-  const exactLanguage = topicPool.filter((q) => q.language === normalizedLanguage)
-
-  if (exactLanguage.length >= QUESTION_COUNT) return exactLanguage
-
-  const sameTopicFill = topicPool.filter(
-    (q) => !exactLanguage.some((picked) => picked.id === q.id)
-  )
-
-  return [...exactLanguage, ...sameTopicFill]
-}
-
-function buildQuestionSet(topicId, languageMode) {
-  const pool = buildPool(topicId, languageMode)
-  let finalPool = [...pool]
-
-  if (finalPool.length < QUESTION_COUNT) {
-    const remaining = quizQuestions.filter(
-      (q) => !finalPool.some((picked) => picked.id === q.id)
-    )
-
-    finalPool = [...finalPool, ...shuffle(remaining)]
+    pool = [...pool, ...sameTopicAnyLang]
   }
 
-  return shuffle(finalPool)
+  if (pool.length < QUESTION_COUNT) {
+    const extra = quizQuestions.filter((q) => !pool.some((item) => item.id === q.id))
+    pool = [...pool, ...extra]
+  }
+
+  return shuffle(pool)
     .slice(0, QUESTION_COUNT)
-    .map((question) => {
-      const mappedOptions = question.options.map((text, originalIndex) => ({
+    .map((q) => {
+      const mapped = q.options.map((text, originalIndex) => ({
         text,
         originalIndex,
       }))
 
-      const shuffledOptions = shuffle(mappedOptions)
-      const correctIndex = shuffledOptions.findIndex(
-        (opt) => opt.originalIndex === question.correct
-      )
+      const shuffledOptions = shuffle(mapped)
+      const correctIndex = shuffledOptions.findIndex((item) => item.originalIndex === q.correct)
 
       return {
-        ...question,
-        options: shuffledOptions.map((opt) => opt.text),
+        ...q,
+        options: shuffledOptions.map((item) => item.text),
         correctIndex,
       }
     })
 }
 
-function useSound() {
-  const ctx = useRef(null)
+function useQuizSound() {
+  const ctxRef = useRef(null)
 
-  const getCtx = () => {
-    if (!ctx.current) {
-      ctx.current = new (window.AudioContext || window.webkitAudioContext)()
-    }
-
-    return ctx.current
-  }
-
-  const beep = (freq, dur, type = 'sine', vol = 0.22, delay = 0) => {
+  const playTone = (freq, duration, type = 'sine', volume = 0.12, delay = 0) => {
     try {
-      const ac = getCtx()
+      const AudioContext = window.AudioContext || window.webkitAudioContext
+      if (!AudioContext) return
 
-      if (ac.state === 'suspended') ac.resume()
+      if (!ctxRef.current) ctxRef.current = new AudioContext()
 
-      const o = ac.createOscillator()
-      const g = ac.createGain()
-      const startAt = ac.currentTime + delay
+      const ctx = ctxRef.current
+      if (ctx.state === 'suspended') ctx.resume()
 
-      o.connect(g)
-      g.connect(ac.destination)
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      const start = ctx.currentTime + delay
 
-      o.frequency.value = freq
-      o.type = type
+      osc.type = type
+      osc.frequency.setValueAtTime(freq, start)
 
-      g.gain.setValueAtTime(0.0001, startAt)
-      g.gain.exponentialRampToValueAtTime(vol, startAt + 0.01)
-      g.gain.exponentialRampToValueAtTime(0.0001, startAt + dur)
+      gain.gain.setValueAtTime(0.0001, start)
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
 
-      o.start(startAt)
-      o.stop(startAt + dur + 0.02)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc.start(start)
+      osc.stop(start + duration + 0.02)
     } catch {
-      // ignore blocked audio
+      // Browser may block sound until interaction.
     }
   }
 
   return {
     correct: () => {
-      beep(600, 0.1)
-      beep(900, 0.16, 'sine', 0.22, 0.1)
+      playTone(620, 0.1, 'sine', 0.12)
+      playTone(920, 0.16, 'sine', 0.14, 0.1)
     },
-    wrong: () => beep(180, 0.35, 'sawtooth', 0.14),
-    tick: () => beep(440, 0.04, 'square', 0.04),
-    timeout: () => beep(220, 0.45, 'triangle', 0.14),
-    start: () => {
-      beep(400, 0.08)
-      beep(560, 0.08, 'sine', 0.18, 0.11)
-      beep(740, 0.13, 'sine', 0.2, 0.23)
+    wrong: () => {
+      playTone(190, 0.26, 'sawtooth', 0.08)
+    },
+    tick: () => {
+      playTone(440, 0.035, 'square', 0.025)
+    },
+    timeout: () => {
+      playTone(220, 0.28, 'triangle', 0.08)
     },
     finish: () => {
-      beep(420, 0.11)
-      beep(560, 0.11, 'sine', 0.16, 0.13)
-      beep(700, 0.18, 'sine', 0.18, 0.26)
+      playTone(420, 0.1, 'sine', 0.1)
+      playTone(560, 0.1, 'sine', 0.11, 0.12)
+      playTone(720, 0.18, 'sine', 0.12, 0.25)
     },
     epic: () => {
-      beep(392, 0.12, 'sine', 0.18, 0)
-      beep(523, 0.12, 'sine', 0.2, 0.13)
-      beep(659, 0.14, 'sine', 0.22, 0.27)
-      beep(784, 0.28, 'sine', 0.24, 0.43)
-      beep(1046, 0.35, 'triangle', 0.12, 0.55)
+      playTone(392, 0.11, 'sine', 0.12)
+      playTone(523, 0.12, 'sine', 0.13, 0.13)
+      playTone(659, 0.14, 'sine', 0.14, 0.27)
+      playTone(784, 0.24, 'sine', 0.15, 0.43)
+      playTone(1046, 0.34, 'triangle', 0.08, 0.58)
     },
   }
 }
@@ -180,205 +158,179 @@ export default function GoQuizPlay() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
 
-  const topicId = params.get('topic') || 'all'
-  const languageMode = params.get('lang') || 'mixed'
-  const sound = useSound()
+  const topic = params.get('topic') || 'all'
+  const lang = params.get('lang') || 'mixed'
 
-  const [questions] = useState(() => buildQuestionSet(topicId, languageMode))
-  const [idx, setIdx] = useState(0)
-  const [selected, setSelected] = useState(null)
+  const sounds = useQuizSound()
+
+  const questions = useMemo(() => buildQuestionSet(topic, lang), [topic, lang])
+
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [selectedIndex, setSelectedIndex] = useState(null)
   const [answered, setAnswered] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(TIME_PER_Q)
+  const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION)
   const [results, setResults] = useState([])
-  const [done, setDone] = useState(false)
+  const [finished, setFinished] = useState(false)
   const [reviewMode, setReviewMode] = useState(false)
-  const [showExplanation, setShowExplanation] = useState(false)
 
   const timerRef = useRef(null)
-  const deadlineRef = useRef(0)
-  const lastTickSecond = useRef(null)
-  const started = useRef(false)
-  const finishSoundPlayed = useRef(false)
+  const deadlineRef = useRef(null)
+  const lastTickRef = useRef(null)
+  const finishSoundRef = useRef(false)
 
-  const q = questions[idx]
-  const totalQuestions = questions.length || QUESTION_COUNT
-  const score = results.filter((r) => r.correct).length
-  const pct = Math.round((score / totalQuestions) * 100)
+  const currentQuestion = questions[currentIndex]
+  const total = questions.length
+  const correctCount = results.filter((item) => item.correct).length
+  const missedCount = total - correctCount
+  const percent = total > 0 ? Math.round((correctCount / total) * 100) : 0
 
-  useEffect(() => {
-    if (!started.current) {
-      sound.start()
-      started.current = true
-    }
-  }, [sound])
+  const saveResult = ({ selected, timedOut = false }) => {
+    if (!currentQuestion) return
 
-  useEffect(() => {
-    if (!done || finishSoundPlayed.current) return
+    const correct = selected === currentQuestion.correctIndex
 
-    finishSoundPlayed.current = true
+    setResults((prev) => [
+      ...prev,
+      {
+        id: currentQuestion.id,
+        topic: currentQuestion.topic,
+        language: currentQuestion.language,
+        question: currentQuestion.question,
+        options: currentQuestion.options,
+        selectedIndex: selected,
+        correctIndex: currentQuestion.correctIndex,
+        explanation: currentQuestion.explanation,
+        correct,
+        timedOut,
+      },
+    ])
+  }
 
-    if (pct >= 80) sound.epic()
-    else sound.finish()
-  }, [done, pct, sound])
+  const handleTimeout = () => {
+    if (answered || finished) return
 
-  const recordResult = useCallback((payload) => {
-    setResults((prev) => [...prev, payload])
-  }, [])
-
-  const buildReviewPayload = useCallback(
-    ({ selectedIndex = null, correct = false, timedOut = false }) => ({
-      id: q?.id,
-      topic: q?.topic || 'general',
-      language: q?.language || 'en',
-      question: q?.question || '',
-      options: q?.options || [],
-      selectedIndex,
-      correctIndex: q?.correctIndex ?? q?.correct ?? 0,
-      explanation: q?.explanation || '',
-      correct,
-      timedOut,
-    }),
-    [q]
-  )
-
-  const doTimeout = useCallback(() => {
-    if (answered) return
-
-    sound.timeout()
+    sounds.timeout()
+    setSelectedIndex(null)
     setAnswered(true)
-    setShowExplanation(true)
-
-    recordResult(
-      buildReviewPayload({
-        selectedIndex: null,
-        correct: false,
-        timedOut: true,
-      })
-    )
-  }, [answered, buildReviewPayload, recordResult, sound])
+    saveResult({ selected: null, timedOut: true })
+  }
 
   useEffect(() => {
+    if (finished || answered || !currentQuestion) return
+
     clearInterval(timerRef.current)
 
-    if (done || answered) return
-
-    setTimeLeft(TIME_PER_Q)
-    lastTickSecond.current = null
-    deadlineRef.current = Date.now() + TIME_PER_Q * 1000
+    setTimeLeft(TIME_PER_QUESTION)
+    lastTickRef.current = null
+    deadlineRef.current = Date.now() + TIME_PER_QUESTION * 1000
 
     timerRef.current = setInterval(() => {
       const remainingMs = deadlineRef.current - Date.now()
-      const remaining = Math.max(0, remainingMs / 1000)
-      const display = Math.ceil(remaining)
+      const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000))
 
-      setTimeLeft(display)
+      setTimeLeft(remainingSeconds)
 
       if (
-        display <= 5 &&
-        display > 0 &&
-        display !== lastTickSecond.current
+        remainingSeconds <= 5 &&
+        remainingSeconds > 0 &&
+        remainingSeconds !== lastTickRef.current
       ) {
-        lastTickSecond.current = display
-        sound.tick()
+        lastTickRef.current = remainingSeconds
+        sounds.tick()
       }
 
-      if (remaining <= 0) {
+      if (remainingMs <= 0) {
         clearInterval(timerRef.current)
-        doTimeout()
+        handleTimeout()
       }
-    }, TIMER_INTERVAL_MS)
+    }, 120)
 
     return () => clearInterval(timerRef.current)
-  }, [idx, done, answered, doTimeout, sound])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, answered, finished, currentQuestion])
 
-  const handleSelect = (i) => {
-    if (answered || !q) return
+  useEffect(() => {
+    if (!finished || finishSoundRef.current) return
+
+    finishSoundRef.current = true
+
+    if (percent >= 80) sounds.epic()
+    else sounds.finish()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished, percent])
+
+  const handleAnswer = (index) => {
+    if (answered || !currentQuestion) return
 
     clearInterval(timerRef.current)
 
-    setSelected(i)
+    const correct = index === currentQuestion.correctIndex
+
+    setSelectedIndex(index)
     setAnswered(true)
-    setShowExplanation(true)
+    saveResult({ selected: index })
 
-    const correct = i === q.correctIndex
-
-    if (correct) sound.correct()
-    else sound.wrong()
-
-    recordResult(
-      buildReviewPayload({
-        selectedIndex: i,
-        correct,
-        timedOut: false,
-      })
-    )
+    if (correct) sounds.correct()
+    else sounds.wrong()
   }
 
   const handleNext = () => {
-    if (idx + 1 >= totalQuestions) {
-      setDone(true)
+    if (currentIndex + 1 >= total) {
+      setFinished(true)
       return
     }
 
-    setIdx((prev) => prev + 1)
-    setSelected(null)
+    setCurrentIndex((prev) => prev + 1)
+    setSelectedIndex(null)
     setAnswered(false)
-    setShowExplanation(false)
   }
 
   const tryAgain = () => {
-    window.location.href = `/go/quiz/play?topic=${topicId}&lang=${languageMode}`
+    window.location.href = `/go/quiz/play?topic=${topic}&lang=${lang}`
   }
 
   const changeTopic = () => {
     navigate('/go/quiz?mode=solo')
   }
 
-  const timerPct = Math.max(0, Math.min(100, (timeLeft / TIME_PER_Q) * 100))
-  const timerColor =
-    timeLeft <= 5 ? '#ef4444' : timeLeft <= 10 ? '#f59e0b' : '#b9d6ff'
-
   const grade =
-    pct >= 80
-      ? { label: '🏆 Excellent!', color: '#b9d6ff' }
-      : pct >= 60
-      ? { label: '👍 Good Job', color: '#f8f9fd' }
-      : { label: '📚 Keep Studying', color: '#ef4444' }
+    percent >= 80
+      ? { label: 'Excellent!', emoji: '🏆', color: '#b9d6ff' }
+      : percent >= 60
+      ? { label: 'Good Job', emoji: '👍', color: '#f8f9fd' }
+      : { label: 'Keep Studying', emoji: '📚', color: '#ef4444' }
 
-  if (done && reviewMode) {
+  const timerPercent = Math.max(0, Math.min(100, (timeLeft / TIME_PER_QUESTION) * 100))
+  const timerColor = timeLeft <= 5 ? '#ef4444' : timeLeft <= 10 ? '#f59e0b' : '#b9d6ff'
+
+  if (finished && reviewMode) {
     return (
       <div className="gqp-page">
         <nav className="gqp-nav">
-          <div
-            className="gqp-nav-brand"
-            onClick={() => navigate('/go')}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className="gqp-nav-text">Pulse</span>
-            <span className="gqp-nav-badge">GO</span>
+          <button className="gqp-brand" onClick={() => navigate('/go')}>
+            <span>Pulse</span>
+            <b>GO</b>
+          </button>
+
+          <div className="gqp-nav-center">
+            <span>📚 Review</span>
+            <span>{correctCount}/{total}</span>
           </div>
 
-          <div className="gqp-nav-meta">
-            <span className="gqp-nav-mode">📚 Review</span>
-            <span className="gqp-nav-counter">
-              {score}/{totalQuestions}
-            </span>
-          </div>
-
-          <button className="gqp-nav-exit" onClick={() => setReviewMode(false)}>
+          <button className="gqp-exit-btn" onClick={() => setReviewMode(false)}>
             ← Results
           </button>
         </nav>
 
-        <main className="gqp-review-page">
-          <div className="gqp-review-head">
+        <main className="gqp-review-wrap">
+          <header className="gqp-review-header">
             <h1>Review Answers</h1>
-            <p>Check what you chose, what was correct, and what to study next.</p>
-          </div>
+            <p>Check what you chose and what the correct answer was.</p>
+          </header>
 
-          <div className="gqp-review-list">
-            {results.map((item, qIndex) => (
-              <article key={`${item.id}-${qIndex}`} className="gqp-review-card">
+          <section className="gqp-review-list">
+            {results.map((item, index) => (
+              <article key={`${item.id}-${index}`} className="gqp-review-card">
                 <div className="gqp-review-top">
                   <span className="gqp-topic-badge">{item.topic}</span>
                   <span className={`gqp-review-status ${item.correct ? 'ok' : 'no'}`}>
@@ -386,24 +338,22 @@ export default function GoQuizPlay() {
                   </span>
                 </div>
 
-                <h2>
-                  {qIndex + 1}. {item.question}
-                </h2>
+                <h2>{index + 1}. {item.question}</h2>
 
                 <div className="gqp-review-options">
-                  {item.options.map((option, optionIndex) => {
-                    const isPicked = item.selectedIndex === optionIndex
-                    const isCorrect = item.correctIndex === optionIndex
+                  {item.options.map((option, optIndex) => {
+                    const isCorrect = optIndex === item.correctIndex
+                    const isPicked = optIndex === item.selectedIndex
 
                     return (
                       <div
-                        key={`${item.id}-${optionIndex}`}
+                        key={`${item.id}-${optIndex}`}
                         className={`gqp-review-option ${
                           isCorrect ? 'correct' : isPicked ? 'picked' : ''
                         }`}
                       >
-                        <span className="gqp-review-letter">{LETTERS[optionIndex]}</span>
-                        <span>{option}</span>
+                        <span>{OPTION_META[optIndex]?.letter || optIndex + 1}</span>
+                        <p>{option}</p>
                         {isCorrect && <b>Correct</b>}
                         {isPicked && !isCorrect && <b>Your answer</b>}
                       </div>
@@ -412,7 +362,7 @@ export default function GoQuizPlay() {
                 </div>
 
                 {item.selectedIndex === null && (
-                  <div className="gqp-review-empty">You did not select an answer.</div>
+                  <div className="gqp-no-answer">You did not select an answer.</div>
                 )}
 
                 {item.explanation && (
@@ -423,18 +373,12 @@ export default function GoQuizPlay() {
                 )}
               </article>
             ))}
-          </div>
+          </section>
 
           <div className="gqp-results-actions">
-            <button className="gqp-btn-primary" onClick={tryAgain}>
-              🔄 Try Again
-            </button>
-
-            <button className="gqp-btn-outline" onClick={changeTopic}>
-              Change Topic
-            </button>
-
-            <button className="gqp-btn-outline" onClick={() => setReviewMode(false)}>
+            <button className="gqp-primary-btn" onClick={tryAgain}>🔄 Try Again</button>
+            <button className="gqp-secondary-btn" onClick={changeTopic}>Change Topic</button>
+            <button className="gqp-secondary-btn" onClick={() => setReviewMode(false)}>
               Back to Results
             </button>
           </div>
@@ -443,170 +387,156 @@ export default function GoQuizPlay() {
     )
   }
 
-  if (done) {
+  if (finished) {
     return (
       <div className="gqp-page">
         <nav className="gqp-nav">
-          <div
-            className="gqp-nav-brand"
-            onClick={() => navigate('/go')}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className="gqp-nav-text">Pulse</span>
-            <span className="gqp-nav-badge">GO</span>
+          <button className="gqp-brand" onClick={() => navigate('/go')}>
+            <span>Pulse</span>
+            <b>GO</b>
+          </button>
+
+          <div className="gqp-nav-center">
+            <span>🧠 Classic Quiz</span>
           </div>
 
-          <div className="gqp-nav-meta">
-            <span className="gqp-nav-mode">🧠 Classic Quiz</span>
-          </div>
-
-          <button className="gqp-nav-exit" onClick={() => navigate('/go')}>
+          <button className="gqp-exit-btn" onClick={() => navigate('/go')}>
             Home
           </button>
         </nav>
 
-        <div className="gqp-results">
-          <div className="gqp-results-mode">🧠 Classic Quiz</div>
+        <main className="gqp-results-card">
+          <span className="gqp-results-mode">🧠 Classic Quiz</span>
 
-          <div className="gqp-results-score" style={{ color: grade.color }}>
-            {pct}%
-          </div>
+          <h1 style={{ color: grade.color }}>{percent}%</h1>
+          <h2 style={{ color: grade.color }}>{grade.emoji} {grade.label}</h2>
 
-          <div className="gqp-results-grade" style={{ color: grade.color }}>
-            {grade.label}
-          </div>
-
-          <div className="gqp-results-row">
-            <div className="gqp-results-stat">
-              <span className="gqp-results-num" style={{ color: '#22c55e' }}>
-                {score}
-              </span>
-              <span className="gqp-results-lbl">Correct</span>
+          <div className="gqp-results-stats">
+            <div>
+              <strong className="ok">{correctCount}</strong>
+              <span>Correct</span>
             </div>
 
-            <div className="gqp-results-stat">
-              <span className="gqp-results-num" style={{ color: '#ef4444' }}>
-                {totalQuestions - score}
-              </span>
-              <span className="gqp-results-lbl">Missed</span>
+            <div>
+              <strong className="no">{missedCount}</strong>
+              <span>Missed</span>
             </div>
 
-            <div className="gqp-results-stat">
-              <span className="gqp-results-num" style={{ color: '#9aa7bb' }}>
-                {totalQuestions}
-              </span>
-              <span className="gqp-results-lbl">Total</span>
+            <div>
+              <strong>{total}</strong>
+              <span>Total</span>
             </div>
           </div>
 
           <div className="gqp-results-actions">
-            <button className="gqp-btn-primary" onClick={tryAgain}>
-              🔄 Try Again
-            </button>
-
-            <button className="gqp-btn-outline" onClick={changeTopic}>
-              Change Topic
-            </button>
-
-            <button className="gqp-btn-outline" onClick={() => setReviewMode(true)}>
+            <button className="gqp-primary-btn" onClick={tryAgain}>🔄 Try Again</button>
+            <button className="gqp-secondary-btn" onClick={changeTopic}>Change Topic</button>
+            <button className="gqp-secondary-btn" onClick={() => setReviewMode(true)}>
               📚 Review
             </button>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
 
-  const answerWasCorrect = selected === q?.correctIndex
+  if (!currentQuestion) {
+    return (
+      <div className="gqp-page">
+        <main className="gqp-results-card">
+          <h2>No questions found</h2>
+          <button className="gqp-primary-btn" onClick={() => navigate('/go/quiz?mode=solo')}>
+            Back
+          </button>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="gqp-page">
       <nav className="gqp-nav">
-        <div
-          className="gqp-nav-brand"
-          onClick={() => navigate('/go')}
-          style={{ cursor: 'pointer' }}
-        >
-          <span className="gqp-nav-text">Pulse</span>
-          <span className="gqp-nav-badge">GO</span>
+        <button className="gqp-brand" onClick={() => navigate('/go')}>
+          <span>Pulse</span>
+          <b>GO</b>
+        </button>
+
+        <div className="gqp-nav-center">
+          <span>🧠 Classic Quiz</span>
+          <span>{currentIndex + 1} / {total}</span>
+          <span style={{ color: timerColor }}>{timeLeft}s</span>
         </div>
 
-        <div className="gqp-nav-meta">
-          <span className="gqp-nav-mode">🧠 Classic Quiz</span>
-          <span className="gqp-nav-counter">
-            {idx + 1} / {totalQuestions}
-          </span>
-          <span className="gqp-nav-timer" style={{ color: timerColor }}>
-            {timeLeft}s
-          </span>
-        </div>
-
-        <button className="gqp-nav-exit" onClick={() => navigate('/go/quiz?mode=solo')}>
+        <button className="gqp-exit-btn" onClick={() => navigate('/go/quiz?mode=solo')}>
           ✕ Exit
         </button>
       </nav>
 
-      <div className="gqp-timer-bar">
-        <div
-          className="gqp-timer-fill"
-          style={{ width: `${timerPct}%`, background: timerColor }}
-        />
+      <div className="gqp-timer-line">
+        <div style={{ width: `${timerPercent}%`, background: timerColor }} />
       </div>
 
-      <div className="gqp-dots">
-        {questions.map((_, i) => (
-          <div
-            key={i}
-            className={`gqp-dot ${i < idx ? 'done' : i === idx ? 'active' : ''}`}
+      <div className="gqp-progress-dots">
+        {questions.map((_, index) => (
+          <span
+            key={index}
+            className={`${index < currentIndex ? 'done' : ''} ${
+              index === currentIndex ? 'active' : ''
+            }`}
           />
         ))}
       </div>
 
-      <div className="gqp-card">
-        <span className="gqp-topic-badge">{q?.topic || 'Quiz'}</span>
+      <main className="gqp-card">
+        <span className="gqp-topic-badge">{currentQuestion.topic}</span>
 
-        <h1 className="gqp-question">{q?.question}</h1>
+        <h1>{currentQuestion.question}</h1>
 
         <div className="gqp-options">
-          {q?.options.map((opt, i) => {
-            const st = OPTION_STYLES[i] || OPTION_STYLES[0]
+          {currentQuestion.options.map((option, index) => {
+            const meta = OPTION_META[index] || OPTION_META[0]
+            const isCorrect = index === currentQuestion.correctIndex
+            const isSelected = index === selectedIndex
+
             let state = ''
 
             if (answered) {
-              if (i === q.correctIndex) state = 'correct'
-              else if (i === selected) state = 'wrong'
+              if (isCorrect) state = 'correct'
+              else if (isSelected) state = 'wrong'
               else state = 'dim'
             }
 
             return (
               <button
-                key={i}
+                key={index}
                 className={`gqp-option ${state}`}
-                style={{ '--opt-color': st.color }}
-                onClick={() => handleSelect(i)}
+                style={{ '--option-color': meta.color }}
+                onClick={() => handleAnswer(index)}
                 disabled={answered}
               >
-                <span className="gqp-option-shape">{st.shape}</span>
-                <span className="gqp-option-letter">{LETTERS[i]}</span>
-                <span className="gqp-option-text">{opt}</span>
+                <span className="gqp-shape">{meta.shape}</span>
+                <span className="gqp-letter">{meta.letter}</span>
+                <span>{option}</span>
               </button>
             )
           })}
         </div>
 
-        {showExplanation && (
-          <div className={`gqp-explanation ${answerWasCorrect ? 'ok' : 'no'}`}>
-            <strong>{answerWasCorrect ? '✅ Correct' : '❌ Review this'}</strong>
-            <p>{q?.explanation}</p>
+        {answered && (
+          <div className={`gqp-explanation ${selectedIndex === currentQuestion.correctIndex ? 'ok' : 'no'}`}>
+            <strong>
+              {selectedIndex === currentQuestion.correctIndex ? '✅ Correct' : '❌ Review this'}
+            </strong>
+            <p>{currentQuestion.explanation}</p>
           </div>
         )}
 
         {answered && (
-          <button className="gqp-next" onClick={handleNext}>
-            {idx + 1 >= totalQuestions ? 'See Results →' : 'Next →'}
+          <button className="gqp-next-btn" onClick={handleNext}>
+            {currentIndex + 1 >= total ? 'See Results →' : 'Next →'}
           </button>
         )}
-      </div>
+      </main>
     </div>
   )
 }
