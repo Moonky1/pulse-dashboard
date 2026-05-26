@@ -1398,7 +1398,7 @@ export const learnCategories = [
     title: "Do's and Don'ts",
     description: 'Compliance rules, delivery standards, and dialer basics',
     color: '#431407',
-    type: 'dosdonts',
+    type: 'dialer',
     ref: null,
   },
   {
