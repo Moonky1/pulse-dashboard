@@ -1,64 +1,67 @@
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { supabase } from '../utils/supabase'
 import { quizQuestions } from './goContent'
 import './GoQuizRoom.css'
 
-const API = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
-const POLL_MS = 450
-const TIMER_MS = 100
+const QUESTION_COUNT = 10
+const POLL_MS = 1200
+const TIMER_MS = 120
 const Q_TIME = 30
 const RESULT_SEC = 5
-const AVATARS = ['🦊','🐺','🦁','🐯','🐻','🦅','🐬','🦋','🐲','🦄','🐸','🐧','🦩','🐙','🐼','🦒','🐨','🐔','🦉','🦓']
-const OPTS = [{c:'#ef4444',s:'▲'},{c:'#3b82f6',s:'◆'},{c:'#f59e0b',s:'●'},{c:'#22c55e',s:'■'}]
-const LTRS = ['A','B','C','D']
 
-async function api(params) {
-  try {
-    const r = await fetch(API + '?' + new URLSearchParams(params))
-    return await r.json()
-  } catch {
-    return { success: false }
-  }
+const AVATARS = [
+  '🦊', '🐺', '🦁', '🐯', '🐻',
+  '🦅', '🐬', '🦋', '🐲', '🦄',
+  '🐸', '🐧', '🦩', '🐙', '🐼',
+  '🦒', '🐨', '🐔', '🦉', '🦓',
+]
+
+const OPTS = [
+  { c: '#ef4444', s: '▲' },
+  { c: '#3b82f6', s: '◆' },
+  { c: '#f59e0b', s: '●' },
+  { c: '#22c55e', s: '■' },
+]
+
+const LTRS = ['A', 'B', 'C', 'D']
+
+function normalizeCode(value) {
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
 }
 
-function getQ(id) {
-  return quizQuestions.find((q) => q.id === id) || null
+function normalizeTopic(value) {
+  const clean = String(value || 'all').toLowerCase()
+
+  if (clean === 'all') return 'all'
+  if (clean === 'script') return 'script'
+  if (clean === 'objections') return 'objections'
+  if (clean === 'product') return 'product'
+  if (clean === 'product-knowledge') return 'product'
+  if (clean === 'callflow') return 'callflow'
+  if (clean === 'call-flow') return 'callflow'
+  if (clean === 'dosdonts') return 'dosdonts'
+  if (clean === 'dos-donts') return 'dosdonts'
+
+  return 'all'
 }
 
-function rankList(pl) {
-  return Object.entries(pl || {})
-    .map(([name, p]) => ({ name, ...p }))
-    .sort((a, b) => (b.score || 0) - (a.score || 0))
-}
+function normalizeLang(value) {
+  const clean = String(value || 'mixed').toLowerCase()
 
-function getServerMs(payload) {
-  const raw =
-    payload?.serverNow ||
-    payload?.serverTime ||
-    payload?.now ||
-    payload?.timestamp ||
-    null
+  if (clean === 'en' || clean === 'english') return 'en'
+  if (clean === 'es' || clean === 'spanish') return 'es'
 
-  if (!raw) return null
-
-  const parsed = typeof raw === 'number' ? raw : new Date(raw).getTime()
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-function calcTL(startedAt, nowMs) {
-  if (!startedAt) return Q_TIME
-
-  const startMs = new Date(startedAt).getTime()
-
-  if (!Number.isFinite(startMs)) return Q_TIME
-
-  return Math.max(0, Q_TIME - (nowMs - startMs) / 1000)
+  return 'mixed'
 }
 
 function hashSeed(value) {
   let hash = 2166136261
 
-  for (let i = 0; i < value.length; i++) {
+  for (let i = 0; i < value.length; i += 1) {
     hash ^= value.charCodeAt(i)
     hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24)
   }
@@ -67,26 +70,59 @@ function hashSeed(value) {
 }
 
 function seededRandom(seed) {
-  let t = seed + 0x6D2B79F5
+  let t = seed + 0x6d2b79f5
 
   return () => {
-    t += 0x6D2B79F5
+    t += 0x6d2b79f5
     let x = Math.imul(t ^ (t >>> 15), 1 | t)
     x ^= x + Math.imul(x ^ (x >>> 7), 61 | x)
     return ((x ^ (x >>> 14)) >>> 0) / 4294967296
   }
 }
 
-function deterministicShuffle(arr, seedText) {
-  const a = [...arr]
+function deterministicShuffle(array, seedText) {
+  const copy = [...array]
   const random = seededRandom(hashSeed(seedText))
 
-  for (let i = a.length - 1; i > 0; i--) {
+  for (let i = copy.length - 1; i > 0; i -= 1) {
     const j = Math.floor(random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
 
-  return a
+  return copy
+}
+
+function getQ(id) {
+  return quizQuestions.find((q) => q.id === id) || null
+}
+
+function buildQuestionIds(topic, lang, seed) {
+  const wantedTopic = normalizeTopic(topic)
+  const wantedLang = normalizeLang(lang)
+
+  let pool = quizQuestions.filter((q) => {
+    const topicOk = wantedTopic === 'all' || normalizeTopic(q.topic) === wantedTopic
+    const langOk = wantedLang === 'mixed' || String(q.language || 'en') === wantedLang
+    return topicOk && langOk
+  })
+
+  if (pool.length < QUESTION_COUNT && wantedLang !== 'mixed') {
+    const sameTopicAnyLang = quizQuestions.filter((q) => {
+      const topicOk = wantedTopic === 'all' || normalizeTopic(q.topic) === wantedTopic
+      return topicOk && !pool.some((item) => item.id === q.id)
+    })
+
+    pool = [...pool, ...sameTopicAnyLang]
+  }
+
+  if (pool.length < QUESTION_COUNT) {
+    const extra = quizQuestions.filter((q) => !pool.some((item) => item.id === q.id))
+    pool = [...pool, ...extra]
+  }
+
+  return deterministicShuffle(pool, seed)
+    .slice(0, QUESTION_COUNT)
+    .map((q) => q.id)
 }
 
 function buildDisplayQuestion(rawQuestion, roomCode, currentIndex) {
@@ -103,441 +139,761 @@ function buildDisplayQuestion(rawQuestion, roomCode, currentIndex) {
   )
 
   const correct = shuffledOptions.findIndex(
-    (opt) => opt.originalIndex === rawQuestion.correct
+    (option) => option.originalIndex === rawQuestion.correct
   )
 
   return {
     ...rawQuestion,
-    options: shuffledOptions.map((opt) => opt.text),
+    options: shuffledOptions.map((option) => option.text),
     correct,
   }
+}
+
+function calcTimeLeft(startedAt) {
+  if (!startedAt) return Q_TIME
+
+  const startedMs = new Date(startedAt).getTime()
+
+  if (!Number.isFinite(startedMs)) return Q_TIME
+
+  return Math.max(0, Q_TIME - (Date.now() - startedMs) / 1000)
+}
+
+function rankPlayers(players) {
+  return [...players]
+    .filter((p) => !p.is_kicked)
+    .sort((a, b) => {
+      if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0)
+      return new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
+    })
 }
 
 function useSound() {
   const ctx = useRef(null)
 
-  const ac = () => {
+  const getCtx = () => {
     if (!ctx.current) {
-      ctx.current = new (window.AudioContext || window.webkitAudioContext)()
+      const AudioContext = window.AudioContext || window.webkitAudioContext
+      if (!AudioContext) return null
+      ctx.current = new AudioContext()
     }
 
     return ctx.current
   }
 
-  const b = (f, d, t = 'sine', v = 0.16, delay = 0) => {
+  const tone = (frequency, duration, type = 'sine', volume = 0.12, delay = 0) => {
     try {
-      const audio = ac()
+      const audio = getCtx()
+      if (!audio) return
 
       if (audio.state === 'suspended') audio.resume()
 
-      const o = audio.createOscillator()
-      const g = audio.createGain()
+      const oscillator = audio.createOscillator()
+      const gain = audio.createGain()
       const startAt = audio.currentTime + delay
 
-      o.connect(g)
-      g.connect(audio.destination)
+      oscillator.type = type
+      oscillator.frequency.setValueAtTime(frequency, startAt)
 
-      o.frequency.value = f
-      o.type = t
+      gain.gain.setValueAtTime(0.0001, startAt)
+      gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration)
 
-      g.gain.setValueAtTime(0.0001, startAt)
-      g.gain.exponentialRampToValueAtTime(v, startAt + 0.01)
-      g.gain.exponentialRampToValueAtTime(0.0001, startAt + d)
+      oscillator.connect(gain)
+      gain.connect(audio.destination)
 
-      o.start(startAt)
-      o.stop(startAt + d + 0.03)
+      oscillator.start(startAt)
+      oscillator.stop(startAt + duration + 0.03)
     } catch {
-      // ignore
+      // Browser can block audio until user interaction.
     }
   }
 
   return {
     correct: () => {
-      b(600, 0.1)
-      b(900, 0.15, 'sine', 0.18, 0.1)
+      tone(620, 0.1)
+      tone(920, 0.14, 'sine', 0.14, 0.1)
     },
-    wrong: () => b(180, 0.35, 'sawtooth', 0.12),
-    tick: () => b(500, 0.04, 'square', 0.03),
+    wrong: () => tone(180, 0.28, 'sawtooth', 0.08),
+    tick: () => tone(500, 0.035, 'square', 0.025),
     start: () => {
-      b(400, 0.08)
-      b(600, 0.1, 'sine', 0.16, 0.15)
-      b(800, 0.15, 'sine', 0.18, 0.3)
+      tone(420, 0.08)
+      tone(620, 0.1, 'sine', 0.13, 0.13)
+      tone(820, 0.14, 'sine', 0.14, 0.27)
     },
     join: () => {
-      b(520, 0.09)
-      b(780, 0.12, 'sine', 0.13, 0.09)
+      tone(520, 0.08)
+      tone(780, 0.12, 'sine', 0.12, 0.08)
     },
-    kick: () => b(170, 0.25, 'sawtooth', 0.08),
+    kick: () => tone(170, 0.24, 'sawtooth', 0.08),
     ding: () => {
-      b(800, 0.08)
-      b(1000, 0.12, 'sine', 0.14, 0.08)
+      tone(760, 0.08)
+      tone(980, 0.12, 'sine', 0.12, 0.08)
     },
     finish: () => {
-      b(420, 0.11)
-      b(560, 0.11, 'sine', 0.13, 0.13)
-      b(700, 0.18, 'sine', 0.15, 0.26)
+      tone(420, 0.1)
+      tone(560, 0.1, 'sine', 0.12, 0.12)
+      tone(720, 0.18, 'sine', 0.13, 0.25)
     },
     epic: () => {
-      b(392, 0.12, 'sine', 0.16, 0)
-      b(523, 0.12, 'sine', 0.18, 0.13)
-      b(659, 0.14, 'sine', 0.2, 0.27)
-      b(784, 0.28, 'sine', 0.22, 0.43)
-      b(1046, 0.35, 'triangle', 0.1, 0.55)
+      tone(392, 0.1, 'sine', 0.12)
+      tone(523, 0.12, 'sine', 0.13, 0.13)
+      tone(659, 0.14, 'sine', 0.14, 0.27)
+      tone(784, 0.24, 'sine', 0.15, 0.43)
+      tone(1046, 0.34, 'triangle', 0.08, 0.58)
     },
   }
 }
 
 export default function GoQuizRoom() {
-  const { code } = useParams()
-  const [urlP] = useSearchParams()
+  const params = useParams()
+  const [urlParams] = useSearchParams()
   const nav = useNavigate()
-  const isHost = urlP.get('host') === 'true'
   const snd = useSound()
 
-  const [jName, setJName] = useState('')
-  const [jAv, setJAv] = useState('🦊')
-  const [jErr, setJErr] = useState('')
-  const [jBusy, setJBusy] = useState(false)
+  const code = normalizeCode(params.code)
+  const isHost = urlParams.get('host') === 'true'
+  const topic = normalizeTopic(urlParams.get('topic') || 'all')
+  const lang = normalizeLang(urlParams.get('lang') || 'mixed')
 
-  const [sess, setSess] = useState(null)
+  const [room, setRoom] = useState(null)
+  const [players, setPlayers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [fatalError, setFatalError] = useState('')
+
   const [joined, setJoined] = useState(isHost)
+  const [playerId, setPlayerId] = useState('')
   const [myName, setMyName] = useState('')
-  const [myAv, setMyAv] = useState('🦊')
+  const [myAvatar, setMyAvatar] = useState('🦊')
+
+  const [joinName, setJoinName] = useState('')
+  const [joinAvatar, setJoinAvatar] = useState('🦊')
+  const [joinError, setJoinError] = useState('')
+  const [joinBusy, setJoinBusy] = useState(false)
 
   const [picked, setPicked] = useState(null)
-  const [tLeft, setTLeft] = useState(Q_TIME)
-  const [rCount, setRCount] = useState(RESULT_SEC)
+  const [timeLeft, setTimeLeft] = useState(Q_TIME)
+  const [resultCount, setResultCount] = useState(RESULT_SEC)
   const [busy, setBusy] = useState(false)
   const [kickBusy, setKickBusy] = useState('')
 
-  const sessRef = useRef(null)
-  const prevQ = useRef(-1)
-  const prevState = useRef('')
-  const autoFired = useRef(false)
-  const tickRef = useRef(null)
-  const rCountRef = useRef(null)
-  const lastTickSecond = useRef(null)
-  const clockOffsetRef = useRef(0)
-  const prevPlayerCount = useRef(0)
-  const finishedSoundPlayed = useRef(false)
+  const actionLockRef = useRef(false)
+  const timerRef = useRef(null)
+  const resultTimerRef = useRef(null)
+  const lastTickRef = useRef(null)
+  const previousStateRef = useRef('')
+  const previousPlayerCountRef = useRef(0)
+  const finishSoundPlayedRef = useRef(false)
 
-  sessRef.current = sess
+  const activePlayers = useMemo(() => players.filter((p) => !p.is_kicked), [players])
+  const rankedPlayers = useMemo(() => rankPlayers(players), [players])
+  const totalPlayers = activePlayers.length
+  const answeredPlayers = activePlayers.filter((p) => p.answered).length
 
-  const getSyncedNow = () => Date.now() - clockOffsetRef.current
+  const currentQuestionId = room?.question_ids?.[room?.current_q || 0]
+  const rawQuestion = currentQuestionId ? getQ(currentQuestionId) : null
+  const currentQ = buildDisplayQuestion(rawQuestion, code, room?.current_q || 0)
 
-  const updateClockOffset = (payload) => {
-    const serverMs = getServerMs(payload)
+  const currentPlayer = useMemo(
+    () => players.find((p) => p.id === playerId) || null,
+    [players, playerId]
+  )
 
-    if (serverMs) {
-      clockOffsetRef.current = Date.now() - serverMs
+  const fetchPlayers = useCallback(async () => {
+    if (!code) return
+
+    const { data, error } = await supabase
+      .from('pulse_go_players')
+      .select('*')
+      .eq('room_code', code)
+      .order('joined_at', { ascending: true })
+
+    if (!error) setPlayers(data || [])
+  }, [code])
+
+  const createHostRoom = useCallback(async () => {
+    const questionIds = buildQuestionIds(topic, lang, `${code}:${Date.now()}`)
+
+    const { data, error } = await supabase
+      .from('pulse_go_rooms')
+      .insert({
+        code,
+        state: 'lobby',
+        topic,
+        lang,
+        question_ids: questionIds,
+        current_q: 0,
+        question_started_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .select('*')
+      .single()
+
+    if (error) {
+      setFatalError(error.message || 'Could not create room.')
+      return null
     }
-  }
+
+    setRoom(data)
+    return data
+  }, [code, topic, lang])
+
+  const fetchRoom = useCallback(async () => {
+    if (!code) return null
+
+    const { data, error } = await supabase
+      .from('pulse_go_rooms')
+      .select('*')
+      .eq('code', code)
+      .maybeSingle()
+
+    if (error) {
+      setFatalError(error.message || 'Could not load room.')
+      return null
+    }
+
+    if (!data && isHost) {
+      return createHostRoom()
+    }
+
+    if (!data && !isHost) {
+      setRoom(null)
+      return null
+    }
+
+    setRoom(data)
+    return data
+  }, [code, isHost, createHostRoom])
+
+  const refreshAll = useCallback(async () => {
+    const loadedRoom = await fetchRoom()
+    if (loadedRoom) await fetchPlayers()
+    setLoading(false)
+  }, [fetchRoom, fetchPlayers])
 
   useEffect(() => {
-    if (!joined) return
+    refreshAll()
 
-    let live = true
+    const fallback = setInterval(refreshAll, POLL_MS)
 
-    const poll = async () => {
-      const d = await api({ action: 'quizGet', code })
+    const channel = supabase
+      .channel(`pulse-go-room-${code}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pulse_go_rooms',
+          filter: `code=eq.${code}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            setRoom(null)
+            nav('/go')
+            return
+          }
 
-      if (!live || !d.success) return
-
-      updateClockOffset(d)
-      setSess(d)
-    }
-
-    poll()
-
-    const t = setInterval(poll, POLL_MS)
+          if (payload.new) setRoom(payload.new)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pulse_go_players',
+          filter: `room_code=eq.${code}`,
+        },
+        () => {
+          fetchPlayers()
+        }
+      )
+      .subscribe()
 
     return () => {
-      live = false
-      clearInterval(t)
+      clearInterval(fallback)
+      supabase.removeChannel(channel)
     }
-  }, [joined, code])
+  }, [code, nav, refreshAll, fetchPlayers])
 
   useEffect(() => {
-    if (!sess) return
+    const saved = localStorage.getItem(`pulse_go_player_${code}`)
+    if (!saved || isHost) return
 
-    const count = Object.keys(sess.players || {}).length
+    try {
+      const parsed = JSON.parse(saved)
+      if (!parsed?.id) return
 
-    if (isHost && sess.state === 'lobby' && count > prevPlayerCount.current) {
-      snd.join()
+      setPlayerId(parsed.id)
+      setMyName(parsed.name || '')
+      setMyAvatar(parsed.avatar || '🦊')
+      setJoined(true)
+    } catch {
+      localStorage.removeItem(`pulse_go_player_${code}`)
     }
-
-    prevPlayerCount.current = count
-  }, [sess?.players, sess?.state, isHost, snd])
+  }, [code, isHost])
 
   useEffect(() => {
-    if (!sess || isHost || !joined || !myName) return
+    if (!currentPlayer || isHost) return
 
-    const players = sess.players || {}
-    const kickedPlayers = sess.kickedPlayers || {}
-
-    if (kickedPlayers[myName] || (!players[myName] && sess.state !== 'finished')) {
+    if (currentPlayer.is_kicked) {
       snd.kick()
+      localStorage.removeItem(`pulse_go_player_${code}`)
       alert('You were removed from this room by the host.')
       nav('/go')
     }
-  }, [sess, isHost, joined, myName, nav, snd])
+  }, [currentPlayer, isHost, snd, code, nav])
 
   useEffect(() => {
-    if (!sess || sess.state !== 'question') {
-      clearInterval(tickRef.current)
+    const count = activePlayers.length
+
+    if (isHost && room?.state === 'lobby' && count > previousPlayerCountRef.current) {
+      snd.join()
+    }
+
+    previousPlayerCountRef.current = count
+  }, [activePlayers.length, isHost, room?.state, snd])
+
+  useEffect(() => {
+    if (!room) return
+
+    if (room.state !== previousStateRef.current) {
+      if (room.state === 'question') {
+        snd.start()
+        setPicked(null)
+        setResultCount(RESULT_SEC)
+        actionLockRef.current = false
+        lastTickRef.current = null
+      }
+
+      if (room.state === 'showAnswer') {
+        snd.ding()
+      }
+
+      if (room.state === 'finished' && !finishSoundPlayedRef.current) {
+        finishSoundPlayedRef.current = true
+
+        const myRank = rankedPlayers.findIndex((p) => p.id === playerId) + 1
+        const topResult = isHost || myRank === 1 || myRank === 2 || myRank === 3
+
+        if (topResult) snd.epic()
+        else snd.finish()
+      }
+
+      previousStateRef.current = room.state
+    }
+  }, [room?.state, rankedPlayers, playerId, isHost, snd, room])
+
+  const showAnswer = useCallback(async () => {
+    if (!isHost || !room || actionLockRef.current || busy) return
+
+    actionLockRef.current = true
+    setBusy(true)
+
+    const { error } = await supabase
+      .from('pulse_go_rooms')
+      .update({
+        state: 'showAnswer',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('code', code)
+
+    if (error) {
+      actionLockRef.current = false
+      setFatalError(error.message || 'Could not show answer.')
+    }
+
+    setBusy(false)
+  }, [isHost, room, busy, code])
+
+  const nextQuestion = useCallback(async () => {
+    if (!isHost || !room || busy) return
+
+    setBusy(true)
+    actionLockRef.current = false
+
+    const nextIndex = (room.current_q || 0) + 1
+    const totalQuestions = room.question_ids?.length || QUESTION_COUNT
+
+    if (nextIndex >= totalQuestions) {
+      const { error } = await supabase
+        .from('pulse_go_rooms')
+        .update({
+          state: 'finished',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('code', code)
+
+      if (error) setFatalError(error.message || 'Could not finish game.')
+
+      setBusy(false)
       return
     }
 
-    if (sess.currentQ !== prevQ.current) {
-      prevQ.current = sess.currentQ
-      autoFired.current = false
-      lastTickSecond.current = null
-      setPicked(null)
-    }
+    await supabase
+      .from('pulse_go_players')
+      .update({
+        answered: false,
+        last_answer: null,
+        last_time_left: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('room_code', code)
+      .eq('is_kicked', false)
 
-    clearInterval(tickRef.current)
+    const { error } = await supabase
+      .from('pulse_go_rooms')
+      .update({
+        state: 'question',
+        current_q: nextIndex,
+        question_started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('code', code)
 
-    tickRef.current = setInterval(() => {
-      const tl = calcTL(sessRef.current?.questionStartedAt, getSyncedNow())
-      const display = Math.ceil(tl)
+    if (error) setFatalError(error.message || 'Could not go to next question.')
 
-      setTLeft(tl)
+    setBusy(false)
+  }, [isHost, room, busy, code])
 
-      if (
-        display <= 5 &&
-        display > 0 &&
-        display !== lastTickSecond.current
-      ) {
-        lastTickSecond.current = display
+  useEffect(() => {
+    clearInterval(timerRef.current)
+
+    if (!room || room.state !== 'question') return
+
+    timerRef.current = setInterval(() => {
+      const left = calcTimeLeft(room.question_started_at)
+      const display = Math.ceil(left)
+
+      setTimeLeft(left)
+
+      if (display <= 5 && display > 0 && display !== lastTickRef.current) {
+        lastTickRef.current = display
         snd.tick()
       }
 
-      if (tl <= 0 && isHost && !autoFired.current) {
-        autoFired.current = true
-        clearInterval(tickRef.current)
-        triggerShowAnswer()
+      if (isHost && left <= 0 && !actionLockRef.current) {
+        showAnswer()
       }
     }, TIMER_MS)
 
-    return () => clearInterval(tickRef.current)
-  }, [sess?.state, sess?.currentQ, sess?.questionStartedAt, isHost, snd])
+    return () => clearInterval(timerRef.current)
+  }, [room?.state, room?.question_started_at, isHost, showAnswer, snd, room])
 
   useEffect(() => {
-    if (!sess || sess.state !== 'question' || !isHost || autoFired.current) return
+    if (!isHost || !room || room.state !== 'question') return
+    if (actionLockRef.current) return
+    if (totalPlayers <= 0) return
 
-    const pl = Object.values(sess.players || {})
+    if (answeredPlayers >= totalPlayers) {
+      const timeout = setTimeout(() => {
+        showAnswer()
+      }, 350)
 
-    if (pl.length > 0 && pl.every((p) => p.answered)) {
-      autoFired.current = true
-      clearInterval(tickRef.current)
-      setTimeout(() => triggerShowAnswer(), 350)
+      return () => clearTimeout(timeout)
     }
-  }, [sess?.players, sess?.state, isHost])
+
+    return undefined
+  }, [isHost, room, answeredPlayers, totalPlayers, showAnswer])
 
   useEffect(() => {
-    if (!sess || sess.state === prevState.current) return
+    clearInterval(resultTimerRef.current)
 
-    if (sess.state === 'question') {
-      snd.start()
-      setRCount(RESULT_SEC)
-    }
+    if (!room || room.state !== 'showAnswer') return
 
-    if (sess.state === 'showAnswer') snd.ding()
+    setResultCount(RESULT_SEC)
 
-    if (sess.state === 'finished' && !finishedSoundPlayed.current) {
-      finishedSoundPlayed.current = true
-
-      const list = rankList(sess.players || {})
-      const rank = list.findIndex((p) => p.name === myName) + 1
-      const isTop = isHost || rank === 1 || rank === 2 || rank === 3
-
-      if (isTop) snd.epic()
-      else snd.finish()
-    }
-
-    prevState.current = sess.state
-  }, [sess?.state, sess?.players, isHost, myName, snd])
-
-  useEffect(() => {
-    if (!sess || sess.state !== 'showAnswer') return
-
-    clearInterval(rCountRef.current)
-    setRCount(RESULT_SEC)
-
-    rCountRef.current = setInterval(() => {
-      setRCount((n) => {
-        if (n <= 1) {
-          clearInterval(rCountRef.current)
-
-          if (isHost) triggerNext()
-
+    resultTimerRef.current = setInterval(() => {
+      setResultCount((current) => {
+        if (current <= 1) {
+          clearInterval(resultTimerRef.current)
+          if (isHost) nextQuestion()
           return 0
         }
 
-        return n - 1
+        return current - 1
       })
     }, 1000)
 
-    return () => clearInterval(rCountRef.current)
-  }, [sess?.state, sess?.currentQ, isHost])
+    return () => clearInterval(resultTimerRef.current)
+  }, [room?.state, room?.current_q, isHost, nextQuestion, room])
 
-  useEffect(() => () => {
-    clearInterval(tickRef.current)
-    clearInterval(rCountRef.current)
+  useEffect(() => {
+    return () => {
+      clearInterval(timerRef.current)
+      clearInterval(resultTimerRef.current)
+    }
   }, [])
 
-  const triggerShowAnswer = async () => {
-    if (busy) return
+  const handleJoin = async () => {
+    const cleanName = joinName.trim().slice(0, 20)
 
-    setBusy(true)
+    if (!cleanName || joinBusy) return
 
-    const s = sessRef.current
-    const rawQuestion = getQ(s?.questionIds?.[s?.currentQ])
-    const displayQuestion = buildDisplayQuestion(rawQuestion, code, s?.currentQ ?? 0)
+    setJoinBusy(true)
+    setJoinError('')
 
-    const upd = await api({
-      action: 'quizScoreAndShow',
-      code,
-      correctAnswer: displayQuestion ? displayQuestion.correct : -1,
-    })
+    const loadedRoom = await fetchRoom()
 
-    updateClockOffset(upd)
+    if (!loadedRoom) {
+      setJoinError('Room not found.')
+      setJoinBusy(false)
+      return
+    }
 
-    if (upd.success) setSess(upd)
+    if (loadedRoom.state !== 'lobby') {
+      setJoinError('Game already started.')
+      setJoinBusy(false)
+      return
+    }
 
-    setBusy(false)
-  }
+    const { data, error } = await supabase
+      .from('pulse_go_players')
+      .insert({
+        room_code: code,
+        name: cleanName,
+        avatar: joinAvatar,
+        score: 0,
+        answered: false,
+        last_answer: null,
+        last_time_left: null,
+        is_kicked: false,
+        updated_at: new Date().toISOString(),
+      })
+      .select('*')
+      .single()
 
-  const triggerNext = async () => {
-    if (busy) return
+    if (error) {
+      setJoinError(
+        error.message?.toLowerCase().includes('duplicate')
+          ? 'Name taken. Try another name.'
+          : error.message || 'Could not join room.'
+      )
+      setJoinBusy(false)
+      return
+    }
 
-    setBusy(true)
-    autoFired.current = false
+    localStorage.setItem(
+      `pulse_go_player_${code}`,
+      JSON.stringify({
+        id: data.id,
+        name: data.name,
+        avatar: data.avatar,
+      })
+    )
 
-    const upd = await api({ action: 'quizNext', code })
+    setPlayerId(data.id)
+    setMyName(data.name)
+    setMyAvatar(data.avatar)
+    setJoined(true)
+    snd.join()
+    await fetchPlayers()
 
-    updateClockOffset(upd)
-
-    if (upd.success) setSess(upd)
-
-    setBusy(false)
+    setJoinBusy(false)
   }
 
   const hostStart = async () => {
+    if (!isHost || busy || totalPlayers <= 0) return
+
     setBusy(true)
+    finishSoundPlayedRef.current = false
+    actionLockRef.current = false
 
-    const upd = await api({ action: 'quizStart', code })
+    let questionIds = room?.question_ids || []
 
-    updateClockOffset(upd)
+    if (!Array.isArray(questionIds) || questionIds.length < QUESTION_COUNT) {
+      questionIds = buildQuestionIds(topic, lang, `${code}:${Date.now()}`)
+    }
 
-    if (upd.success) setSess(upd)
+    await supabase.from('pulse_go_answers').delete().eq('room_code', code)
+
+    await supabase
+      .from('pulse_go_players')
+      .update({
+        score: 0,
+        answered: false,
+        last_answer: null,
+        last_time_left: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('room_code', code)
+      .eq('is_kicked', false)
+
+    const { error } = await supabase
+      .from('pulse_go_rooms')
+      .update({
+        state: 'question',
+        question_ids: questionIds,
+        current_q: 0,
+        question_started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('code', code)
+
+    if (error) setFatalError(error.message || 'Could not start game.')
 
     setBusy(false)
   }
 
-  const handleKickPlayer = async (playerName) => {
-    if (!isHost || !playerName || kickBusy) return
+  const handleKickPlayer = async (targetPlayer) => {
+    if (!isHost || !targetPlayer?.id || kickBusy) return
 
-    const ok = window.confirm(`Remove ${playerName} from this room?`)
+    const ok = window.confirm(`Remove ${targetPlayer.name} from this room?`)
     if (!ok) return
 
-    setKickBusy(playerName)
+    setKickBusy(targetPlayer.id)
 
-    let upd = await api({
-      action: 'quizKick',
-      code,
-      name: playerName,
-    })
-
-    if (!upd.success) {
-      upd = await api({
-        action: 'quizRemovePlayer',
-        code,
-        name: playerName,
+    const { error } = await supabase
+      .from('pulse_go_players')
+      .update({
+        is_kicked: true,
+        answered: true,
+        updated_at: new Date().toISOString(),
       })
-    }
+      .eq('id', targetPlayer.id)
 
-    updateClockOffset(upd)
-
-    if (upd.success) {
-      snd.kick()
-      setSess(upd)
+    if (error) {
+      alert(error.message || 'Could not remove player.')
     } else {
-      alert('Kick failed. Add the quizKick action in Apps Script to enable this fully.')
+      snd.kick()
+      await fetchPlayers()
     }
 
     setKickBusy('')
   }
 
-  const handleAnswer = async (idx) => {
-    if (picked !== null || sess?.state !== 'question') return
+  const handleAnswer = async (answerIndex) => {
+    if (!room || room.state !== 'question') return
+    if (!currentPlayer || currentPlayer.is_kicked) return
+    if (picked !== null || currentPlayer.answered) return
+    if (!currentQ) return
 
-    setPicked(idx)
+    setPicked(answerIndex)
 
-    const tl = Math.round(calcTL(sess?.questionStartedAt, getSyncedNow()))
+    const left = Math.max(0, Math.ceil(calcTimeLeft(room.question_started_at)))
+    const correct = answerIndex === currentQ.correct
+    const points = correct ? 1000 + left * 50 : 0
 
-    await api({
-      action: 'quizAnswer',
-      code,
-      name: myName,
-      answer: idx,
-      timeLeft: tl,
-    })
-
-    if (idx === currentQ?.correct) snd.correct()
-    else snd.wrong()
-  }
-
-  const handleJoin = async () => {
-    if (!jName.trim()) return
-
-    setJBusy(true)
-    setJErr('')
-
-    const d = await api({
-      action: 'quizJoin',
-      code,
-      name: jName.trim(),
-      avatar: jAv,
-    })
-
-    updateClockOffset(d)
-
-    if (d.success) {
-      snd.join()
-      setMyName(jName.trim())
-      setMyAv(jAv)
-      setJoined(true)
-    } else {
-      setJErr(
-        d.error === 'started'
-          ? 'Game already started.'
-          : d.error === 'name taken'
-          ? 'Name taken — try another.'
-          : d.error === 'not found'
-          ? 'Room not found.'
-          : 'Error. Try again.'
+    const { error: answerError } = await supabase
+      .from('pulse_go_answers')
+      .upsert(
+        {
+          room_code: code,
+          player_id: currentPlayer.id,
+          question_index: room.current_q || 0,
+          question_id: currentQ.id,
+          answer: answerIndex,
+          correct,
+          time_left: left,
+          points,
+        },
+        {
+          onConflict: 'room_code,player_id,question_index',
+          ignoreDuplicates: true,
+        }
       )
+
+    if (answerError) {
+      console.error(answerError)
     }
 
-    setJBusy(false)
+    const newScore = (currentPlayer.score || 0) + points
+
+    const { error: playerError } = await supabase
+      .from('pulse_go_players')
+      .update({
+        score: newScore,
+        answered: true,
+        last_answer: answerIndex,
+        last_time_left: left,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', currentPlayer.id)
+
+    if (playerError) {
+      console.error(playerError)
+    }
+
+    if (correct) snd.correct()
+    else snd.wrong()
+
+    await fetchPlayers()
   }
 
-  const rawCurrentQ = sess?.questionIds?.[sess.currentQ]
-    ? getQ(sess.questionIds[sess.currentQ])
-    : null
+  const resetRoomToLobby = async () => {
+    if (!isHost || !room) return
 
-  const currentQ = buildDisplayQuestion(rawCurrentQ, code, sess?.currentQ ?? 0)
-  const players = sess?.players || {}
-  const list = rankList(players)
-  const totalP = list.length
-  const answeredN = list.filter((p) => p.answered).length
-  const myData = players[myName]
-  const state = sess?.state || 'lobby'
-  const tDisp = Math.ceil(tLeft)
-  const tColor = tDisp <= 5 ? '#ef4444' : tDisp <= 10 ? '#f59e0b' : '#b9d6ff'
-  const tPct = Math.max(0, Math.min(100, (tLeft / Q_TIME) * 100))
+    setBusy(true)
+
+    const questionIds = buildQuestionIds(topic, lang, `${code}:${Date.now()}`)
+
+    await supabase.from('pulse_go_answers').delete().eq('room_code', code)
+
+    await supabase
+      .from('pulse_go_players')
+      .delete()
+      .eq('room_code', code)
+
+    const { error } = await supabase
+      .from('pulse_go_rooms')
+      .update({
+        state: 'lobby',
+        question_ids: questionIds,
+        current_q: 0,
+        question_started_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('code', code)
+
+    if (error) setFatalError(error.message || 'Could not reset room.')
+
+    setBusy(false)
+  }
+
+  const timeDisplay = Math.ceil(timeLeft)
+  const timeColor = timeDisplay <= 5 ? '#ef4444' : timeDisplay <= 10 ? '#f59e0b' : '#b9d6ff'
+  const timePct = Math.max(0, Math.min(100, (timeLeft / Q_TIME) * 100))
+  const state = room?.state || 'lobby'
   const isCorrect = !isHost && picked === currentQ?.correct
+
+  if (loading) {
+    return (
+      <div className="grm grm-center">
+        <div className="grm-spin">⏳ Loading room <b>{code}</b>...</div>
+      </div>
+    )
+  }
+
+  if (fatalError) {
+    return (
+      <div className="grm grm-center">
+        <div className="grm-join-box">
+          <h2>Room error</h2>
+          <p className="grm-err">{fatalError}</p>
+          <button className="grm-btn-join" onPointerDown={() => nav('/go')}>
+            Back Home
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!room && !isHost) {
+    return (
+      <div className="grm grm-center">
+        <div className="grm-join-box">
+          <div className="grm-code-display">
+            <small>Room Code</small>
+            <strong>{code}</strong>
+          </div>
+          <p className="grm-err">Room not found. Ask the host to create it again.</p>
+          <button className="grm-btn-join" onPointerDown={() => nav('/go')}>
+            Back Home
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (!joined) {
     return (
@@ -551,13 +907,13 @@ export default function GoQuizRoom() {
           <p className="grm-join-hint">Pick your avatar and enter your name</p>
 
           <div className="grm-av-grid">
-            {AVATARS.map((av) => (
+            {AVATARS.map((avatar) => (
               <button
-                key={av}
-                className={`grm-av ${jAv === av ? 'on' : ''}`}
-                onPointerDown={() => setJAv(av)}
+                key={avatar}
+                className={`grm-av ${joinAvatar === avatar ? 'on' : ''}`}
+                onPointerDown={() => setJoinAvatar(avatar)}
               >
-                {av}
+                {avatar}
               </button>
             ))}
           </div>
@@ -566,31 +922,23 @@ export default function GoQuizRoom() {
             className="grm-input"
             type="text"
             placeholder="Your name"
-            value={jName}
-            onChange={(e) => setJName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+            value={joinName}
+            onChange={(event) => setJoinName(event.target.value)}
+            onKeyDown={(event) => event.key === 'Enter' && handleJoin()}
             maxLength={20}
             autoFocus
           />
 
-          {jErr && <p className="grm-err">{jErr}</p>}
+          {joinError && <p className="grm-err">{joinError}</p>}
 
           <button
             className="grm-btn-join"
             onPointerDown={handleJoin}
-            disabled={!jName.trim() || jBusy}
+            disabled={!joinName.trim() || joinBusy}
           >
-            {jBusy ? 'Joining...' : `${jAv} Join Room →`}
+            {joinBusy ? 'Joining...' : `${joinAvatar} Join Room →`}
           </button>
         </div>
-      </div>
-    )
-  }
-
-  if (!sess) {
-    return (
-      <div className="grm grm-center">
-        <div className="grm-spin">⏳ Connecting to <b>{code}</b>...</div>
       </div>
     )
   }
@@ -605,30 +953,30 @@ export default function GoQuizRoom() {
 
         <div className="grm-lobby-body">
           <h1 className="grm-lobby-title">
-            {isHost ? '⏳ Waiting for players...' : `${myAv} You're in!`}
+            {isHost ? '⏳ Waiting for players...' : `${myAvatar} You're in!`}
           </h1>
 
           <div className="grm-lobby-grid">
-            {list.length === 0 && (
+            {activePlayers.length === 0 && (
               <p className="grm-muted">No players yet — share the code!</p>
             )}
 
-            {list.map((p) => (
-              <div key={p.name} className="grm-lobby-chip">
-                <span>{p.avatar}</span>
-                <span>{p.name}</span>
+            {activePlayers.map((player) => (
+              <div key={player.id} className="grm-lobby-chip">
+                <span>{player.avatar}</span>
+                <span>{player.name}</span>
 
                 {isHost && (
                   <button
                     className="grm-kick-btn"
-                    onPointerDown={(e) => {
-                      e.stopPropagation()
-                      handleKickPlayer(p.name)
+                    onPointerDown={(event) => {
+                      event.stopPropagation()
+                      handleKickPlayer(player)
                     }}
-                    disabled={kickBusy === p.name}
-                    title={`Remove ${p.name}`}
+                    disabled={kickBusy === player.id}
+                    title={`Remove ${player.name}`}
                   >
-                    {kickBusy === p.name ? '...' : '×'}
+                    {kickBusy === player.id ? '...' : '×'}
                   </button>
                 )}
               </div>
@@ -636,14 +984,14 @@ export default function GoQuizRoom() {
           </div>
 
           <p className="grm-lobby-count">
-            {totalP} player{totalP !== 1 ? 's' : ''} ready
+            {totalPlayers} player{totalPlayers !== 1 ? 's' : ''} ready
           </p>
 
           {isHost && (
             <button
               className="grm-btn-start"
               onPointerDown={hostStart}
-              disabled={totalP === 0 || busy}
+              disabled={totalPlayers === 0 || busy}
             >
               🚀 {busy ? 'Starting...' : 'Start Game'}
             </button>
@@ -663,41 +1011,49 @@ export default function GoQuizRoom() {
     return (
       <div className="grm grm-q">
         <div className="grm-tbar">
-          <div className="grm-tfill" style={{ width: `${tPct}%`, background: tColor }} />
+          <div className="grm-tfill" style={{ width: `${timePct}%`, background: timeColor }} />
         </div>
 
         <div className="grm-qmeta">
-          <span className="grm-qnum">{(sess.currentQ ?? 0) + 1}/{sess.questionIds?.length ?? 10}</span>
-          <span className="grm-qtimer" style={{ color: tColor }}>{tDisp}s</span>
+          <span className="grm-qnum">
+            {(room.current_q || 0) + 1}/{room.question_ids?.length || QUESTION_COUNT}
+          </span>
+          <span className="grm-qtimer" style={{ color: timeColor }}>
+            {timeDisplay}s
+          </span>
           <span
             className="grm-qans"
-            style={{ color: answeredN === totalP && totalP > 0 ? '#22c55e' : '#b9d6ff' }}
+            style={{
+              color: answeredPlayers === totalPlayers && totalPlayers > 0 ? '#22c55e' : '#b9d6ff',
+            }}
           >
-            {answeredN}/{totalP} ✓
+            {answeredPlayers}/{totalPlayers} ✓
           </span>
         </div>
 
-        <div className="grm-qtext">{currentQ?.question || '...'}</div>
+        <div className="grm-qtext">{currentQ?.question || 'Loading question...'}</div>
 
         {!isHost && (
           <div className="grm-opts">
-            {currentQ?.options.map((opt, i) => (
+            {currentQ?.options.map((option, index) => (
               <button
-                key={i}
-                className={`grm-opt ${picked === i ? 'sel' : ''} ${picked !== null && picked !== i ? 'dim' : ''}`}
-                style={{ '--c': OPTS[i]?.c || '#b9d6ff' }}
-                onPointerDown={() => handleAnswer(i)}
-                disabled={picked !== null}
+                key={index}
+                className={`grm-opt ${picked === index ? 'sel' : ''} ${
+                  picked !== null && picked !== index ? 'dim' : ''
+                }`}
+                style={{ '--c': OPTS[index]?.c || '#b9d6ff' }}
+                onPointerDown={() => handleAnswer(index)}
+                disabled={picked !== null || currentPlayer?.answered}
               >
-                <span className="grm-os">{OPTS[i]?.s || '◆'}</span>
-                <span className="grm-ol">{LTRS[i]}</span>
-                <span className="grm-ot">{opt}</span>
+                <span className="grm-os">{OPTS[index]?.s || '◆'}</span>
+                <span className="grm-ol">{LTRS[index]}</span>
+                <span className="grm-ot">{option}</span>
               </button>
             ))}
 
-            {picked !== null && (
+            {(picked !== null || currentPlayer?.answered) && (
               <div className="grm-waiting">
-                ⏳ Answered! Waiting for others... ({answeredN}/{totalP})
+                ⏳ Answered! Waiting for others... ({answeredPlayers}/{totalPlayers})
               </div>
             )}
           </div>
@@ -705,47 +1061,47 @@ export default function GoQuizRoom() {
 
         {isHost && (
           <div className="grm-host-q">
-            <div className="grm-auto-badge">⚡ Auto-advances when all answer or time runs out</div>
+            <div className="grm-auto-badge">
+              ⚡ Auto-advances when all players answer or time runs out
+            </div>
 
             <div className="grm-bars">
-              {currentQ?.options.map((opt, i) => {
-                const cnt = list.filter((p) => p.answered && p.lastAnswer === i).length
+              {currentQ?.options.map((option, index) => {
+                const count = activePlayers.filter(
+                  (player) => player.answered && player.last_answer === index
+                ).length
 
                 return (
-                  <div key={i} className="grm-bar-row">
-                    <span className="grm-bar-lbl" style={{ color: OPTS[i]?.c || '#b9d6ff' }}>
-                      {OPTS[i]?.s || '◆'} {LTRS[i]}
+                  <div key={index} className="grm-bar-row">
+                    <span className="grm-bar-lbl" style={{ color: OPTS[index]?.c || '#b9d6ff' }}>
+                      {OPTS[index]?.s || '◆'} {LTRS[index]}
                     </span>
 
                     <div className="grm-bar-bg">
                       <div
                         className="grm-bar-fill"
                         style={{
-                          width: `${answeredN > 0 ? (cnt / answeredN) * 100 : 0}%`,
-                          background: OPTS[i]?.c || '#b9d6ff',
+                          width: `${answeredPlayers > 0 ? (count / answeredPlayers) * 100 : 0}%`,
+                          background: OPTS[index]?.c || '#b9d6ff',
                         }}
                       />
                     </div>
 
-                    <span className="grm-bar-n">{cnt}</span>
+                    <span className="grm-bar-n">{count}</span>
                   </div>
                 )
               })}
             </div>
 
             <p className="grm-host-status">
-              {answeredN === totalP && totalP > 0
+              {answeredPlayers === totalPlayers && totalPlayers > 0
                 ? '✅ All answered!'
-                : `${totalP - answeredN} still thinking...`}
+                : `${Math.max(0, totalPlayers - answeredPlayers)} still thinking...`}
             </p>
 
             <button
               className="grm-btn-skip"
-              onPointerDown={() => {
-                autoFired.current = true
-                clearInterval(tickRef.current)
-                triggerShowAnswer()
-              }}
+              onPointerDown={showAnswer}
               disabled={busy}
             >
               {busy ? 'Loading...' : 'Skip →'}
@@ -761,9 +1117,7 @@ export default function GoQuizRoom() {
       <div className="grm grm-answer">
         {!isHost && (
           <div className={`grm-result-banner ${isCorrect ? 'ok' : 'no'}`}>
-            {isCorrect
-              ? '✅ Correct!'
-              : picked === null ? "⏱️ Time's up!" : '❌ Wrong'}
+            {isCorrect ? '✅ Correct!' : picked === null ? "⏱️ Time's up!" : '❌ Wrong'}
           </div>
         )}
 
@@ -777,26 +1131,28 @@ export default function GoQuizRoom() {
               cy="24"
               r="20"
               className="grm-ring-fg"
-              strokeDasharray={`${(rCount / RESULT_SEC) * 125.7} 125.7`}
+              strokeDasharray={`${(resultCount / RESULT_SEC) * 125.7} 125.7`}
             />
           </svg>
 
-          <span className="grm-ring-n">{rCount}</span>
+          <span className="grm-ring-n">{resultCount}</span>
         </div>
 
         <p className="grm-ring-label">Next in...</p>
 
         <div className="grm-answer-opts">
-          {currentQ?.options.map((opt, i) => (
+          {currentQ?.options.map((option, index) => (
             <div
-              key={i}
-              className={`grm-aopt ${i === currentQ.correct ? 'correct' : ''} ${!isHost && picked === i && i !== currentQ.correct ? 'wrong' : ''}`}
-              style={{ '--c': OPTS[i]?.c || '#b9d6ff' }}
+              key={index}
+              className={`grm-aopt ${index === currentQ.correct ? 'correct' : ''} ${
+                !isHost && picked === index && index !== currentQ.correct ? 'wrong' : ''
+              }`}
+              style={{ '--c': OPTS[index]?.c || '#b9d6ff' }}
             >
-              <span className="grm-aopt-s">{OPTS[i]?.s || '◆'}</span>
-              <span className="grm-ol">{LTRS[i]}</span>
-              <span className="grm-aopt-t">{opt}</span>
-              {i === currentQ.correct && <span className="grm-aopt-check">✓</span>}
+              <span className="grm-aopt-s">{OPTS[index]?.s || '◆'}</span>
+              <span className="grm-ol">{LTRS[index]}</span>
+              <span className="grm-aopt-t">{option}</span>
+              {index === currentQ.correct && <span className="grm-aopt-check">✓</span>}
             </div>
           ))}
         </div>
@@ -806,12 +1162,12 @@ export default function GoQuizRoom() {
         <div className="grm-mini-lb">
           <div className="grm-mini-lb-hd">🏆 Leaderboard</div>
 
-          {list.slice(0, 6).map((p, i) => (
-            <div key={p.name} className={`grm-mini-row ${p.name === myName ? 'me' : ''}`}>
-              <span className="grm-mini-r">{i + 1}</span>
-              <span className="grm-mini-a">{p.avatar}</span>
-              <span className="grm-mini-n">{p.name}</span>
-              <span className="grm-mini-s">{(p.score || 0).toLocaleString()}</span>
+          {rankedPlayers.slice(0, 6).map((player, index) => (
+            <div key={player.id} className={`grm-mini-row ${player.id === playerId ? 'me' : ''}`}>
+              <span className="grm-mini-r">{index + 1}</span>
+              <span className="grm-mini-a">{player.avatar}</span>
+              <span className="grm-mini-n">{player.name}</span>
+              <span className="grm-mini-s">{(player.score || 0).toLocaleString()}</span>
             </div>
           ))}
         </div>
@@ -820,14 +1176,14 @@ export default function GoQuizRoom() {
           <button
             className="grm-btn-skip"
             onPointerDown={() => {
-              clearInterval(rCountRef.current)
-              triggerNext()
+              clearInterval(resultTimerRef.current)
+              nextQuestion()
             }}
             disabled={busy}
           >
             {busy
               ? 'Loading...'
-              : (sess.currentQ ?? 0) + 1 >= (sess.questionIds?.length ?? 10)
+              : (room.current_q || 0) + 1 >= (room.question_ids?.length || QUESTION_COUNT)
               ? '🏁 Finish now'
               : '▶ Next now'}
           </button>
@@ -837,48 +1193,57 @@ export default function GoQuizRoom() {
   }
 
   if (state === 'finished') {
-    const top = list.slice(0, 3)
+    const top = rankedPlayers.slice(0, 3)
 
     return (
       <div className="grm grm-finished">
         <h1 className="grm-finished-h">🏆 Final Results</h1>
-        <p className="grm-muted">{code} · {totalP} players</p>
+        <p className="grm-muted">
+          {code} · {totalPlayers} player{totalPlayers !== 1 ? 's' : ''}
+        </p>
 
         <div className="grm-podium">
-          {[top[1], top[0], top[2]].map((p, i) => p ? (
-            <div key={p.name} className={`grm-pod ${['second','first','third'][i]}`}>
-              <span style={{ fontSize: i === 1 ? 48 : 32 }}>{p.avatar}</span>
-              <span className="grm-pod-name">{p.name}</span>
-              <div className="grm-pod-block">{['🥈','🥇','🥉'][i]}</div>
-              <span className="grm-pod-score">{(p.score || 0).toLocaleString()}</span>
-            </div>
-          ) : <div key={i} />)}
+          {[top[1], top[0], top[2]].map((player, index) =>
+            player ? (
+              <div key={player.id} className={`grm-pod ${['second', 'first', 'third'][index]}`}>
+                <span style={{ fontSize: index === 1 ? 48 : 32 }}>{player.avatar}</span>
+                <span className="grm-pod-name">{player.name}</span>
+                <div className="grm-pod-block">{['🥈', '🥇', '🥉'][index]}</div>
+                <span className="grm-pod-score">{(player.score || 0).toLocaleString()}</span>
+              </div>
+            ) : (
+              <div key={index} />
+            )
+          )}
         </div>
 
-        {list.length > 3 && (
+        {rankedPlayers.length > 3 && (
           <div className="grm-full-lb">
-            {list.slice(3).map((p, i) => (
-              <div key={p.name} className={`grm-lb-row ${p.name === myName ? 'me' : ''}`}>
-                <span className="grm-lb-r">{i + 4}</span>
-                <span className="grm-lb-a">{p.avatar}</span>
-                <span className="grm-lb-n">{p.name}</span>
-                <span className="grm-lb-s">{(p.score || 0).toLocaleString()}</span>
+            {rankedPlayers.slice(3).map((player, index) => (
+              <div key={player.id} className={`grm-lb-row ${player.id === playerId ? 'me' : ''}`}>
+                <span className="grm-lb-r">{index + 4}</span>
+                <span className="grm-lb-a">{player.avatar}</span>
+                <span className="grm-lb-n">{player.name}</span>
+                <span className="grm-lb-s">{(player.score || 0).toLocaleString()}</span>
               </div>
             ))}
           </div>
         )}
 
-        {!isHost && myData && (
+        {!isHost && currentPlayer && (
           <p className="grm-my-result">
-            Your score: <strong>{(myData.score || 0).toLocaleString()} pts</strong>
-            &nbsp;·&nbsp; Rank #{list.findIndex((p) => p.name === myName) + 1} of {totalP}
+            Your score: <strong>{(currentPlayer.score || 0).toLocaleString()} pts</strong>
+            &nbsp;·&nbsp; Rank #{rankedPlayers.findIndex((p) => p.id === currentPlayer.id) + 1} of{' '}
+            {totalPlayers}
           </p>
         )}
 
         <div className="grm-finished-btns">
-          <button className="grm-btn-primary" onPointerDown={() => nav('/go/quiz?mode=host')}>
-            🔄 New Game
-          </button>
+          {isHost && (
+            <button className="grm-btn-primary" onPointerDown={resetRoomToLobby} disabled={busy}>
+              🔄 New Game
+            </button>
+          )}
 
           <button className="grm-btn-outline" onPointerDown={() => nav('/go')}>
             Home
