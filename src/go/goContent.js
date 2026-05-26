@@ -1334,7 +1334,567 @@ export const quizQuestions = [
     ],
     correct: 0,
     explanation: "Clean transfers require verification, approval, proper introduction, and enough wait time.",
-  }
+  },
+{
+  "id": 61,
+  "topic": "script",
+  "language": "en",
+  "question": "What is the safest way to open the call after confirming the customer name?",
+  "options": [
+    "Identify yourself and Vehicle Services Group",
+    "Ask for the VIN immediately",
+    "Quote the coverage price first",
+    "Tell them the bank requested the call"
+  ],
+  "correct": 0,
+  "explanation": "The opener should identify themselves and Vehicle Services Group before moving through the approved script."
+},
+{
+  "id": 62,
+  "topic": "script",
+  "language": "en",
+  "question": "What should the opener mention when referencing the financed vehicle?",
+  "options": [
+    "The financing month and year",
+    "The full street address",
+    "The customer email address",
+    "The dealership manager name"
+  ],
+  "correct": 0,
+  "explanation": "The approved opening references the vehicle financed on the month and year shown on the form."
+},
+{
+  "id": 63,
+  "topic": "script",
+  "language": "en",
+  "question": "Which line keeps the transfer setup compliant?",
+  "options": [
+    "I will introduce you to a Service Advisor. Okay?",
+    "This will only take less than a minute.",
+    "I am sending you now because you qualify.",
+    "The advisor already approved your price."
+  ],
+  "correct": 0,
+  "explanation": "The opener should ask for approval and avoid promising time, price, or guaranteed qualification."
+},
+{
+  "id": 64,
+  "topic": "script",
+  "language": "en",
+  "question": "What should happen after the Service Advisor joins the call?",
+  "options": [
+    "Stay at least 15 seconds and confirm both parties are talking",
+    "Leave immediately after hearing the first ring",
+    "Mute the call and wait for the system to disconnect",
+    "Ask the customer for payment information"
+  ],
+  "correct": 0,
+  "explanation": "The opener must stay long enough to confirm a real handoff between the customer and advisor."
+},
+{
+  "id": 65,
+  "topic": "script",
+  "language": "es",
+  "question": "¿Cuál es la forma correcta de iniciar el script en español?",
+  "options": [
+    "Hola, le habla [nombre] de Grupo de Servicios Vehiculares",
+    "Hola, llamo del banco que financió su carro",
+    "Hola, soy del dealer y vengo a renovar su póliza",
+    "Hola, le llamo para venderle un seguro obligatorio"
+  ],
+  "correct": 0,
+  "explanation": "El script en español identifica al opener como parte de Grupo de Servicios Vehiculares."
+},
+{
+  "id": 66,
+  "topic": "script",
+  "language": "es",
+  "question": "Antes de transferir en español, ¿qué debe hacer el opener?",
+  "options": [
+    "Pedir aprobación clara del cliente",
+    "Transferir apenas el cliente conteste",
+    "Prometer que será gratis",
+    "Decir que el banco pidió la llamada"
+  ],
+  "correct": 0,
+  "explanation": "La aprobación clara del cliente es necesaria antes de transferir."
+},
+{
+  "id": 67,
+  "topic": "script",
+  "language": "es",
+  "question": "¿Qué rol debe mencionar el opener en la línea de transferencia?",
+  "options": [
+    "Asesor de Servicio",
+    "Agente bancario",
+    "Vendedor de seguros",
+    "Representante del dealer"
+  ],
+  "correct": 0,
+  "explanation": "La línea aprobada conecta al cliente con un Asesor de Servicio."
+},
+{
+  "id": 68,
+  "topic": "script",
+  "language": "es",
+  "question": "¿Qué debe evitar el opener al leer el script?",
+  "options": [
+    "Cambiar o acortar partes importantes",
+    "Usar el nombre del cliente",
+    "Controlar el ritmo de voz",
+    "Confirmar que el vehículo funciona"
+  ],
+  "correct": 0,
+  "explanation": "La entrega debe respetar el wording del script sin improvisar ni saltar pasos."
+},
+{
+  "id": 69,
+  "topic": "objections",
+  "language": "en",
+  "question": "Customer says, “This sounds like a scam.” What is the best first move?",
+  "options": [
+    "Stay calm, clarify who you are, and explain the purpose",
+    "Argue that the customer is wrong",
+    "Transfer immediately so the advisor handles it",
+    "Tell them the call is required by law"
+  ],
+  "correct": 0,
+  "explanation": "Scam concerns require calm clarification and trust building, not pressure."
+},
+{
+  "id": 70,
+  "topic": "objections",
+  "language": "en",
+  "question": "Customer says, “Send me something in the mail.” What should the opener do?",
+  "options": [
+    "Explain the advisor can review the details live first",
+    "Promise to mail a full policy today",
+    "End the call and mark DNC",
+    "Ask for a credit card to send documents"
+  ],
+  "correct": 0,
+  "explanation": "The opener should bridge to the Service Advisor instead of promising documents they cannot send."
+},
+{
+  "id": 71,
+  "topic": "objections",
+  "language": "en",
+  "question": "Customer says, “I already paid for this.” What is the safest response?",
+  "options": [
+    "Clarify this is a review of possible extended coverage options",
+    "Tell them their current plan is invalid",
+    "Ask them to cancel the other plan first",
+    "Say they must pay again today"
+  ],
+  "correct": 0,
+  "explanation": "Do not attack or invalidate existing coverage. Position it as a review."
+},
+{
+  "id": 72,
+  "topic": "objections",
+  "language": "en",
+  "question": "Customer asks, “Are you my dealership?” What should the opener avoid?",
+  "options": [
+    "Claiming to work for the dealership",
+    "Clarifying the company name",
+    "Explaining the purpose of the call",
+    "Moving toward a Service Advisor after approval"
+  ],
+  "correct": 0,
+  "explanation": "The opener should not claim to be the dealership or a car brand."
+},
+{
+  "id": 73,
+  "topic": "objections",
+  "language": "es",
+  "question": "El cliente dice: “No me interesa.” ¿Cuál es el mejor manejo inicial?",
+  "options": [
+    "Reconocerlo y crear curiosidad con una pregunta breve",
+    "Colgar inmediatamente",
+    "Discutir con el cliente",
+    "Transferir sin aprobación"
+  ],
+  "correct": 0,
+  "explanation": "Se debe reconocer la objeción, entenderla y crear curiosidad sin presionar."
+},
+{
+  "id": 74,
+  "topic": "objections",
+  "language": "es",
+  "question": "El cliente pregunta: “¿De dónde sacaron mi información?” ¿Qué respuesta es más segura?",
+  "options": [
+    "Trabajamos con concesionarios y registros vehiculares",
+    "El banco nos dio todo su archivo",
+    "Compramos su información en línea",
+    "No puedo decirle de dónde salió"
+  ],
+  "correct": 0,
+  "explanation": "No se debe decir que el banco dio la información. Usa dealerships y vehicle registries."
+},
+{
+  "id": 75,
+  "topic": "objections",
+  "language": "es",
+  "question": "El cliente dice: “Ya tengo seguro.” ¿Qué debe aclarar el opener?",
+  "options": [
+    "El seguro cubre accidentes; esto es para fallas mecánicas",
+    "El seguro y la garantía extendida son lo mismo",
+    "El seguro se cancela si no activa esto",
+    "La garantía extendida es obligatoria"
+  ],
+  "correct": 0,
+  "explanation": "Seguro y cobertura extendida son productos diferentes."
+},
+{
+  "id": 76,
+  "topic": "objections",
+  "language": "es",
+  "question": "El cliente dice: “Estoy ocupado.” ¿Cuál es la mejor respuesta?",
+  "options": [
+    "Respetar el tiempo y ofrecer callback",
+    "Seguir leyendo el script más rápido",
+    "Transferir para que el asesor agende",
+    "Marcarlo como DNC automáticamente"
+  ],
+  "correct": 0,
+  "explanation": "Si el cliente está ocupado, ofrece una llamada de regreso en vez de forzar el transfer."
+},
+{
+  "id": 77,
+  "topic": "product",
+  "language": "en",
+  "question": "Which vehicle should not be treated as eligible?",
+  "options": [
+    "A 2020 electric vehicle",
+    "A 2017 sedan under 100,000 miles",
+    "A 2018 SUV that runs well",
+    "A 2015 truck with normal mileage"
+  ],
+  "correct": 0,
+  "explanation": "Electric vehicles are excluded from this coverage."
+},
+{
+  "id": 78,
+  "topic": "product",
+  "language": "en",
+  "question": "What is the key difference between insurance and extended coverage?",
+  "options": [
+    "Insurance covers accidents; extended coverage focuses on mechanical breakdowns",
+    "Both cover the exact same repairs",
+    "Extended coverage is required by law",
+    "Insurance pays for normal wear repairs only"
+  ],
+  "correct": 0,
+  "explanation": "This distinction prevents customers from confusing insurance with mechanical breakdown coverage."
+},
+{
+  "id": 79,
+  "topic": "product",
+  "language": "en",
+  "question": "Which repair type should agents avoid promising as covered?",
+  "options": [
+    "Cosmetic bodywork",
+    "Engine mechanical failure",
+    "Transmission mechanical failure",
+    "Authorized covered repairs"
+  ],
+  "correct": 0,
+  "explanation": "Bodywork and cosmetic damage are excluded."
+},
+{
+  "id": 80,
+  "topic": "product",
+  "language": "en",
+  "question": "What mileage limit should be respected before moving forward?",
+  "options": [
+    "Up to 175,000 miles",
+    "Up to 250,000 miles",
+    "Any mileage if financed",
+    "Only under 50,000 miles"
+  ],
+  "correct": 0,
+  "explanation": "Vehicles with over 175,000 miles should not be treated as eligible."
+},
+{
+  "id": 81,
+  "topic": "product",
+  "language": "es",
+  "question": "¿Qué año de vehículo empieza a ser elegible según la regla básica?",
+  "options": [
+    "2011 o más nuevo",
+    "2005 o más nuevo",
+    "Cualquier año si está financiado",
+    "Solo 2020 o más nuevo"
+  ],
+  "correct": 0,
+  "explanation": "Vehículos antes de 2011 no califican bajo la regla básica."
+},
+{
+  "id": 82,
+  "topic": "product",
+  "language": "es",
+  "question": "¿Qué tipo de cobertura se está ofreciendo?",
+  "options": [
+    "Cobertura para fallas mecánicas",
+    "Seguro de accidentes",
+    "Reparación estética de carrocería",
+    "Renovación directa de fábrica"
+  ],
+  "correct": 0,
+  "explanation": "La cobertura extendida se enfoca en fallas mecánicas, no accidentes ni estética."
+},
+{
+  "id": 83,
+  "topic": "product",
+  "language": "es",
+  "question": "¿Dónde se pueden manejar reparaciones aprobadas normalmente?",
+  "options": [
+    "En talleres autorizados a nivel nacional",
+    "Solo en el dealer original",
+    "Solo en Dallas",
+    "Solo con el banco"
+  ],
+  "correct": 0,
+  "explanation": "Las reparaciones aprobadas pueden manejarse en repair facilities autorizadas en EE.UU."
+},
+{
+  "id": 84,
+  "topic": "product",
+  "language": "es",
+  "question": "Si el vehículo tiene partes modificadas, ¿qué debe recordarse?",
+  "options": [
+    "Las partes modificadas no se cubren, pero otras partes podrían calificar",
+    "Todo el vehículo siempre queda cubierto",
+    "Toda modificación mejora la cobertura",
+    "Solo se cubren modificaciones del cliente"
+  ],
+  "correct": 0,
+  "explanation": "Las partes modificadas son excluidas, aunque partes no modificadas podrían calificar."
+},
+{
+  "id": 85,
+  "topic": "callflow",
+  "language": "en",
+  "question": "What protects the call while waiting for the Service Advisor?",
+  "options": [
+    "Keep the customer engaged with light vehicle questions",
+    "Stay silent until the advisor speaks",
+    "Ask for payment details",
+    "Promise the advisor is ready now"
+  ],
+  "correct": 0,
+  "explanation": "Light waiting questions reduce dead air and prevent hang-ups."
+},
+{
+  "id": 86,
+  "topic": "callflow",
+  "language": "en",
+  "question": "If the Service Advisor joins but does not speak, what should the opener do?",
+  "options": [
+    "Say “Hello Service Advisor” and continue the handoff",
+    "Leave immediately",
+    "Tag XFER and disconnect",
+    "Restart the call from the beginning"
+  ],
+  "correct": 0,
+  "explanation": "Prompting the advisor helps prevent silence and protects the transfer."
+},
+{
+  "id": 87,
+  "topic": "callflow",
+  "language": "en",
+  "question": "What makes a transfer risky or invalid?",
+  "options": [
+    "Leaving before confirming the SA and customer are talking",
+    "Getting approval before dialing",
+    "Introducing the customer clearly",
+    "Waiting at least 15 seconds"
+  ],
+  "correct": 0,
+  "explanation": "Leaving too early can create an invalid handoff."
+},
+{
+  "id": 88,
+  "topic": "callflow",
+  "language": "en",
+  "question": "What should be done if the customer hangs up before a real SA conversation starts?",
+  "options": [
+    "Do not treat it as a clean valid XFER",
+    "Always tag XFER because the call was dialed",
+    "Use SPXFER automatically",
+    "Mark DNC immediately"
+  ],
+  "correct": 0,
+  "explanation": "A valid transfer requires a real handoff, not just dialing the advisor."
+},
+{
+  "id": 89,
+  "topic": "callflow",
+  "language": "es",
+  "question": "¿Qué debe pasar antes de marcar al asesor?",
+  "options": [
+    "El cliente debe dar aprobación clara",
+    "El opener debe prometer precio",
+    "El cliente debe dar VIN completo",
+    "El asesor debe enviar un chat"
+  ],
+  "correct": 0,
+  "explanation": "La aprobación del cliente debe ocurrir antes de marcar la transferencia."
+},
+{
+  "id": 90,
+  "topic": "callflow",
+  "language": "es",
+  "question": "En una transferencia en español, ¿qué debe cuidar el opener?",
+  "options": [
+    "Usar la ruta/opción correcta de Spanish transfer",
+    "Usar SPXFER para todo cliente que habla español",
+    "Colgar apenas el asesor conteste",
+    "No presentar al cliente"
+  ],
+  "correct": 0,
+  "explanation": "El flujo en español debe seguir la ruta correcta y mantener un handoff limpio."
+},
+{
+  "id": 91,
+  "topic": "callflow",
+  "language": "es",
+  "question": "¿Qué confirma que el handoff fue seguro?",
+  "options": [
+    "El asesor y el cliente están hablando activamente",
+    "El opener escuchó un ring",
+    "El cliente dijo hello una vez",
+    "El opener presionó transfer"
+  ],
+  "correct": 0,
+  "explanation": "La conversación activa entre asesor y cliente confirma el handoff."
+},
+{
+  "id": 92,
+  "topic": "callflow",
+  "language": "es",
+  "question": "Si el cliente pide callback durante la transferencia, ¿qué debe evitarse?",
+  "options": [
+    "Marcarlo como XFER válido",
+    "Usar CALLBK",
+    "Documentar lo ocurrido",
+    "Respetar el callback"
+  ],
+  "correct": 0,
+  "explanation": "Si el cliente pide callback, no debe contarse como una transferencia limpia."
+},
+{
+  "id": 93,
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Which source statement is not allowed?",
+  "options": [
+    "The bank gave us your file",
+    "We partner with dealerships and registries",
+    "I only see finance information",
+    "The advisor can review the details"
+  ],
+  "correct": 0,
+  "explanation": "Agents should not say the bank gave the customer information."
+},
+{
+  "id": 94,
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Which word should agents avoid when describing the quote or coverage?",
+  "options": [
+    "Free",
+    "Review",
+    "Advisor",
+    "Coverage"
+  ],
+  "correct": 0,
+  "explanation": "Using “free” can be misleading and non-compliant."
+},
+{
+  "id": 95,
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Which disposition rule is correct for blind Spanish routing?",
+  "options": [
+    "Use SPANIS, not SPXFER",
+    "Use SPXFER for every Spanish speaker",
+    "Use XFER even if no closer joins",
+    "Use DNC if the customer speaks Spanish"
+  ],
+  "correct": 0,
+  "explanation": "SPANIS is for blind Spanish speaker routing; SPXFER is for direct Spanish transfer."
+},
+{
+  "id": 96,
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "What should the rep do when the customer asks to be removed?",
+  "options": [
+    "Use DNC and handle it professionally",
+    "Keep rebutting until they listen",
+    "Mark NI only",
+    "Transfer to the advisor"
+  ],
+  "correct": 0,
+  "explanation": "Removal requests must be handled as DNC."
+},
+{
+  "id": 97,
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "¿Qué comportamiento evita errores de compliance?",
+  "options": [
+    "No improvisar ni acortar el script",
+    "Prometer que será gratis",
+    "Decir que el banco pidió la llamada",
+    "Transferir sin aprobación"
+  ],
+  "correct": 0,
+  "explanation": "No improvisar ayuda a mantener consistencia y evitar invalids."
+},
+{
+  "id": 98,
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "¿Qué pause code corresponde al baño/restroom?",
+  "options": [
+    "RR",
+    "Lunch",
+    "Manage",
+    "CB"
+  ],
+  "correct": 0,
+  "explanation": "RR es el código correcto para restroom."
+},
+{
+  "id": 99,
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "¿Qué pause code corresponde a problemas técnicos o del sistema?",
+  "options": [
+    "Tech",
+    "Break",
+    "Lunch",
+    "CALLBK"
+  ],
+  "correct": 0,
+  "explanation": "Tech se usa para problemas técnicos o del sistema."
+},
+{
+  "id": 100,
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "¿Qué combinación ayuda a evitar invalid transfers?",
+  "options": [
+    "Verificar, pedir aprobación, presentar y esperar",
+    "Transferir rápido y colgar",
+    "Usar SPXFER para todo español",
+    "Prometer menos de un minuto"
+  ],
+  "correct": 0,
+  "explanation": "La transferencia limpia requiere verificación, aprobación, introducción y espera suficiente."
+}
 ]
 
 export const learnCategories = [
@@ -1449,10 +2009,10 @@ export const gameModes = [
   },
   {
     id: 'disposition-trainer',
-    label: 'Disposition Trainer',
+    label: 'Dispose It',
     icon: '🖥️',
     color: '#38bdf8',
-    desc: 'Choose the correct dialer disposition',
+    desc: 'Pick the right disposition fast',
   },
   {
     id: 'valid-invalid',
@@ -1486,730 +2046,2761 @@ export const gameModes = [
 
 export const objectionBattleQuestions = [
   {
-    id: 'ob-001',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'en',
-    question: 'Customer says: “I am not interested.” What is the strongest response?',
-    options: [
-      'I understand. Many people felt that way before seeing repair costs.',
-      'I understand. I can end the call and update the file now.',
-      'I understand. The advisor will still need to review it today.',
-      'I understand. You can decide after I finish the full script.',
+    "id": "ob-001",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “I am not interested.” What is the strongest response?",
+    "options": [
+      "I understand. Many people felt that way before seeing repair costs.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Acknowledge the objection, create curiosity, and connect it to repair-cost value.',
+    "correct": 0,
+    "explanation": "Acknowledge first, then create curiosity around repair-cost value."
   },
   {
-    id: 'ob-002',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'en',
-    question: 'Customer asks: “Where did you get my information?” Choose the approved direction.',
-    options: [
-      'We partner with dealerships and vehicle registries nationwide.',
-      'The bank sent us the file after reviewing the loan.',
-      'Your dealership provided your record for this call.',
-      'The system assigned the number without showing the source.',
+    "id": "ob-002",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer asks: “Where did you get my information?” Choose the approved direction.",
+    "options": [
+      "We partner with dealerships and vehicle registries nationwide.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Do not say the bank gave the information. Use dealerships and vehicle registries.',
+    "correct": 0,
+    "explanation": "Use the approved source language; do not say the bank gave the file."
   },
   {
-    id: 'ob-003',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'en',
-    question: 'Customer says: “I already have insurance.” What should you clarify?',
-    options: [
-      'Insurance handles accidents; this is for mechanical breakdowns.',
-      'Insurance works with us once the policy is activated.',
-      'Insurance may expire if coverage is not reviewed soon.',
-      'Insurance covers repairs, but this lowers the deductible.',
+    "id": "ob-003",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “I already have insurance.” What should you clarify?",
+    "options": [
+      "Insurance covers accidents; this is for mechanical breakdowns.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Insurance and extended coverage are different products.',
+    "correct": 0,
+    "explanation": "Separate insurance from mechanical breakdown coverage."
   },
   {
-    id: 'ob-004',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'en',
-    question: 'Customer asks: “How much does it cost?” What is the cleanest bridge?',
-    options: [
-      'It depends on mileage and driving habits; the advisor can review it.',
-      'It starts low, and the advisor can lower it even more today.',
-      'It is usually cheaper than insurance, depending on the vehicle.',
-      'It is not something I can discuss until after the transfer.',
+    "id": "ob-004",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer asks: “How much does it cost?” What is the cleanest bridge?",
+    "options": [
+      "Cost depends on mileage and driving habits; the advisor can review it.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Do not quote exact prices. Bridge to the Service Advisor for pricing.',
+    "correct": 0,
+    "explanation": "Do not quote exact pricing. Bridge to the Service Advisor."
   },
   {
-    id: 'ob-005',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'en',
-    question: 'Customer asks: “What kind of vehicle?” What should the opener say?',
-    options: [
-      'I only see finance info here; the Service Advisor has the full details.',
-      'I can see the vehicle, but I need the advisor to confirm the model.',
-      'The vehicle is listed on the registration we received for the call.',
-      'The exact vehicle is not important until the quote is generated.',
+    "id": "ob-005",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer asks: “What kind of vehicle?” What should the opener say?",
+    "options": [
+      "I only see finance info here; the Service Advisor can review full details.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Be transparent: openers see finance info, not full vehicle details.',
+    "correct": 0,
+    "explanation": "Be transparent about what the opener can see."
   },
   {
-    id: 'ob-006',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'en',
-    question: 'Customer says: “I am busy.” What should you do?',
-    options: [
-      'Respect it and offer a callback window that works better.',
-      'Continue quickly because the review only takes a moment.',
-      'Transfer first so the advisor can schedule the callback.',
-      'Mark it not interested unless they stay on the line.',
+    "id": "ob-006",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “I am busy.” What should you do?",
+    "options": [
+      "Respect it and offer a callback window that works better.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Busy customers should not be forced into a transfer. Offer a callback.',
+    "correct": 0,
+    "explanation": "Do not force the transfer when the customer is clearly busy."
   },
   {
-    id: 'ob-007',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'en',
-    question: 'Customer says: “I already have coverage.” What is the safest position?',
-    options: [
-      'Review whether updated or additional benefits are available.',
-      'Explain that their current plan probably does not cover enough.',
-      'Ask them to cancel their current coverage before comparing.',
-      'Tell them the call is required even if they already have coverage.',
+    "id": "ob-007",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “I already have coverage.” What is the safest position?",
+    "options": [
+      "We can review whether updated or additional benefits are available.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Do not attack existing coverage. Position it as a review or comparison.',
+    "correct": 0,
+    "explanation": "Do not attack current coverage; position it as a review."
   },
   {
-    id: 'ob-008',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'en',
-    question: 'Customer says: “That is not my vehicle.” What should happen next?',
-    options: [
-      'Acknowledge outdated info and verify the current vehicle condition.',
-      'Transfer anyway so the advisor can correct the vehicle record.',
-      'Tell the customer the dealership record is usually more accurate.',
-      'Mark the call as wrong number and move to the next lead.',
+    "id": "ob-008",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “That is not my vehicle.” What should happen next?",
+    "options": [
+      "Acknowledge outdated info and verify their current vehicle condition.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Vehicle info can be outdated. Redirect toward the current vehicle when appropriate.',
+    "correct": 0,
+    "explanation": "Vehicle info can be outdated; redirect carefully."
   },
   {
-    id: 'ob-009',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'es',
-    question: 'Spanish customer says they only speak Spanish. What should you do for a blind Spanish route?',
-    options: [
-      'Use SPANIS when it is a blind Spanish speaker route.',
-      'Use SPXFER because the customer speaks Spanish.',
-      'Use XFER because the call will still be transferred.',
-      'Use LANG because the opener cannot continue in English.',
+    "id": "ob-009",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “This sounds like a scam.” What is the best response?",
+    "options": [
+      "Stay calm, identify the company, and explain the purpose clearly.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Blind Spanish Xfers must use SPANIS, not SPXFER.',
+    "correct": 0,
+    "explanation": "Scam concerns require calm trust building."
   },
   {
-    id: 'ob-010',
-    mode: 'objection-battle',
-    topic: 'objections',
-    language: 'en',
-    question: 'Customer becomes rude and uses profanity. What is the right response?',
-    options: [
-      'Stay calm, ask them to stop, and close respectfully if it continues.',
-      'Raise your tone slightly so the customer understands the warning.',
-      'Keep rebutting until the customer gives a final clear answer.',
-      'Transfer the call before the customer has time to hang up.',
+    "id": "ob-010",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “Send me something first.” What is the best bridge?",
+    "options": [
+      "The Service Advisor can review the details with you live first.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
     ],
-    correct: 0,
-    explanation: 'Remain professional and never argue with the customer.',
+    "correct": 0,
+    "explanation": "Do not promise documents you cannot send."
   },
+  {
+    "id": "ob-011",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “I do not have that car anymore.” What should you ask?",
+    "options": [
+      "Ask if they currently drive another eligible vehicle.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Redirect to current vehicle eligibility when appropriate."
+  },
+  {
+    "id": "ob-012",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “Is this mandatory?” What is the correct tone?",
+    "options": [
+      "No, this is an opportunity to review protection options.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Do not make it sound legally required."
+  },
+  {
+    "id": "ob-013",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer asks: “Are you from my bank?” What should you avoid?",
+    "options": [
+      "Do not say you work for the bank.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Never claim to represent the bank."
+  },
+  {
+    "id": "ob-014",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer asks: “Why are you calling me?” What should you do?",
+    "options": [
+      "Clarify the extended warranty review purpose briefly.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Purpose clarity keeps the call controlled."
+  },
+  {
+    "id": "ob-015",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "en",
+    "question": "Customer says: “I am not paying anything today.” What is safest?",
+    "options": [
+      "The advisor can review options; I am not taking payment.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Openers should not push payment or pricing."
+  },
+  {
+    "id": "ob-016",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente dice: “No me interesa.” ¿Cuál respuesta es más fuerte?",
+    "options": [
+      "Entiendo. Muchos pensaban igual hasta ver cuánto puede costar una reparación.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Reconoce la objeción y crea curiosidad sin presión."
+  },
+  {
+    "id": "ob-017",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente pregunta: “¿De dónde sacaron mi información?”",
+    "options": [
+      "Trabajamos con concesionarios y registros vehiculares.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "No digas que el banco entregó la información."
+  },
+  {
+    "id": "ob-018",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente dice: “Ya tengo seguro.” ¿Qué aclaras?",
+    "options": [
+      "El seguro cubre accidentes; esto es para fallas mecánicas.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Seguro y cobertura extendida son productos distintos."
+  },
+  {
+    "id": "ob-019",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente pregunta: “¿Cuánto cuesta?”",
+    "options": [
+      "Depende del millaje y hábitos de manejo; el asesor puede explicarlo.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "No des precio exacto como opener."
+  },
+  {
+    "id": "ob-020",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente pregunta: “¿Qué vehículo?”",
+    "options": [
+      "Solo veo información financiera; el asesor revisa los detalles completos.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Sé transparente sobre la información visible."
+  },
+  {
+    "id": "ob-021",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente dice: “Estoy ocupado.”",
+    "options": [
+      "Lo respeto. Podemos agendar una llamada en un mejor momento.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Ofrece callback sin presionar."
+  },
+  {
+    "id": "ob-022",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente dice: “Ya tengo cobertura.”",
+    "options": [
+      "Podemos revisar si hay beneficios actualizados o adicionales.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "No ataques la cobertura actual."
+  },
+  {
+    "id": "ob-023",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente dice: “Ese no es mi carro.”",
+    "options": [
+      "Entiendo, puede estar desactualizado. ¿Qué vehículo maneja actualmente?",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Redirige a verificación actual."
+  },
+  {
+    "id": "ob-024",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente dice: “Esto suena a estafa.”",
+    "options": [
+      "Entiendo la preocupación. Le explico claramente quiénes somos y el propósito.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Construye confianza con calma."
+  },
+  {
+    "id": "ob-025",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente dice: “Mándeme información primero.”",
+    "options": [
+      "El Asesor de Servicio puede revisar los detalles con usted en vivo.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Puentea hacia el asesor sin prometer documentos."
+  },
+  {
+    "id": "ob-026",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente dice: “Ya vendí ese carro.”",
+    "options": [
+      "¿Actualmente maneja otro vehículo que esté en buenas condiciones?",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Pregunta por vehículo actual si aplica."
+  },
+  {
+    "id": "ob-027",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente pregunta: “¿Esto es obligatorio?”",
+    "options": [
+      "No, es una oportunidad para revisar opciones de protección.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "No lo presentes como obligación legal."
+  },
+  {
+    "id": "ob-028",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente pregunta: “¿Son del banco?”",
+    "options": [
+      "No somos el banco; somos Grupo de Servicios Vehiculares.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Aclara sin afirmar relación falsa con banco."
+  },
+  {
+    "id": "ob-029",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente pregunta: “¿Cuál es el propósito?”",
+    "options": [
+      "Revisar una oportunidad de protección extendida para su vehículo.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "Una respuesta breve mantiene control."
+  },
+  {
+    "id": "ob-030",
+    "mode": "objection-battle",
+    "topic": "objections",
+    "language": "es",
+    "question": "Cliente dice: “No voy a pagar nada hoy.”",
+    "options": [
+      "El asesor puede revisar opciones; yo no estoy tomando pagos.",
+      "Transfer immediately before they object again.",
+      "Tell the customer they are wrong.",
+      "End the call without clarifying."
+    ],
+    "correct": 0,
+    "explanation": "No presiones pagos ni precios."
+  }
 ]
 
 export const scriptFillChallenges = [
   {
-    id: 'sf-001',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'en',
-    question: 'Complete the opening: “Hi, [client name], this is [your name] with the ____.”',
-    options: [
-      'Vehicle Services Group',
-      'Vehicle Warranty Center',
-      'Dealer Services Office',
-      'Coverage Review Team',
+    "id": "sf-001",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "Complete the opening: “Hi, [client name], this is [your name] with the ____.”",
+    "options": [
+      "Vehicle Services Group",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'The approved company name in the opening is Vehicle Services Group.',
+    "correct": 0,
+    "explanation": "The approved company name is Vehicle Services Group."
   },
   {
-    id: 'sf-002',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'en',
-    question: 'Complete the line: “We are calling about the vehicle you financed on ____.”',
-    options: [
-      'month and year',
-      'loan and term',
-      'date and address',
-      'make and model',
+    "id": "sf-002",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "Complete: “We are calling about the vehicle you financed on ____.”",
+    "options": [
+      "month and year",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'Use the financing month and year from the form.',
+    "correct": 0,
+    "explanation": "Use the financing month and year from the form."
   },
   {
-    id: 'sf-003',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'en',
-    question: 'Complete the eligibility check: “Is your vehicle still in ____?”',
-    options: [
-      'good running condition',
-      'active finance status',
-      'factory warranty range',
-      'the same registered state',
+    "id": "sf-003",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "Complete the check: “Is your vehicle still in ____?”",
+    "options": [
+      "good running condition",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'Vehicle running condition must be confirmed before transfer.',
+    "correct": 0,
+    "explanation": "Vehicle condition confirms eligibility."
   },
   {
-    id: 'sf-004',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'en',
-    question: 'Complete the transfer setup: “I would need to get you on with a ____.”',
-    options: [
-      'Service Advisor',
-      'coverage operator',
-      'verification agent',
-      'warranty specialist',
+    "id": "sf-004",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "Complete: “I need to get you on with a ____.”",
+    "options": [
+      "Service Advisor",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'The correct role is Service Advisor.',
+    "correct": 0,
+    "explanation": "The correct role is Service Advisor."
   },
   {
-    id: 'sf-005',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'en',
-    question: 'Before transferring, the opener must wait for the customer to say something like ____.',
-    options: [
-      'okay or sure',
-      'maybe or later',
-      'wait or hold on',
-      'no or not now',
+    "id": "sf-005",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "Before transferring, wait for a clear ____ from the customer.",
+    "options": [
+      "approval",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'Transfer only after clear customer approval.',
+    "correct": 0,
+    "explanation": "Never transfer without clear customer approval."
   },
   {
-    id: 'sf-006',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'en',
-    question: 'Complete the SA intro: “Hello Service Advisor, I have ____ on the line.”',
-    options: [
-      'the client name',
-      'the policy number',
-      'a warranty lead',
-      'a pricing question',
+    "id": "sf-006",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "When the SA joins, the opener should wait for the advisor to ____ first.",
+    "options": [
+      "speak",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'Use the customer/client name during the handoff.',
+    "correct": 0,
+    "explanation": "The SA should speak first before the opener introduces the customer."
   },
   {
-    id: 'sf-007',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'es',
-    question: 'Complete the Spanish opening: “Le habla [tu nombre] de ____.”',
-    options: [
-      'Grupo de Servicios Vehiculares',
-      'Centro de Garantías del Banco',
-      'Departamento del Concesionario',
-      'Equipo de Protección Nacional',
+    "id": "sf-007",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "Complete the handoff: “Hello Service Advisor, I have ____ on the line.”",
+    "options": [
+      "the customer",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'The Spanish script uses Grupo de Servicios Vehiculares.',
+    "correct": 0,
+    "explanation": "The handoff introduces the customer clearly."
   },
   {
-    id: 'sf-008',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'es',
-    question: 'Complete the Spanish transfer line: “Lo voy a comunicar con un ____.”',
-    options: [
-      'Asesor de Servicio',
-      'Agente de Banco',
-      'Supervisor de Cuenta',
-      'Representante de Ventas',
+    "id": "sf-008",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "After the SA joins, stay for at least ____ seconds.",
+    "options": [
+      "15",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'The correct Spanish term is Asesor de Servicio.',
+    "correct": 0,
+    "explanation": "The 15-second rule protects the handoff."
   },
   {
-    id: 'sf-009',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'en',
-    question: 'Complete the compliance rule: “Do not ____ the script.”',
-    options: [
-      'shorten or improvise',
-      'repeat or practice',
-      'read or memorize',
-      'pause or control',
+    "id": "sf-009",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "Do not say the review will take ____.",
+    "options": [
+      "less than a minute",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'Agents should not shorten or improvise the official script.',
+    "correct": 0,
+    "explanation": "Avoid promising time or oversimplifying the transfer."
   },
   {
-    id: 'sf-010',
-    mode: 'script-fill',
-    topic: 'script',
-    language: 'en',
-    question: 'Complete the wait rule: stay at least ____ after the SA joins.',
-    options: [
-      '15 seconds',
-      '5 seconds',
-      '30 seconds',
-      '60 seconds',
+    "id": "sf-010",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "The opener should not quote the exact ____.",
+    "options": [
+      "price",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
     ],
-    correct: 0,
-    explanation: 'The opener should stay at least 15 seconds and confirm both parties are talking.',
+    "correct": 0,
+    "explanation": "Pricing belongs with the Service Advisor."
   },
+  {
+    "id": "sf-011",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "The purpose line says the extended warranty has not been ____ yet.",
+    "options": [
+      "activated",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "This is the approved purpose concept."
+  },
+  {
+    "id": "sf-012",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "If the customer asks for cost, bridge to the ____.",
+    "options": [
+      "Service Advisor",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "The advisor reviews cost details."
+  },
+  {
+    "id": "sf-013",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "The opener must avoid changing or ____ the script.",
+    "options": [
+      "shortening",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "Script compliance requires consistent wording."
+  },
+  {
+    "id": "sf-014",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "The opener should mention finance info with ____.",
+    "options": [
+      "confidence",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "Confidence helps the line sound credible."
+  },
+  {
+    "id": "sf-015",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "en",
+    "question": "The opener should introduce the customer by ____.",
+    "options": [
+      "name",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "A clean handoff uses the customer name."
+  },
+  {
+    "id": "sf-016",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "Completa: “Le habla [tu nombre] de ____.”",
+    "options": [
+      "Grupo de Servicios Vehiculares",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "Ese es el nombre aprobado en español."
+  },
+  {
+    "id": "sf-017",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "Completa: “Le llamamos con respecto al vehículo que usted financió en ____.”",
+    "options": [
+      "mes y año",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "Se usa mes y año del financiamiento."
+  },
+  {
+    "id": "sf-018",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "Completa: “¿Su vehículo se encuentra actualmente en buenas condiciones de ____?”",
+    "options": [
+      "funcionamiento",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "La condición del vehículo confirma elegibilidad."
+  },
+  {
+    "id": "sf-019",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "Completa: “Lo voy a comunicar con un ____.”",
+    "options": [
+      "Asesor de Servicio",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "Ese es el rol correcto en español."
+  },
+  {
+    "id": "sf-020",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "Antes de transferir, espera aprobación ____ del cliente.",
+    "options": [
+      "clara",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "No se debe transferir sin aprobación clara."
+  },
+  {
+    "id": "sf-021",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "Al transferir, espera que el asesor ____ primero.",
+    "options": [
+      "hable",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "No te adelantes al asesor."
+  },
+  {
+    "id": "sf-022",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "Completa: “Tengo a [nombre del cliente] en ____.”",
+    "options": [
+      "la línea",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "La introducción debe ser clara."
+  },
+  {
+    "id": "sf-023",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "Después de que entra el asesor, espera al menos ____ segundos.",
+    "options": [
+      "15",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "La regla de 15 segundos protege el handoff."
+  },
+  {
+    "id": "sf-024",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "No prometas que será ____.",
+    "options": [
+      "gratis",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "Decir free/gratis puede ser misleading."
+  },
+  {
+    "id": "sf-025",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "No digas que el ____ dio la información.",
+    "options": [
+      "banco",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "No se debe atribuir el lead al banco."
+  },
+  {
+    "id": "sf-026",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "Si preguntan por precio, dirige la explicación al ____.",
+    "options": [
+      "Asesor de Servicio",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "El asesor revisa precios y detalles."
+  },
+  {
+    "id": "sf-027",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "El opener debe evitar ____ partes del script.",
+    "options": [
+      "improvisar",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "No improvisar mantiene compliance."
+  },
+  {
+    "id": "sf-028",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "El opener debe confirmar que el vehículo ____.",
+    "options": [
+      "funciona",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "El vehículo debe estar en buenas condiciones de funcionamiento."
+  },
+  {
+    "id": "sf-029",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "La transferencia debe hacerse después de un “sí” u “____” claro.",
+    "options": [
+      "okay",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "Debe haber consentimiento claro."
+  },
+  {
+    "id": "sf-030",
+    "mode": "script-fill",
+    "topic": "script",
+    "language": "es",
+    "question": "El handoff termina cuando asesor y cliente están ____.",
+    "options": [
+      "hablando",
+      "dealer warranty desk",
+      "bank department",
+      "final price"
+    ],
+    "correct": 0,
+    "explanation": "Debe confirmarse conversación activa."
+  }
 ]
 
 export const dispositionTrainerQuestions = [
   {
-    id: 'dt-001',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'Customer only speaks Spanish, and it is a blind Spanish route. Which disposition fits?',
-    options: ['SPANIS', 'SPXFER', 'XFER', 'LANG'],
-    correct: 0,
-    explanation: 'Blind Spanish routes use SPANIS - Spanish Speaker.',
+    "id": "di-001",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Customer requests a callback later today. Which disposition fits?",
+    "options": [
+      "CALLBK",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Callback requests should be tagged as CALLBK."
   },
   {
-    id: 'dt-002',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'You directly transfer a Spanish-speaking customer to a Spanish closer. Which disposition fits?',
-    options: ['SPXFER', 'SPANIS', 'CALLBK', 'LANG'],
-    correct: 0,
-    explanation: 'SPXFER is only for direct Spanish transfer to a closer.',
+    "id": "di-002",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Customer asks to be removed from the calling list. Which disposition fits?",
+    "options": [
+      "DNC",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Removal requests must be tagged as DNC."
   },
   {
-    id: 'dt-003',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'Customer requests to be removed from the calling list. Which disposition fits?',
-    options: ['DNC', 'NI', 'DC', 'BLANK'],
-    correct: 0,
-    explanation: 'DNC is for removal requests.',
+    "id": "di-003",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Call goes to voicemail or answering machine. Which disposition fits?",
+    "options": [
+      "A",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Voicemail or answering machine is A."
   },
   {
-    id: 'dt-004',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'The number is no longer in service. Which disposition fits?',
-    options: ['DC', 'WRGNUM', 'DAIR', 'A'],
-    correct: 0,
-    explanation: 'DC means disconnected number.',
+    "id": "di-004",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The call connects, but nobody responds after several greetings. Which disposition fits?",
+    "options": [
+      "DAIR",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Connected silence is Dead Air."
   },
   {
-    id: 'dt-005',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'The call connects, but nobody responds. Which disposition fits?',
-    options: ['DAIR', 'A', 'NI', 'CALLBK'],
-    correct: 0,
-    explanation: 'DAIR means dead air.',
+    "id": "di-005",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The number belongs to someone unrelated to the file. Which disposition fits?",
+    "options": [
+      "WRGNUM",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Wrong person/number is WRGNUM."
   },
   {
-    id: 'dt-006',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'Customer asks to receive a call later today. Which disposition fits?',
-    options: ['CALLBK', 'NI', 'DNC', 'XFER'],
-    correct: 0,
-    explanation: 'Use CALLBK when the customer requests a callback.',
+    "id": "di-006",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Vehicle details on file do not match what the customer owns. Which disposition fits?",
+    "options": [
+      "WRGVEH",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Incorrect vehicle info is WRGVEH."
   },
   {
-    id: 'dt-007',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'Phone number belongs to someone unrelated to the file. Which disposition fits?',
-    options: ['WRGNUM', 'WRGVEH', 'BLANK', 'LANG'],
-    correct: 0,
-    explanation: 'WRGNUM is for wrong number.',
+    "id": "di-007",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Customer declines and gives no callback request. Which disposition fits?",
+    "options": [
+      "NI",
+      "XFER",
+      "SPANIS",
+      "CALLBK"
+    ],
+    "correct": 0,
+    "explanation": "A simple decline without callback is NI."
   },
   {
-    id: 'dt-008',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'Vehicle details on file do not match what the customer owns. Which disposition fits?',
-    options: ['WRGVEH', 'WRGNUM', 'NI', 'DC'],
-    correct: 0,
-    explanation: 'WRGVEH is wrong vehicle information.',
+    "id": "di-008",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Customer only speaks Spanish and it is a blind Spanish route. Which disposition fits?",
+    "options": [
+      "SPANIS",
+      "XFER",
+      "NI",
+      "CALLBK"
+    ],
+    "correct": 0,
+    "explanation": "Blind Spanish routing uses SPANIS."
   },
   {
-    id: 'dt-009',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'Call goes to voicemail or an answering machine. Which disposition fits?',
-    options: ['A', 'DAIR', 'CALLBK', 'BLANK'],
-    correct: 0,
-    explanation: 'A is Answering Machine.',
+    "id": "di-009",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "You directly transfer a Spanish-speaking customer to a Spanish closer. Which disposition fits?",
+    "options": [
+      "SPXFER",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Direct Spanish closer transfer uses SPXFER."
   },
   {
-    id: 'dt-010',
-    mode: 'disposition-trainer',
-    topic: 'dosdonts',
-    language: 'en',
-    question: 'Customer declines and gives no callback request. Which disposition fits?',
-    options: ['NI', 'CALLBK', 'DNC', 'XFER'],
-    correct: 0,
-    explanation: 'NI is used when the customer is not interested.',
+    "id": "di-010",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Successful English handoff to Service Advisor. Which disposition fits?",
+    "options": [
+      "XFER",
+      "NI",
+      "SPANIS",
+      "CALLBK"
+    ],
+    "correct": 0,
+    "explanation": "A clean English transfer uses XFER."
   },
+  {
+    "id": "di-011",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Phone number is disconnected or no longer in service. Which disposition fits?",
+    "options": [
+      "DC",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Disconnected number is DC."
+  },
+  {
+    "id": "di-012",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "There is no usable customer info on the file. Which disposition fits?",
+    "options": [
+      "BLANK",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "No usable information is BLANK."
+  },
+  {
+    "id": "di-013",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Customer cannot communicate due to language barrier and no transfer occurs. Which disposition fits?",
+    "options": [
+      "LANG",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Use LANG for unresolved language barrier."
+  },
+  {
+    "id": "di-014",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Customer asks for another call tomorrow morning. Which disposition fits?",
+    "options": [
+      "CALLBK",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Specific future call request is CALLBK."
+  },
+  {
+    "id": "di-015",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Customer says they never want calls again. Which disposition fits?",
+    "options": [
+      "DNC",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Do-not-call request is DNC."
+  },
+  {
+    "id": "di-016",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "Cliente pide llamada más tarde. ¿Qué disposition corresponde?",
+    "options": [
+      "CALLBK",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Una llamada de regreso se marca CALLBK."
+  },
+  {
+    "id": "di-017",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "Cliente pide que no lo llamen más. ¿Qué disposition corresponde?",
+    "options": [
+      "DNC",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Solicitud de no llamar es DNC."
+  },
+  {
+    "id": "di-018",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "La llamada cae a buzón de voz. ¿Qué disposition corresponde?",
+    "options": [
+      "A",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Buzón o contestadora es A."
+  },
+  {
+    "id": "di-019",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "La llamada conecta, pero nadie responde. ¿Qué disposition corresponde?",
+    "options": [
+      "DAIR",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Silencio en llamada conectada es DAIR."
+  },
+  {
+    "id": "di-020",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "La persona dice que es número equivocado. ¿Qué disposition corresponde?",
+    "options": [
+      "WRGNUM",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Número equivocado es WRGNUM."
+  },
+  {
+    "id": "di-021",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "La información del vehículo no coincide. ¿Qué disposition corresponde?",
+    "options": [
+      "WRGVEH",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Vehículo incorrecto es WRGVEH."
+  },
+  {
+    "id": "di-022",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "Cliente no está interesado y no pide callback. ¿Qué disposition corresponde?",
+    "options": [
+      "NI",
+      "XFER",
+      "SPANIS",
+      "CALLBK"
+    ],
+    "correct": 0,
+    "explanation": "Rechazo sin callback es NI."
+  },
+  {
+    "id": "di-023",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "Cliente habla español y se hace blind Spanish route. ¿Qué disposition corresponde?",
+    "options": [
+      "SPANIS",
+      "XFER",
+      "NI",
+      "CALLBK"
+    ],
+    "correct": 0,
+    "explanation": "Blind Spanish route usa SPANIS."
+  },
+  {
+    "id": "di-024",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "Cliente hispanohablante es transferido directamente al closer en español. ¿Qué disposition corresponde?",
+    "options": [
+      "SPXFER",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Transfer directo en español usa SPXFER."
+  },
+  {
+    "id": "di-025",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "Handoff inglés exitoso al Service Advisor. ¿Qué disposition corresponde?",
+    "options": [
+      "XFER",
+      "NI",
+      "SPANIS",
+      "CALLBK"
+    ],
+    "correct": 0,
+    "explanation": "Transfer limpio inglés usa XFER."
+  },
+  {
+    "id": "di-026",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "Número desconectado o fuera de servicio. ¿Qué disposition corresponde?",
+    "options": [
+      "DC",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Número desconectado es DC."
+  },
+  {
+    "id": "di-027",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "No hay información útil en el registro. ¿Qué disposition corresponde?",
+    "options": [
+      "BLANK",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Sin información útil es BLANK."
+  },
+  {
+    "id": "di-028",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "No se puede comunicar por barrera de idioma y no hay transfer. ¿Qué disposition corresponde?",
+    "options": [
+      "LANG",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Barrera de idioma sin resolución es LANG."
+  },
+  {
+    "id": "di-029",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "Cliente pide que le llamen mañana. ¿Qué disposition corresponde?",
+    "options": [
+      "CALLBK",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Callback programado es CALLBK."
+  },
+  {
+    "id": "di-030",
+    "mode": "disposition-trainer",
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "Cliente dice: “borren mi número”. ¿Qué disposition corresponde?",
+    "options": [
+      "DNC",
+      "XFER",
+      "NI",
+      "SPANIS"
+    ],
+    "correct": 0,
+    "explanation": "Pedir remover número es DNC."
+  }
 ]
 
 export const validInvalidScenarios = [
   {
-    id: 'vi-001',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'en',
-    question: 'The opener verified the vehicle runs, got clear approval, introduced the customer, and waited 15 seconds while both parties spoke.',
-    options: ['Valid XFER', 'Invalid XFER', 'Call Back', 'SPANIS only'],
-    correct: 0,
-    explanation: 'This follows the clean transfer process.',
+    "id": "vi-001",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The opener verified the vehicle runs, got approval, introduced the customer, and waited 15 seconds while both parties spoke.",
+    "options": [
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "This follows the clean transfer process."
   },
   {
-    id: 'vi-002',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'en',
-    question: 'The opener transferred before the customer clearly agreed to speak with the Service Advisor.',
-    options: ['Invalid XFER', 'Valid XFER', 'Call Back', 'Answering Machine'],
-    correct: 0,
-    explanation: 'Customer approval is required before transfer.',
+    "id": "vi-002",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The opener transferred before the customer clearly agreed to speak with the Service Advisor.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Customer approval is required before transfer."
   },
   {
-    id: 'vi-003',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'en',
-    question: 'The SA joined, the customer said they were busy and asked the SA for a callback.',
-    options: ['Call Back', 'Valid XFER', 'SPXFER', 'Not Interested'],
-    correct: 0,
-    explanation: 'If the customer requests a callback with the SA, do not tag it as XFER.',
+    "id": "vi-003",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The SA joined, and the customer asked the SA for a callback instead of continuing.",
+    "options": [
+      "Call Back",
+      "Valid XFER",
+      "Invalid XFER",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "If the customer requests callback with the SA, do not count it as XFER."
   },
   {
-    id: 'vi-004',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'en',
-    question: 'The customer hung up after the SA started speaking, before a real conversation began.',
-    options: ['Call Back', 'Valid XFER', 'DNC', 'Wrong Vehicle'],
-    correct: 0,
-    explanation: 'If the handoff is not completed cleanly, avoid tagging it as XFER.',
+    "id": "vi-004",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer hung up before the SA and customer had a real conversation.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "A real handoff did not happen."
   },
   {
-    id: 'vi-005',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'en',
-    question: 'The opener skipped the running-condition question and transferred after the customer said “okay.”',
-    options: ['Invalid XFER', 'Valid XFER', 'Call Back', 'Wrong Number'],
-    correct: 0,
-    explanation: 'Vehicle condition must be verified before transfer.',
+    "id": "vi-005",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The opener skipped the running-condition question and transferred after an okay.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Vehicle condition must be verified first."
   },
   {
-    id: 'vi-006',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'en',
-    question: 'The SA did not speak after 5 seconds, so the opener said “Hello Service Advisor” to avoid dead air.',
-    options: ['Correct process', 'Invalid action', 'Use SPANIS', 'End the call'],
-    correct: 0,
-    explanation: 'Prompting the SA after silence helps prevent customer hang-ups.',
+    "id": "vi-006",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The SA stayed silent, and the opener said “Hello Service Advisor” to prevent dead air.",
+    "options": [
+      "Correct process",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Prompting the SA protects the call."
   },
   {
-    id: 'vi-007',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'en',
-    question: 'The opener promised the transfer would take “just a few minutes” before speaking with the SA.',
-    options: ['Invalid risk', 'Valid process', 'Correct rebuttal', 'Required line'],
-    correct: 0,
-    explanation: 'Do not promise specific waiting time before the SA speaks.',
+    "id": "vi-007",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The opener promised it would take less than a minute before the SA joined.",
+    "options": [
+      "Invalid risk",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Do not promise time."
   },
   {
-    id: 'vi-008',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'es',
-    question: 'The rep used SPXFER for a blind Spanish speaker who was not directly transferred to a Spanish closer.',
-    options: ['Incorrect disposition', 'Correct disposition', 'Valid XFER', 'Factory review'],
-    correct: 0,
-    explanation: 'Blind Spanish routes must use SPANIS, not SPXFER.',
+    "id": "vi-008",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "A blind Spanish speaker was marked SPXFER without direct closer transfer.",
+    "options": [
+      "Incorrect disposition",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Blind Spanish routes use SPANIS."
   },
   {
-    id: 'vi-009',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'en',
-    question: 'The customer confirmed the vehicle has warning lights and current mechanical issues before transfer.',
-    options: ['Do not transfer', 'Transfer normally', 'Use XFER only', 'Use SPXFER'],
-    correct: 0,
-    explanation: 'Current mechanical issues can affect eligibility; do not proceed like a clean transfer.',
+    "id": "vi-009",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer says the vehicle has current major mechanical issues before transfer.",
+    "options": [
+      "Do not transfer",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Current condition concerns can affect eligibility."
   },
   {
-    id: 'vi-010',
-    mode: 'valid-invalid',
-    topic: 'callflow',
-    language: 'en',
-    question: 'The opener introduced the customer to the SA but left immediately before confirming both were talking.',
-    options: ['Invalid risk', 'Valid XFER', 'Correct shortcut', 'Callback process'],
-    correct: 0,
-    explanation: 'The opener must stay long enough to confirm a clean handoff.',
+    "id": "vi-010",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The opener left immediately after introducing the customer, before confirming conversation.",
+    "options": [
+      "Invalid risk",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Stay long enough to confirm both parties are talking."
   },
+  {
+    "id": "vi-011",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer clearly approved, the SA spoke first, and the opener introduced the customer by name.",
+    "options": [
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "This is a proper handoff."
+  },
+  {
+    "id": "vi-012",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The opener told the SA, “This person wants prices,” and left.",
+    "options": [
+      "Invalid risk",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Handoff wording should be professional and clear."
+  },
+  {
+    "id": "vi-013",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer said “maybe later,” but the opener dialed anyway.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Maybe later is not clear approval."
+  },
+  {
+    "id": "vi-014",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The opener used waiting questions while the advisor connected.",
+    "options": [
+      "Correct process",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Waiting questions reduce dead air."
+  },
+  {
+    "id": "vi-015",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "en",
+    "question": "The opener tagged XFER after only one ring to the advisor.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Dialing alone is not a completed transfer."
+  },
+  {
+    "id": "vi-016",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente aprobó, el asesor habló primero y ambos conversaron al menos 15 segundos.",
+    "options": [
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Cumple el proceso limpio."
+  },
+  {
+    "id": "vi-017",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El opener transfirió sin aprobación clara del cliente.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Se requiere aprobación antes de transferir."
+  },
+  {
+    "id": "vi-018",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente pidió callback cuando el asesor entró.",
+    "options": [
+      "Call Back",
+      "Valid XFER",
+      "Invalid XFER",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Si pide callback, no se cuenta como XFER limpio."
+  },
+  {
+    "id": "vi-019",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente colgó antes de una conversación real con el asesor.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "No hubo handoff real."
+  },
+  {
+    "id": "vi-020",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El opener no verificó si el vehículo funciona antes de transferir.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "La condición del vehículo es obligatoria."
+  },
+  {
+    "id": "vi-021",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El asesor quedó en silencio y el opener dijo “Hello Service Advisor”.",
+    "options": [
+      "Correct process",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Es correcto para evitar dead air."
+  },
+  {
+    "id": "vi-022",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El opener prometió que sería menos de un minuto.",
+    "options": [
+      "Invalid risk",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "No se debe prometer tiempo."
+  },
+  {
+    "id": "vi-023",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Se usó SPXFER para un blind Spanish route.",
+    "options": [
+      "Incorrect disposition",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Debe usarse SPANIS."
+  },
+  {
+    "id": "vi-024",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente dijo que el carro no funciona actualmente.",
+    "options": [
+      "Do not transfer",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Vehículo con problemas actuales puede no calificar."
+  },
+  {
+    "id": "vi-025",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El opener colgó apenas entró el asesor.",
+    "options": [
+      "Invalid risk",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Debe esperar y confirmar conversación."
+  },
+  {
+    "id": "vi-026",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El opener presentó al cliente con nombre y esperó confirmación.",
+    "options": [
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Ese es un handoff limpio."
+  },
+  {
+    "id": "vi-027",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El opener dijo al asesor: “quiere precio” y salió.",
+    "options": [
+      "Invalid risk",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "La presentación debe ser profesional."
+  },
+  {
+    "id": "vi-028",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente dijo “tal vez” y aun así se transfirió.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Tal vez no es aprobación clara."
+  },
+  {
+    "id": "vi-029",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "El opener mantuvo al cliente hablando con preguntas ligeras mientras conectaba.",
+    "options": [
+      "Correct process",
+      "Valid XFER",
+      "Invalid XFER",
+      "Call Back"
+    ],
+    "correct": 0,
+    "explanation": "Evita silencio y cuelgues."
+  },
+  {
+    "id": "vi-030",
+    "mode": "valid-invalid",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Se marcó XFER solo porque la llamada al asesor timbró.",
+    "options": [
+      "Invalid XFER",
+      "Valid XFER",
+      "Call Back",
+      "Correct process"
+    ],
+    "correct": 0,
+    "explanation": "Timbrar no equivale a transferencia completada."
+  }
 ]
 
 export const transferOrderChallenges = [
   {
-    id: 'tp-001',
-    mode: 'transfer-protocol',
-    topic: 'callflow',
-    language: 'en',
-    question: 'Build the clean transfer order.',
-    steps: [
-      'Confirm vehicle qualification',
-      'Get customer approval to transfer',
-      'Start the transfer and stay on the line',
-      'Wait for the Service Advisor to speak first',
-      'Introduce the customer by name',
-      'Stay at least 15 seconds and confirm both are talking',
+    "id": "tp-001",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Build the clean transfer order.",
+    "steps": [
+      "Confirm vehicle qualification",
+      "Get customer approval to transfer",
+      "Start the transfer and stay on the line",
+      "Wait for the Service Advisor to speak first",
+      "Introduce the customer by name",
+      "Stay at least 15 seconds and confirm both are talking"
     ],
-    explanation: 'A valid handoff requires qualification, approval, SA connection, proper introduction, and enough wait time.',
+    "explanation": "A valid handoff requires qualification, approval, SA connection, introduction, and wait time."
   },
   {
-    id: 'tp-002',
-    mode: 'transfer-protocol',
-    topic: 'callflow',
-    language: 'en',
-    question: 'Order the first four core script actions.',
-    steps: [
-      'Greet the customer and identify yourself',
-      'Mention the financed vehicle month and year',
-      'State the extended warranty purpose line',
-      'Ask if the vehicle is in good running condition',
+    "id": "tp-002",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the first four core script actions.",
+    "steps": [
+      "Greet the customer and identify yourself",
+      "Mention the financed vehicle month and year",
+      "State the extended warranty purpose line",
+      "Ask if the vehicle is in good running condition"
     ],
-    explanation: 'The script should move from intro, to finance reference, to purpose, to eligibility.',
+    "explanation": "The script moves from intro to finance reference to purpose to eligibility."
   },
   {
-    id: 'tp-003',
-    mode: 'transfer-protocol',
-    topic: 'callflow',
-    language: 'en',
-    question: 'Order the SA handoff actions.',
-    steps: [
-      'Customer gives approval',
-      'Dial the Service Advisor',
-      'Wait for the advisor to speak first',
-      'Introduce the customer clearly',
-      'Stay and confirm the conversation started',
+    "id": "tp-003",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the SA handoff actions.",
+    "steps": [
+      "Customer gives approval",
+      "Dial the Service Advisor",
+      "Wait for the advisor to speak first",
+      "Introduce the customer clearly",
+      "Stay and confirm the conversation started"
     ],
-    explanation: 'Do not introduce before the advisor speaks, and do not leave too early.',
+    "explanation": "Do not introduce before the advisor speaks, and do not leave too early."
   },
   {
-    id: 'tp-004',
-    mode: 'transfer-protocol',
-    topic: 'callflow',
-    language: 'es',
-    question: 'Order the Spanish transfer flow.',
-    steps: [
-      'Verify the vehicle is running well',
-      'Tell the customer you will introduce an Asesor de Servicio',
-      'Wait for customer approval',
-      'Select the correct Spanish transfer path',
-      'Wait for the advisor and introduce the customer',
+    "id": "tp-004",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the process when the SA is silent after connecting.",
+    "steps": [
+      "Stay on the 3-way call",
+      "Wait briefly for the SA to respond",
+      "Say “Hello Service Advisor” if there is no response",
+      "Complete the introduction once the SA responds",
+      "Add a note if the SA took longer than expected"
     ],
-    explanation: 'Spanish transfers still require verification, approval, and a clean advisor introduction.',
+    "explanation": "Prompting the advisor after silence protects the call."
   },
   {
-    id: 'tp-005',
-    mode: 'transfer-protocol',
-    topic: 'callflow',
-    language: 'en',
-    question: 'Order the process when the SA is silent after connecting.',
-    steps: [
-      'Stay on the 3-way call',
-      'Wait briefly for the SA to respond',
-      'Say “Hello Service Advisor” if there is no response',
-      'Complete the introduction once the SA responds',
-      'Add a note that the SA took longer than expected',
+    "id": "tp-005",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order a clean callback handling flow.",
+    "steps": [
+      "Customer says they are busy",
+      "Acknowledge their time",
+      "Offer a specific callback window",
+      "Confirm the callback time",
+      "Use CALLBK"
     ],
-    explanation: 'Prompting the advisor after silence protects the call and helps document the situation.',
+    "explanation": "Callback handling should be respectful and properly tagged."
   },
+  {
+    "id": "tp-006",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the wrong number handling flow.",
+    "steps": [
+      "Person says the customer is not there",
+      "Confirm it is the wrong number politely",
+      "Avoid pitching the offer",
+      "Use WRGNUM",
+      "Move to the next call"
+    ],
+    "explanation": "Wrong numbers should not be forced into the pitch."
+  },
+  {
+    "id": "tp-007",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the DNC handling flow.",
+    "steps": [
+      "Customer asks not to be called again",
+      "Acknowledge the request",
+      "Do not rebuttal further",
+      "Use DNC",
+      "End politely"
+    ],
+    "explanation": "DNC requests must be respected."
+  },
+  {
+    "id": "tp-008",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the price objection bridge.",
+    "steps": [
+      "Customer asks for exact cost",
+      "Acknowledge the question",
+      "Explain cost depends on vehicle factors",
+      "Bridge to the Service Advisor",
+      "Ask for approval to introduce them"
+    ],
+    "explanation": "Openers should not quote exact prices."
+  },
+  {
+    "id": "tp-009",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the insurance objection flow.",
+    "steps": [
+      "Customer says they have insurance",
+      "Acknowledge it",
+      "Explain insurance covers accidents",
+      "Explain this is mechanical breakdown coverage",
+      "Move back toward advisor review"
+    ],
+    "explanation": "Clear product distinction helps overcome confusion."
+  },
+  {
+    "id": "tp-010",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the no-interest flow.",
+    "steps": [
+      "Customer says they are not interested",
+      "Acknowledge calmly",
+      "Ask a brief curiosity question",
+      "Connect the risk to repair costs",
+      "Move toward advisor review if they engage"
+    ],
+    "explanation": "Do not argue; create curiosity."
+  },
+  {
+    "id": "tp-011",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the current vehicle verification flow.",
+    "steps": [
+      "Customer says the listed vehicle is wrong",
+      "Acknowledge outdated info",
+      "Ask what vehicle they currently drive",
+      "Confirm it is running well",
+      "Continue only if it may qualify"
+    ],
+    "explanation": "Wrong info can become a verification opportunity."
+  },
+  {
+    "id": "tp-012",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the Spanish blind route logic.",
+    "steps": [
+      "Customer only speaks Spanish",
+      "Do not continue in English if communication is not possible",
+      "Route as Spanish speaker",
+      "Use SPANIS",
+      "Do not use SPXFER unless direct transfer happens"
+    ],
+    "explanation": "Blind Spanish route uses SPANIS."
+  },
+  {
+    "id": "tp-013",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order a clean XFER disposition decision.",
+    "steps": [
+      "Vehicle is verified",
+      "Approval is received",
+      "SA speaks first",
+      "Customer and SA talk",
+      "Tag XFER"
+    ],
+    "explanation": "XFER requires a completed handoff."
+  },
+  {
+    "id": "tp-014",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the invalid-transfer prevention checklist.",
+    "steps": [
+      "Verify the vehicle runs",
+      "Get explicit approval",
+      "Wait for SA to answer",
+      "Introduce correctly",
+      "Stay long enough to confirm conversation"
+    ],
+    "explanation": "These steps prevent invalid transfers."
+  },
+  {
+    "id": "tp-015",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "en",
+    "question": "Order the voicemail disposition flow.",
+    "steps": [
+      "Call reaches voicemail",
+      "Do not pitch to voicemail as customer",
+      "End according to process",
+      "Use A",
+      "Move to the next lead"
+    ],
+    "explanation": "Voicemail/answering machine is A."
+  },
+  {
+    "id": "tp-016",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el flujo limpio de transferencia.",
+    "steps": [
+      "Confirmar que el vehículo funciona",
+      "Pedir aprobación para transferir",
+      "Marcar al Asesor de Servicio",
+      "Esperar que el asesor hable primero",
+      "Presentar al cliente",
+      "Esperar 15 segundos y confirmar conversación"
+    ],
+    "explanation": "La transferencia limpia requiere todos estos pasos."
+  },
+  {
+    "id": "tp-017",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el inicio del script en español.",
+    "steps": [
+      "Saludar al cliente por nombre",
+      "Identificarte como Grupo de Servicios Vehiculares",
+      "Mencionar mes y año del financiamiento",
+      "Decir la línea de garantía extendida",
+      "Verificar condición del vehículo"
+    ],
+    "explanation": "El script debe seguir orden lógico y aprobado."
+  },
+  {
+    "id": "tp-018",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el manejo de “no me interesa”.",
+    "steps": [
+      "Reconocer la objeción",
+      "No discutir",
+      "Hacer una pregunta breve",
+      "Crear curiosidad sobre costos de reparación",
+      "Volver a la revisión con el asesor"
+    ],
+    "explanation": "La objeción se maneja con calma y curiosidad."
+  },
+  {
+    "id": "tp-019",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el manejo de “ya tengo seguro”.",
+    "steps": [
+      "Reconocer el seguro",
+      "Explicar que seguro cubre accidentes",
+      "Aclarar que esto cubre fallas mecánicas",
+      "Mantenerlo breve",
+      "Volver al asesor"
+    ],
+    "explanation": "La diferencia de producto debe quedar clara."
+  },
+  {
+    "id": "tp-020",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el flujo de callback.",
+    "steps": [
+      "Cliente dice que está ocupado",
+      "Respetar su tiempo",
+      "Ofrecer horario de callback",
+      "Confirmar el horario",
+      "Usar CALLBK"
+    ],
+    "explanation": "CALLBK aplica si el cliente pide llamada posterior."
+  },
+  {
+    "id": "tp-021",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el flujo DNC.",
+    "steps": [
+      "Cliente pide no volver a llamar",
+      "Reconocer la solicitud",
+      "No seguir rebuttals",
+      "Marcar DNC",
+      "Cerrar con respeto"
+    ],
+    "explanation": "DNC debe respetarse de inmediato."
+  },
+  {
+    "id": "tp-022",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena la ruta Spanish blind.",
+    "steps": [
+      "Cliente solo habla español",
+      "No hay transferencia directa a closer",
+      "Enrutar como Spanish speaker",
+      "Usar SPANIS",
+      "No usar SPXFER"
+    ],
+    "explanation": "SPANIS es para blind Spanish route."
+  },
+  {
+    "id": "tp-023",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena la transferencia directa en español.",
+    "steps": [
+      "Cliente habla español",
+      "Se conecta con closer/asesor en español",
+      "Se presenta al cliente",
+      "Ambos conversan",
+      "Usar SPXFER"
+    ],
+    "explanation": "SPXFER es para transferencia directa en español."
+  },
+  {
+    "id": "tp-024",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el manejo de wrong number.",
+    "steps": [
+      "Persona dice número equivocado",
+      "Confirmar con respeto",
+      "No hacer pitch",
+      "Usar WRGNUM",
+      "Continuar con siguiente llamada"
+    ],
+    "explanation": "WRGNUM aplica cuando el número no corresponde."
+  },
+  {
+    "id": "tp-025",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el manejo de wrong vehicle.",
+    "steps": [
+      "Cliente dice que ese no es su vehículo",
+      "Reconocer posible información vieja",
+      "Preguntar por vehículo actual",
+      "Verificar si funciona",
+      "Usar WRGVEH si la info no coincide"
+    ],
+    "explanation": "WRGVEH aplica a información incorrecta del vehículo."
+  },
+  {
+    "id": "tp-026",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el manejo de precio.",
+    "steps": [
+      "Cliente pregunta precio",
+      "Reconocer la pregunta",
+      "Explicar que depende de factores",
+      "No dar precio exacto",
+      "Puente al Asesor de Servicio"
+    ],
+    "explanation": "El opener no debe cotizar precio exacto."
+  },
+  {
+    "id": "tp-027",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el handoff al asesor.",
+    "steps": [
+      "Cliente aprueba",
+      "Se marca al asesor",
+      "El asesor habla primero",
+      "El opener presenta al cliente",
+      "El opener confirma conversación"
+    ],
+    "explanation": "Ese orden protege la transferencia."
+  },
+  {
+    "id": "tp-028",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el proceso si el asesor queda callado.",
+    "steps": [
+      "Permanecer en la línea",
+      "Esperar brevemente",
+      "Decir Hello Service Advisor",
+      "Presentar al cliente cuando responda",
+      "Documentar si hubo demora"
+    ],
+    "explanation": "Esto reduce dead air."
+  },
+  {
+    "id": "tp-029",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena la decisión de XFER limpio.",
+    "steps": [
+      "Verificar vehículo",
+      "Obtener aprobación",
+      "Conectar con asesor",
+      "Confirmar conversación",
+      "Marcar XFER"
+    ],
+    "explanation": "XFER solo si hubo handoff real."
+  },
+  {
+    "id": "tp-030",
+    "mode": "transfer-protocol",
+    "topic": "callflow",
+    "language": "es",
+    "question": "Ordena el checklist anti-invalid.",
+    "steps": [
+      "No saltar verificación",
+      "No prometer tiempo",
+      "No transferir sin aprobación",
+      "No colgar inmediatamente",
+      "Confirmar que ambos hablan"
+    ],
+    "explanation": "Este checklist reduce invalids."
+  }
 ]
 
 export const roleplayScenarios = [
   {
-    id: 'rp-001',
-    mode: 'roleplay',
-    topic: 'objections',
-    language: 'en',
-    customer: 'Who is this? I do not recognize this number.',
-    question: 'Choose the best opener response.',
-    options: [
-      'This is [your name] from the Vehicle Services Group.',
-      'This is the warranty office calling about your account.',
-      'This is a required review for your financed vehicle.',
-      'This is the company that handles your vehicle plan.',
+    "id": "rp-001",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "I am not interested.",
+    "question": "Choose the best next move.",
+    "options": [
+      "Acknowledge and ask a short curiosity question.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
     ],
-    correct: 0,
-    outcome: 'Good. You identified yourself without overclaiming or sounding suspicious.',
+    "correct": 0,
+    "outcome": "Good. Curiosity keeps the door open without pressure."
   },
   {
-    id: 'rp-002',
-    mode: 'roleplay',
-    topic: 'objections',
-    language: 'en',
-    customer: 'I already told someone I was not interested.',
-    question: 'Choose the best way to reopen the conversation.',
-    options: [
-      'I understand. Your account may have updated options now.',
-      'I understand. This time the advisor can explain it better.',
-      'I understand. The file still requires one final review.',
-      'I understand. I will keep it short and transfer you now.',
+    "id": "rp-002",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "Where did you get my information?",
+    "question": "Choose the safest answer.",
+    "options": [
+      "Say you partner with dealerships and vehicle registries.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
     ],
-    correct: 0,
-    outcome: 'Good. This creates a reason for the new call without pressuring the customer.',
+    "correct": 0,
+    "outcome": "Good. Do not say the bank gave the information."
   },
   {
-    id: 'rp-003',
-    mode: 'roleplay',
-    topic: 'objections',
-    language: 'en',
-    customer: 'What vehicle are you talking about?',
-    question: 'Choose the safest response.',
-    options: [
-      'I only see finance information here, not the exact make or model.',
-      'It should be the vehicle attached to your latest registration.',
-      'The advisor will know it once I transfer you over.',
-      'It is the vehicle connected with your monthly payment.',
+    "id": "rp-003",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "I already have insurance.",
+    "question": "Choose the best product explanation.",
+    "options": [
+      "Insurance covers accidents; this is for mechanical breakdowns.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
     ],
-    correct: 0,
-    outcome: 'Good. You are honest about what you can see and still guide toward the advisor.',
+    "correct": 0,
+    "outcome": "Good. This separates the products clearly."
   },
   {
-    id: 'rp-004',
-    mode: 'roleplay',
-    topic: 'callflow',
-    language: 'en',
-    customer: 'Fine, but I only have one minute.',
-    question: 'Choose the cleanest next move.',
-    options: [
-      'Confirm approval and avoid promising exact wait time.',
-      'Promise it will take less than one minute.',
-      'Transfer immediately before the customer changes their mind.',
-      'Skip the vehicle condition question to save time.',
+    "id": "rp-004",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "How much is it?",
+    "question": "Choose the cleanest bridge.",
+    "options": [
+      "Cost depends on factors; the Service Advisor can review it.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
     ],
-    correct: 0,
-    outcome: 'Good. Do not promise time or skip required verification.',
+    "correct": 0,
+    "outcome": "Good. Do not quote prices as the opener."
   },
   {
-    id: 'rp-005',
-    mode: 'roleplay',
-    topic: 'dosdonts',
-    language: 'en',
-    customer: 'Take me off your list.',
-    question: 'Choose the correct handling.',
-    options: [
-      'Confirm removal politely and use DNC.',
-      'Ask one more question before removing them.',
-      'Use NI because they are not interested.',
-      'Transfer to the advisor for removal.',
+    "id": "rp-005",
+    "mode": "roleplay",
+    "topic": "callflow",
+    "language": "en",
+    "customer": "I am busy right now.",
+    "question": "Choose the best handling.",
+    "options": [
+      "Offer a callback time that works better.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
     ],
-    correct: 0,
-    outcome: 'Good. Removal requests should be handled professionally and tagged as DNC.',
+    "correct": 0,
+    "outcome": "Good. Respect the customer’s time."
   },
   {
-    id: 'rp-006',
-    mode: 'roleplay',
-    topic: 'product',
-    language: 'en',
-    customer: 'I have full coverage insurance already.',
-    question: 'Choose the best product explanation.',
-    options: [
-      'Insurance covers accidents; this covers mechanical breakdowns.',
-      'Insurance helps with claims; this helps lower insurance cost.',
-      'Insurance is required; this is required for financed vehicles.',
-      'Insurance and extended coverage work exactly the same way.',
+    "id": "rp-006",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "Take me off your list.",
+    "question": "Choose the correct handling.",
+    "options": [
+      "Confirm removal politely and use DNC.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
     ],
-    correct: 0,
-    outcome: 'Good. Clear product distinction prevents confusion and objections.',
+    "correct": 0,
+    "outcome": "Good. Removal requests should be respected."
   },
   {
-    id: 'rp-007',
-    mode: 'roleplay',
-    topic: 'callflow',
-    language: 'es',
-    customer: 'Spanish-speaking customer needs routing, but no direct Spanish closer transfer happens.',
-    question: 'Choose the right disposition logic.',
-    options: [
-      'Use SPANIS because it is a blind Spanish speaker route.',
-      'Use SPXFER because the customer speaks Spanish.',
-      'Use LANG because English was not possible.',
-      'Use XFER because the customer may be transferred later.',
+    "id": "rp-007",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "That is not my vehicle.",
+    "question": "Choose the next question.",
+    "options": [
+      "Ask what vehicle they currently drive and whether it runs well.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
     ],
-    correct: 0,
-    outcome: 'Good. SPXFER is only for direct Spanish transfer to a closer.',
+    "correct": 0,
+    "outcome": "Good. Redirect to current vehicle verification."
   },
   {
-    id: 'rp-008',
-    mode: 'roleplay',
-    topic: 'callflow',
-    language: 'en',
-    customer: 'The Service Advisor joins but stays silent for several seconds.',
-    question: 'Choose the best opener action.',
-    options: [
-      'Say “Hello Service Advisor” and continue the handoff.',
-      'Hang up quickly so the customer is left with the advisor.',
-      'Tell the customer the advisor is busy and tag XFER.',
-      'Restart the transfer without saying anything to the SA.',
+    "id": "rp-008",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "This sounds like a scam.",
+    "question": "Choose the best tone.",
+    "options": [
+      "Stay calm, identify the company, and explain the purpose.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
     ],
-    correct: 0,
-    outcome: 'Good. Prompt the SA to prevent dead air and document it if needed.',
+    "correct": 0,
+    "outcome": "Good. Trust concerns need clarity."
   },
+  {
+    "id": "rp-009",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "The advisor joined but is silent.",
+    "question": "Choose the opener action.",
+    "options": [
+      "Say “Hello Service Advisor” and complete the handoff.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Good. Avoid dead air."
+  },
+  {
+    "id": "rp-010",
+    "mode": "roleplay",
+    "topic": "callflow",
+    "language": "en",
+    "customer": "I want information mailed first.",
+    "question": "Choose the best bridge.",
+    "options": [
+      "The Service Advisor can review the details with you live.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Good. Bridge without promising mail."
+  },
+  {
+    "id": "rp-011",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "I sold that car.",
+    "question": "Choose the best move.",
+    "options": [
+      "Ask whether they currently drive another vehicle.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Good. Current vehicle may still matter."
+  },
+  {
+    "id": "rp-012",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "Is this required?",
+    "question": "Choose the safest answer.",
+    "options": [
+      "No, this is an opportunity to review options.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Good. Do not make it sound mandatory."
+  },
+  {
+    "id": "rp-013",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "I have coverage with another company.",
+    "question": "Choose the best angle.",
+    "options": [
+      "Use it as a comparison opportunity.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Good. Do not attack the current plan."
+  },
+  {
+    "id": "rp-014",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "en",
+    "customer": "Who is this?",
+    "question": "Choose the correct identification.",
+    "options": [
+      "This is [name] with Vehicle Services Group.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Good. Identify clearly."
+  },
+  {
+    "id": "rp-015",
+    "mode": "roleplay",
+    "topic": "callflow",
+    "language": "en",
+    "customer": "The car has engine problems right now.",
+    "question": "Choose the safest action.",
+    "options": [
+      "Do not treat it like a clean qualified transfer.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Good. Current mechanical issues are a risk."
+  },
+  {
+    "id": "rp-016",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "No me interesa.",
+    "question": "Elige el mejor siguiente paso.",
+    "options": [
+      "Reconocer y hacer una pregunta breve de curiosidad.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. No presiones, crea curiosidad."
+  },
+  {
+    "id": "rp-017",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "¿De dónde sacaron mi información?",
+    "question": "Elige la respuesta segura.",
+    "options": [
+      "Trabajamos con concesionarios y registros vehiculares.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. No digas que fue el banco."
+  },
+  {
+    "id": "rp-018",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "Ya tengo seguro.",
+    "question": "Elige la mejor explicación.",
+    "options": [
+      "El seguro cubre accidentes; esto cubre fallas mecánicas.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. Aclara la diferencia."
+  },
+  {
+    "id": "rp-019",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "¿Cuánto cuesta?",
+    "question": "Elige el puente correcto.",
+    "options": [
+      "Depende de factores; el Asesor de Servicio puede revisarlo.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. El opener no cotiza."
+  },
+  {
+    "id": "rp-020",
+    "mode": "roleplay",
+    "topic": "callflow",
+    "language": "es",
+    "customer": "Estoy ocupado.",
+    "question": "Elige el manejo correcto.",
+    "options": [
+      "Ofrecer callback en un mejor momento.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. Respeta el tiempo del cliente."
+  },
+  {
+    "id": "rp-021",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "No me vuelvan a llamar.",
+    "question": "Elige el manejo correcto.",
+    "options": [
+      "Confirmar con respeto y usar DNC.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. DNC se respeta."
+  },
+  {
+    "id": "rp-022",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "Ese no es mi vehículo.",
+    "question": "Elige la siguiente pregunta.",
+    "options": [
+      "Preguntar qué vehículo maneja actualmente y si funciona bien.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. Verifica vehículo actual."
+  },
+  {
+    "id": "rp-023",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "Esto suena a estafa.",
+    "question": "Elige el tono correcto.",
+    "options": [
+      "Mantener calma, identificar la empresa y explicar el propósito.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. Construye confianza."
+  },
+  {
+    "id": "rp-024",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "El asesor entró pero no habla.",
+    "question": "Elige la acción del opener.",
+    "options": [
+      "Decir “Hello Service Advisor” y completar el handoff.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. Evita dead air."
+  },
+  {
+    "id": "rp-025",
+    "mode": "roleplay",
+    "topic": "callflow",
+    "language": "es",
+    "customer": "Mándeme información primero.",
+    "question": "Elige el mejor puente.",
+    "options": [
+      "El asesor puede revisar los detalles con usted en vivo.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. No prometas documentos."
+  },
+  {
+    "id": "rp-026",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "Vendí ese carro.",
+    "question": "Elige el mejor movimiento.",
+    "options": [
+      "Preguntar si maneja otro vehículo actualmente.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. Puede haber vehículo actual."
+  },
+  {
+    "id": "rp-027",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "¿Esto es obligatorio?",
+    "question": "Elige la respuesta segura.",
+    "options": [
+      "No, es una oportunidad para revisar opciones.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. No lo hagas sonar obligatorio."
+  },
+  {
+    "id": "rp-028",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "Tengo cobertura con otra compañía.",
+    "question": "Elige el mejor ángulo.",
+    "options": [
+      "Usarlo como oportunidad de comparación.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. No ataques la cobertura actual."
+  },
+  {
+    "id": "rp-029",
+    "mode": "roleplay",
+    "topic": "objections",
+    "language": "es",
+    "customer": "¿Quién habla?",
+    "question": "Elige la identificación correcta.",
+    "options": [
+      "Le habla [nombre] de Grupo de Servicios Vehiculares.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. Identifica claramente."
+  },
+  {
+    "id": "rp-030",
+    "mode": "roleplay",
+    "topic": "callflow",
+    "language": "es",
+    "customer": "El carro tiene problemas de motor ahora.",
+    "question": "Elige la acción segura.",
+    "options": [
+      "No tratarlo como transferencia limpia calificada.",
+      "Transfer immediately.",
+      "End the call without notes.",
+      "Promise a specific price."
+    ],
+    "correct": 0,
+    "outcome": "Bien. Es un riesgo de elegibilidad."
+  }
 ]
 
 export const gameChallengeBank = {
   'objection-battle': objectionBattleQuestions,
   'script-fill': scriptFillChallenges,
+  'dispose-it': dispositionTrainerQuestions,
   'disposition-trainer': dispositionTrainerQuestions,
   'valid-invalid': validInvalidScenarios,
   'transfer-protocol': transferOrderChallenges,
   roleplay: roleplayScenarios,
+  'speed-round': quizQuestions,
+  certification: quizQuestions,
 }

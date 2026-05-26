@@ -824,3 +824,58 @@
     grid-template-columns: repeat(4, 1fr);
   }
 }
+/* Pulse GO clean starfield override
+   Paste this at the bottom of GoQuiz.css, GoQuizPlay.css, and GoQuizRoom.css.
+   It keeps the same clean visual language as /go without adding too many dots. */
+
+.gqz-page,
+.gqp-page,
+.grm {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(39, 103, 255, 0.16), transparent 32%),
+    radial-gradient(circle at 50% 45%, rgba(18, 38, 78, 0.10), transparent 42%),
+    linear-gradient(180deg, #040816 0%, #050913 100%) !important;
+  color: #f8fafc;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.gqz-page::before,
+.gqp-page::before,
+.grm::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.78) 0 1px, transparent 1.6px) 8% 18% / 220px 220px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.70) 0 1px, transparent 1.6px) 22% 42% / 240px 240px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.70) 0 1px, transparent 1.6px) 35% 22% / 260px 260px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.68) 0 1px, transparent 1.6px) 52% 30% / 240px 240px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.76) 0 1px, transparent 1.6px) 68% 18% / 220px 220px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.68) 0 1px, transparent 1.6px) 82% 38% / 250px 250px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.72) 0 1px, transparent 1.6px) 14% 70% / 240px 240px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.66) 0 1px, transparent 1.6px) 32% 78% / 260px 260px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.72) 0 1px, transparent 1.6px) 56% 66% / 240px 240px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.68) 0 1px, transparent 1.6px) 76% 74% / 250px 250px no-repeat,
+    radial-gradient(circle, rgba(255,255,255,0.68) 0 1px, transparent 1.6px) 90% 56% / 230px 230px no-repeat;
+}
+
+.gqz-page > *,
+.gqp-page > *,
+.grm > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gqz-page::before,
+  .gqp-page::before,
+  .grm::before {
+    animation: none !important;
+  }
+}
