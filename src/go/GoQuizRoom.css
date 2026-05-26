@@ -879,3 +879,58 @@
     animation: none !important;
   }
 }
+/* =========================================================
+   PULSE GO CLEAN BACKGROUND PATCH
+   Fix: reduce white dots and disable old dense stars
+   ========================================================= */
+
+.gq-bg-stars,
+.gq-bg-stars::before,
+.gq-bg-stars::after,
+.gq-bg-stars span {
+  display: none !important;
+}
+
+.gq-page {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(86, 126, 210, 0.13), transparent 34%),
+    radial-gradient(circle at 50% 55%, rgba(18, 38, 78, 0.10), transparent 48%),
+    linear-gradient(180deg, #040816 0%, #050913 100%) !important;
+}
+
+.gq-page::before {
+  content: "" !important;
+  position: fixed !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  opacity: 0.48 !important;
+  background:
+    radial-gradient(circle at 7% 17%, rgba(255,255,255,0.72) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 15% 55%, rgba(255,255,255,0.52) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 24% 28%, rgba(255,255,255,0.62) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 34% 16%, rgba(255,255,255,0.50) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 44% 38%, rgba(255,255,255,0.45) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 54% 20%, rgba(255,255,255,0.55) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 63% 55%, rgba(255,255,255,0.42) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 74% 26%, rgba(255,255,255,0.58) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 83% 50%, rgba(255,255,255,0.44) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 92% 18%, rgba(255,255,255,0.62) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 18% 78%, rgba(255,255,255,0.45) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 38% 84%, rgba(255,255,255,0.36) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 58% 76%, rgba(255,255,255,0.44) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 79% 82%, rgba(255,255,255,0.38) 0 1px, transparent 1.8px) !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
+}
+
+.gq-page::after {
+  content: "" !important;
+  position: fixed !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  opacity: 0.18 !important;
+  background:
+    linear-gradient(115deg, transparent 0 62%, rgba(185,214,255,0.13) 62.2%, transparent 64%),
+    linear-gradient(115deg, transparent 0 76%, rgba(185,214,255,0.10) 76.2%, transparent 77.5%) !important;
+  background-size: 100% 100% !important;
+}

@@ -59,6 +59,14 @@ const GAME_MODES = [
     needsTopic: false,
   },
   {
+  id: 'disposition-trainer',
+  icon: '🧾',
+  title: 'Dispose It',
+  desc: 'Pick the correct disposition for each call scenario.',
+  topic: 'disposeit',
+  needsTopic: false,
+ },
+  {
     id: 'certification',
     icon: '🏅',
     title: 'Certification Mode',
