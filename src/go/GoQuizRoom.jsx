@@ -278,6 +278,9 @@ export default function GoQuizRoom() {
   const [kickBusy, setKickBusy] = useState('')
   const [cancelBusy, setCancelBusy] = useState(false)
 
+  const roomRef = useRef(null)
+  const busyRef = useRef(false)
+  const resultAutoRef = useRef(false)
   const actionLockRef = useRef(false)
   const timerRef = useRef(null)
   const resultTimerRef = useRef(null)
@@ -285,6 +288,14 @@ export default function GoQuizRoom() {
   const previousStateRef = useRef('')
   const previousPlayerCountRef = useRef(0)
   const finishSoundPlayedRef = useRef(false)
+
+  useEffect(() => {
+    roomRef.current = room
+  }, [room])
+
+  useEffect(() => {
+    busyRef.current = busy
+  }, [busy])
 
   const activePlayers = useMemo(() => players.filter((p) => !p.is_kicked), [players])
   const rankedPlayers = useMemo(() => rankPlayers(players), [players])
@@ -464,6 +475,7 @@ export default function GoQuizRoom() {
         setPicked(null)
         setResultCount(RESULT_SEC)
         actionLockRef.current = false
+        resultAutoRef.current = false
         lastTickRef.current = null
       }
 
@@ -507,55 +519,61 @@ export default function GoQuizRoom() {
     setBusy(false)
   }, [isHost, room, busy, code])
 
-  const nextQuestion = useCallback(async () => {
-    if (!isHost || !room || busy) return
+  const nextQuestion = useCallback(async (force = false) => {
+    const currentRoom = roomRef.current
 
+    if (!isHost || !currentRoom) return
+    if (!force && busyRef.current) return
+
+    busyRef.current = true
     setBusy(true)
+    resultAutoRef.current = false
     actionLockRef.current = false
 
-    const nextIndex = (room.current_q || 0) + 1
-    const totalQuestions = room.question_ids?.length || QUESTION_COUNT
+    try {
+      const nextIndex = (currentRoom.current_q || 0) + 1
+      const totalQuestions = currentRoom.question_ids?.length || QUESTION_COUNT
 
-    if (nextIndex >= totalQuestions) {
+      if (nextIndex >= totalQuestions) {
+        const { error } = await supabase
+          .from('pulse_go_rooms')
+          .update({
+            state: 'finished',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('code', code)
+
+        if (error) setFatalError(error.message || 'Could not finish game.')
+        return
+      }
+
+      await supabase
+        .from('pulse_go_players')
+        .update({
+          answered: false,
+          last_answer: null,
+          last_time_left: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('room_code', code)
+        .eq('is_kicked', false)
+
       const { error } = await supabase
         .from('pulse_go_rooms')
         .update({
-          state: 'finished',
+          state: 'question',
+          current_q: nextIndex,
+          question_started_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq('code', code)
 
-      if (error) setFatalError(error.message || 'Could not finish game.')
-
+      if (error) setFatalError(error.message || 'Could not go to next question.')
+    } finally {
+      busyRef.current = false
       setBusy(false)
-      return
     }
-
-    await supabase
-      .from('pulse_go_players')
-      .update({
-        answered: false,
-        last_answer: null,
-        last_time_left: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('room_code', code)
-      .eq('is_kicked', false)
-
-    const { error } = await supabase
-      .from('pulse_go_rooms')
-      .update({
-        state: 'question',
-        current_q: nextIndex,
-        question_started_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('code', code)
-
-    if (error) setFatalError(error.message || 'Could not go to next question.')
-
-    setBusy(false)
-  }, [isHost, room, busy, code])
+  }, [isHost, code])
 
   useEffect(() => {
     clearInterval(timerRef.current)
@@ -602,22 +620,27 @@ export default function GoQuizRoom() {
 
     if (!room || room.state !== 'showAnswer') return
 
-    setResultCount(RESULT_SEC)
+    resultAutoRef.current = false
+
+    let secondsLeft = RESULT_SEC
+    setResultCount(secondsLeft)
 
     resultTimerRef.current = setInterval(() => {
-      setResultCount((current) => {
-        if (current <= 1) {
-          clearInterval(resultTimerRef.current)
-          if (isHost) nextQuestion()
-          return 0
-        }
+      secondsLeft -= 1
+      setResultCount(secondsLeft)
 
-        return current - 1
-      })
+      if (secondsLeft <= 0) {
+        clearInterval(resultTimerRef.current)
+
+        if (isHost && !resultAutoRef.current) {
+          resultAutoRef.current = true
+          nextQuestion(true)
+        }
+      }
     }, 1000)
 
     return () => clearInterval(resultTimerRef.current)
-  }, [room?.state, room?.current_q, isHost, nextQuestion, room])
+  }, [room?.state, room?.current_q, isHost, nextQuestion])
 
   useEffect(() => {
     return () => {
@@ -1250,7 +1273,7 @@ export default function GoQuizRoom() {
             className="grm-btn-skip"
             onPointerDown={() => {
               clearInterval(resultTimerRef.current)
-              nextQuestion()
+              nextQuestion(true)
             }}
             disabled={busy}
           >
