@@ -1,422 +1,289 @@
-import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { quizQuestions } from './goContent'
 import './GoQuiz.css'
 
-const API = 'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
+const LANG_OPTIONS = [
+  {
+    id: 'en',
+    badge: 'US',
+    icon: '🇺🇸',
+    title: 'English Questions',
+    desc: 'Questions and answers displayed in English.',
+  },
+  {
+    id: 'es',
+    badge: 'ES',
+    icon: '🇪🇸',
+    title: 'Spanish Questions',
+    desc: 'Preguntas y respuestas mostradas en español.',
+  },
+  {
+    id: 'mixed',
+    badge: 'MX',
+    icon: '🔀',
+    title: 'Mixed',
+    desc: 'A mix of English and Spanish questions.',
+  },
+]
+
+const GAME_MODES = [
+  {
+    id: 'classic',
+    icon: '🧠',
+    title: 'Classic Quiz',
+    desc: 'Standard Pulse GO questions by topic.',
+    topic: null,
+    needsTopic: true,
+  },
+  {
+    id: 'script-fill',
+    icon: '📝',
+    title: 'Script Fill-in',
+    desc: 'Practice missing lines and script control.',
+    topic: 'script',
+    needsTopic: false,
+  },
+  {
+    id: 'valid-invalid',
+    icon: '✅',
+    title: 'Valid or Invalid XFER',
+    desc: 'Decide if the transfer should count or not.',
+    topic: 'dosdonts',
+    needsTopic: false,
+  },
+  {
+    id: 'objection-battle',
+    icon: '🛡️',
+    title: 'Objection Battle',
+    desc: 'Pick the strongest rebuttal under pressure.',
+    topic: 'objections',
+    needsTopic: false,
+  },
+  {
+    id: 'certification',
+    icon: '🏅',
+    title: 'Certification Mode',
+    desc: 'Mixed challenge from all training areas.',
+    topic: 'all',
+    needsTopic: false,
+  },
+]
 
 const TOPICS = [
   {
     id: 'all',
-    label: 'All Topics',
     icon: '⚡',
-    color: '#b9d6ff',
-    desc: 'Mixed from everything',
+    title: 'All Topics',
+    desc: 'Mixed from everything.',
   },
   {
     id: 'script',
-    label: 'Script',
     icon: '📋',
-    color: '#d8e8ff',
-    desc: 'Opening lines & script control',
+    title: 'Script',
+    desc: 'Opening lines & script control.',
   },
   {
     id: 'objections',
-    label: 'Objections',
     icon: '🛡️',
-    color: '#9ed6ff',
-    desc: 'Rebuttals & responses',
+    title: 'Objections',
+    desc: 'Rebuttals & responses.',
   },
   {
     id: 'product',
-    label: 'Product Knowledge',
     icon: '📦',
-    color: '#c7d2fe',
-    desc: 'Coverage & exclusions',
+    title: 'Product Knowledge',
+    desc: 'Coverage & exclusions.',
   },
   {
     id: 'callflow',
-    label: 'Call Flow',
     icon: '📞',
-    color: '#d8b4fe',
-    desc: 'Transfer protocol',
+    title: 'Call Flow',
+    desc: 'Transfer protocol.',
   },
   {
     id: 'dosdonts',
-    label: "Do's & Don'ts",
     icon: '⚠️',
-    color: '#e1e5ef',
-    desc: 'Rules & compliance',
+    title: "Do's & Don'ts",
+    desc: 'Rules & compliance.',
   },
 ]
-
-const LANGUAGE_OPTIONS = [
-  {
-    id: 'en',
-    icon: 'US',
-    title: 'English Questions',
-    desc: 'Questions and answers displayed in English',
-    color: '#9ed6ff',
-  },
-  {
-    id: 'es',
-    icon: 'ES',
-    title: 'Spanish Questions',
-    desc: 'Preguntas y respuestas mostradas en español',
-    color: '#d8e8ff',
-  },
-  {
-    id: 'mixed',
-    icon: '🔀',
-    title: 'Mixed',
-    desc: 'A mix of English and Spanish questions',
-    color: '#c7d2fe',
-  },
-]
-
-function shuffle(arr) {
-  const a = [...arr]
-
-  for (let i = a.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-
-  return a
-}
-
-function normalizeMode(value) {
-  const clean = String(value || '').toLowerCase()
-
-  if (clean === 'host') return 'host'
-  if (clean === 'solo') return 'solo'
-
-  return null
-}
-
-function normalizeTopic(value) {
-  const clean = String(value || 'all').toLowerCase()
-
-  if (clean === 'all') return 'all'
-  if (clean === 'script') return 'script'
-  if (clean === 'objections') return 'objections'
-  if (clean === 'product') return 'product'
-  if (clean === 'product-knowledge') return 'product'
-  if (clean === 'callflow') return 'callflow'
-  if (clean === 'call-flow') return 'callflow'
-  if (clean === 'dosdonts') return 'dosdonts'
-  if (clean === 'dos-donts') return 'dosdonts'
-  if (clean === 'dosdонts') return 'dosdonts'
-
-  return 'all'
-}
-
-function getQuestionLanguage(question) {
-  return String(
-    question?.language ||
-    question?.lang ||
-    question?.locale ||
-    question?.questionLang ||
-    'en'
-  ).toLowerCase()
-}
-
-function matchesLanguage(question, lang) {
-  if (!lang || lang === 'mixed') return true
-  return getQuestionLanguage(question) === lang
-}
-
-function matchesTopic(question, topic) {
-  const normalizedTopic = normalizeTopic(topic)
-
-  if (normalizedTopic === 'all') return true
-
-  const qTopic = normalizeTopic(question?.topic)
-  return qTopic === normalizedTopic
-}
-
-function getQuestionIds(topicId, lang, count = 10) {
-  const normalizedTopic = normalizeTopic(topicId)
-
-  let pool = quizQuestions.filter(
-    (q) => matchesTopic(q, normalizedTopic) && matchesLanguage(q, lang)
-  )
-
-  if (pool.length < count && lang !== 'mixed') {
-    const extraSameTopic = quizQuestions.filter(
-      (q) =>
-        matchesTopic(q, normalizedTopic) &&
-        !pool.some((picked) => picked.id === q.id)
-    )
-
-    pool = [...pool, ...shuffle(extraSameTopic)]
-  }
-
-  if (pool.length < count) {
-    const extraAny = quizQuestions.filter(
-      (q) => !pool.some((picked) => picked.id === q.id)
-    )
-
-    pool = [...pool, ...shuffle(extraAny)]
-  }
-
-  return shuffle(pool).slice(0, count).map((q) => q.id)
-}
 
 function makeRoomCode() {
-  return 'KK' + Math.floor(1000 + Math.random() * 9000)
-}
-
-function VisualBg() {
-  return (
-    <>
-      <div className="gqz-bg" />
-      <div className="gqz-grid-bg" />
-      <div className="gqz-soft-glow" />
-      <div className="gqz-stars" aria-hidden="true">
-        {Array.from({ length: 18 }).map((_, index) => (
-          <span key={index} className={`gqz-star s${index + 1}`} />
-        ))}
-      </div>
-      <div className="gqz-shooting-stars" aria-hidden="true">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <span key={index} className={`gqz-shooting-star ss${index + 1}`} />
-        ))}
-      </div>
-    </>
-  )
-}
-
-function TopNav({ active = 'Pulse GO' }) {
-  const nav = useNavigate()
-
-  return (
-    <nav className="gqz-top-nav">
-      <div className="gqz-nav-pill">
-        <button
-          className={`gqz-nav-link ${active === 'Dashboard' ? 'active' : ''}`}
-          onClick={() => nav('/dashboard')}
-        >
-          Dashboard
-        </button>
-
-        <button
-          className={`gqz-nav-link ${active === 'Pulse GO' ? 'active' : ''}`}
-          onClick={() => nav('/go')}
-        >
-          Pulse GO
-        </button>
-
-        <button
-          className={`gqz-nav-link ${active === 'Academy' ? 'active' : ''}`}
-          onClick={() => nav('/academy')}
-        >
-          Academy
-        </button>
-      </div>
-    </nav>
-  )
+  return `KK${Math.floor(1000 + Math.random() * 9000)}`
 }
 
 export default function GoQuiz() {
-  const nav = useNavigate()
+  const navigate = useNavigate()
   const [params] = useSearchParams()
 
-  const initialMode = useMemo(() => normalizeMode(params.get('mode')), [params])
+  const trainingMode = params.get('mode')
+  const lang = params.get('lang')
+  const game = params.get('game')
 
-  const [mode, setMode] = useState(initialMode)
-  const [language, setLanguage] = useState(null)
-  const [creating, setCreating] = useState(false)
-  const [error, setError] = useState('')
-
-  const resetToMode = () => {
-    setLanguage(null)
-    setError('')
-    setMode(null)
+  const goToMode = (nextMode) => {
+    navigate(`/go/quiz?mode=${nextMode}`)
   }
 
-  const goBack = () => {
-    if (language) {
-      setLanguage(null)
+  const goToLanguage = (nextLang) => {
+    navigate(`/go/quiz?mode=${trainingMode}&lang=${nextLang}`)
+  }
+
+  const goToGame = (gameMode) => {
+    if (gameMode.needsTopic) {
+      navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}&game=${gameMode.id}`)
       return
     }
 
-    if (mode) {
-      setMode(null)
-      return
-    }
-
-    nav('/go')
+    launchGame(gameMode.id, gameMode.topic)
   }
 
-  const handleSoloTopic = (topicId) => {
-    const lang = language || 'mixed'
-    nav(`/go/quiz/play?topic=${topicId}&lang=${lang}`)
-  }
+  const launchGame = (gameId, topicId) => {
+    const finalTopic = topicId || 'all'
+    const finalLang = lang || 'mixed'
+    const finalGame = gameId || game || 'classic'
 
-  const createRoom = async (topicId, code) => {
-    const lang = language || 'mixed'
-    const questionIds = getQuestionIds(topicId, lang, 10)
-
-    const res = await fetch(
-      API +
-        '?' +
-        new URLSearchParams({
-          action: 'quizCreate',
-          code,
-          topic: topicId,
-          language: lang,
-          questionIds: JSON.stringify(questionIds),
-        })
-    )
-
-    return res.json()
-  }
-
-  const handleHostTopic = async (topicId) => {
-    setCreating(true)
-    setError('')
-
-    try {
+    if (trainingMode === 'host') {
       const code = makeRoomCode()
-      const data = await createRoom(topicId, code)
-
-      if (data.success) {
-        nav(`/go/quiz/${code}?host=true`)
-        return
-      }
-
-      const code2 = makeRoomCode()
-      const data2 = await createRoom(topicId, code2)
-
-      if (data2.success) {
-        nav(`/go/quiz/${code2}?host=true`)
-        return
-      }
-
-      setError('Could not create room. Try again.')
-    } catch {
-      setError('Connection error. Check your internet.')
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const handleTopic = (topicId) => {
-    if (mode === 'host') {
-      handleHostTopic(topicId)
+      navigate(
+        `/go/quiz/${code}?host=true&topic=${finalTopic}&lang=${finalLang}&game=${finalGame}`
+      )
       return
     }
 
-    handleSoloTopic(topicId)
+    navigate(`/go/quiz/play?topic=${finalTopic}&lang=${finalLang}&game=${finalGame}`)
   }
+
+  const activeGame = GAME_MODES.find((item) => item.id === game)
 
   return (
-    <div className="gqz-page">
-      <VisualBg />
-      <TopNav active="Pulse GO" />
+    <div className="gq-page">
+      <div className="gq-bg-stars" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
 
-      <button className="gqz-back-top" onClick={goBack}>
-        ← {language ? 'Language' : mode ? 'Mode' : 'Home'}
-      </button>
+      <header className="gq-shell-nav">
+        <button className="gq-back-btn" onClick={() => navigate('/go')}>
+          ← Home
+        </button>
 
-      {!mode && (
-        <main className="gqz-shell">
-          <section className="gqz-hero">
-            <h1 className="gqz-title">Training Mode</h1>
-            <p className="gqz-sub">
-              Choose how you want to train with Pulse GO.
-            </p>
+        <nav className="gq-main-pill">
+          <button onClick={() => navigate('/dashboard')}>Dashboard</button>
+          <button className="active" onClick={() => navigate('/go')}>Pulse GO</button>
+          <button onClick={() => navigate('/academy')}>Academy</button>
+        </nav>
+
+        <div />
+      </header>
+
+      {!trainingMode && (
+        <main className="gq-wrap">
+          <section className="gq-hero">
+            <h1>Training Mode</h1>
+            <p>Choose how you want to train with Pulse GO.</p>
           </section>
 
-          <div className="gqz-mode-grid">
-            <button className="gqz-mode-card" onClick={() => setMode('host')}>
-              <span className="gqz-mode-icon">🎮</span>
-              <span className="gqz-mode-title">Host a Game</span>
-              <span className="gqz-mode-desc">
-                Create a live room, share the code, and compete with your team.
-              </span>
-              <span className="gqz-mode-cta">Create Room →</span>
+          <section className="gq-card-grid two">
+            <button className="gq-card" onClick={() => goToMode('host')}>
+              <span className="gq-card-icon">🎮</span>
+              <h2>Host a Game</h2>
+              <p>Create a live room, share the code, and compete with your team.</p>
+              <b>Create Room →</b>
             </button>
 
-            <button className="gqz-mode-card" onClick={() => setMode('solo')}>
-              <span className="gqz-mode-icon">👤</span>
-              <span className="gqz-mode-title">Practice</span>
-              <span className="gqz-mode-desc">
-                Train at your own pace with instant feedback.
-              </span>
-              <span className="gqz-mode-cta">Start →</span>
+            <button className="gq-card" onClick={() => goToMode('solo')}>
+              <span className="gq-card-icon">👤</span>
+              <h2>Practice</h2>
+              <p>Train at your own pace with instant feedback.</p>
+              <b>Start →</b>
             </button>
-          </div>
+          </section>
         </main>
       )}
 
-      {mode && !language && (
-        <main className="gqz-shell">
-          <section className="gqz-hero">
-            <h1 className="gqz-title">Choose Language Mix</h1>
-            <p className="gqz-sub">
-              Pick English, Spanish, or a mixed game before choosing the topic.
-            </p>
+      {trainingMode && !lang && (
+        <main className="gq-wrap">
+          <section className="gq-hero">
+            <h1>Choose Language</h1>
+            <p>Pick how questions and answers should appear.</p>
           </section>
 
-          <div className="gqz-grid gqz-game-grid">
-            {LANGUAGE_OPTIONS.map((item) => (
+          <section className="gq-card-grid three">
+            {LANG_OPTIONS.map((item) => (
               <button
                 key={item.id}
-                className="gqz-card"
-                style={{ '--topic-color': item.color }}
-                onClick={() => setLanguage(item.id)}
+                className="gq-card"
+                onClick={() => goToLanguage(item.id)}
               >
-                <span className="gqz-card-icon">{item.icon}</span>
-                <span className="gqz-card-label">{item.title}</span>
-                <span className="gqz-card-desc">{item.desc}</span>
+                <span className="gq-card-badge">{item.badge}</span>
+                <span className="gq-card-icon">{item.icon}</span>
+                <h2>{item.title}</h2>
+                <p>{item.desc}</p>
               </button>
             ))}
+          </section>
+
+          <div className="gq-bottom-actions">
+            <button onClick={() => navigate('/go/quiz')}>Change Mode</button>
           </div>
         </main>
       )}
 
-      {mode && language && (
-        <main className="gqz-shell">
-          <section className="gqz-hero">
-            <h1 className="gqz-title">
-              {mode === 'host' ? 'Host a Topic' : 'Choose a Topic'}
-            </h1>
-            <p className="gqz-sub">
-              {mode === 'host'
-                ? 'All players will answer questions from this topic.'
-                : 'Select what you want to practice.'}
-            </p>
+      {trainingMode && lang && !game && (
+        <main className="gq-wrap">
+          <section className="gq-hero">
+            <h1>Choose Game</h1>
+            <p>Select the training style before starting.</p>
           </section>
 
-          {error && <div className="gqz-error">⚠️ {error}</div>}
+          <section className="gq-card-grid three">
+            {GAME_MODES.map((item) => (
+              <button
+                key={item.id}
+                className="gq-card"
+                onClick={() => goToGame(item)}
+              >
+                <span className="gq-card-icon">{item.icon}</span>
+                <h2>{item.title}</h2>
+                <p>{item.desc}</p>
+                <b>{item.needsTopic ? 'Choose Topic →' : 'Start →'}</b>
+              </button>
+            ))}
+          </section>
 
-          {creating && (
-            <div className="gqz-loading">
-              Creating room... ⏳
-            </div>
-          )}
+          <div className="gq-bottom-actions">
+            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}`)}>
+              ← Language
+            </button>
+          </div>
+        </main>
+      )}
 
-          <div className="gqz-grid">
+      {trainingMode && lang && game && activeGame?.needsTopic && (
+        <main className="gq-wrap">
+          <section className="gq-hero">
+            <h1>Choose a Topic</h1>
+            <p>Select what you want to practice.</p>
+          </section>
+
+          <section className="gq-card-grid three">
             {TOPICS.map((topic) => (
               <button
                 key={topic.id}
-                className="gqz-card"
-                style={{ '--topic-color': topic.color }}
-                onClick={() => handleTopic(topic.id)}
-                disabled={creating}
+                className="gq-card"
+                onClick={() => launchGame(game, topic.id)}
               >
-                <span className="gqz-card-icon">{topic.icon}</span>
-                <span className="gqz-card-label">{topic.label}</span>
-                <span className="gqz-card-desc">{topic.desc}</span>
+                <span className="gq-card-icon">{topic.icon}</span>
+                <h2>{topic.title}</h2>
+                <p>{topic.desc}</p>
               </button>
             ))}
-          </div>
+          </section>
 
-          <div className="gqz-bottom-action">
-            <button className="gqz-secondary-btn" onClick={resetToMode}>
-              Change Mode
+          <div className="gq-bottom-actions">
+            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}`)}>
+              ← Game Mode
             </button>
           </div>
         </main>
