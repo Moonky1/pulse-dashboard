@@ -189,7 +189,7 @@ export default function Register({ embedded = false, onClose, onSwitchMode }) {
 
         window.setTimeout(() => {
           goDashboard()
-        }, 1550)
+        }, 2550)
       } catch (e) {
         console.error('Register failed:', e)
         setError('Could not complete registration. Please try again.')

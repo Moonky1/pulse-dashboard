@@ -143,7 +143,7 @@ export default function SignIn({ embedded = false, onClose, onSwitchMode }) {
 
       window.setTimeout(() => {
         goDashboard()
-      }, 1450)
+      }, 2450)
     } catch (e) {
       console.error(e)
       setError('Connection error. Try again.')
