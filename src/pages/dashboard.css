@@ -3784,3 +3784,278 @@
     padding-inline: 14px !important;
   }
 }
+/* =========================================================
+   FINAL COOL THEME OVERRIDE — remove remaining sand/orange
+   Paste at the VERY END of src/pages/dashboard.css
+========================================================= */
+
+.dash-root {
+  --lov-orange: #cfe3ff !important;
+  --lov-orange-soft: rgba(185, 214, 255, 0.11) !important;
+  --lov-orange-border: rgba(185, 214, 255, 0.28) !important;
+  --pulse-accent: #cfe3ff !important;
+  --pulse-warm: #cfe3ff !important;
+  --pulse-warm-soft: rgba(185, 214, 255, 0.12) !important;
+  --pulse-ice: #cfe3ff !important;
+  --pulse-ice-strong: #eef6ff !important;
+  --pulse-ice-soft: rgba(185, 214, 255, 0.12) !important;
+  --pulse-ice-border: rgba(185, 214, 255, 0.32) !important;
+}
+
+/* Remove old orange/sand page glow */
+.dash-root::after {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(185, 214, 255, 0.13), rgba(185, 214, 255, 0.045) 38%, transparent 72%) !important;
+  filter: blur(34px) !important;
+}
+
+/* Active pills/buttons: replace sand with Pulse GO blue-white */
+.dash-root .lov-nav-pill button.active,
+.dash-root .lov-icon-btn.active,
+.dash-root .lov-date-btn.active,
+.dash-root .pulse-analytics-date-control .lov-date-btn,
+.dash-root .pulse-range-pills button.active,
+.dash-root .pulse-team-filter.active,
+.dash-root .pulse-mini-tabs button.active,
+.dash-root .pulse-sort-tab.active,
+.dash-root .pulse-tab.active,
+.dash-root .dash-tab.active,
+.dash-root .view-tab.active,
+.dash-root .metric-tab.active,
+.dash-root .datepicker-btn:hover,
+.dash-root .dp-selected {
+  background:
+    linear-gradient(135deg, #f8fbff 0%, #dbeafe 48%, #bfdbfe 100%) !important;
+  border-color: rgba(185, 214, 255, 0.55) !important;
+  color: #07111f !important;
+  box-shadow:
+    0 14px 34px rgba(147, 197, 253, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+}
+
+/* Non-active pills stay dark/clean */
+.dash-root .pulse-range-pills button,
+.dash-root .pulse-team-filter,
+.dash-root .lov-date-btn,
+.dash-root .pulse-mini-tabs button,
+.dash-root .pulse-sort-tab,
+.dash-root .pulse-tab,
+.dash-root .dash-tab,
+.dash-root .view-tab,
+.dash-root .metric-tab,
+.dash-root .datepicker-btn {
+  border-color: rgba(196, 216, 255, 0.11) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  color: rgba(218, 226, 240, 0.72) !important;
+}
+
+/* Hover states */
+.dash-root .pulse-range-pills button:hover,
+.dash-root .pulse-team-filter:hover,
+.dash-root .lov-date-btn:hover,
+.dash-root .pulse-mini-tabs button:hover,
+.dash-root .pulse-sort-tab:hover,
+.dash-root .pulse-tab:hover,
+.dash-root .dash-tab:hover,
+.dash-root .view-tab:hover,
+.dash-root .metric-tab:hover {
+  border-color: rgba(185, 214, 255, 0.36) !important;
+  background: rgba(185, 214, 255, 0.075) !important;
+  color: #ffffff !important;
+}
+
+/* Sidebar active/status: remove warm sand */
+.dash-root .lov-sidebar-item.active {
+  background:
+    linear-gradient(135deg, rgba(185, 214, 255, 0.15), rgba(185, 214, 255, 0.055)) !important;
+  border-color: rgba(185, 214, 255, 0.28) !important;
+  color: #f8fbff !important;
+}
+
+.dash-root .lov-sidebar-status {
+  background: rgba(185, 214, 255, 0.055) !important;
+  border-color: rgba(185, 214, 255, 0.16) !important;
+}
+
+.dash-root .lov-status-dot-row {
+  color: #dbeafe !important;
+}
+
+.dash-root .lov-status-dot {
+  background: #dbeafe !important;
+  box-shadow: 0 0 16px rgba(185, 214, 255, 0.55) !important;
+}
+
+.dash-root .lov-brand-glow,
+.dash-root .lov-brand-dot {
+  background:
+    radial-gradient(circle at 35% 30%, #ffffff, #b9d6ff 38%, rgba(185, 214, 255, 0.34) 72%) !important;
+  box-shadow: 0 0 26px rgba(185, 214, 255, 0.22) !important;
+}
+
+/* Main buttons */
+.dash-root .btn-save,
+.dash-root .lov-primary-btn,
+.dash-root .pulse-primary-btn,
+.dash-root .lov-export-btn {
+  color: #07111f !important;
+  background:
+    linear-gradient(135deg, #f8fbff 0%, #dbeafe 48%, #bfdbfe 100%) !important;
+  border-color: rgba(185, 214, 255, 0.42) !important;
+  box-shadow: 0 16px 36px rgba(147, 197, 253, 0.14) !important;
+}
+
+.dash-root .btn-save:hover,
+.dash-root .lov-primary-btn:hover,
+.dash-root .pulse-primary-btn:hover,
+.dash-root .lov-export-btn:hover {
+  background:
+    linear-gradient(135deg, #ffffff 0%, #eaf2ff 48%, #cfe3ff 100%) !important;
+}
+
+/* Inputs/focus borders that were orange */
+.dash-root input:focus,
+.dash-root textarea:focus,
+.dash-root select:focus,
+.dash-root .bulk-edit-input:focus,
+.dash-root .sum-edit-input:focus {
+  border-color: rgba(185, 214, 255, 0.65) !important;
+  box-shadow: 0 0 0 3px rgba(185, 214, 255, 0.09) !important;
+}
+
+.dash-root .bulk-edit-input {
+  border-color: rgba(185, 214, 255, 0.45) !important;
+}
+
+.dash-root .sum-edit-input {
+  border-bottom-color: rgba(185, 214, 255, 0.65) !important;
+}
+
+/* Links that were orange */
+.dash-root .agent-link:hover,
+.dash-root .pulse-table .linkish:hover,
+.dash-root .asia-menu-btn:hover {
+  color: #dbeafe !important;
+  border-color: rgba(185, 214, 255, 0.38) !important;
+}
+
+/* Total / orange utility classes become clean ice, but keep real metric colors */
+.dash-root .orange,
+.dash-root .val-total,
+.dash-root .sum-card.orange .sum-val,
+.dash-root .lov-kpi-card.orange .lov-kpi-value,
+.dash-root .lov-kpi-card.total .lov-kpi-value,
+.dash-root .pulse-team-metric-value,
+.dash-root .pulse-top3-val,
+.dash-root .pulse-top-block-value {
+  color: #dbeafe !important;
+}
+
+/* Cards with warm glow: neutralize */
+.dash-root .lov-hero,
+.dash-root .lov-kpi-card,
+.dash-root .pulse-team-card,
+.dash-root .pulse-summary-card,
+.dash-root .pulse-chart-card,
+.dash-root .pulse-table-card,
+.dash-root .pulse-table-wrap,
+.dash-root .pulse-top-block,
+.dash-root .vteam-card,
+.dash-root .agent-table-wrap,
+.dash-root .charts-section,
+.dash-root .slacks-section {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(185, 214, 255, 0.055), transparent 34%),
+    linear-gradient(180deg, rgba(17, 24, 39, 0.72), rgba(8, 12, 22, 0.84)) !important;
+  border-color: rgba(196, 216, 255, 0.095) !important;
+}
+
+/* Team cards hover: no sand */
+.dash-root .pulse-team-card:hover,
+.dash-root .vteam-clickable:hover,
+.dash-root .vteam-hovered {
+  border-color: rgba(185, 214, 255, 0.34) !important;
+  box-shadow:
+    0 0 0 1px rgba(185, 214, 255, 0.18),
+    0 18px 50px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Date picker old orange states */
+.dash-root .dp-date-btn:hover {
+  border-color: rgba(185, 214, 255, 0.45) !important;
+  color: #f8fbff !important;
+  background: rgba(185, 214, 255, 0.075) !important;
+}
+
+.dash-root .dp-selected {
+  color: #07111f !important;
+}
+
+/* Team reveal animation: remove arena glow */
+.team-reveal-bg {
+  background:
+    radial-gradient(circle at 50% 34%, rgba(185, 214, 255, 0.15), transparent 34%),
+    rgba(2, 5, 12, 0.74) !important;
+  backdrop-filter: blur(15px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(15px) saturate(120%) !important;
+}
+
+.dash-root .team-reveal-natural,
+.team-reveal-natural {
+  --team-reveal-accent: #cfe3ff !important;
+}
+
+.dash-root .team-reveal-warm-glow,
+.team-reveal-warm-glow {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(185, 214, 255, 0.30) 0%, transparent 58%),
+    radial-gradient(circle at 50% 50%, rgba(93, 140, 200, 0.16) 0%, transparent 64%) !important;
+  opacity: 0.56 !important;
+  filter: blur(38px) !important;
+}
+
+.dash-root .team-reveal-kicker,
+.team-reveal-kicker {
+  color: rgba(219, 234, 254, 0.82) !important;
+  text-shadow: 0 10px 34px rgba(0, 0, 0, 0.65) !important;
+}
+
+.dash-root .team-reveal-name,
+.team-reveal-name {
+  color: #f8fbff !important;
+  text-shadow:
+    0 22px 70px rgba(0, 0, 0, 0.78),
+    0 0 42px rgba(185, 214, 255, 0.16) !important;
+}
+
+/* Welcome intro / login intro names */
+.dash-root .dash-intro-backdrop {
+  background:
+    radial-gradient(circle at 50% 28%, rgba(185, 214, 255, 0.16), transparent 32%),
+    rgba(2, 5, 12, 0.76) !important;
+}
+
+.dash-root .dash-intro-name {
+  color: #f8fbff !important;
+  text-shadow:
+    0 22px 70px rgba(0, 0, 0, 0.76),
+    0 0 44px rgba(185, 214, 255, 0.18) !important;
+}
+
+/* Gold/sand cards fallback */
+.dash-root .sum-card.gold,
+.dash-root .goal-stat.yellow-stat {
+  background: rgba(185, 214, 255, 0.055) !important;
+  border-color: rgba(185, 214, 255, 0.16) !important;
+}
+
+.dash-root .sum-card.gold .sum-val,
+.dash-root .yellow-stat .goal-stat-val {
+  color: #dbeafe !important;
+}
+
+/* Selection color */
+.dash-root ::selection {
+  background: rgba(185, 214, 255, 0.28);
+  color: #ffffff;
+}
