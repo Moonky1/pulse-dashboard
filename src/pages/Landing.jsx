@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import SignIn from './SignIn'
+import Register from './Register'
 import './Landing.css'
 
 const STARS = [
@@ -105,6 +107,7 @@ export default function Landing() {
   const audioRef = useRef(null)
 
   const [ripples, setRipples] = useState([])
+  const [authMode, setAuthMode] = useState(null)
 
   const playClickSound = () => {
     try {
@@ -171,6 +174,16 @@ export default function Landing() {
 
   const blockCopy = (e) => {
     e.preventDefault()
+  }
+
+  const openAuth = (mode) => {
+    playClickSound()
+    setAuthMode(mode)
+  }
+
+  const closeAuth = () => {
+    playClickSound()
+    setAuthMode(null)
   }
 
   return (
@@ -271,7 +284,7 @@ export default function Landing() {
             <button
               type="button"
               className="home-action-btn home-action-primary"
-              onClick={() => navigate('/signin')}
+              onClick={() => openAuth('signin')}
             >
               Sign In →
             </button>
@@ -279,7 +292,7 @@ export default function Landing() {
             <button
               type="button"
               className="home-action-btn"
-              onClick={() => navigate('/register')}
+              onClick={() => openAuth('register')}
             >
               Register
             </button>
@@ -352,6 +365,29 @@ export default function Landing() {
           </article>
         </section>
       </main>
+
+      {authMode ? (
+        <div
+          className="home-auth-layer"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeAuth()
+          }}
+        >
+          {authMode === 'signin' ? (
+            <SignIn
+              embedded
+              onClose={closeAuth}
+              onSwitchMode={() => setAuthMode('register')}
+            />
+          ) : (
+            <Register
+              embedded
+              onClose={closeAuth}
+              onSwitchMode={() => setAuthMode('signin')}
+            />
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }
