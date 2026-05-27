@@ -569,7 +569,7 @@ export default function GoLearnDetail() {
 
   const type = getCategoryType(category)
 
-  return (
+  return ( 
     <AcademyBackground>
       <main className="pgl-content academy-detail-content">
         <PageHeader category={category} />

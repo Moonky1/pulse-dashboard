@@ -718,7 +718,7 @@
 .grm > * {
   position: relative;
   z-index: 1;
-}
+} 
 
 @media (max-width: 640px) {
   .gq-page::after,

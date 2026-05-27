@@ -64,7 +64,7 @@ const GAME_MODES = [
   title: 'Dispose It',
   desc: 'Pick the correct disposition for each call scenario.',
   topic: 'disposeit',
-  needsTopic: false,
+  needsTopic: false, 
  },
   {
     id: 'certification',

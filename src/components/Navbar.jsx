@@ -11,7 +11,7 @@ export default function Navbar({ lastUpdate }) {
   const user       = JSON.parse(localStorage.getItem('pulse_user') || 'null')
   const [userPhoto]    = useState(localStorage.getItem('pulse_user_photo') || '')
   const [profileOpen,  setProfileOpen]  = useState(false)
-  const [navScrolled,  setNavScrolled]  = useState(false)
+  const [navScrolled,  setNavScrolled]  = useState(false) 
   const [academyOpen,  setAcademyOpen]  = useState(false)
 
   const team      = APP_CONFIG.teams.find(t => t.id === user?.team)

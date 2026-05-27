@@ -332,7 +332,7 @@
   .pnav-dropdown {
     right: 0;
     left: auto;
-    min-width: 200px;
+    min-width: 200px; 
   }
 
   .pnav-tab { height: 36px; padding: 0 14px; font-size: 13px; }

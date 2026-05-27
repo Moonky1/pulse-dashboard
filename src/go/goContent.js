@@ -4801,4 +4801,4 @@ export const gameChallengeBank = {
   roleplay: roleplayScenarios,
   'speed-round': quizQuestions,
   certification: quizQuestions,
-}
+} 

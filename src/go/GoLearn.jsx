@@ -536,7 +536,7 @@ export default function GoLearn() {
         ) : (
           <p className="academy-empty-hint">
             Start typing to search scripts, rebuttals, compliance rules, product notes, and dialer guides.
-          </p>
+          </p> 
         )}
       </main>
     </div>

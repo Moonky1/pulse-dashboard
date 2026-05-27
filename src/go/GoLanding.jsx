@@ -222,7 +222,7 @@ export default function GoLanding() {
             Academy
           </button>
         </div>
-      </nav>
+      </nav> 
 
       <main className="pgl-content">
         <h1 className="pgl-title" draggable="false">
