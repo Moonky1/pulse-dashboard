@@ -286,8 +286,14 @@ function scoreResult(item, query) {
 }
 
 export default function GoLearn() {
-  const navigate = useNavigate()
-  const pageRef = useRef(null)
+ const navigate = useNavigate()
+
+const goHome = () => {
+  const loggedIn = Boolean(localStorage.getItem('pulse_user'))
+  navigate(loggedIn ? '/dashboard' : '/')
+}
+
+const pageRef = useRef(null)
   const rafRef = useRef(null)
   const audioRef = useRef(null)
 
@@ -441,9 +447,9 @@ export default function GoLearn() {
 
       <nav className="pgl-nav">
         <div className="pgl-nav-pill">
-          <button className="pgl-nav-link" onClick={() => navigate('/dashboard')}>
-            Dashboard
-          </button>
+<button className="pgl-nav-link" onClick={goHome}>
+  Home
+</button>
 
           <button className="pgl-nav-link" onClick={() => navigate('/go')}>
             Pulse GO

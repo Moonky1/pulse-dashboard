@@ -33,7 +33,13 @@ const SHOOTING_STARS = [
 
 export default function GoLanding() {
   const navigate = useNavigate()
-  const pageRef = useRef(null)
+
+const goHome = () => {
+  const loggedIn = Boolean(localStorage.getItem('pulse_user'))
+  navigate(loggedIn ? '/dashboard' : '/')
+}
+
+const pageRef = useRef(null)
   const rafRef = useRef(null)
   const audioRef = useRef(null)
 
@@ -210,9 +216,9 @@ export default function GoLanding() {
 
       <nav className="pgl-nav">
         <div className="pgl-nav-pill">
-          <button className="pgl-nav-link" onClick={() => navigate('/dashboard')}>
-            Dashboard
-          </button>
+         <button className="pgl-nav-link" onClick={goHome}>
+          Home
+         </button>
 
           <button className="pgl-nav-link pgl-nav-link-active" onClick={() => navigate('/go')}>
             Pulse GO

@@ -121,7 +121,12 @@ function makeRoomCode() {
 
 export default function GoQuiz() {
   const navigate = useNavigate()
-  const [params] = useSearchParams()
+const [params] = useSearchParams()
+
+const goHome = () => {
+  const loggedIn = Boolean(localStorage.getItem('pulse_user'))
+  navigate(loggedIn ? '/dashboard' : '/')
+}
 
   const trainingMode = params.get('mode')
   const lang = params.get('lang')
@@ -177,7 +182,7 @@ export default function GoQuiz() {
         </button>
 
         <nav className="gq-main-pill">
-          <button onClick={() => navigate('/dashboard')}>Dashboard</button>
+          <button onClick={goHome}>Home</button>
           <button className="active" onClick={() => navigate('/go')}>Pulse GO</button>
           <button onClick={() => navigate('/academy')}>Academy</button>
         </nav>
