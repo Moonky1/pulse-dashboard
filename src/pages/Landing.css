@@ -20,6 +20,15 @@
   color: var(--home-text);
   font-family: 'DM Sans', sans-serif;
   isolation: isolate;
+
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.home-page * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .home-bg,
@@ -45,10 +54,10 @@
 
 .home-grid {
   z-index: 1;
-  opacity: 0.28;
+  opacity: 0.22;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
   background-size: 82px 82px;
   mask-image: radial-gradient(ellipse at 50% 40%, black 0%, transparent 82%);
   -webkit-mask-image: radial-gradient(ellipse at 50% 40%, black 0%, transparent 82%);
@@ -209,6 +218,7 @@
   font-weight: 900;
   color: #f7f8fb;
   text-shadow: 0 18px 55px rgba(0, 0, 0, 0.34);
+  cursor: default;
 }
 
 .home-subtitle {
@@ -265,62 +275,68 @@
   height: 330px;
   margin-top: 42px;
   overflow: hidden;
-  opacity: 0.95;
+  opacity: 0.96;
+  pointer-events: none;
 }
 
 .home-haze {
   position: absolute;
   left: 50%;
-  bottom: 48px;
+  bottom: 72px;
   transform: translateX(-50%);
   border-radius: 999px;
   pointer-events: none;
+  mix-blend-mode: screen;
 }
 
 .home-haze-1 {
   width: 760px;
   height: 230px;
   background:
-    radial-gradient(ellipse at 50% 52%, rgba(216, 232, 255, 0.24), rgba(158, 214, 255, 0.09) 28%, transparent 68%);
-  filter: blur(22px);
-  animation: homeHazeOne 8s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 50% 52%, rgba(185, 214, 255, 0.2), transparent 30%),
+    radial-gradient(ellipse at 42% 58%, rgba(158, 214, 255, 0.12), transparent 48%),
+    radial-gradient(ellipse at 62% 55%, rgba(120, 170, 255, 0.09), transparent 52%);
+  filter: blur(30px);
+  opacity: 0.84;
+  animation: homeHazeOne 9s ease-in-out infinite alternate;
 }
 
 .home-haze-2 {
-  width: 520px;
-  height: 180px;
+  width: 540px;
+  height: 170px;
+  bottom: 96px;
   background:
-    radial-gradient(ellipse at 50% 52%, rgba(255, 255, 255, 0.18), rgba(158, 214, 255, 0.08) 34%, transparent 70%);
-  filter: blur(16px);
-  animation: homeHazeTwo 9s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 50% 50%, rgba(240, 248, 255, 0.18), transparent 28%),
+    radial-gradient(ellipse at 50% 62%, rgba(158, 214, 255, 0.1), transparent 58%);
+  filter: blur(24px);
+  opacity: 0.72;
+  animation: homeHazeTwo 10s ease-in-out infinite alternate;
 }
 
 .home-haze-3 {
-  width: 920px;
+  width: 900px;
   height: 120px;
-  bottom: 78px;
+  bottom: 106px;
   background:
-    radial-gradient(ellipse at 50% 52%, rgba(158, 214, 255, 0.1), transparent 70%);
-  filter: blur(18px);
-  animation: homeHazeThree 11s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 50% 52%, rgba(158, 214, 255, 0.09), transparent 72%);
+  filter: blur(24px);
+  opacity: 0.7;
+  animation: homeHazeThree 12s ease-in-out infinite alternate;
 }
 
-.home-haze-line {
+.home-haze-core {
   position: absolute;
   left: 50%;
-  bottom: 92px;
-  width: min(860px, 92%);
-  height: 1px;
+  bottom: 110px;
+  width: 310px;
+  height: 80px;
   transform: translateX(-50%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(216, 232, 255, 0.24),
-    rgba(255, 255, 255, 0.54),
-    rgba(216, 232, 255, 0.24),
-    transparent
-  );
-  box-shadow: 0 0 24px rgba(158, 214, 255, 0.14);
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse at center, rgba(235, 246, 255, 0.18), rgba(158, 214, 255, 0.08) 35%, transparent 72%);
+  filter: blur(18px);
+  opacity: 0.72;
+  animation: homeCoreFloat 7s ease-in-out infinite alternate;
 }
 
 .home-section {
@@ -574,37 +590,49 @@
 
 @keyframes homeHazeOne {
   from {
-    transform: translateX(-52%) scaleX(0.96);
-    opacity: 0.66;
+    transform: translateX(-52%) translateY(8px) scaleX(0.96) scaleY(0.92);
+    opacity: 0.55;
   }
 
   to {
-    transform: translateX(-48%) scaleX(1.08);
-    opacity: 0.95;
+    transform: translateX(-48%) translateY(-10px) scaleX(1.08) scaleY(1.05);
+    opacity: 0.86;
   }
 }
 
 @keyframes homeHazeTwo {
   from {
-    transform: translateX(-48%) translateY(4px) scale(0.96);
-    opacity: 0.52;
+    transform: translateX(-48%) translateY(6px) scale(0.94);
+    opacity: 0.46;
   }
 
   to {
-    transform: translateX(-52%) translateY(-6px) scale(1.08);
-    opacity: 0.86;
+    transform: translateX(-52%) translateY(-8px) scale(1.08);
+    opacity: 0.76;
   }
 }
 
 @keyframes homeHazeThree {
   from {
-    transform: translateX(-50%) scaleX(0.92);
-    opacity: 0.48;
+    transform: translateX(-50%) translateY(4px) scaleX(0.9);
+    opacity: 0.42;
   }
 
   to {
-    transform: translateX(-50%) scaleX(1.12);
-    opacity: 0.8;
+    transform: translateX(-50%) translateY(-7px) scaleX(1.14);
+    opacity: 0.68;
+  }
+}
+
+@keyframes homeCoreFloat {
+  from {
+    transform: translateX(-50%) translateY(5px) scaleX(0.92);
+    opacity: 0.44;
+  }
+
+  to {
+    transform: translateX(-50%) translateY(-7px) scaleX(1.08);
+    opacity: 0.76;
   }
 }
 
@@ -726,7 +754,8 @@
   .home-star,
   .home-shooting-star,
   .home-ripple,
-  .home-haze {
+  .home-haze,
+  .home-haze-core {
     animation: none;
   }
 }

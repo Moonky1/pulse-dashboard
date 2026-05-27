@@ -99,10 +99,47 @@ const TEAMS = [
 
 export default function Landing() {
   const navigate = useNavigate()
+
   const pageRef = useRef(null)
   const rafRef = useRef(null)
+  const audioRef = useRef(null)
 
   const [ripples, setRipples] = useState([])
+
+  const playClickSound = () => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext
+      if (!AudioContext) return
+
+      if (!audioRef.current) {
+        audioRef.current = new AudioContext()
+      }
+
+      const ctx = audioRef.current
+      if (ctx.state === 'suspended') ctx.resume()
+
+      const now = ctx.currentTime
+
+      const oscillator = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(540, now)
+      oscillator.frequency.exponentialRampToValueAtTime(320, now + 0.075)
+
+      gain.gain.setValueAtTime(0.0001, now)
+      gain.gain.exponentialRampToValueAtTime(0.045, now + 0.012)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1)
+
+      oscillator.connect(gain)
+      gain.connect(ctx.destination)
+
+      oscillator.start(now)
+      oscillator.stop(now + 0.11)
+    } catch {
+      // no sound if browser blocks it
+    }
+  }
 
   const handleMouseMove = (e) => {
     const page = pageRef.current
@@ -117,6 +154,8 @@ export default function Landing() {
   }
 
   const handlePointerDown = (e) => {
+    playClickSound()
+
     const ripple = {
       id: Date.now() + Math.random(),
       x: e.clientX,
@@ -130,12 +169,20 @@ export default function Landing() {
     }, 650)
   }
 
+  const blockCopy = (e) => {
+    e.preventDefault()
+  }
+
   return (
     <div
       ref={pageRef}
       className="home-page"
       onMouseMove={handleMouseMove}
       onPointerDown={handlePointerDown}
+      onCopy={blockCopy}
+      onCut={blockCopy}
+      onContextMenu={blockCopy}
+      onDragStart={blockCopy}
     >
       <div className="home-bg" />
       <div className="home-grid" />
@@ -186,15 +233,27 @@ export default function Landing() {
 
       <nav className="home-nav">
         <div className="home-nav-pill">
-          <button className="home-nav-link home-nav-link-active" onClick={() => navigate('/')}>
+          <button
+            type="button"
+            className="home-nav-link home-nav-link-active"
+            onClick={() => navigate('/')}
+          >
             Home
           </button>
 
-          <button className="home-nav-link" onClick={() => navigate('/go')}>
+          <button
+            type="button"
+            className="home-nav-link"
+            onClick={() => navigate('/go')}
+          >
             Pulse GO
           </button>
 
-          <button className="home-nav-link" onClick={() => navigate('/academy')}>
+          <button
+            type="button"
+            className="home-nav-link"
+            onClick={() => navigate('/academy')}
+          >
             Academy
           </button>
         </div>
@@ -209,11 +268,19 @@ export default function Landing() {
           <p className="home-subtitle">Performance intelligence for leaders.</p>
 
           <div className="home-actions">
-            <button className="home-action-btn home-action-primary" onClick={() => navigate('/signin')}>
+            <button
+              type="button"
+              className="home-action-btn home-action-primary"
+              onClick={() => navigate('/signin')}
+            >
               Sign In →
             </button>
 
-            <button className="home-action-btn" onClick={() => navigate('/register')}>
+            <button
+              type="button"
+              className="home-action-btn"
+              onClick={() => navigate('/register')}
+            >
               Register
             </button>
           </div>
@@ -222,7 +289,7 @@ export default function Landing() {
             <div className="home-haze home-haze-1" />
             <div className="home-haze home-haze-2" />
             <div className="home-haze home-haze-3" />
-            <div className="home-haze-line" />
+            <div className="home-haze-core" />
           </div>
         </section>
 
