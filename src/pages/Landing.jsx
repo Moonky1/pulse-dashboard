@@ -1,368 +1,288 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Landing.css'
 
+const STARS = [
+  { top: '12%', left: '10%' },
+  { top: '16%', left: '28%' },
+  { top: '14%', left: '48%' },
+  { top: '18%', left: '72%' },
+  { top: '24%', left: '84%' },
+  { top: '32%', left: '18%' },
+  { top: '36%', left: '38%' },
+  { top: '30%', left: '62%' },
+  { top: '41%', left: '78%' },
+  { top: '52%', left: '14%' },
+  { top: '58%', left: '28%' },
+  { top: '55%', left: '70%' },
+  { top: '66%', left: '18%' },
+  { top: '72%', left: '42%' },
+  { top: '69%', left: '82%' },
+  { top: '83%', left: '20%' },
+  { top: '86%', left: '58%' },
+  { top: '80%', left: '88%' },
+]
+
+const SHOOTING_STARS = [
+  { top: '18%', left: '78%', delay: '0s', duration: '6.5s' },
+  { top: '28%', left: '64%', delay: '2.4s', duration: '7.5s' },
+  { top: '12%', left: '58%', delay: '4.8s', duration: '6.8s' },
+  { top: '34%', left: '86%', delay: '7.2s', duration: '8s' },
+  { top: '22%', left: '72%', delay: '9.4s', duration: '7.2s' },
+]
+
 const FEATURES = [
   {
-    title: 'Live dashboard',
-    desc: 'Track team performance, daily movement, rankings, and key production numbers in one place.',
+    icon: '📊',
+    title: 'Live Operations',
+    desc: 'View daily production, team movement, English, Spanish, invalids, and total xfers in one clean workspace.',
   },
   {
-    title: 'Pulse GO',
-    desc: 'Practice, host live training games, review answers, and sharpen call-flow skills with your team.',
+    icon: '🏆',
+    title: 'Rankings',
+    desc: 'Track top performers, consistency, team leaders, and performance trends without manually checking sheets.',
   },
   {
-    title: 'Academy',
-    desc: 'A searchable training hub for scripts, objections, product knowledge, compliance, and dialer guides.',
+    icon: '👤',
+    title: 'Agent Profiles',
+    desc: 'Review each agent’s progress, production history, goals, and performance patterns over time.',
   },
   {
-    title: 'Leader tools',
-    desc: 'Built for team leaders, QA, and supervisors who need fast visibility without digging through sheets.',
+    icon: '🧠',
+    title: 'Pulse GO Training',
+    desc: 'Practice with quizzes, live rooms, objections, call-flow scenarios, and team-based learning games.',
+  },
+  {
+    icon: '📚',
+    title: 'Academy Search',
+    desc: 'Find scripts, rebuttals, product knowledge, compliance reminders, and dialer guides fast.',
+  },
+  {
+    icon: '✅',
+    title: 'QA & Invalid Tracking',
+    desc: 'Keep coaching focused by connecting invalid transfer patterns with clear training opportunities.',
   },
 ]
 
 const TEAMS = [
   {
     name: 'Asia',
-    region: 'Regional Hub',
     flag: '/flags/asia.png',
-    desc: 'English-focused production team with daily tracking and live visibility.',
+    desc: 'English-focused production team with live visibility and daily performance tracking.',
   },
   {
     name: 'Philippines',
-    region: 'Asia Pacific',
     flag: '/flags/philippines.png',
-    desc: 'High-volume English operations with strong transfer performance tracking.',
+    desc: 'High-volume English operations with clear daily and weekly tracking.',
   },
   {
     name: 'Colombia',
-    region: 'South America',
     flag: '/flags/colombia.png',
-    desc: 'Bilingual support and production visibility for English and Spanish activity.',
+    desc: 'Bilingual team visibility for English and Spanish production.',
   },
   {
     name: 'Central America',
-    region: 'LATAM',
     emoji: '🌎',
-    desc: 'Regional team coverage with live performance and support coordination.',
+    desc: 'Regional team coverage for production, coaching, and daily support.',
   },
   {
     name: 'Mexico Baja',
-    region: 'North America',
     flag: '/flags/mexico.png',
-    desc: 'Team visibility for daily production, tracking, and operational reporting.',
+    desc: 'Team performance view for daily production and operational reporting.',
   },
   {
     name: 'Venezuela',
-    region: 'South America',
     flag: '/flags/venezuela.png',
-    desc: 'Regional support team connected to Pulse tracking and daily operations.',
+    desc: 'Regional team connected to live tracking, support, and performance insights.',
   },
 ]
 
-function scrollToRef(ref) {
-  ref.current?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  })
-}
-
 export default function Landing() {
   const navigate = useNavigate()
+  const pageRef = useRef(null)
+  const rafRef = useRef(null)
 
-  const [visible, setVisible] = useState(false)
-  const [activeSection, setActiveSection] = useState('home')
+  const [ripples, setRipples] = useState([])
 
-  const heroRef = useRef(null)
-  const featuresRef = useRef(null)
-  const teamsRef = useRef(null)
-  const missionRef = useRef(null)
-  const solarCanvasRef = useRef(null)
-  const solarZoneRef = useRef(null)
+  const handleMouseMove = (e) => {
+    const page = pageRef.current
+    if (!page) return
 
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 70)
-    return () => clearTimeout(timer)
-  }, [])
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
 
-  useEffect(() => {
-    const sections = [
-      { key: 'home', ref: heroRef },
-      { key: 'features', ref: featuresRef },
-      { key: 'teams', ref: teamsRef },
-      { key: 'mission', ref: missionRef },
-    ]
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visibleEntry = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-
-        if (!visibleEntry) return
-
-        const match = sections.find((section) => section.ref.current === visibleEntry.target)
-        if (match) setActiveSection(match.key)
-      },
-      {
-        threshold: [0.25, 0.4, 0.6],
-        rootMargin: '-22% 0px -55% 0px',
-      }
-    )
-
-    sections.forEach((section) => {
-      if (section.ref.current) observer.observe(section.ref.current)
+    rafRef.current = requestAnimationFrame(() => {
+      page.style.setProperty('--mx', `${e.clientX}px`)
+      page.style.setProperty('--my', `${e.clientY}px`)
     })
+  }
 
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const canvas = solarCanvasRef.current
-    const zone = solarZoneRef.current
-    if (!canvas || !zone) return
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    let raf = 0
-    let particles = []
-
-    const getTarget = () => {
-      const rect = zone.getBoundingClientRect()
-
-      return {
-        width: rect.width,
-        height: rect.height,
-        x: rect.width / 2,
-        y: rect.height * 0.67,
-      }
+  const handlePointerDown = (e) => {
+    const ripple = {
+      id: Date.now() + Math.random(),
+      x: e.clientX,
+      y: e.clientY,
     }
 
-    const spawnParticle = (width, height) => {
-      const side = Math.floor(Math.random() * 3)
+    setRipples((prev) => [...prev.slice(-4), ripple])
 
-      if (side === 0) {
-        return {
-          x: Math.random() * width,
-          y: Math.random() * height * 0.28,
-          size: Math.random() * 1.45 + 0.55,
-          speed: Math.random() * 0.009 + 0.004,
-          alpha: Math.random() * 0.48 + 0.16,
-        }
-      }
-
-      if (side === 1) {
-        return {
-          x: Math.random() < 0.5 ? -10 : width + 10,
-          y: Math.random() * height * 0.34,
-          size: Math.random() * 1.45 + 0.55,
-          speed: Math.random() * 0.009 + 0.004,
-          alpha: Math.random() * 0.48 + 0.16,
-        }
-      }
-
-      return {
-        x: Math.random() * width,
-        y: Math.random() * height * 0.22,
-        size: Math.random() * 1.45 + 0.55,
-        speed: Math.random() * 0.009 + 0.004,
-        alpha: Math.random() * 0.48 + 0.16,
-      }
-    }
-
-    const setup = () => {
-      const rect = zone.getBoundingClientRect()
-      const ratio = Math.min(window.devicePixelRatio || 1, 2)
-
-      canvas.width = Math.floor(rect.width * ratio)
-      canvas.height = Math.floor(rect.height * ratio)
-      canvas.style.width = `${rect.width}px`
-      canvas.style.height = `${rect.height}px`
-
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
-
-      const count = Math.min(34, Math.max(14, Math.floor(rect.width / 48)))
-      particles = Array.from({ length: count }, () => spawnParticle(rect.width, rect.height))
-    }
-
-    const draw = () => {
-      const { width, height, x: tx, y: ty } = getTarget()
-
-      ctx.clearRect(0, 0, width, height)
-
-      particles.forEach((particle, index) => {
-        const dx = tx - particle.x
-        const dy = ty - particle.y
-        const dist = Math.hypot(dx, dy) || 1
-
-        particle.x += dx * particle.speed
-        particle.y += dy * particle.speed
-
-        const alpha = particle.alpha * Math.max(0, Math.min(1, dist / 360))
-
-        ctx.beginPath()
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(235, 244, 255, ${alpha})`
-        ctx.fill()
-
-        if (dist < 8) {
-          particles[index] = spawnParticle(width, height)
-        }
-      })
-
-      raf = requestAnimationFrame(draw)
-    }
-
-    setup()
-    draw()
-
-    const handleResize = () => setup()
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      cancelAnimationFrame(raf)
-    }
-  }, [])
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((item) => item.id !== ripple.id))
+    }, 650)
+  }
 
   return (
-    <div className="landing">
-      <header className="landing-navbar">
-        <nav className="landing-nav-pill" aria-label="Pulse navigation">
-          <button
-            type="button"
-            className={activeSection === 'home' ? 'active' : ''}
-            onClick={() => scrollToRef(heroRef)}
-          >
+    <div
+      ref={pageRef}
+      className="home-page"
+      onMouseMove={handleMouseMove}
+      onPointerDown={handlePointerDown}
+    >
+      <div className="home-bg" />
+      <div className="home-grid" />
+      <div className="home-soft-glow" />
+      <div className="home-cursor-glow" />
+
+      <div className="home-stars" aria-hidden="true">
+        {STARS.map((star, index) => (
+          <span
+            key={index}
+            className="home-star"
+            style={{
+              top: star.top,
+              left: star.left,
+              animationDelay: `${index * 0.35}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="home-shooting-stars" aria-hidden="true">
+        {SHOOTING_STARS.map((item, index) => (
+          <span
+            key={index}
+            className="home-shooting-star"
+            style={{
+              top: item.top,
+              left: item.left,
+              animationDelay: item.delay,
+              animationDuration: item.duration,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="home-ripples" aria-hidden="true">
+        {ripples.map((ripple) => (
+          <span
+            key={ripple.id}
+            className="home-ripple"
+            style={{
+              left: `${ripple.x}px`,
+              top: `${ripple.y}px`,
+            }}
+          />
+        ))}
+      </div>
+
+      <nav className="home-nav">
+        <div className="home-nav-pill">
+          <button className="home-nav-link home-nav-link-active" onClick={() => navigate('/')}>
             Home
           </button>
 
-          <button
-            type="button"
-            className={activeSection === 'features' ? 'active' : ''}
-            onClick={() => scrollToRef(featuresRef)}
-          >
-            Features
-          </button>
-
-          <button
-            type="button"
-            className={activeSection === 'teams' ? 'active' : ''}
-            onClick={() => scrollToRef(teamsRef)}
-          >
-            Teams
-          </button>
-
-          <button type="button" onClick={() => navigate('/go')}>
+          <button className="home-nav-link" onClick={() => navigate('/go')}>
             Pulse GO
           </button>
-        </nav>
-      </header>
 
-      <main className={`landing-shell ${visible ? 'is-visible' : ''}`}>
-        <section ref={heroRef} className="hero-section">
-          <h1 className="hero-title">PULSE</h1>
+          <button className="home-nav-link" onClick={() => navigate('/academy')}>
+            Academy
+          </button>
+        </div>
+      </nav>
 
-          <p className="hero-sub">Performance intelligence for leaders.</p>
+      <main className="home-content">
+        <section className="home-hero">
+          <h1 className="home-title" draggable="false">
+            PULSE
+          </h1>
 
-          <div className="hero-actions">
-            <button
-              type="button"
-              className="hero-action hero-action-primary"
-              onClick={() => navigate('/signin')}
-            >
+          <p className="home-subtitle">Performance intelligence for leaders.</p>
+
+          <div className="home-actions">
+            <button className="home-action-btn home-action-primary" onClick={() => navigate('/signin')}>
               Sign In →
             </button>
 
-            <button
-              type="button"
-              className="hero-action hero-action-secondary"
-              onClick={() => navigate('/register')}
-            >
+            <button className="home-action-btn" onClick={() => navigate('/register')}>
               Register
             </button>
           </div>
 
-          <div ref={solarZoneRef} className="hero-solar-zone">
-            <canvas ref={solarCanvasRef} className="solar-particle-canvas" aria-hidden="true" />
-
-            <div className="solar-main-glow" />
-            <div className="solar-wave solar-wave-1" />
-            <div className="solar-wave solar-wave-2" />
-            <div className="solar-wave solar-wave-3" />
-
-            <div className="solar-line" />
-
-            <div className="solar-core-wrap">
-              <div className="solar-core-ring" />
-              <div className="solar-core" />
-            </div>
-
-            <div className="solar-bottom-mask" />
+          <div className="home-haze-wrap" aria-hidden="true">
+            <div className="home-haze home-haze-1" />
+            <div className="home-haze home-haze-2" />
+            <div className="home-haze home-haze-3" />
+            <div className="home-haze-line" />
           </div>
         </section>
 
-        <section ref={featuresRef} className="feature-section">
-          <div className="section-head">
-            <span className="section-kicker">Features</span>
-            <h2 className="section-title section-title-xl">
-              Everything leaders need, without the noise.
-            </h2>
-            <p className="section-sub">
+        <section className="home-section">
+          <div className="home-section-head">
+            <span className="home-kicker">Features</span>
+            <h2>Everything leaders need, without the noise.</h2>
+            <p>
               Pulse brings production, learning, performance, and team visibility into one smooth workspace.
             </p>
           </div>
 
-          <div className="feature-grid">
-            {FEATURES.map((item) => (
-              <article key={item.title} className="feature-card">
-                <div className="feature-dot" />
-                <h3>{item.title}</h3>
-                <p>{item.desc}</p>
+          <div className="home-feature-grid">
+            {FEATURES.map((feature) => (
+              <article key={feature.title} className="home-card">
+                <span className="home-card-icon">{feature.icon}</span>
+                <h3>{feature.title}</h3>
+                <p>{feature.desc}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section ref={teamsRef} className="teams-section">
-          <div className="section-head">
-            <span className="section-kicker">Teams</span>
-            <h2 className="section-title section-title-xl">Built for every region.</h2>
-            <p className="section-sub">
-              A clean view for each team connected to Kampaign Kings operations.
+        <section className="home-section">
+          <div className="home-section-head">
+            <span className="home-kicker">Teams</span>
+            <h2>Built for every region.</h2>
+            <p>
+              One platform for Kampaign Kings leaders to track, train, and support every team.
             </p>
           </div>
 
-          <div className="teams-grid">
+          <div className="home-team-grid">
             {TEAMS.map((team) => (
-              <article key={team.name} className="team-card">
-                <div className="team-card-top">
+              <article key={team.name} className="home-team-card">
+                <div className="home-team-top">
                   {team.flag ? (
-                    <img className="team-flag" src={team.flag} alt="" />
+                    <img className="home-team-flag" src={team.flag} alt="" />
                   ) : (
-                    <span className="team-emoji">{team.emoji}</span>
+                    <span className="home-team-emoji">{team.emoji}</span>
                   )}
 
-                  <span className="team-region">{team.region}</span>
+                  <h3>{team.name}</h3>
                 </div>
 
-                <h3>{team.name}</h3>
                 <p>{team.desc}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section ref={missionRef} className="mission-section">
-          <div className="mission-card">
-            <span className="section-kicker">Mission</span>
+        <section className="home-section home-mission-section">
+          <article className="home-mission-card">
+            <span className="home-kicker">Mission</span>
             <h2>Make performance easier to see, train, and improve.</h2>
             <p>
-              Pulse exists to help leaders move faster: cleaner data, better coaching, stronger training,
+              Pulse helps leaders move faster with cleaner data, stronger coaching, better training,
               and one shared place for the team to grow.
             </p>
-          </div>
+          </article>
         </section>
       </main>
     </div>
