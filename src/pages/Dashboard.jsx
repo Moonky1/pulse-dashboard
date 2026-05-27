@@ -1197,6 +1197,7 @@ function LovableHeader({
       <div className="lov-search-wrap">
         <div className="lov-search">
           <span className="lov-search-icon">⌕</span>
+
           <input
             value={searchQuery}
             placeholder="Search agent name or extension..."
@@ -1233,10 +1234,12 @@ function LovableHeader({
                 onClick={() => onSuggestionClick(item)}
               >
                 <span className="lov-suggestion-icon">{item.icon}</span>
+
                 <span className="lov-suggestion-text">
                   <strong>{item.label}</strong>
                   <small>{item.sub}</small>
                 </span>
+
                 <span className="lov-suggestion-action">
                   {item.type === 'agent' ? 'Open profile' : 'Open team'}
                 </span>
@@ -1247,26 +1250,47 @@ function LovableHeader({
       </div>
 
       <nav className="lov-nav-pill" aria-label="Primary navigation">
-        <button type="button" className="active">Home</button>
-        <button type="button" onClick={onPulseGo}>Pulse GO</button>
-        <button type="button" onClick={onAcademy}>Academy</button>
+        <button type="button">
+          Home
+        </button>
+
+        <button type="button" onClick={onPulseGo}>
+          Pulse GO
+        </button>
+
+        <button type="button" onClick={onAcademy}>
+          Academy
+        </button>
       </nav>
 
       <div className="lov-header-actions">
         <div className="lov-user-wrap">
-          <button type="button" className="lov-user" onClick={onToggleUserMenu}>
+          <button
+            type="button"
+            className={`lov-user ${userMenuOpen ? 'active' : ''}`}
+            onClick={onToggleUserMenu}
+          >
             <div>
               <strong>Simon</strong>
               <span>Asia · Team Leader</span>
             </div>
+
             <div className="lov-avatar">SM</div>
           </button>
 
           {userMenuOpen ? (
             <div className="lov-user-menu">
-              <button type="button" onClick={() => onUserAction('profile')}>👤 Profile</button>
-              <button type="button" onClick={() => onUserAction('settings')}>⚙️ Settings</button>
-              <button type="button" onClick={() => onUserAction('logout')}>🚪 Log out</button>
+              <button type="button" onClick={() => onUserAction('profile')}>
+                Profile
+              </button>
+
+              <button type="button" onClick={() => onUserAction('settings')}>
+                Settings
+              </button>
+
+              <button type="button" onClick={() => onUserAction('logout')}>
+                Log out
+              </button>
             </div>
           ) : null}
         </div>
@@ -4453,9 +4477,9 @@ export default function Dashboard() {
               navigate('/go')
             }}
             onAcademy={() => {
-              playPulseSound('click')
-              window.alert('Academy is coming soon.')
-            }}
+  playPulseSound('click')
+  navigate('/academy')
+}}
           />
 
           <main className="lov-content">
