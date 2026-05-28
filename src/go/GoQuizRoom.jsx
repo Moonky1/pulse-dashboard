@@ -108,10 +108,6 @@ function buildQuestionIds(topic, lang, seed) {
     return topicOk && String(q.language || 'en') === wantedLang
   })
 
-  // Important:
-  // English mode = English only.
-  // Spanish mode = Spanish only.
-  // Never refill Spanish mode with English questions or English mode with Spanish questions.
   if (pool.length === 0 && wantedLang !== 'mixed' && wantedTopic !== 'all') {
     pool = quizQuestions.filter((q) => String(q.language || 'en') === wantedLang)
   }
@@ -186,6 +182,12 @@ function rankPlayers(players) {
 
 function useSound() {
   const ctx = useRef(null)
+  const lobbyMusicRef = useRef({
+    timer: null,
+    oscillators: [],
+    active: false,
+    step: 0,
+  })
 
   const getCtx = () => {
     if (!ctx.current) {
@@ -200,7 +202,7 @@ function useSound() {
   const tone = (frequency, duration, type = 'sine', volume = 0.12, delay = 0) => {
     try {
       const audio = getCtx()
-      if (!audio) return
+      if (!audio) return false
 
       if (audio.state === 'suspended') audio.resume()
 
@@ -220,8 +222,96 @@ function useSound() {
 
       oscillator.start(startAt)
       oscillator.stop(startAt + duration + 0.03)
+
+      return true
     } catch {
-      // Browser can block audio until user interaction.
+      return false
+    }
+  }
+
+  const stopLobbyMusic = () => {
+    try {
+      lobbyMusicRef.current.active = false
+
+      if (lobbyMusicRef.current.timer) {
+        clearTimeout(lobbyMusicRef.current.timer)
+        lobbyMusicRef.current.timer = null
+      }
+
+      lobbyMusicRef.current.oscillators.forEach((oscillator) => {
+        try {
+          oscillator.stop()
+        } catch {
+          // Already stopped.
+        }
+      })
+
+      lobbyMusicRef.current.oscillators = []
+    } catch {
+      // Ignore audio cleanup issues.
+    }
+  }
+
+  const startLobbyMusic = () => {
+    try {
+      const audio = getCtx()
+      if (!audio) return false
+
+      if (audio.state === 'suspended') audio.resume()
+
+      stopLobbyMusic()
+
+      lobbyMusicRef.current.active = true
+      lobbyMusicRef.current.step = 0
+
+      const notes = [
+        523.25, 659.25, 783.99, 659.25,
+        587.33, 698.46, 880.0, 698.46,
+        493.88, 622.25, 739.99, 622.25,
+        523.25, 659.25, 783.99, 987.77,
+      ]
+
+      const playNext = () => {
+        if (!lobbyMusicRef.current.active) return
+
+        const liveAudio = getCtx()
+        if (!liveAudio) return
+
+        if (liveAudio.state === 'suspended') liveAudio.resume()
+
+        const frequency = notes[lobbyMusicRef.current.step % notes.length]
+        const oscillator = liveAudio.createOscillator()
+        const gain = liveAudio.createGain()
+        const filter = liveAudio.createBiquadFilter()
+        const now = liveAudio.currentTime
+
+        oscillator.type = 'sine'
+        oscillator.frequency.setValueAtTime(frequency, now)
+
+        filter.type = 'lowpass'
+        filter.frequency.setValueAtTime(1050, now)
+
+        gain.gain.setValueAtTime(0.0001, now)
+        gain.gain.exponentialRampToValueAtTime(0.028, now + 0.08)
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.72)
+
+        oscillator.connect(filter)
+        filter.connect(gain)
+        gain.connect(liveAudio.destination)
+
+        oscillator.start(now)
+        oscillator.stop(now + 0.78)
+
+        lobbyMusicRef.current.oscillators.push(oscillator)
+        lobbyMusicRef.current.step += 1
+
+        lobbyMusicRef.current.timer = setTimeout(playNext, 620)
+      }
+
+      playNext()
+      return true
+    } catch {
+      return false
     }
   }
 
@@ -258,6 +348,8 @@ function useSound() {
       tone(784, 0.24, 'sine', 0.15, 0.43)
       tone(1046, 0.34, 'triangle', 0.08, 0.58)
     },
+    lobbyStart: startLobbyMusic,
+    lobbyStop: stopLobbyMusic,
   }
 }
 
@@ -293,6 +385,7 @@ export default function GoQuizRoom() {
   const [busy, setBusy] = useState(false)
   const [kickBusy, setKickBusy] = useState('')
   const [cancelBusy, setCancelBusy] = useState(false)
+  const [lobbyMusicOn, setLobbyMusicOn] = useState(false)
 
   const roomRef = useRef(null)
   const busyRef = useRef(false)
@@ -326,6 +419,24 @@ export default function GoQuizRoom() {
     () => players.find((p) => p.id === playerId) || null,
     [players, playerId]
   )
+
+  const choiceBreakdown = useMemo(() => {
+    if (!currentQ?.options?.length) return []
+
+    return currentQ.options.map((option, index) => {
+      const chosenPlayers = activePlayers.filter(
+        (player) => player.answered && Number(player.last_answer) === index
+      )
+
+      return {
+        index,
+        option,
+        count: chosenPlayers.length,
+        pct: totalPlayers > 0 ? (chosenPlayers.length / totalPlayers) * 100 : 0,
+        players: chosenPlayers,
+      }
+    })
+  }, [currentQ, activePlayers, totalPlayers])
 
   const fetchPlayers = useCallback(async () => {
     if (!code) return
@@ -662,6 +773,7 @@ export default function GoQuizRoom() {
     return () => {
       clearInterval(timerRef.current)
       clearInterval(resultTimerRef.current)
+      snd.lobbyStop()
     }
   }, [])
 
@@ -741,6 +853,9 @@ export default function GoQuizRoom() {
   const hostStart = async () => {
     if (!isHost || busy || totalPlayers <= 0) return
 
+    snd.lobbyStop()
+    setLobbyMusicOn(false)
+
     setBusy(true)
     finishSoundPlayedRef.current = false
     actionLockRef.current = false
@@ -810,6 +925,9 @@ export default function GoQuizRoom() {
 
   const cancelGame = async () => {
     if (!isHost || !room || cancelBusy) return
+
+    snd.lobbyStop()
+    setLobbyMusicOn(false)
 
     const ok = window.confirm('Cancel this game for everyone? Players will be sent back to Pulse GO.')
     if (!ok) return
@@ -944,6 +1062,25 @@ export default function GoQuizRoom() {
   const goHomeAfterClosed = () => {
     localStorage.removeItem(`pulse_go_player_${code}`)
     nav('/go')
+  }
+
+  const toggleLobbyMusic = () => {
+    if (!isHost) return
+
+    if (lobbyMusicOn) {
+      snd.lobbyStop()
+      setLobbyMusicOn(false)
+      return
+    }
+
+    const started = snd.lobbyStart()
+
+    if (!started) {
+      alert('Click again to allow lobby music in this browser.')
+      return
+    }
+
+    setLobbyMusicOn(true)
   }
 
   if (loading) {
@@ -1096,13 +1233,23 @@ export default function GoQuizRoom() {
           </p>
 
           {isHost && (
-            <button
-              className="grm-btn-start"
-              onPointerDown={hostStart}
-              disabled={totalPlayers === 0 || busy}
-            >
-              🚀 {busy ? 'Starting...' : 'Start Game'}
-            </button>
+            <div className="grm-host-lobby-actions">
+              <button
+                className={`grm-music-btn ${lobbyMusicOn ? 'on' : ''}`}
+                type="button"
+                onPointerDown={toggleLobbyMusic}
+              >
+                {lobbyMusicOn ? '🎵 Music On' : '🎵 Lobby Music'}
+              </button>
+
+              <button
+                className="grm-btn-start"
+                onPointerDown={hostStart}
+                disabled={totalPlayers === 0 || busy}
+              >
+                🚀 {busy ? 'Starting...' : 'Start Game'}
+              </button>
+            </div>
           )}
 
           {!isHost && (
@@ -1175,29 +1322,47 @@ export default function GoQuizRoom() {
               ⚡ Auto-advances when all players answer or time runs out
             </div>
 
-            <div className="grm-bars">
-              {currentQ?.options.map((option, index) => {
-                const count = activePlayers.filter(
-                  (player) => player.answered && player.last_answer === index
-                ).length
+            <div className="grm-host-options">
+              {choiceBreakdown.map((choice) => {
+                const meta = OPTS[choice.index] || OPTS[0]
 
                 return (
-                  <div key={index} className="grm-bar-row">
-                    <span className="grm-bar-lbl" style={{ color: OPTS[index]?.c || '#b9d6ff' }}>
-                      {OPTS[index]?.s || '◆'} {LTRS[index]}
-                    </span>
+                  <div
+                    key={choice.index}
+                    className="grm-host-option-card"
+                    style={{ '--c': meta.c }}
+                  >
+                    <div className="grm-host-option-top">
+                      <div className="grm-host-option-left">
+                        <span className="grm-os">{meta.s}</span>
+                        <span className="grm-ol">{LTRS[choice.index]}</span>
+                        <strong>{choice.option}</strong>
+                      </div>
 
-                    <div className="grm-bar-bg">
+                      <span className="grm-host-option-count">
+                        {choice.count}/{totalPlayers}
+                      </span>
+                    </div>
+
+                    <div className="grm-host-option-meter">
                       <div
-                        className="grm-bar-fill"
-                        style={{
-                          width: `${answeredPlayers > 0 ? (count / answeredPlayers) * 100 : 0}%`,
-                          background: OPTS[index]?.c || '#b9d6ff',
-                        }}
+                        className="grm-host-option-fill"
+                        style={{ width: `${choice.pct}%` }}
                       />
                     </div>
 
-                    <span className="grm-bar-n">{count}</span>
+                    <div className="grm-host-picks">
+                      {choice.players.length > 0 ? (
+                        choice.players.map((player) => (
+                          <span key={player.id} className="grm-host-pick-chip">
+                            <span>{player.avatar}</span>
+                            <b>{player.name}</b>
+                          </span>
+                        ))
+                      ) : (
+                        <span className="grm-host-empty">No picks yet</span>
+                      )}
+                    </div>
                   </div>
                 )
               })}
@@ -1265,6 +1430,21 @@ export default function GoQuizRoom() {
               <span className="grm-ol">{LTRS[index]}</span>
               <span className="grm-aopt-t">{option}</span>
               {index === currentQ.correct && <span className="grm-aopt-check">✓</span>}
+
+              {isHost && (
+                <div className="grm-aopt-picks">
+                  {choiceBreakdown[index]?.players?.length > 0 ? (
+                    choiceBreakdown[index].players.map((player) => (
+                      <span key={player.id} className="grm-host-pick-chip small">
+                        <span>{player.avatar}</span>
+                        <b>{player.name}</b>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="grm-host-empty">No picks</span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
