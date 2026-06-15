@@ -298,32 +298,6 @@ function LovableKpi({ title, value, tone }) {
   )
 }
 
-function normalizeSupabaseAgent(row) {
-  const english = Number(row?.english || 0)
-  const spanish = Number(row?.spanish || 0)
-  const invalidTransfers = Number(row?.invalid_transfers ?? row?.invalidTransfers ?? 0)
-  const rawTotal = Number(row?.raw_total ?? row?.rawTotal ?? (english + spanish))
-  const total = Number(row?.net_total ?? row?.total ?? Math.max(0, rawTotal - invalidTransfers))
-  const teamId = String(row?.team ?? row?.teamId ?? '').trim()
-
-  return {
-    date: normalizeDate(row?.date),
-    ext: String(row?.agent_ext ?? row?.ext ?? '').trim(),
-    name: String(row?.agent_name ?? row?.name ?? '').trim(),
-    teamId,
-    team: teamId,
-    teamLabel: getTeamLabel(teamId),
-    teamFlag: getTeamFlag(teamId),
-    english,
-    spanish,
-    invalidTransfers,
-    rawTotal,
-    total,
-    source: String(row?.source || ''),
-    isFinal: Boolean(row?.is_final ?? row?.isFinal),
-  }
-}
-
 function dedupeDailyAgents(normalizedAgents = []) {
   const byKey = new Map()
 
@@ -395,33 +369,6 @@ function dedupeDailyTeams(normalizedTeams = []) {
 
   return [...byKey.values()]
 }
-
-function normalizeSupabaseTeam(row) {
-  const teamId = String(row?.team ?? row?.teamId ?? '').trim()
-  const english = Number(row?.english || 0)
-  const spanish = Number(row?.spanish || 0)
-  const invalidTransfers = Number(row?.invalid_transfers ?? row?.invalidTransfers ?? 0)
-  const rawTotal = Number(row?.raw_total ?? row?.rawTotal ?? (english + spanish))
-  const total = Number(row?.net_total ?? row?.total ?? Math.max(0, rawTotal - invalidTransfers))
-
-  return {
-    date: normalizeDate(row?.date),
-    teamId,
-    team: teamId,
-    teamLabel: getTeamLabel(teamId),
-    teamFlag: getTeamFlag(teamId),
-    english,
-    spanish,
-    invalidTransfers,
-    rawTotal,
-    total,
-    activeAgents: Number(row?.active_agents ?? row?.activeAgents ?? 0),
-    source: String(row?.source || ''),
-    isFinal: Boolean(row?.is_final ?? row?.isFinal),
-  }
-}
-
-
 
 function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
   const teamMap = {}
