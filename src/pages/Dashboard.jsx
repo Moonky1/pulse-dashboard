@@ -21,6 +21,12 @@ import {
   fetchSupabaseDashboardDate,
   fetchSupabaseDates,
 } from './dashboardData'
+import {
+  getTeamColor,
+  getTeamFlag,
+  getTeamGoal,
+  getTeamLabel,
+} from './dashboardHelpers'
 import './dashboard.css'
 
 const normalizeSearchText = value => {
@@ -126,10 +132,6 @@ function getMetricColor(metric) {
   return '#d7b987'
 }
 
-function getTeamColor(teamId) {
-  return TEAM_COLORS[teamId] || '#e98a34'
-}
-
 function getBusinessHoursForDate(dateKey) {
   return isSaturdayDateKey(dateKey) ? BUSINESS_HOURS.saturday : BUSINESS_HOURS.weekday
 }
@@ -177,18 +179,6 @@ function playPulseSound(type = 'click') {
   } catch (err) {
     // Sounds are a nice-to-have. Never break the dashboard if the browser blocks audio.
   }
-}
-
-function getTeamName(teamId) {
-  return TEAMS[teamId]?.label || teamId || 'Unknown team'
-}
-
-function getTeamFlag(teamId) {
-  return TEAMS[teamId]?.flag || null
-}
-
-function getTeamGoal(teamId) {
-  return Number(TEAM_TARGETS[teamId] || 10)
 }
 
 function isSaturdayDateKey(dateKey) {
@@ -251,7 +241,7 @@ function TeamInlineLabel({ teamId, teamFlag, teamLabel }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 900 }}>
       <FlagImg src={teamFlag || getTeamFlag(teamId)} size={18} alt="" />
-      {teamLabel || getTeamName(teamId)}
+      {teamLabel || getTeamLabel(teamId)}
     </span>
   )
 }
@@ -320,7 +310,7 @@ function normalizeSupabaseAgent(row) {
     name: String(row?.agent_name ?? row?.name ?? '').trim(),
     teamId,
     team: teamId,
-    teamLabel: getTeamName(teamId),
+    teamLabel: getTeamLabel(teamId),
     teamFlag: getTeamFlag(teamId),
     english,
     spanish,
@@ -416,7 +406,7 @@ function normalizeSupabaseTeam(row) {
     date: normalizeDate(row?.date),
     teamId,
     team: teamId,
-    teamLabel: getTeamName(teamId),
+    teamLabel: getTeamLabel(teamId),
     teamFlag: getTeamFlag(teamId),
     english,
     spanish,
@@ -850,7 +840,7 @@ function buildTeamWeeklyInsights(agentRows = [], teamRows = []) {
 
   return TEAM_ORDER.map(teamId => ({
     teamId,
-    teamLabel: getTeamName(teamId),
+    teamLabel: getTeamLabel(teamId),
     teamFlag: getTeamFlag(teamId),
     goal: getTeamGoal(teamId),
     thisWeek: buildWeekForTeam(teamId, thisWeekStart),
@@ -1890,7 +1880,7 @@ function buildAnalyticsInsights(history, selectedTeams = ['all'], rangeMode = 'w
   selectedTeamIds.forEach(teamId => {
     byTeam.set(teamId, {
       teamId,
-      teamLabel: getTeamName(teamId),
+      teamLabel: getTeamLabel(teamId),
       teamFlag: getTeamFlag(teamId),
       english: 0,
       spanish: 0,
@@ -1916,7 +1906,7 @@ function buildAnalyticsInsights(history, selectedTeams = ['all'], rangeMode = 'w
   teamRows.forEach(row => {
     const current = byTeam.get(row.teamId) || {
       teamId: row.teamId,
-      teamLabel: getTeamName(row.teamId),
+      teamLabel: getTeamLabel(row.teamId),
       teamFlag: getTeamFlag(row.teamId),
       english: 0,
       spanish: 0,
@@ -2352,7 +2342,7 @@ function MultiTeamLineChart({ data = [], teamIds = TEAM_ORDER, metric = 'total',
           <strong>{formatDateLabel(hoverRow.date)}</strong>
           {activeTeamIds.map(teamId => (
             <span key={teamId} style={{ color: getTeamColor(teamId) }}>
-              {getTeamName(teamId)}: {Number(hoverRow[metricKey(teamId)] ?? hoverRow[teamId] ?? 0).toLocaleString()}
+              {getTeamLabel(teamId)}: {Number(hoverRow[metricKey(teamId)] ?? hoverRow[teamId] ?? 0).toLocaleString()}
             </span>
           ))}
         </div>
@@ -2431,7 +2421,7 @@ function RadarChart({ axes = [], data = [], size = 320 }) {
           return (
             <g key={teamId}>
               <line x1={cx} y1={cy} x2={x2} y2={y2} className="pulse-radar-axis" />
-              <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="pulse-radar-label">{getTeamName(teamId)}</text>
+              <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="pulse-radar-label">{getTeamLabel(teamId)}</text>
             </g>
           )
         })}
@@ -2460,7 +2450,7 @@ function RadarChart({ axes = [], data = [], size = 320 }) {
             transform: `${hover.flipX ? 'translate(-104%, 12px)' : 'translate(18px, 12px)'} ${hover.flipY ? 'translateY(-112%)' : ''}`,
           }}
         >
-          <strong>{getTeamName(hover.teamId)}</strong>
+          <strong>{getTeamLabel(hover.teamId)}</strong>
           <span style={{ color: '#38bdf8' }}>English: {hover.english.toLocaleString()}</span>
           <span style={{ color: '#34d399' }}>Spanish: {hover.spanish.toLocaleString()}</span>
         </div>
@@ -2593,7 +2583,7 @@ function HourlyPaceChart({ data = [], teamIds = TEAM_ORDER }) {
           <strong>{hoverRow.hour}</strong>
           {activeTeamIds.map(teamId => (
             <span key={teamId} style={{ color: getTeamColor(teamId) }}>
-              {getTeamName(teamId)}: {Number(hoverRow[teamId] || 0).toFixed(2)}
+              {getTeamLabel(teamId)}: {Number(hoverRow[teamId] || 0).toFixed(2)}
             </span>
           ))}
         </div>
@@ -2821,7 +2811,7 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
                 onClick={() => toggleTeam(teamId)}
               >
                 <FlagImg src={getTeamFlag(teamId)} size={17} alt="" />
-                {getTeamName(teamId)}
+                {getTeamLabel(teamId)}
               </button>
             ))}
           </div>
@@ -2889,7 +2879,7 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
             <MultiTeamLineChart data={analytics.allTeamsTrend} teamIds={selectedTeamIds} metric={comparisonMetric} />
             <div className="pulse-chart-legend">
               {selectedTeamIds.map(teamId => (
-                <span key={teamId}><i style={{ background: getTeamColor(teamId) }} />{getTeamName(teamId)}</span>
+                <span key={teamId}><i style={{ background: getTeamColor(teamId) }} />{getTeamLabel(teamId)}</span>
               ))}
             </div>
           </div>
@@ -2904,7 +2894,7 @@ function AnalyticsPage({ history, historyLoading, historyError, dateTabs = [], n
               <HourlyPaceChart data={analytics.hourlyCompared} teamIds={selectedTeamIds} />
               <div className="pulse-chart-legend">
                 {selectedTeamIds.map(teamId => (
-                  <span key={teamId}><i style={{ background: getTeamColor(teamId) }} />{getTeamName(teamId)}</span>
+                  <span key={teamId}><i style={{ background: getTeamColor(teamId) }} />{getTeamLabel(teamId)}</span>
                 ))}
               </div>
             </div>
@@ -2963,7 +2953,7 @@ function flattenAgentsForRankings(teamData) {
       agents.push({
         ...agent,
         teamId,
-        teamLabel: getTeamName(teamId),
+        teamLabel: getTeamLabel(teamId),
         teamFlag: getTeamFlag(teamId),
       })
     })
@@ -2980,7 +2970,7 @@ function buildCurrentTeamRankings(teamData, metric = 'total') {
 
       return {
         teamId,
-        teamLabel: getTeamName(teamId),
+        teamLabel: getTeamLabel(teamId),
         teamFlag: getTeamFlag(teamId),
         english: Number(parsed?.totals?.english || 0),
         spanish: Number(parsed?.totals?.spanish || 0),
@@ -3063,7 +3053,7 @@ function TeamDirectoryCard({ teamId, onOpenTeam }) {
       <div className="pulse-team-directory-flag">
         <FlagImg src={team?.flag} size={34} alt="" />
       </div>
-      <div className="pulse-team-directory-name">{team?.label || getTeamName(teamId)}</div>
+      <div className="pulse-team-directory-name">{team?.label || getTeamLabel(teamId)}</div>
     </button>
   )
 }
