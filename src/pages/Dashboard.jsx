@@ -421,27 +421,7 @@ function normalizeSupabaseTeam(row) {
   }
 }
 
-function sortAgentsByLowestXfers(agents = []) {
-  return [...(agents || [])]
-    .filter(agent => Number(agent.lowestXfers ?? agent.weekXfers ?? agent.total ?? 0) > 0)
-    .sort((a, b) => {
-      const aXfers = Number(a.lowestXfers ?? a.weekXfers ?? a.total ?? 0)
-      const bXfers = Number(b.lowestXfers ?? b.weekXfers ?? b.total ?? 0)
-      const xferDiff = aXfers - bXfers
-      if (xferDiff !== 0) return xferDiff
 
-      const englishDiff = Number(a.english || 0) - Number(b.english || 0)
-      if (englishDiff !== 0) return englishDiff
-
-      const spanishDiff = Number(a.spanish || 0) - Number(b.spanish || 0)
-      if (spanishDiff !== 0) return spanishDiff
-
-      const activeDiff = Number(b.activeDays || 0) - Number(a.activeDays || 0)
-      if (activeDiff !== 0) return activeDiff
-
-      return String(a?.name || '').localeCompare(String(b?.name || ''))
-    })
-}
 
 function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
   const teamMap = {}
