@@ -27,6 +27,7 @@ import {
   getTeamFlag,
   getTeamGoal,
   getTeamLabel,
+  sortAgentsByMetric,
 } from './dashboardHelpers'
 import './dashboard.css'
 
@@ -418,21 +419,6 @@ function normalizeSupabaseTeam(row) {
     source: String(row?.source || ''),
     isFinal: Boolean(row?.is_final ?? row?.isFinal),
   }
-}
-
-function sortAgentsByMetric(agents, metric = 'total') {
-  return [...(agents || [])].sort((a, b) => {
-    const metricDiff = Number(b?.[metric] || 0) - Number(a?.[metric] || 0)
-    if (metricDiff !== 0) return metricDiff
-
-    const totalDiff = Number(b?.total || 0) - Number(a?.total || 0)
-    if (totalDiff !== 0) return totalDiff
-
-    const englishDiff = Number(b?.english || 0) - Number(a?.english || 0)
-    if (englishDiff !== 0) return englishDiff
-
-    return String(a?.name || '').localeCompare(String(b?.name || ''))
-  })
 }
 
 function sortAgentsByLowestXfers(agents = []) {
