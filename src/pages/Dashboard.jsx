@@ -17,7 +17,10 @@ import {
   TEAM_TARGETS,
   TEAMS,
 } from './dashboardConfig'
-
+import {
+  fetchSupabaseDashboardDate,
+  fetchSupabaseDates,
+} from './dashboardData'
 import './dashboard.css'
 
 const normalizeSearchText = value => {
@@ -505,79 +508,6 @@ function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
   })
 
   return teamMap
-}
-
-
-async function fetchSupabaseDashboardDate(date) {
-  const [teamResult, agentResult] = await Promise.all([
-    supabase
-      .from('pulse_team_daily_clean')
-      .select('*')
-      .eq('date', date),
-
-    supabase
-      .from('pulse_agent_daily_clean')
-      .select('*')
-      .eq('date', date)
-      .range(0, 9999),
-  ])
-
-  if (teamResult.error) throw teamResult.error
-  if (agentResult.error) throw agentResult.error
-
-  return buildParsedTeamsFromSupabase(teamResult.data || [], agentResult.data || [])
-}
-
-async function fetchSupabaseDates() {
-  const { data, error } = await supabase
-    .from('pulse_team_daily_clean')
-    .select('date')
-    .gte('date', CLEAN_START_DATE)
-    .order('date', { ascending: false })
-    .range(0, 9999)
-
-  if (error) throw error
-
-  return [...new Set(
-    (data || [])
-      .map(row => normalizeDate(row.date))
-      .filter(Boolean)
-  )].sort((a, b) => b.localeCompare(a))
-}
-
-async function fetchAllSupabaseRows(tableName, select = '*', pageSize = 1000, orderColumns = []) {
-  const rows = []
-  let from = 0
-
-  // Supabase/PostgREST can silently return only the first page if we request a huge range.
-  // This loop forces Dashboard rankings to read every historical row saved in the tables,
-  // not only the current week or the first 1,000 rows.
-  while (true) {
-    const to = from + pageSize - 1
-    let query = supabase
-      .from(tableName)
-      .select(select)
-      .gte('date', OFFICIAL_DATA_START)
-
-    orderColumns.forEach(column => {
-      query = query.order(column.name, { ascending: column.ascending })
-    })
-
-    const { data, error } = await query.range(from, to)
-
-    if (error) throw error
-
-    const batch = data || []
-    rows.push(...batch)
-
-    if (batch.length < pageSize) break
-    from += pageSize
-
-    // Safety guard. 100k rows is far above what this dashboard needs right now.
-    if (from >= 100000) break
-  }
-
-  return rows
 }
 
 async function fetchHistoryRows() {
