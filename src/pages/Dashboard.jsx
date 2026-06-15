@@ -20,6 +20,7 @@ import {
 import {
   fetchSupabaseDashboardDate,
   fetchSupabaseDates,
+  fetchSupabaseHistorySourceRows,
 } from './dashboardData'
 import {
   getTeamColor,
@@ -501,16 +502,7 @@ function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
 }
 
 async function fetchHistoryRows() {
-  const [agentRows, teamRows] = await Promise.all([
-    fetchAllSupabaseRows('pulse_agent_daily_clean', '*', SUPABASE_PAGE_SIZE, [
-      { name: 'date', ascending: false },
-    ]),
-
-    fetchAllSupabaseRows('pulse_team_daily_clean', '*', SUPABASE_PAGE_SIZE, [
-      { name: 'date', ascending: false },
-    ]),
-  ])
-
+  const { agentRows, teamRows } = await fetchSupabaseHistorySourceRows()
   return buildHistoryInsights(agentRows || [], teamRows || [])
 }
 
