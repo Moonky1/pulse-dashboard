@@ -21,12 +21,15 @@ import {
   fetchSupabaseDashboardDate,
   fetchSupabaseDates,
   fetchSupabaseHistorySourceRows,
+  normalizeSupabaseAgent,
+  normalizeSupabaseTeam,
 } from './dashboardData'
 import {
   getTeamColor,
   getTeamFlag,
   getTeamGoal,
   getTeamLabel,
+  sortAgentsByLowestXfers,
   sortAgentsByMetric,
 } from './dashboardHelpers'
 import './dashboard.css'
@@ -368,50 +371,6 @@ function dedupeDailyTeams(normalizedTeams = []) {
   })
 
   return [...byKey.values()]
-}
-
-function buildParsedTeamsFromSupabase(teamRows = [], agentRows = []) {
-  const teamMap = {}
-
-  TEAM_ORDER.forEach(teamId => {
-    const teamRow = (teamRows || []).find(row => String(row.team || '') === teamId)
-
-    const agents = (agentRows || [])
-      .filter(row => String(row.team || '') === teamId)
-      .map(normalizeSupabaseAgent)
-      .filter(agent => agent.ext)
-
-    if (!teamRow && agents.length === 0) return
-
-    const fallbackEnglish = agents.reduce((sum, agent) => sum + Number(agent.english || 0), 0)
-    const fallbackSpanish = agents.reduce((sum, agent) => sum + Number(agent.spanish || 0), 0)
-    const fallbackInvalid = agents.reduce((sum, agent) => sum + Number(agent.invalidTransfers || 0), 0)
-    const fallbackRawTotal = agents.reduce((sum, agent) => sum + Number(agent.rawTotal || 0), 0)
-    const fallbackTotal = agents.reduce((sum, agent) => sum + Number(agent.total || 0), 0)
-
-    const english = Number(teamRow?.english ?? fallbackEnglish)
-    const spanish = Number(teamRow?.spanish ?? fallbackSpanish)
-    const invalidTransfers = Number(teamRow?.invalid_transfers ?? fallbackInvalid)
-    const rawTotal = Number(teamRow?.raw_total ?? (fallbackRawTotal || english + spanish))
-    const total = Number(teamRow?.net_total ?? (fallbackTotal || Math.max(0, rawTotal - invalidTransfers)))
-    const activeAgents = Number(teamRow?.active_agents ?? agents.length)
-
-    teamMap[teamId] = {
-      agents: sortAgentsByMetric(agents, 'total'),
-      totals: {
-        english,
-        spanish,
-        rawTotal,
-        total,
-        activeAgents,
-      },
-      invalidTransfers,
-      source: String(teamRow?.source || agents[0]?.source || ''),
-      isFinal: Boolean(teamRow?.is_final),
-    }
-  })
-
-  return teamMap
 }
 
 async function fetchHistoryRows() {

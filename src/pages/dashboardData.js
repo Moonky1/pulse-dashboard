@@ -17,7 +17,7 @@ import {
   toNumber,
 } from './dashboardHelpers'
 
-function normalizeSupabaseAgent(row = {}) {
+export function normalizeSupabaseAgent(row = {}) {
   const teamId = normalizeTeamId(row.team || row.teamId)
   const english = toNumber(row.english)
   const spanish = toNumber(row.spanish)
@@ -53,7 +53,7 @@ function normalizeSupabaseAgent(row = {}) {
   }
 }
 
-function normalizeSupabaseTeam(row = {}) {
+export function normalizeSupabaseTeam(row = {}) {
   const teamId = normalizeTeamId(row.team || row.teamId)
   const english = toNumber(row.english)
   const spanish = toNumber(row.spanish)
