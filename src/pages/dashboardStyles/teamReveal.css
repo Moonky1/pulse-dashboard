@@ -1,43 +1,73 @@
 /* src/pages/dashboardStyles/teamReveal.css */
 
-/* Smooth + lighter team reveal animation */
+/* Fast team reveal override.
+   Keep this file after dashboard.css import. */
+
+.team-reveal-overlay {
+  contain: layout paint style;
+  animation: teamRevealOverlayFast 1.05s ease-out forwards !important;
+}
 
 .team-reveal-bg {
-  background: rgba(3, 4, 5, 0.72) !important;
+  background: rgba(3, 4, 5, 0.74) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-.team-reveal-overlay {
-  contain: layout paint style;
-  animation: teamRevealOverlaySmooth 1.08s ease-out forwards !important;
-}
-
-.team-reveal-natural,
-.team-reveal-flag-wrap,
-.team-reveal-name,
-.team-reveal-kicker {
+.team-reveal-natural {
+  transform: translate3d(0, 0, 0);
+  filter: none !important;
   will-change: transform, opacity;
+  animation: teamRevealNaturalFast 0.46s cubic-bezier(0.2, 0.85, 0.25, 1) both !important;
 }
 
 .team-reveal-warm-glow {
-  opacity: 0.28 !important;
+  width: min(420px, 76vw) !important;
+  height: min(190px, 30vh) !important;
+  opacity: 0.2 !important;
+  filter: none !important;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(215, 185, 135, 0.18) 0%,
+    rgba(215, 185, 135, 0.08) 36%,
+    transparent 68%
+  ) !important;
+}
+
+.team-reveal-flag-wrap {
+  transform: translate3d(0, 0, 0);
+  filter: none !important;
+  will-change: transform, opacity;
+  animation: teamRevealFlagFast 0.42s cubic-bezier(0.2, 0.85, 0.25, 1) both !important;
+}
+
+.team-reveal-flag-wrap img,
+.team-reveal-flag-wrap span {
+  transform: translate3d(0, 0, 0) scale(1.14) !important;
   filter: none !important;
 }
 
-.team-reveal-name {
-  animation: teamRevealNameSmooth 0.56s cubic-bezier(0.2, 0.85, 0.25, 1) 0.04s both !important;
+.team-reveal-kicker {
+  will-change: transform, opacity;
+  animation: teamRevealTextFast 0.36s ease-out 0.03s both !important;
 }
 
-@keyframes teamRevealNameSmooth {
+.team-reveal-name {
+  filter: none !important;
+  will-change: transform, opacity;
+  text-shadow: 0 14px 34px rgba(0, 0, 0, 0.52) !important;
+  animation: teamRevealNameFast 0.46s cubic-bezier(0.2, 0.85, 0.25, 1) 0.04s both !important;
+}
+
+@keyframes teamRevealNaturalFast {
   0% {
     opacity: 0;
-    transform: translate3d(0, 16px, 0) scale(0.965);
+    transform: translate3d(0, 14px, 0) scale(0.96);
   }
 
-  74% {
+  72% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1.012);
+    transform: translate3d(0, 0, 0) scale(1.01);
   }
 
   100% {
@@ -46,7 +76,48 @@
   }
 }
 
-@keyframes teamRevealOverlaySmooth {
+@keyframes teamRevealFlagFast {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.94);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes teamRevealTextFast {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 7px, 0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes teamRevealNameFast {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 13px, 0) scale(0.97);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.01);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes teamRevealOverlayFast {
   0%,
   72% {
     opacity: 1;
