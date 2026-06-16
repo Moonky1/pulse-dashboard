@@ -33,6 +33,7 @@ import {
   sortAgentsByMetric,
 } from './dashboardHelpers'
 import './dashboard.css'
+import './dashboardStyles/teamReveal.css'
 
 const normalizeSearchText = value => {
   return String(value || '')
