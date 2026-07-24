@@ -9,6 +9,7 @@ const POLL_MS = 1200
 const TIMER_MS = 120
 const Q_TIME = 30
 const RESULT_SEC = 5
+const LOBBY_MUSIC_SRC = '/audio/lobby-music.mp3'
 
 const AVATARS = [
   '🦊', '🐺', '🦁', '🐯', '🐻',
@@ -243,10 +244,8 @@ function rankPlayers(players) {
 function useSound() {
   const ctx = useRef(null)
   const lobbyMusicRef = useRef({
-    timer: null,
-    oscillators: [],
+    audio: null,
     active: false,
-    step: 0,
   })
 
   const getCtx = () => {
@@ -293,84 +292,32 @@ function useSound() {
     try {
       lobbyMusicRef.current.active = false
 
-      if (lobbyMusicRef.current.timer) {
-        clearTimeout(lobbyMusicRef.current.timer)
-        lobbyMusicRef.current.timer = null
+      if (lobbyMusicRef.current.audio) {
+        lobbyMusicRef.current.audio.pause()
+        lobbyMusicRef.current.audio.currentTime = 0
+        lobbyMusicRef.current.audio = null
       }
-
-      lobbyMusicRef.current.oscillators.forEach((oscillator) => {
-        try {
-          oscillator.stop()
-        } catch {
-          // Already stopped.
-        }
-      })
-
-      lobbyMusicRef.current.oscillators = []
     } catch {
       // Ignore audio cleanup issues.
     }
   }
 
-  const startLobbyMusic = () => {
+  const startLobbyMusic = async () => {
     try {
-      const audio = getCtx()
-      if (!audio) return false
-
-      if (audio.state === 'suspended') audio.resume()
-
       stopLobbyMusic()
 
+      const music = new Audio(LOBBY_MUSIC_SRC)
+      music.loop = true
+      music.preload = 'auto'
+      music.volume = 0.32
+
+      lobbyMusicRef.current.audio = music
+      await music.play()
+
       lobbyMusicRef.current.active = true
-      lobbyMusicRef.current.step = 0
-
-      const notes = [
-        523.25, 659.25, 783.99, 659.25,
-        587.33, 698.46, 880.0, 698.46,
-        493.88, 622.25, 739.99, 622.25,
-        523.25, 659.25, 783.99, 987.77,
-      ]
-
-      const playNext = () => {
-        if (!lobbyMusicRef.current.active) return
-
-        const liveAudio = getCtx()
-        if (!liveAudio) return
-
-        if (liveAudio.state === 'suspended') liveAudio.resume()
-
-        const frequency = notes[lobbyMusicRef.current.step % notes.length]
-        const oscillator = liveAudio.createOscillator()
-        const gain = liveAudio.createGain()
-        const filter = liveAudio.createBiquadFilter()
-        const now = liveAudio.currentTime
-
-        oscillator.type = 'sine'
-        oscillator.frequency.setValueAtTime(frequency, now)
-
-        filter.type = 'lowpass'
-        filter.frequency.setValueAtTime(1050, now)
-
-        gain.gain.setValueAtTime(0.0001, now)
-        gain.gain.exponentialRampToValueAtTime(0.028, now + 0.08)
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.72)
-
-        oscillator.connect(filter)
-        filter.connect(gain)
-        gain.connect(liveAudio.destination)
-
-        oscillator.start(now)
-        oscillator.stop(now + 0.78)
-
-        lobbyMusicRef.current.oscillators.push(oscillator)
-        lobbyMusicRef.current.step += 1
-
-        lobbyMusicRef.current.timer = setTimeout(playNext, 620)
-      }
-
-      playNext()
       return true
     } catch {
+      stopLobbyMusic()
       return false
     }
   }
@@ -624,7 +571,7 @@ export default function GoQuizRoom() {
     if (!error) setAnswers(data || [])
   }, [code])
 
-const createHostRoom = useCallback(async () => {
+  const createHostRoom = useCallback(async () => {
   const questionIds = buildQuestionIds(topic, lang, `${code}:${Date.now()}`)
 
   const roomPayload = {
@@ -1275,7 +1222,7 @@ const createHostRoom = useCallback(async () => {
     nav('/go')
   }
 
-  const toggleLobbyMusic = () => {
+  const toggleLobbyMusic = async () => {
     if (!isHost) return
 
     if (lobbyMusicOn) {
@@ -1284,10 +1231,10 @@ const createHostRoom = useCallback(async () => {
       return
     }
 
-    const started = snd.lobbyStart()
+    const started = await snd.lobbyStart()
 
     if (!started) {
-      alert('Click again to allow lobby music in this browser.')
+      alert('Could not play lobby music. Check that public/audio/lobby-music.mp3 exists.')
       return
     }
 
@@ -1585,8 +1532,8 @@ const createHostRoom = useCallback(async () => {
                 : `${Math.max(0, totalPlayers - answeredPlayers)} still thinking...`}
             </p>
 
-            <button
-              className="grm-btn-skip"
+<button
+  className="grm-btn-skip grm-btn-skip-compact"
               onPointerDown={showAnswer}
               disabled={busy}
             >
@@ -1662,8 +1609,11 @@ const createHostRoom = useCallback(async () => {
 
         {currentQ?.explanation && <div className="grm-exp">💡 {currentQ.explanation}</div>}
 
-        <div className="grm-mini-lb">
-          <div className="grm-mini-lb-hd">🏆 Leaderboard</div>
+<div className="grm-mini-lb">
+  <div className="grm-mini-lb-hd">
+    <img src={GO_RESULT_ASSETS.header} alt="" className="grm-mini-lb-icon" />
+    <span>Leaderboard</span>
+  </div>
 
           {rankedPlayers.slice(0, 6).map((player, index) => (
             <div key={player.id} className={`grm-mini-row ${player.id === playerId ? 'me' : ''}`}>
@@ -1677,7 +1627,7 @@ const createHostRoom = useCallback(async () => {
 
         {isHost && (
           <button
-            className="grm-btn-skip"
+            className="grm-btn-skip grm-btn-skip-compact"
             onPointerDown={() => {
               clearInterval(resultTimerRef.current)
               nextQuestion(true)

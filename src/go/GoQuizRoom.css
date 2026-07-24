@@ -2223,3 +2223,79 @@
     display: grid;
   }
 }
+
+/* =========================================================
+   PULSE GO MICRO POLISH — lobby music + answer/final UI
+========================================================= */
+
+.grm-mini-lb-hd {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.grm-mini-lb-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.34));
+}
+
+.grm-btn-skip.grm-btn-skip-compact {
+  width: auto;
+  min-width: 170px;
+  max-width: 220px;
+  margin: 18px auto 0;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grm-music-btn.on {
+  border-color: rgba(34, 197, 94, 0.34);
+  background: rgba(34, 197, 94, 0.12);
+  color: #bbf7d0;
+}
+
+.grm-pod-name {
+  position: relative;
+  z-index: 2;
+  margin-top: 2px;
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+  text-shadow: 0 10px 22px rgba(0, 0, 0, 0.38);
+}
+
+.grm-pod.first .grm-pod-name {
+  font-size: 25px;
+}
+
+.grm-pod-block {
+  min-height: 70px;
+  opacity: 0.82;
+  background: rgba(185, 214, 255, 0.065);
+}
+
+.grm-pod-medal {
+  width: 38px;
+  height: 38px;
+}
+
+.grm-pod-score-main {
+  margin-top: 2px;
+}
+
+@media (max-width: 760px) {
+  .grm-btn-skip.grm-btn-skip-compact {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .grm-pod-name,
+  .grm-pod.first .grm-pod-name {
+    font-size: 22px;
+  }
+}
