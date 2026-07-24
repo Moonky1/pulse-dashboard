@@ -494,1406 +494,2807 @@ export const dialer = {
 
 export const quizQuestions = [
   {
-    id: 1,
-    topic: "script",
-    language: "en",
-    question: "Which company name should the opener use in the English introduction?",
-    options: [
-      "Vehicle Services Group",
-      "Vehicle Service Center",
-      "Auto Warranty Department",
-      "Coverage Review Team",
+    "id": 1,
+    "topic": "script",
+    "language": "en",
+    "question": "A customer asks if the call will lower their monthly payments, and the agent transfers without answering. What should QA flag?",
+    "options": [
+      "The agent waited too long after transfer.",
+      "The mileage limit was explained too early.",
+      "The customer was asked too many questions.",
+      "Customer question was not clarified first."
     ],
-    correct: 0,
-    explanation: "The English opening identifies the caller as being with the Vehicle Services Group.",
+    "correct": 3,
+    "explanation": "The agent must clarify the nature of the call and answer key customer questions before transferring."
   },
   {
-    id: 2,
-    topic: "script",
-    language: "en",
-    question: "What financing detail belongs in the opening line?",
-    options: [
-      "The dealership street address",
-      "The month and year financed",
-      "The APR percentage shown",
-      "The customer ZIP code",
+    "id": 2,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer says, “So this is from my bank?” Which answer keeps the script safest?",
+    "options": [
+      "Yes, your bank asked us to call you.",
+      "The finance company sent the file.",
+      "We work with dealerships and vehicle registries.",
+      "Your lender approved the coverage."
     ],
-    correct: 1,
-    explanation: "The opener should mention the vehicle financed on the month and year shown on the form.",
+    "correct": 2,
+    "explanation": "Agents should not say the bank or lender provided the file."
   },
   {
-    id: 3,
-    topic: "script",
-    language: "en",
-    question: "What must be verified before moving toward a transfer?",
-    options: [
-      "That the customer knows the VIN",
-      "That the address is fully updated",
-      "That the vehicle is running well",
-      "That the customer has repair receipts",
+    "id": 3,
+    "topic": "script",
+    "language": "en",
+    "question": "The agent says, “There is no cost at all, you only listen.” Why is this risky?",
+    "options": [
+      "It can sound like a free service promise.",
+      "It confirms the vehicle is running well.",
+      "It gives the advisor enough context.",
+      "It helps separate insurance from coverage."
     ],
-    correct: 2,
-    explanation: "The opener must confirm the vehicle is still in good running condition before transferring.",
+    "correct": 0,
+    "explanation": "Do not use wording that can be interpreted as free coverage or guaranteed no cost."
   },
   {
-    id: 4,
-    topic: "script",
-    language: "en",
-    question: "Which line best matches the approved purpose statement?",
-    options: [
-      "Your bank asked us to renew the factory warranty today",
-      "The dealership wants us to sell a new policy now",
-      "We are calling to confirm your insurance coverage",
-      "Our records show the extended warranty has not been activated yet",
+    "id": 4,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer says “okay” after the vehicle runs question, but never agrees to the transfer. What is missing?",
+    "options": [
+      "The exact make and model.",
+      "The customer’s full address.",
+      "Clear approval to be transferred.",
+      "A final monthly payment quote."
     ],
-    correct: 3,
-    explanation: "The purpose line is about the vehicle’s extended warranty not being activated yet.",
+    "correct": 2,
+    "explanation": "Vehicle condition approval is not the same as transfer consent."
   },
   {
-    id: 5,
-    topic: "script",
-    language: "en",
-    question: "What should the opener do before starting the transfer?",
-    options: [
-      "Ask for the full VIN number",
-      "Get clear approval from the customer",
-      "Quote the exact monthly price",
-      "Read the dealership address",
+    "id": 5,
+    "topic": "script",
+    "language": "en",
+    "question": "A customer answers in English but sounds unsure and confused by basic questions. What should the agent do?",
+    "options": [
+      "Ask for the preferred language.",
+      "Transfer as English XFER anyway.",
+      "Keep reading faster in English.",
+      "Mark NI without more context."
     ],
-    correct: 1,
-    explanation: "The customer must clearly approve the transfer before the opener connects the call.",
+    "correct": 0,
+    "explanation": "If the customer may not understand, the agent should verify language preference before continuing."
   },
   {
-    id: 6,
-    topic: "script",
-    language: "en",
-    question: "Which handoff line is the most professional?",
-    options: [
-      "I have someone here. Please take this call now.",
-      "This person wants prices. Go ahead and explain.",
-      "Hello Service Advisor, I have the customer on the line. Can you please assist?",
-      "The customer is ready, so I am leaving the call.",
+    "id": 6,
+    "topic": "script",
+    "language": "en",
+    "question": "The agent changes small connector words but keeps the required meaning. When is that acceptable?",
+    "options": [
+      "When the company name is skipped.",
+      "When vehicle condition is ignored.",
+      "When compliance points stay intact.",
+      "When transfer approval is assumed."
     ],
-    correct: 2,
-    explanation: "The handoff must introduce the customer to the Service Advisor in a clean and professional way.",
+    "correct": 2,
+    "explanation": "Natural wording is acceptable only if the required script meaning is preserved."
   },
   {
-    id: 7,
-    topic: "script",
-    language: "es",
-    question: "En el script en español, ¿qué nombre de compañía se debe usar?",
-    options: [
-      "Centro Nacional de Bancos",
-      "Departamento de Seguros del Concesionario",
-      "Garantía Directa del Fabricante",
-      "Grupo de Servicios Vehiculares",
+    "id": 7,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer asks, “What is this about?” Which response is safest?",
+    "options": [
+      "Your factory warranty is being renewed.",
+      "The dealer already approved your plan.",
+      "This is required to keep the vehicle legal.",
+      "It is a review of possible coverage options."
     ],
-    correct: 3,
-    explanation: "El script en español identifica al agente como parte del Grupo de Servicios Vehiculares.",
+    "correct": 3,
+    "explanation": "The purpose should be presented as a coverage review/opportunity, not a guaranteed renewal."
   },
   {
-    id: 8,
-    topic: "script",
-    language: "es",
-    question: "¿Qué debe verificar el agente en español antes de transferir?",
-    options: [
-      "Que el vehículo esté en buenas condiciones de funcionamiento",
-      "Que el cliente tenga seguro completo",
-      "Que el préstamo ya esté pagado",
-      "Que la dirección coincida con el archivo",
+    "id": 8,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer asks, “Who are you exactly?” What should the agent avoid?",
+    "options": [
+      "Explaining the call purpose calmly.",
+      "Pretending to be the dealership.",
+      "Identifying Vehicle Services Group.",
+      "Continuing only after approval."
     ],
-    correct: 0,
-    explanation: "El script en español también requiere verificar que el vehículo funcione correctamente antes de transferir.",
+    "correct": 1,
+    "explanation": "The agent should not claim to work for the dealer, manufacturer, or bank."
   },
   {
-    id: 9,
-    topic: "script",
-    language: "es",
-    question: "¿Cuál preparación de transferencia en español es la aprobada?",
-    options: [
-      "Enviar al cliente directamente al concesionario por precios",
-      "Pasar la llamada a facturación antes de revisar elegibilidad",
-      "Conectar al cliente con un Asesor de Servicio para revisar la calificación",
-      "Pedirle al cliente que llame luego de revisar el vehículo",
+    "id": 9,
+    "topic": "script",
+    "language": "en",
+    "question": "The agent says, “Your warranty has expired and this is your final notice.” What is the issue?",
+    "options": [
+      "It checks language preference clearly.",
+      "It gives the right disposition.",
+      "It creates unsupported urgency.",
+      "It confirms the Service Advisor first."
     ],
-    correct: 2,
-    explanation: "La línea de transferencia en español conecta al cliente con un Asesor de Servicio para revisar los detalles de calificación.",
+    "correct": 2,
+    "explanation": "Agents should not create false or unsupported urgency beyond the approved script."
   },
   {
-    id: 10,
-    topic: "script",
-    language: "es",
-    question: "En el script en español, ¿cuándo debe transferir el agente?",
-    options: [
-      "Apenas el cliente contesta",
-      "Después de que el cliente da aprobación",
-      "Antes de confirmar que el vehículo funciona",
-      "Solo después de cotizar el costo del plan",
+    "id": 10,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer asks for the price before vehicle condition is verified. What should the agent do?",
+    "options": [
+      "Skip condition and transfer fast.",
+      "Bridge pricing to the Service Advisor after qualification.",
+      "Say the quote is always free.",
+      "Give the cheapest monthly amount."
     ],
-    correct: 1,
-    explanation: "La aprobación del cliente es obligatoria antes de transferir, tanto en inglés como en español.",
+    "correct": 1,
+    "explanation": "The agent does not quote price; they confirm condition and bridge to the Service Advisor."
   },
   {
-    id: 11,
-    topic: "script",
-    language: "es",
-    question: "¿Cuál introducción en español se acerca más a la línea aprobada?",
-    options: [
-      "Hola, ventas, este cliente quiere saber el precio final.",
-      "Buenas, le dejo a esta persona porque está interesada.",
-      "Asesor, tome esta llamada mientras yo cuelgo.",
-      "Hola, Asesor de Servicio, tengo al cliente en la línea. ¿Podría asistir?",
+    "id": 11,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer says, “Thanks, I’m good,” and the agent says only “yeah” before transferring. What was missed?",
+    "options": [
+      "Dealer location confirmation.",
+      "Objection handling and consent.",
+      "Mileage calculation only.",
+      "A pause code correction."
     ],
-    correct: 3,
-    explanation: "La introducción debe presentar al cliente claramente ante el Asesor de Servicio.",
+    "correct": 1,
+    "explanation": "A casual response does not replace a rebuttal or clear consent to transfer."
   },
   {
-    id: 12,
-    topic: "script",
-    language: "es",
-    question: "¿Qué debe evitar el agente al decir el script?",
-    options: [
-      "Acortar o improvisar las palabras",
-      "Hablar con ritmo controlado",
-      "Usar claramente el nombre del cliente",
-      "Sonar seguro con la información financiera",
+    "id": 12,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer says the vehicle information is wrong. Which script direction is best?",
+    "options": [
+      "Say the file is never wrong.",
+      "Mark DNC because data is wrong.",
+      "Treat it as verification for the current vehicle.",
+      "Transfer before asking anything."
     ],
-    correct: 0,
-    explanation: "El estándar de entrega exige no acortar el script y no improvisar.",
+    "correct": 2,
+    "explanation": "Wrong or outdated vehicle data should be handled as a verification opportunity."
   },
   {
-    id: 13,
-    topic: "objections",
-    language: "en",
-    question: "A customer says, “I’m not interested.” What is the strongest first move?",
-    options: [
-      "Ask why and create curiosity",
-      "End the call immediately",
-      "Argue that they need coverage",
-      "Skip directly to the transfer",
+    "id": 13,
+    "topic": "script",
+    "language": "en",
+    "question": "The agent says, “The Service Advisor will lower your payment.” What is wrong?",
+    "options": [
+      "It keeps the handoff too clean.",
+      "It promises a result not controlled by the agent.",
+      "It asks too clearly for approval.",
+      "It confirms eligibility too slowly."
     ],
-    correct: 0,
-    explanation: "The opener should ask a question, understand the reason, and create curiosity.",
+    "correct": 1,
+    "explanation": "Agents must not promise lower payments or guaranteed outcomes."
   },
   {
-    id: 14,
-    topic: "objections",
-    language: "en",
-    question: "A customer asks, “Where did you get my information?” What should you say?",
-    options: [
-      "Your bank sent us your loan profile today",
-      "We partner with dealerships and vehicle registries nationwide",
-      "We bought the file from another company",
-      "The system does not show that information",
+    "id": 14,
+    "topic": "script",
+    "language": "en",
+    "question": "The agent says, “I’ll introduce you, okay?” and the customer says, “To who?” What should happen?",
+    "options": [
+      "Mark XFER after the question.",
+      "Dial first and explain later.",
+      "Ignore it as small talk.",
+      "Clarify the Service Advisor role."
     ],
-    correct: 1,
-    explanation: "The approved answer references dealerships and vehicle registries, not the bank.",
+    "correct": 3,
+    "explanation": "If the customer asks who they are being connected to, the agent should clarify before dialing."
   },
   {
-    id: 15,
-    topic: "objections",
-    language: "en",
-    question: "A customer asks, “What kind of vehicle?” What is the best response?",
-    options: [
-      "I can see the exact make and model but cannot say it",
-      "You should already know which vehicle we mean",
-      "I only see finance info, and the Service Advisor can review the full details",
-      "That question does not matter for this call",
+    "id": 15,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer asks if they must buy anything today. What should the agent say?",
+    "options": [
+      "The agent can approve the purchase.",
+      "The bank already selected the plan.",
+      "Yes, purchase is required today.",
+      "The advisor reviews options; the customer decides."
     ],
-    correct: 2,
-    explanation: "Be transparent about seeing finance information and bridge to the Service Advisor.",
+    "correct": 3,
+    "explanation": "The agent should not frame the call as mandatory or force a purchase."
   },
   {
-    id: 16,
-    topic: "objections",
-    language: "en",
-    question: "A customer asks, “How much does it cost?” What should the opener avoid?",
-    options: [
-      "Mentioning mileage can affect cost",
-      "Moving toward the Service Advisor",
-      "Explaining that pricing varies",
-      "Giving an exact price",
+    "id": 16,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer asks, “What vehicle are you calling about?” and the agent lacks make/model. What is safest?",
+    "options": [
+      "Reference finance info and verify current vehicle.",
+      "Invent the likely make and model.",
+      "Skip the vehicle check.",
+      "Say the customer should know."
     ],
-    correct: 3,
-    explanation: "The opener should not quote exact pricing; the Service Advisor reviews cost.",
+    "correct": 0,
+    "explanation": "The approved direction is to use available finance info and verify the current vehicle condition."
   },
   {
-    id: 17,
-    topic: "objections",
-    language: "en",
-    question: "A customer says, “I already have insurance.” What distinction matters most?",
-    options: [
-      "Insurance and extended coverage are the same service",
-      "Insurance covers accidents; this covers mechanical breakdowns",
-      "Insurance replaces the need for any repair coverage",
-      "Extended coverage is required by law like insurance",
+    "id": 17,
+    "topic": "script",
+    "language": "en",
+    "question": "The agent says the coverage is “from the manufacturer.” What should QA flag?",
+    "options": [
+      "Misrepresenting the coverage source.",
+      "Using the customer name clearly.",
+      "Waiting for the advisor to speak.",
+      "Asking if the vehicle runs."
     ],
-    correct: 1,
-    explanation: "Insurance and extended coverage are different products.",
+    "correct": 0,
+    "explanation": "Agents should not say they work for car brands or the manufacturer."
   },
   {
-    id: 18,
-    topic: "objections",
-    language: "en",
-    question: "A customer says, “I’m busy.” What is the best control move?",
-    options: [
-      "Push faster through the full script",
-      "Tell them it will only take seconds",
-      "Offer a callback time that works better",
-      "Continue talking until they answer",
+    "id": 18,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer asks a direct question during the opening. What is the best rule?",
+    "options": [
+      "Answer or clarify before pushing forward.",
+      "Ignore questions until the advisor joins.",
+      "Transfer faster to avoid objections.",
+      "Repeat the script louder."
     ],
-    correct: 2,
-    explanation: "Respect the customer’s time and offer a callback option.",
+    "correct": 0,
+    "explanation": "Unanswered questions can make the transfer misleading or invalid."
   },
   {
-    id: 19,
-    topic: "objections",
-    language: "es",
-    question: "En una llamada en español, el cliente dice que no le interesa. ¿Qué debe hacer primero el agente?",
-    options: [
-      "Transferir sin explicar más",
-      "Marcar SPXFER inmediatamente",
-      "Decirle que está cometiendo un error",
-      "Hacer una pregunta breve para entender por qué",
+    "id": 19,
+    "topic": "script",
+    "language": "en",
+    "question": "The agent gets approval but never introduces the customer by name to the Service Advisor. What is the issue?",
+    "options": [
+      "The call became a voicemail.",
+      "The customer asked for RR.",
+      "The vehicle became electric.",
+      "The handoff was incomplete."
     ],
-    correct: 3,
-    explanation: "La lógica de manejo de objeciones se mantiene: preguntar por qué y trabajar con la respuesta.",
+    "correct": 3,
+    "explanation": "The transfer requires a professional introduction, not just connecting the lines."
   },
   {
-    id: 20,
-    topic: "objections",
-    language: "es",
-    question: "En una llamada en español, el cliente pregunta dónde está ubicada la compañía. ¿Cuál respuesta es aprobada?",
-    options: [
-      "La sede principal está en Dallas, Texas",
-      "La oficina está dentro del concesionario",
-      "La oficina del banco maneja la póliza",
-      "La ubicación cambia según el estado del cliente",
+    "id": 20,
+    "topic": "script",
+    "language": "en",
+    "question": "The customer says, “I don't understand what you mean.” What should the agent not do?",
+    "options": [
+      "Ask language preference if needed.",
+      "Restate the purpose simply.",
+      "Confirm understanding first.",
+      "Push to transfer without clarifying."
     ],
-    correct: 0,
-    explanation: "La respuesta aprobada indica Dallas, Texas, y que los planes son aceptados a nivel nacional.",
+    "correct": 3,
+    "explanation": "If understanding is unclear, the agent must clarify before moving to transfer."
   },
   {
-    id: 21,
-    topic: "objections",
-    language: "es",
-    question: "En una llamada en español, el cliente pregunta: “¿Quién habla?”. ¿Qué debe decirse primero?",
-    options: [
-      "Que el banco entregó la información",
-      "Que es el departamento de garantía del concesionario",
-      "Identificarse como Grupo de Servicios Vehiculares",
-      "Saltar el nombre de la compañía por completo",
+    "id": 21,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “Not interested,” but gives no reason. What is the best first move?",
+    "options": [
+      "Transfer before they hang up.",
+      "Ask a short reason to work with.",
+      "Argue about repair costs.",
+      "Mark DNC immediately."
     ],
-    correct: 2,
-    explanation: "La identificación inicial debe coincidir con la frase aprobada del script en español.",
+    "correct": 1,
+    "explanation": "The agent needs a reason before choosing the best rebuttal."
   },
   {
-    id: 22,
-    topic: "objections",
-    language: "es",
-    question: "En una llamada en español, el cliente dice que ya tiene cobertura. ¿Cuál es el mejor enfoque?",
-    options: [
-      "Decirle que su cobertura actual no sirve",
-      "Revisar posibles beneficios actualizados o adicionales",
-      "Decirle que cancele su plan actual",
-      "Terminar la llamada porque no puede calificar",
+    "id": 22,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “I’m busy,” but does not refuse the call. What should the agent avoid?",
+    "options": [
+      "Promising it will take under a minute.",
+      "Respecting the time objection.",
+      "Asking if later works better.",
+      "Offering a better callback time."
     ],
-    correct: 1,
-    explanation: "La llamada debe presentarse como una revisión de opciones o beneficios adicionales, no como una obligación de cambiar.",
+    "correct": 0,
+    "explanation": "Agents should not promise exact or short wait times they cannot control."
   },
   {
-    id: 23,
-    topic: "objections",
-    language: "es",
-    question: "En una llamada en español, el cliente dice que vendió el vehículo o que fue pérdida total. ¿Qué debe hacer el agente?",
-    options: [
-      "Marcarlo como transferencia exitosa",
-      "Insistir en que el vehículo viejo aún califica",
-      "Pedir información de pago primero",
-      "Preguntar si actualmente maneja otro vehículo",
+    "id": 23,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “This sounds like a scam.” What is the safest tone?",
+    "options": [
+      "Calm, transparent, and controlled.",
+      "Defensive and argumentative.",
+      "Fast and dismissive.",
+      "Silent until they stop talking."
     ],
-    correct: 3,
-    explanation: "Se debe redirigir hacia el vehículo actual y confirmar si está en buenas condiciones de funcionamiento.",
+    "correct": 0,
+    "explanation": "Scam concerns require trust-building, not pressure."
   },
   {
-    id: 24,
-    topic: "objections",
-    language: "es",
-    question: "En una llamada en español, el cliente dice que la información del vehículo está incorrecta. ¿Cuál es el mejor manejo?",
-    options: [
-      "Tratarlo como verificación y revisar el vehículo actual",
-      "Decirle al cliente que el archivo siempre está correcto",
-      "Saltar la verificación y transferir de todas formas",
-      "Marcar la llamada como Do Not Call",
+    "id": 24,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “I already have insurance.” What distinction should the agent make?",
+    "options": [
+      "Insurance pays every repair type.",
+      "Coverage replaces legal insurance.",
+      "Insurance and coverage are identical.",
+      "Insurance covers accidents; coverage is mechanical."
     ],
-    correct: 0,
-    explanation: "La información incorrecta o desactualizada debe manejarse como una oportunidad de verificación.",
+    "correct": 3,
+    "explanation": "Extended coverage and insurance must be separated clearly."
   },
   {
-    id: 25,
-    topic: "product",
-    language: "en",
-    question: "What does extended coverage mainly protect against?",
-    options: [
-      "Mechanical breakdown repairs",
-      "Accident liability claims",
-      "Bodywork after collisions",
-      "Routine oil changes only",
+    "id": 25,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “I already have a warranty.” What is the safest positioning?",
+    "options": [
+      "Promise a cheaper replacement.",
+      "Tell them to cancel the plan.",
+      "Review updated or additional options.",
+      "Say their current plan is useless."
     ],
-    correct: 0,
-    explanation: "Extended coverage is focused on mechanical breakdown repairs, not accident insurance.",
+    "correct": 2,
+    "explanation": "Existing coverage should be handled as a review, not attacked."
   },
   {
-    id: 26,
-    topic: "product",
-    language: "en",
-    question: "Which vehicle is most likely to qualify?",
-    options: [
-      "2008 coupe with 70,000 miles",
-      "2018 sedan with 95,000 miles",
-      "2021 electric vehicle with 30,000 miles",
-      "2019 motorcycle with 15,000 miles",
+    "id": 26,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer asks, “Where did you get my information?” Which answer should be avoided?",
+    "options": [
+      "The call is for eligibility review.",
+      "We partner with dealerships.",
+      "We work with vehicle registries.",
+      "Your bank sent us your loan file."
     ],
-    correct: 1,
-    explanation: "A qualifying vehicle should be 2011 or newer, non-electric, under 175,000 miles, and not an excluded type.",
+    "correct": 3,
+    "explanation": "Bank-source statements create compliance risk."
   },
   {
-    id: 27,
-    topic: "product",
-    language: "en",
-    question: "What mileage limit should agents remember?",
-    options: [
-      "125,000 miles",
-      "150,000 miles",
-      "175,000 miles",
-      "200,000 miles",
+    "id": 27,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer asks, “What vehicle?” and seems suspicious. What helps most?",
+    "options": [
+      "Tell them the question is irrelevant.",
+      "Invent details to sound confident.",
+      "Transfer because suspicion is normal.",
+      "Explain the limit of your screen and verify."
     ],
-    correct: 2,
-    explanation: "Vehicles with more than 175,000 miles cannot be covered.",
+    "correct": 3,
+    "explanation": "Transparency about finance-only info helps build trust."
   },
   {
-    id: 28,
-    topic: "product",
-    language: "en",
-    question: "Which item is excluded from coverage?",
-    options: [
-      "Engine mechanical repair",
-      "Transmission mechanical repair",
-      "Covered electrical failure",
-      "Bodywork or cosmetic repair",
+    "id": 28,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer asks, “How much?” before giving vehicle condition. Which reply is safest?",
+    "options": [
+      "Pricing depends, and the advisor reviews it.",
+      "It is always free today.",
+      "The agent can approve a discount.",
+      "The bank sets the lowest payment."
     ],
-    correct: 3,
-    explanation: "Bodywork and cosmetic repairs are not covered.",
+    "correct": 0,
+    "explanation": "The agent can bridge pricing to the advisor, but should not quote or promise."
   },
   {
-    id: 29,
-    topic: "product",
-    language: "en",
-    question: "How is factory warranty different from extended coverage?",
-    options: [
-      "Factory warranty is optional after every repair",
-      "Factory warranty comes with new vehicles for a limited term",
-      "Factory warranty covers accidents nationwide",
-      "Factory warranty starts after extended coverage ends",
+    "id": 29,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “Send me an email first.” What should the agent avoid?",
+    "options": [
+      "Explaining the advisor can review details.",
+      "Promising to send policy documents.",
+      "Asking if the vehicle still runs.",
+      "Confirming vehicle condition first."
     ],
-    correct: 1,
-    explanation: "Factory warranty usually comes with a new vehicle and lasts for a limited time or mileage.",
+    "correct": 1,
+    "explanation": "The agent should not promise emails or documents they cannot provide."
   },
   {
-    id: 30,
-    topic: "product",
-    language: "en",
-    question: "Where can approved repairs generally be handled?",
-    options: [
-      "Only at the original dealership",
-      "Only at repair shops in Texas",
-      "At authorized repair facilities nationwide",
-      "Only through the selling bank",
+    "id": 30,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says the vehicle was totaled. What should the agent do next?",
+    "options": [
+      "Mark XFER if they listen.",
+      "Promise coverage on the loss.",
+      "Transfer for the totaled vehicle.",
+      "Ask about a current drivable vehicle."
     ],
-    correct: 2,
-    explanation: "Approved repairs can be handled at authorized repair facilities across the U.S.",
+    "correct": 3,
+    "explanation": "A totaled vehicle should not be moved forward; redirect to the current vehicle if any."
   },
   {
-    id: 31,
-    topic: "product",
-    language: "es",
-    question: "En entrenamiento en español, ¿qué vehículo debe considerarse no elegible?",
-    options: [
-      "Un sedán 2016 con menos de 100,000 millas",
-      "Una SUV 2018 en buenas condiciones",
-      "Una camioneta 2015 sin luces de advertencia",
-      "Un vehículo eléctrico 2020",
+    "id": 31,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “That’s not my car.” What is the best response path?",
+    "options": [
+      "End the call as DNC.",
+      "Say the file is always accurate.",
+      "Transfer without correcting.",
+      "Verify the current vehicle instead."
     ],
-    correct: 3,
-    explanation: "Los vehículos eléctricos están excluidos de la cobertura.",
+    "correct": 3,
+    "explanation": "Wrong vehicle info should become a verification path."
   },
   {
-    id: 32,
-    topic: "product",
-    language: "es",
-    question: "En entrenamiento en español, ¿cuál es el año de modelo más antiguo que todavía puede calificar?",
-    options: [
-      "2011",
-      "2009",
-      "2008",
-      "2010",
+    "id": 32,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer has multiple vehicles. What must be confirmed before transfer?",
+    "options": [
+      "At least one vehicle runs and may qualify.",
+      "Every vehicle has the same mileage.",
+      "All vehicles were bought together.",
+      "The customer knows each VIN."
     ],
-    correct: 0,
-    explanation: "Los vehículos fabricados antes de 2011 no pueden ser cubiertos.",
+    "correct": 0,
+    "explanation": "For multiple cars, the agent should verify at least one current qualifying vehicle."
   },
   {
-    id: 33,
-    topic: "product",
-    language: "es",
-    question: "En entrenamiento en español, ¿qué se debe confirmar antes de hablar de opciones?",
-    options: [
-      "Que el cliente tenga el título disponible",
-      "Que el préstamo ya esté pagado",
-      "Que el vehículo esté funcionando actualmente",
-      "Que el cliente sepa el millaje exacto",
+    "id": 33,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “That’s too expensive,” before the advisor reviews anything. What should the agent do?",
+    "options": [
+      "Reframe cost vs major repairs.",
+      "Tell them price is fixed.",
+      "Promise the cheapest plan.",
+      "Agree and end the call at once."
     ],
-    correct: 2,
-    explanation: "La condición de funcionamiento del vehículo es esencial para la elegibilidad.",
+    "correct": 0,
+    "explanation": "The agent can reframe value but should not promise exact cost."
   },
   {
-    id: 34,
-    topic: "product",
-    language: "es",
-    question: "En entrenamiento en español, ¿qué es correcto sobre el seguro?",
-    options: [
-      "Reemplaza completamente la cobertura extendida",
-      "Cubre accidentes, no fallas mecánicas",
-      "Es lo mismo que la garantía de fábrica",
-      "Paga cualquier tipo de reparación",
+    "id": 34,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “You called before and I said no.” What should the agent use?",
+    "options": [
+      "A claim that refusal expired.",
+      "A direct transfer without consent.",
+      "A threat of losing legal driving rights.",
+      "Updated options as the reason."
     ],
-    correct: 1,
-    explanation: "El seguro y la cobertura extendida deben explicarse como productos separados.",
+    "correct": 3,
+    "explanation": "Reopening curiosity with updated options is safer than pressure."
   },
   {
-    id: 35,
-    topic: "product",
-    language: "es",
-    question: "En entrenamiento en español, ¿cómo se deben tratar las partes modificadas?",
-    options: [
-      "Todas las partes modificadas siempre están cubiertas",
-      "Cualquier modificación descalifica todo el vehículo",
-      "Solo se excluyen modificaciones hechas por el concesionario",
-      "Las partes modificadas no están cubiertas, pero otras partes pueden calificar",
+    "id": 35,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer is rude and asks to stop calling. What is the professional path?",
+    "options": [
+      "Keep rebutting aggressively.",
+      "Mirror the customer’s tone.",
+      "Stay calm and process removal.",
+      "Transfer to avoid the conflict."
     ],
-    correct: 3,
-    explanation: "Las partes modificadas en sí están excluidas, pero el vehículo aún puede tener partes no modificadas elegibles.",
+    "correct": 2,
+    "explanation": "Rude behavior plus a stop-calling request should be handled professionally, often as DNC."
   },
   {
-    id: 36,
-    topic: "product",
-    language: "es",
-    question: "En entrenamiento en español, ¿qué significa “taller autorizado”?",
-    options: [
-      "Un taller calificado aceptado por el plan",
-      "Solo el concesionario donde se vendió el carro",
-      "Cualquier mecánico que el cliente elija",
-      "Solo un taller ubicado en Dallas",
+    "id": 36,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “I’m not the owner, I just co-signed.” What should the agent check?",
+    "options": [
+      "Whether they know the advisor’s name.",
+      "Whether they can make decisions.",
+      "Whether the vehicle has a radio.",
+      "Whether they want a free quote."
     ],
-    correct: 0,
-    explanation: "El plan trabaja con talleres autorizados, no únicamente con un concesionario.",
+    "correct": 1,
+    "explanation": "Co-signer status does not automatically mean they are the decision maker."
   },
   {
-    id: 37,
-    topic: "callflow",
-    language: "en",
-    question: "What is the first step in a clean transfer flow?",
-    options: [
-      "Confirm vehicle qualification",
-      "Introduce the Service Advisor",
-      "Disconnect after dialing",
-      "Choose the final disposition",
+    "id": 37,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer gives polite “sure” answers but sounds distracted. What is the risk?",
+    "options": [
+      "The advisor cannot speak first.",
+      "The vehicle becomes modified.",
+      "The mileage becomes unknown.",
+      "Consent may not be meaningful."
     ],
-    correct: 0,
-    explanation: "Qualification comes first, especially vehicle condition.",
+    "correct": 3,
+    "explanation": "The agent should confirm understanding instead of relying on weak agreement."
   },
   {
-    id: 38,
-    topic: "callflow",
-    language: "en",
-    question: "What must happen before the opener dials the transfer?",
-    options: [
-      "The customer provides the VIN",
-      "The customer gives clear approval",
-      "The customer accepts a quoted price",
-      "The SA confirms availability by chat",
+    "id": 38,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer asks, “Can you just tell me the plan details?” What is the best bridge?",
+    "options": [
+      "The customer must buy before details.",
+      "The agent should invent plan terms.",
+      "Plan details are never explained.",
+      "The Service Advisor reviews details after verification."
     ],
-    correct: 1,
-    explanation: "A clean transfer requires customer approval before dialing.",
+    "correct": 3,
+    "explanation": "The agent should not over-explain or invent details; bridge to the Service Advisor."
   },
   {
-    id: 39,
-    topic: "callflow",
-    language: "en",
-    question: "Who should speak first when the Service Advisor joins?",
-    options: [
-      "The opener immediately",
-      "The customer only",
-      "The Service Advisor",
-      "No one until the timer ends",
+    "id": 39,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer says, “I need Spanish,” after struggling in English. What should the agent do?",
+    "options": [
+      "Ignore it until the advisor joins.",
+      "Mark XFER as English transfer.",
+      "Use the proper Spanish handling path.",
+      "Continue the English script anyway."
     ],
-    correct: 2,
-    explanation: "The Service Advisor should pick up and speak first before the opener introduces the customer.",
+    "correct": 2,
+    "explanation": "Language preference should be respected and routed correctly."
   },
   {
-    id: 40,
-    topic: "callflow",
-    language: "en",
-    question: "How long should the opener stay after the SA joins?",
-    options: [
-      "At least 3 seconds",
-      "Exactly 5 seconds",
-      "Until the customer asks to leave",
-      "At least 15 seconds",
+    "id": 40,
+    "topic": "objections",
+    "language": "en",
+    "question": "The customer asks if the advisor will only take “a few seconds.” What should the agent avoid?",
+    "options": [
+      "Saying the advisor reviews details.",
+      "Asking vehicle waiting questions.",
+      "Guaranteeing a short wait time.",
+      "Keeping the customer engaged."
     ],
-    correct: 3,
-    explanation: "The opener should stay at least 15 seconds and confirm both parties are talking.",
+    "correct": 2,
+    "explanation": "The agent does not control advisor timing and should not promise it."
   },
   {
-    id: 41,
-    topic: "callflow",
-    language: "en",
-    question: "What should the opener do if the SA is silent for about 5 seconds?",
-    options: [
-      "Disconnect and tag the call as transferred",
-      "Say “Hello Service Advisor” to get attention",
-      "Tell the customer to call back later",
-      "Mute the line until someone speaks",
+    "id": 41,
+    "topic": "product",
+    "language": "en",
+    "question": "Which case is safest to continue toward transfer?",
+    "options": [
+      "2010 SUV, 80,000 miles, runs well.",
+      "2022 electric car, 30,000 miles, runs well.",
+      "2016 gas sedan, 110,000 miles, runs well.",
+      "2019 truck, 181,000 miles, runs well."
     ],
-    correct: 1,
-    explanation: "The opener should call the advisor’s attention to avoid a hang-up and protect the transfer.",
+    "correct": 2,
+    "explanation": "The safest case meets year, mileage, vehicle type, and running-condition rules."
   },
   {
-    id: 42,
-    topic: "callflow",
-    language: "en",
-    question: "What should happen if the customer asks the SA for a callback?",
-    options: [
-      "Tag it as XFER because the SA joined",
-      "Tag it as SPANIS automatically",
-      "Tag it as Call Back, not XFER",
-      "Tag it as Dead Air",
+    "id": 42,
+    "topic": "product",
+    "language": "en",
+    "question": "A 2020 electric vehicle has 30,000 miles and runs well. What matters most?",
+    "options": [
+      "Running condition overrides type.",
+      "The Service Advisor must approve it.",
+      "Electric vehicles are excluded.",
+      "Low mileage makes it eligible."
     ],
-    correct: 2,
-    explanation: "If the customer asks the SA for a callback, it should be Call Back rather than XFER.",
+    "correct": 2,
+    "explanation": "Electric vehicle exclusion still applies even with good mileage."
   },
   {
-    id: 43,
-    topic: "callflow",
-    language: "es",
-    question: "Para una transferencia en español, ¿qué se debe seleccionar durante el proceso?",
-    options: [
-      "Blind Transfer antes de hablar con el Asesor",
-      "Hangup Both Lines apenas timbra",
-      "Do Not Call antes de marcar al asesor",
-      "La opción de español antes de completar la transferencia",
+    "id": 43,
+    "topic": "product",
+    "language": "en",
+    "question": "A 2011 car has 176,200 miles and runs well. What should the agent understand?",
+    "options": [
+      "It is over the mileage limit.",
+      "It qualifies if financed recently.",
+      "The year alone makes it safe.",
+      "Running well removes the limit."
     ],
-    correct: 3,
-    explanation: "Las transferencias en español requieren seleccionar la opción de español dentro del flujo del marcador.",
+    "correct": 0,
+    "explanation": "The basic mileage limit is up to 175,000 miles."
   },
   {
-    id: 44,
-    topic: "callflow",
-    language: "es",
-    question: "En una llamada en español, ¿qué debe hacer el agente mientras espera al asesor?",
-    options: [
-      "Mantener al cliente conectado con preguntas ligeras sobre el vehículo",
-      "Quedarse en silencio hasta que aparezca el asesor",
-      "Pedir datos bancarios",
-      "Prometer que el precio será bajo",
+    "id": 44,
+    "topic": "product",
+    "language": "en",
+    "question": "A 2010 vehicle has 92,000 miles and no issues. What is the concern?",
+    "options": [
+      "Model year is before 2011.",
+      "No issues makes it suspicious.",
+      "Insurance is missing.",
+      "Mileage is too high."
     ],
-    correct: 0,
-    explanation: "Las preguntas de espera evitan silencios incómodos y mantienen al cliente conectado.",
+    "correct": 0,
+    "explanation": "Vehicles before 2011 are outside the basic eligibility rule."
   },
   {
-    id: 45,
-    topic: "callflow",
-    language: "es",
-    question: "En el protocolo de transferencia en español, ¿qué confirma que la entrega es segura?",
-    options: [
-      "El agente escuchó solo un timbre",
-      "El agente ya presionó transferir",
-      "El asesor y el cliente están hablando activamente",
-      "El cliente dijo “hola” una vez",
+    "id": 45,
+    "topic": "product",
+    "language": "en",
+    "question": "The car runs, but the customer says it is missing a tire. What is best?",
+    "options": [
+      "Ignore it because engine runs.",
+      "Treat it as good running condition.",
+      "Promise tire replacement coverage.",
+      "Clarify if it is safely drivable now."
     ],
-    correct: 2,
-    explanation: "Una entrega segura requiere que ambas partes estén hablando activamente antes de que el agente salga.",
+    "correct": 3,
+    "explanation": "A missing tire creates a current condition concern that must be clarified."
   },
   {
-    id: 46,
-    topic: "callflow",
-    language: "es",
-    question: "En llamadas en español, ¿cuándo es incorrecto marcar XFER?",
-    options: [
-      "Cuando el asesor y el cliente están conectados",
-      "Cuando el cliente cuelga antes de una entrega real",
-      "Cuando el agente esperó e introdujo correctamente",
-      "Cuando el cliente aceptó claramente la transferencia",
+    "id": 46,
+    "topic": "product",
+    "language": "en",
+    "question": "The customer says the check engine light is on today. What should the agent avoid?",
+    "options": [
+      "Treating it as clearly qualified.",
+      "Asking what issue is happening.",
+      "Clarifying if it still drives.",
+      "Noting there is a warning light."
     ],
-    correct: 1,
-    explanation: "Si el cliente cuelga antes de una entrega real, no debe contarse como una transferencia válida.",
+    "correct": 0,
+    "explanation": "Current warning lights or issues must be clarified before transfer."
   },
   {
-    id: 47,
-    topic: "callflow",
-    language: "es",
-    question: "En llamadas en español, ¿qué debe anotar el agente si el Asesor tardó mucho en responder?",
-    options: [
-      "Que el cliente rechazó toda cobertura",
-      "Que el agente omitió la introducción",
-      "Que el sistema generó un número equivocado",
-      "Que el Asesor tardó en responder después de conectarse",
+    "id": 47,
+    "topic": "product",
+    "language": "en",
+    "question": "The vehicle starts but cannot shift into gear. What does that suggest?",
+    "options": [
+      "The issue is cosmetic only.",
+      "The vehicle is automatically eligible.",
+      "Mileage becomes the only rule.",
+      "Good running condition is not confirmed."
     ],
-    correct: 3,
-    explanation: "Si la demora del Asesor creó riesgo, las notas deben explicar esa demora.",
+    "correct": 3,
+    "explanation": "A vehicle that cannot shift may not be in good running condition."
   },
   {
-    id: 48,
-    topic: "callflow",
-    language: "es",
-    question: "En llamadas en español, ¿cuál es el rol del agente durante la transferencia?",
-    options: [
-      "Conectar, introducir, esperar y verificar la conversación",
-      "Cotizar el precio final y cerrar la venta",
-      "Salir inmediatamente después de presionar transferir",
-      "Discutir objeciones mientras habla el Asesor",
+    "id": 48,
+    "topic": "product",
+    "language": "en",
+    "question": "The customer asks if accident body damage is covered. What is safest?",
+    "options": [
+      "The agent can approve bodywork.",
+      "Accident and bodywork damage are excluded.",
+      "All collision repairs are covered.",
+      "Insurance and coverage are the same."
     ],
-    correct: 0,
-    explanation: "El agente debe completar una entrega controlada, no abandonar la llamada.",
+    "correct": 1,
+    "explanation": "The product focuses on mechanical breakdown, not collision or cosmetic repair."
   },
   {
-    id: 49,
-    topic: "dosdonts",
-    language: "en",
-    question: "Which phrase should agents avoid?",
-    options: [
-      "This is free",
-      "This is an opportunity to review options",
-      "The Service Advisor can explain details",
-      "Let me verify the vehicle condition",
+    "id": 49,
+    "topic": "product",
+    "language": "en",
+    "question": "The customer asks if worn brake pads are covered. What should the agent know?",
+    "options": [
+      "Worn pads always qualify the car.",
+      "The advisor must cover pads.",
+      "Wear items are not the coverage focus.",
+      "Wear items replace insurance."
     ],
-    correct: 0,
-    explanation: "Agents should not use “free” because it can be misleading.",
+    "correct": 2,
+    "explanation": "Normal wear items should not be promised as covered."
   },
   {
-    id: 50,
-    topic: "dosdonts",
-    language: "en",
-    question: "Which statement is not allowed?",
-    options: [
-      "We partner with vehicle registries",
-      "The bank gave us your information",
-      "The Service Advisor reviews details",
-      "I only see finance information",
+    "id": 50,
+    "topic": "product",
+    "language": "en",
+    "question": "A vehicle has modified suspension. What is the safest statement?",
+    "options": [
+      "Modified parts themselves are excluded.",
+      "All modified vehicles are fully covered.",
+      "The bank decides modified repairs.",
+      "All modifications improve eligibility."
     ],
-    correct: 1,
-    explanation: "Agents should not say the bank gave the information.",
+    "correct": 0,
+    "explanation": "Modified parts are excluded, though other parts may still be reviewed."
   },
   {
-    id: 51,
-    topic: "dosdonts",
-    language: "en",
-    question: "Which delivery behavior is required?",
-    options: [
-      "Shorten the script to save time",
-      "Change wording based on preference",
-      "Read the script without improvising",
-      "Skip the vehicle condition check",
+    "id": 51,
+    "topic": "product",
+    "language": "en",
+    "question": "Where can approved repairs generally be handled?",
+    "options": [
+      "Only the original dealership.",
+      "Only the finance company garage.",
+      "Only repair shops in Texas.",
+      "Authorized repair facilities nationwide."
     ],
-    correct: 2,
-    explanation: "Script compliance means no improvising and no skipping required parts.",
+    "correct": 3,
+    "explanation": "Approved repairs are not limited to the original dealership."
   },
   {
-    id: 52,
-    topic: "dosdonts",
-    language: "en",
-    question: "Which disposition fits a completed English transfer?",
-    options: [
-      "SPXFER",
-      "SPANIS",
-      "CALLBK",
-      "XFER",
+    "id": 52,
+    "topic": "product",
+    "language": "en",
+    "question": "A customer has a motorcycle with low mileage. What should the agent remember?",
+    "options": [
+      "It qualifies if the advisor agrees.",
+      "Motorcycles are excluded types.",
+      "Coverage is automatic with insurance.",
+      "Low mileage overrides vehicle type."
     ],
-    correct: 3,
-    explanation: "XFER is for a valid English call transferred to a Service Advisor.",
+    "correct": 1,
+    "explanation": "Motorcycles are listed among vehicles not covered."
   },
   {
-    id: 53,
-    topic: "dosdonts",
-    language: "en",
-    question: "Which pause code should be used for a supervisor-requested call?",
-    options: [
-      "RR",
+    "id": 53,
+    "topic": "product",
+    "language": "en",
+    "question": "The customer has three cars. What must be true before transfer?",
+    "options": [
+      "At least one current vehicle should qualify.",
+      "The customer must know all VINs.",
+      "All three must be from the same year.",
+      "The oldest vehicle decides coverage."
+    ],
+    "correct": 0,
+    "explanation": "With multiple cars, qualify at least one current running vehicle."
+  },
+  {
+    "id": 54,
+    "topic": "product",
+    "language": "en",
+    "question": "The customer has a current engine problem. What should the agent avoid promising?",
+    "options": [
+      "That the advisor reviews options.",
+      "That mechanical coverage is different.",
+      "That running condition matters.",
+      "That the existing issue will be fixed."
+    ],
+    "correct": 3,
+    "explanation": "Agents must not promise coverage for pre-existing or current issues."
+  },
+  {
+    "id": 55,
+    "topic": "product",
+    "language": "en",
+    "question": "How should factory warranty be compared with extended coverage?",
+    "options": [
+      "Factory warranty starts after coverage.",
+      "They are the exact same product.",
+      "Insurance renews factory warranty.",
+      "Factory warranty is limited; extended coverage is separate."
+    ],
+    "correct": 3,
+    "explanation": "Factory warranty and extended coverage are different concepts."
+  },
+  {
+    "id": 56,
+    "topic": "product",
+    "language": "en",
+    "question": "What is the key insurance distinction?",
+    "options": [
+      "Coverage is required like insurance.",
+      "Insurance covers every mechanical issue.",
+      "Insurance and coverage are identical.",
+      "Insurance covers accidents, not breakdown focus."
+    ],
+    "correct": 3,
+    "explanation": "Agents must separate accident insurance from mechanical breakdown coverage."
+  },
+  {
+    "id": 57,
+    "topic": "product",
+    "language": "en",
+    "question": "The customer asks if the plan can add coverage after factory coverage ends. What is accurate?",
+    "options": [
+      "It may provide additional miles after factory coverage.",
+      "It only covers accident liability.",
+      "It removes the need for insurance.",
+      "It always renews the factory warranty."
+    ],
+    "correct": 0,
+    "explanation": "Extended coverage is separate and can add mechanical protection after factory coverage."
+  },
+  {
+    "id": 58,
+    "topic": "product",
+    "language": "en",
+    "question": "A financed electric vehicle is under 175,000 miles. What should the agent do?",
+    "options": [
+      "Treat financing as the main rule.",
+      "Do not treat it as eligible.",
+      "Transfer because mileage is fine.",
+      "Ignore the electric vehicle rule."
+    ],
+    "correct": 1,
+    "explanation": "Financing does not override an electric vehicle exclusion."
+  },
+  {
+    "id": 59,
+    "topic": "product",
+    "language": "en",
+    "question": "The customer does not know exact mileage but thinks it is around 170,000. What is best?",
+    "options": [
+      "Assume it is under the limit.",
+      "Mark XFER because it is close.",
+      "Say mileage does not matter.",
+      "Clarify carefully before treating it as qualified."
+    ],
+    "correct": 3,
+    "explanation": "When near the limit, the agent should not assume eligibility."
+  },
+  {
+    "id": 60,
+    "topic": "product",
+    "language": "en",
+    "question": "Which case should raise the strongest eligibility concern?",
+    "options": [
+      "2012 vehicle with 90,000 miles.",
+      "2018 vehicle with 120,000 miles.",
+      "2019 vehicle with 182,000 miles.",
+      "2015 vehicle with 75,000 miles."
+    ],
+    "correct": 2,
+    "explanation": "Over 175,000 miles is outside the stated mileage rule."
+  },
+  {
+    "id": 61,
+    "topic": "callflow",
+    "language": "en",
+    "question": "During the 3-way process, the customer hangs up before speaking to the Service Advisor. What should the agent do?",
+    "options": [
+      "Mark Dead Air for the advisor.",
+      "Use Hung Up Both Lines and Call Back.",
+      "Use Leave 3-Way Call and XFER.",
+      "Keep the advisor ringing alone."
+    ],
+    "correct": 1,
+    "explanation": "This prevents a dead air transfer to the Service Advisor."
+  },
+  {
+    "id": 62,
+    "topic": "callflow",
+    "language": "en",
+    "question": "Why is “Leave 3-Way Call” dangerous after the customer hangs up?",
+    "options": [
+      "It changes the vehicle mileage.",
+      "It automatically sends a Spanish route.",
+      "It removes the callback option.",
+      "The advisor may receive a ringing call with no customer."
+    ],
+    "correct": 3,
+    "explanation": "Leaving the 3-way can create dead air for the Service Advisor when the customer is gone."
+  },
+  {
+    "id": 63,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The Service Advisor joins but stays silent for several seconds. What should the agent do?",
+    "options": [
+      "Stay silent until someone hangs up.",
+      "Tell the customer to call back.",
+      "Prompt the advisor and control the handoff.",
+      "Disconnect and mark XFER."
+    ],
+    "correct": 2,
+    "explanation": "The agent should prevent silence by getting the advisor’s attention."
+  },
+  {
+    "id": 64,
+    "topic": "callflow",
+    "language": "en",
+    "question": "Who should speak first when the Service Advisor joins?",
+    "options": [
+      "No one until 15 seconds pass.",
+      "The Service Advisor.",
+      "The customer without introduction.",
+      "The agent before anyone else."
+    ],
+    "correct": 1,
+    "explanation": "The agent should wait for the Service Advisor to answer before introducing the customer."
+  },
+  {
+    "id": 65,
+    "topic": "callflow",
+    "language": "en",
+    "question": "What confirms a real handoff?",
+    "options": [
+      "The advisor line only rang once.",
+      "The customer said hello before transfer.",
+      "The agent pressed transfer.",
+      "Advisor and customer are actively talking."
+    ],
+    "correct": 3,
+    "explanation": "A valid handoff requires active communication, not just dialing."
+  },
+  {
+    "id": 66,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer asks the Service Advisor for a callback. How should it be handled?",
+    "options": [
+      "Call Back, not clean XFER.",
+      "XFER because the advisor joined.",
+      "DAIR because the call changed.",
+      "SPANIS because callback was requested."
+    ],
+    "correct": 0,
+    "explanation": "A callback request with the advisor should not count as a clean XFER."
+  },
+  {
+    "id": 67,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer immediately asks the advisor for Spanish before any English conversation. What is the issue?",
+    "options": [
+      "The vehicle becomes wrong number.",
+      "It should be Answering Machine.",
+      "The transfer is valid because lines connected.",
+      "No meaningful English SA conversation occurred."
+    ],
+    "correct": 3,
+    "explanation": "An English XFER needs meaningful English communication with the Service Advisor."
+  },
+  {
+    "id": 68,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer speaks English with the Service Advisor for 18 seconds, then asks for Spanish. How should QA view it?",
+    "options": [
+      "Automatic SPANIS with no review.",
+      "The English handoff requirement was likely met.",
+      "Invalid only because Spanish was mentioned.",
+      "Dead Air because language changed."
+    ],
+    "correct": 1,
+    "explanation": "If meaningful English conversation happened long enough first, the handoff can still be valid."
+  },
+  {
+    "id": 69,
+    "topic": "callflow",
+    "language": "en",
+    "question": "A child answers and agrees to “hear options” for the household vehicle. What should the agent do?",
+    "options": [
+      "Transfer because someone agreed.",
+      "Ask for an adult decision maker.",
+      "Mark XFER after the yes.",
+      "Ask the child for mileage only."
+    ],
+    "correct": 1,
+    "explanation": "A child cannot provide valid decision-making approval."
+  },
+  {
+    "id": 70,
+    "topic": "callflow",
+    "language": "en",
+    "question": "A co-signer says they do not make vehicle decisions. What is the best path?",
+    "options": [
+      "Transfer because they are on file.",
+      "Ask for the decision maker or callback.",
+      "Treat it as completed XFER.",
+      "Push until they agree."
+    ],
+    "correct": 1,
+    "explanation": "The call should not be forced if the person cannot decide."
+  },
+  {
+    "id": 71,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer answers “yes” to everything but gives unrelated replies. What should the agent verify?",
+    "options": [
+      "That the customer likes the vehicle color.",
+      "That the file has the street address.",
+      "That the advisor can close faster.",
+      "That they truly understand the call."
+    ],
+    "correct": 3,
+    "explanation": "Polite agreement is not enough if comprehension is doubtful."
+  },
+  {
+    "id": 72,
+    "topic": "callflow",
+    "language": "en",
+    "question": "While waiting for the advisor, silence lasts too long. What helps protect the call?",
+    "options": [
+      "Ask for card information.",
+      "Ask light vehicle-related questions.",
+      "Promise the advisor is ready now.",
+      "Mute until the advisor joins."
+    ],
+    "correct": 1,
+    "explanation": "Waiting questions reduce dead air and keep the customer engaged."
+  },
+  {
+    "id": 73,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer says no to being transferred after qualifying. What should the agent avoid?",
+    "options": [
+      "Respecting the refusal.",
+      "Dialing the advisor anyway.",
+      "Using the correct disposition.",
+      "Documenting the outcome."
+    ],
+    "correct": 1,
+    "explanation": "Qualification alone does not allow transfer without consent."
+  },
+  {
+    "id": 74,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The advisor line rings but no advisor answers. What should the agent avoid?",
+    "options": [
+      "Following callback handling if needed.",
+      "Counting it as valid XFER.",
+      "Protecting the customer experience.",
+      "Avoiding dead air transfer."
+    ],
+    "correct": 1,
+    "explanation": "A valid XFER requires a Service Advisor/customer handoff."
+  },
+  {
+    "id": 75,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The agent introduces the customer before the advisor speaks. What is the risk?",
+    "options": [
+      "The mileage is reset.",
+      "The call becomes a voicemail.",
+      "The handoff may not be controlled.",
+      "The customer becomes co-signer."
+    ],
+    "correct": 2,
+    "explanation": "The advisor should speak first so the introduction lands cleanly."
+  },
+  {
+    "id": 76,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer hangs up after agent introduction but before any advisor conversation. What should happen?",
+    "options": [
+      "Count it because intro happened.",
+      "Use Answering Machine.",
+      "Do not count it as clean XFER.",
+      "Mark SPXFER automatically."
+    ],
+    "correct": 2,
+    "explanation": "Introduction alone does not prove an active conversation between advisor and customer."
+  },
+  {
+    "id": 77,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The customer starts speaking Spanish during an English transfer wait. What should the agent consider?",
+    "options": [
+      "The vehicle is automatically invalid.",
+      "English transfer must be forced.",
+      "DNC is required immediately.",
+      "Preferred language may need confirmation."
+    ],
+    "correct": 3,
+    "explanation": "Language changes can indicate the customer needs Spanish handling."
+  },
+  {
+    "id": 78,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The agent stays on the line for a long time after both parties are talking. What is the coaching point?",
+    "options": [
+      "Stay until the full sale closes.",
+      "Leave before the advisor speaks.",
+      "Mute and count extra time.",
+      "Stay enough, not longer than necessary."
+    ],
+    "correct": 3,
+    "explanation": "The rule protects handoff; it does not mean staying unnecessarily long."
+  },
+  {
+    "id": 79,
+    "topic": "callflow",
+    "language": "en",
+    "question": "Before transfer, the customer says, “I don’t want to talk to anyone else.” What should the agent avoid?",
+    "options": [
+      "Clarifying the concern.",
+      "Offering callback if needed.",
+      "Transferring without renewed consent.",
+      "Respecting the refusal."
+    ],
+    "correct": 2,
+    "explanation": "Clear refusal means consent is not present."
+  },
+  {
+    "id": 80,
+    "topic": "callflow",
+    "language": "en",
+    "question": "The advisor says hello, the customer says hello, then both stop. What should the agent do before leaving?",
+    "options": [
+      "Confirm they are actively talking.",
+      "Leave immediately after two hellos.",
+      "Mark XFER and mute forever.",
+      "Ask for payment details."
+    ],
+    "correct": 0,
+    "explanation": "Two greetings may not be enough to confirm an active handoff."
+  },
+  {
+    "id": 81,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "When is DAIR the best disposition?",
+    "options": [
+      "The customer asks for callback.",
+      "No real person ever responds on the line.",
+      "The customer says not interested.",
+      "The customer requests Spanish."
+    ],
+    "correct": 1,
+    "explanation": "DAIR is for complete dead air, not a normal refusal or callback."
+  },
+  {
+    "id": 82,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The customer hears the script then hangs up. Which disposition usually fits better than DAIR?",
+    "options": [
       "Manage",
-      "Lunch",
-      "Break",
-    ],
-    correct: 1,
-    explanation: "Manage is used when a supervisor asks the agent to call or talk to them.",
-  },
-  {
-    id: 54,
-    topic: "dosdonts",
-    language: "en",
-    question: "Which pause code fits a restroom pause?",
-    options: [
-      "CB",
-      "Tech",
-      "RR",
-      "Manage",
-    ],
-    correct: 2,
-    explanation: "RR is the restroom pause code.",
-  },
-  {
-    id: 55,
-    topic: "dosdonts",
-    language: "es",
-    question: "Para una transferencia ciega de cliente en español, ¿qué disposición se debe usar?",
-    options: [
-      "SPXFER",
-      "XFER",
-      "CALLBK",
-      "SPANIS",
-    ],
-    correct: 3,
-    explanation: "Las transferencias ciegas de clientes en español deben usar SPANIS, no SPXFER.",
-  },
-  {
-    id: 56,
-    topic: "dosdonts",
-    language: "es",
-    question: "¿Cuándo se debe usar SPXFER?",
-    options: [
-      "Cuando el agente transfiere directamente a un cliente que habla español con un closer en español",
-      "Cuando el cliente solo habla español y no ocurre transferencia",
-      "Cada vez que el agente escucha español en la llamada",
-      "Cuando no hay transferencia directa con un closer en español",
-    ],
-    correct: 0,
-    explanation: "SPXFER solo se usa para una transferencia directa en español hacia un closer o Asesor.",
-  },
-  {
-    id: 57,
-    topic: "dosdonts",
-    language: "es",
-    question: "¿Qué está mal al usar SPXFER para una ruta ciega en español?",
-    options: [
-      "Siempre mejora la precisión del reporte en español",
-      "Es obligatorio para todos los clientes que hablan español",
-      "Puede crear una disposición de transferencia incorrecta",
-      "Reemplaza la necesidad de notas de transferencia",
-    ],
-    correct: 2,
-    explanation: "Usar SPXFER para transferencias ciegas en español es incorrecto y puede crear violaciones del proceso.",
-  },
-  {
-    id: 58,
-    topic: "dosdonts",
-    language: "es",
-    question: "¿Qué disposición corresponde cuando el cliente pide una llamada más tarde?",
-    options: [
-      "XFER",
-      "CALLBK",
-      "DNC",
-      "SPXFER",
-    ],
-    correct: 1,
-    explanation: "CALLBK se usa cuando el cliente solicita una llamada de regreso.",
-  },
-  {
-    id: 59,
-    topic: "dosdonts",
-    language: "es",
-    question: "¿Qué disposición corresponde cuando el cliente pide ser removido de la lista de llamadas?",
-    options: [
       "NI",
-      "DAIR",
-      "BLANK",
-      "DNC",
+      "SPXFER",
+      "A"
     ],
-    correct: 3,
-    explanation: "DNC se usa cuando el cliente pide no recibir más llamadas.",
+    "correct": 1,
+    "explanation": "If there was contact and the customer drops after the pitch, DAIR is not usually the best fit."
   },
   {
-    id: 60,
-    topic: "dosdonts",
-    language: "es",
-    question: "¿Qué comportamiento ayuda más a evitar transferencias inválidas?",
-    options: [
-      "Verificar condición, obtener aprobación, introducir correctamente y esperar",
-      "Transferir rápido y marcar XFER apenas timbra la línea",
-      "Prometer una espera corta para que el cliente se quede conectado",
-      "Salir de la llamada antes de que el Asesor confirme la entrega",
+    "id": 83,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The customer says, “Stop calling me or I’ll report this.” Which disposition fits?",
+    "options": [
+      "DNC",
+      "XFER",
+      "SPANIS",
+      "CALLBK"
     ],
-    correct: 0,
-    explanation: "Las transferencias limpias requieren verificación, aprobación, introducción correcta y tiempo suficiente de espera.",
+    "correct": 0,
+    "explanation": "Removal requests, threats, or stop-calling language should be handled as DNC."
   },
-{
-  "id": 61,
-  "topic": "script",
-  "language": "en",
-  "question": "What is the safest way to open the call after confirming the customer name?",
-  "options": [
-    "Identify yourself and Vehicle Services Group",
-    "Ask for the VIN immediately",
-    "Quote the coverage price first",
-    "Tell them the bank requested the call"
-  ],
-  "correct": 0,
-  "explanation": "The opener should identify themselves and Vehicle Services Group before moving through the approved script."
-},
-{
-  "id": 62,
-  "topic": "script",
-  "language": "en",
-  "question": "What should the opener mention when referencing the financed vehicle?",
-  "options": [
-    "The financing month and year",
-    "The full street address",
-    "The customer email address",
-    "The dealership manager name"
-  ],
-  "correct": 0,
-  "explanation": "The approved opening references the vehicle financed on the month and year shown on the form."
-},
-{
-  "id": 63,
-  "topic": "script",
-  "language": "en",
-  "question": "Which line keeps the transfer setup compliant?",
-  "options": [
-    "I will introduce you to a Service Advisor. Okay?",
-    "This will only take less than a minute.",
-    "I am sending you now because you qualify.",
-    "The advisor already approved your price."
-  ],
-  "correct": 0,
-  "explanation": "The opener should ask for approval and avoid promising time, price, or guaranteed qualification."
-},
-{
-  "id": 64,
-  "topic": "script",
-  "language": "en",
-  "question": "What should happen after the Service Advisor joins the call?",
-  "options": [
-    "Stay at least 15 seconds and confirm both parties are talking",
-    "Leave immediately after hearing the first ring",
-    "Mute the call and wait for the system to disconnect",
-    "Ask the customer for payment information"
-  ],
-  "correct": 0,
-  "explanation": "The opener must stay long enough to confirm a real handoff between the customer and advisor."
-},
-{
-  "id": 65,
-  "topic": "script",
-  "language": "es",
-  "question": "¿Cuál es la forma correcta de iniciar el script en español?",
-  "options": [
-    "Hola, le habla [nombre] de Grupo de Servicios Vehiculares",
-    "Hola, llamo del banco que financió su carro",
-    "Hola, soy del dealer y vengo a renovar su póliza",
-    "Hola, le llamo para venderle un seguro obligatorio"
-  ],
-  "correct": 0,
-  "explanation": "El script en español identifica al opener como parte de Grupo de Servicios Vehiculares."
-},
-{
-  "id": 66,
-  "topic": "script",
-  "language": "es",
-  "question": "Antes de transferir en español, ¿qué debe hacer el opener?",
-  "options": [
-    "Pedir aprobación clara del cliente",
-    "Transferir apenas el cliente conteste",
-    "Prometer que será gratis",
-    "Decir que el banco pidió la llamada"
-  ],
-  "correct": 0,
-  "explanation": "La aprobación clara del cliente es necesaria antes de transferir."
-},
-{
-  "id": 67,
-  "topic": "script",
-  "language": "es",
-  "question": "¿Qué rol debe mencionar el opener en la línea de transferencia?",
-  "options": [
-    "Asesor de Servicio",
-    "Agente bancario",
-    "Vendedor de seguros",
-    "Representante del dealer"
-  ],
-  "correct": 0,
-  "explanation": "La línea aprobada conecta al cliente con un Asesor de Servicio."
-},
-{
-  "id": 68,
-  "topic": "script",
-  "language": "es",
-  "question": "¿Qué debe evitar el opener al leer el script?",
-  "options": [
-    "Cambiar o acortar partes importantes",
-    "Usar el nombre del cliente",
-    "Controlar el ritmo de voz",
-    "Confirmar que el vehículo funciona"
-  ],
-  "correct": 0,
-  "explanation": "La entrega debe respetar el wording del script sin improvisar ni saltar pasos."
-},
-{
-  "id": 69,
-  "topic": "objections",
-  "language": "en",
-  "question": "Customer says, “This sounds like a scam.” What is the best first move?",
-  "options": [
-    "Stay calm, clarify who you are, and explain the purpose",
-    "Argue that the customer is wrong",
-    "Transfer immediately so the advisor handles it",
-    "Tell them the call is required by law"
-  ],
-  "correct": 0,
-  "explanation": "Scam concerns require calm clarification and trust building, not pressure."
-},
-{
-  "id": 70,
-  "topic": "objections",
-  "language": "en",
-  "question": "Customer says, “Send me something in the mail.” What should the opener do?",
-  "options": [
-    "Explain the advisor can review the details live first",
-    "Promise to mail a full policy today",
-    "End the call and mark DNC",
-    "Ask for a credit card to send documents"
-  ],
-  "correct": 0,
-  "explanation": "The opener should bridge to the Service Advisor instead of promising documents they cannot send."
-},
-{
-  "id": 71,
-  "topic": "objections",
-  "language": "en",
-  "question": "Customer says, “I already paid for this.” What is the safest response?",
-  "options": [
-    "Clarify this is a review of possible extended coverage options",
-    "Tell them their current plan is invalid",
-    "Ask them to cancel the other plan first",
-    "Say they must pay again today"
-  ],
-  "correct": 0,
-  "explanation": "Do not attack or invalidate existing coverage. Position it as a review."
-},
-{
-  "id": 72,
-  "topic": "objections",
-  "language": "en",
-  "question": "Customer asks, “Are you my dealership?” What should the opener avoid?",
-  "options": [
-    "Claiming to work for the dealership",
-    "Clarifying the company name",
-    "Explaining the purpose of the call",
-    "Moving toward a Service Advisor after approval"
-  ],
-  "correct": 0,
-  "explanation": "The opener should not claim to be the dealership or a car brand."
-},
-{
-  "id": 73,
-  "topic": "objections",
-  "language": "es",
-  "question": "El cliente dice: “No me interesa.” ¿Cuál es el mejor manejo inicial?",
-  "options": [
-    "Reconocerlo y crear curiosidad con una pregunta breve",
-    "Colgar inmediatamente",
-    "Discutir con el cliente",
-    "Transferir sin aprobación"
-  ],
-  "correct": 0,
-  "explanation": "Se debe reconocer la objeción, entenderla y crear curiosidad sin presionar."
-},
-{
-  "id": 74,
-  "topic": "objections",
-  "language": "es",
-  "question": "El cliente pregunta: “¿De dónde sacaron mi información?” ¿Qué respuesta es más segura?",
-  "options": [
-    "Trabajamos con concesionarios y registros vehiculares",
-    "El banco nos dio todo su archivo",
-    "Compramos su información en línea",
-    "No puedo decirle de dónde salió"
-  ],
-  "correct": 0,
-  "explanation": "No se debe decir que el banco dio la información. Usa dealerships y vehicle registries."
-},
-{
-  "id": 75,
-  "topic": "objections",
-  "language": "es",
-  "question": "El cliente dice: “Ya tengo seguro.” ¿Qué debe aclarar el opener?",
-  "options": [
-    "El seguro cubre accidentes; esto es para fallas mecánicas",
-    "El seguro y la garantía extendida son lo mismo",
-    "El seguro se cancela si no activa esto",
-    "La garantía extendida es obligatoria"
-  ],
-  "correct": 0,
-  "explanation": "Seguro y cobertura extendida son productos diferentes."
-},
-{
-  "id": 76,
-  "topic": "objections",
-  "language": "es",
-  "question": "El cliente dice: “Estoy ocupado.” ¿Cuál es la mejor respuesta?",
-  "options": [
-    "Respetar el tiempo y ofrecer callback",
-    "Seguir leyendo el script más rápido",
-    "Transferir para que el asesor agende",
-    "Marcarlo como DNC automáticamente"
-  ],
-  "correct": 0,
-  "explanation": "Si el cliente está ocupado, ofrece una llamada de regreso en vez de forzar el transfer."
-},
-{
-  "id": 77,
-  "topic": "product",
-  "language": "en",
-  "question": "Which vehicle should not be treated as eligible?",
-  "options": [
-    "A 2020 electric vehicle",
-    "A 2017 sedan under 100,000 miles",
-    "A 2018 SUV that runs well",
-    "A 2015 truck with normal mileage"
-  ],
-  "correct": 0,
-  "explanation": "Electric vehicles are excluded from this coverage."
-},
-{
-  "id": 78,
-  "topic": "product",
-  "language": "en",
-  "question": "What is the key difference between insurance and extended coverage?",
-  "options": [
-    "Insurance covers accidents; extended coverage focuses on mechanical breakdowns",
-    "Both cover the exact same repairs",
-    "Extended coverage is required by law",
-    "Insurance pays for normal wear repairs only"
-  ],
-  "correct": 0,
-  "explanation": "This distinction prevents customers from confusing insurance with mechanical breakdown coverage."
-},
-{
-  "id": 79,
-  "topic": "product",
-  "language": "en",
-  "question": "Which repair type should agents avoid promising as covered?",
-  "options": [
-    "Cosmetic bodywork",
-    "Engine mechanical failure",
-    "Transmission mechanical failure",
-    "Authorized covered repairs"
-  ],
-  "correct": 0,
-  "explanation": "Bodywork and cosmetic damage are excluded."
-},
-{
-  "id": 80,
-  "topic": "product",
-  "language": "en",
-  "question": "What mileage limit should be respected before moving forward?",
-  "options": [
-    "Up to 175,000 miles",
-    "Up to 250,000 miles",
-    "Any mileage if financed",
-    "Only under 50,000 miles"
-  ],
-  "correct": 0,
-  "explanation": "Vehicles with over 175,000 miles should not be treated as eligible."
-},
-{
-  "id": 81,
-  "topic": "product",
-  "language": "es",
-  "question": "¿Qué año de vehículo empieza a ser elegible según la regla básica?",
-  "options": [
-    "2011 o más nuevo",
-    "2005 o más nuevo",
-    "Cualquier año si está financiado",
-    "Solo 2020 o más nuevo"
-  ],
-  "correct": 0,
-  "explanation": "Vehículos antes de 2011 no califican bajo la regla básica."
-},
-{
-  "id": 82,
-  "topic": "product",
-  "language": "es",
-  "question": "¿Qué tipo de cobertura se está ofreciendo?",
-  "options": [
-    "Cobertura para fallas mecánicas",
-    "Seguro de accidentes",
-    "Reparación estética de carrocería",
-    "Renovación directa de fábrica"
-  ],
-  "correct": 0,
-  "explanation": "La cobertura extendida se enfoca en fallas mecánicas, no accidentes ni estética."
-},
-{
-  "id": 83,
-  "topic": "product",
-  "language": "es",
-  "question": "¿Dónde se pueden manejar reparaciones aprobadas normalmente?",
-  "options": [
-    "En talleres autorizados a nivel nacional",
-    "Solo en el dealer original",
-    "Solo en Dallas",
-    "Solo con el banco"
-  ],
-  "correct": 0,
-  "explanation": "Las reparaciones aprobadas pueden manejarse en repair facilities autorizadas en EE.UU."
-},
-{
-  "id": 84,
-  "topic": "product",
-  "language": "es",
-  "question": "Si el vehículo tiene partes modificadas, ¿qué debe recordarse?",
-  "options": [
-    "Las partes modificadas no se cubren, pero otras partes podrían calificar",
-    "Todo el vehículo siempre queda cubierto",
-    "Toda modificación mejora la cobertura",
-    "Solo se cubren modificaciones del cliente"
-  ],
-  "correct": 0,
-  "explanation": "Las partes modificadas son excluidas, aunque partes no modificadas podrían calificar."
-},
-{
-  "id": 85,
-  "topic": "callflow",
-  "language": "en",
-  "question": "What protects the call while waiting for the Service Advisor?",
-  "options": [
-    "Keep the customer engaged with light vehicle questions",
-    "Stay silent until the advisor speaks",
-    "Ask for payment details",
-    "Promise the advisor is ready now"
-  ],
-  "correct": 0,
-  "explanation": "Light waiting questions reduce dead air and prevent hang-ups."
-},
-{
-  "id": 86,
-  "topic": "callflow",
-  "language": "en",
-  "question": "If the Service Advisor joins but does not speak, what should the opener do?",
-  "options": [
-    "Say “Hello Service Advisor” and continue the handoff",
-    "Leave immediately",
-    "Tag XFER and disconnect",
-    "Restart the call from the beginning"
-  ],
-  "correct": 0,
-  "explanation": "Prompting the advisor helps prevent silence and protects the transfer."
-},
-{
-  "id": 87,
-  "topic": "callflow",
-  "language": "en",
-  "question": "What makes a transfer risky or invalid?",
-  "options": [
-    "Leaving before confirming the SA and customer are talking",
-    "Getting approval before dialing",
-    "Introducing the customer clearly",
-    "Waiting at least 15 seconds"
-  ],
-  "correct": 0,
-  "explanation": "Leaving too early can create an invalid handoff."
-},
-{
-  "id": 88,
-  "topic": "callflow",
-  "language": "en",
-  "question": "What should be done if the customer hangs up before a real SA conversation starts?",
-  "options": [
-    "Do not treat it as a clean valid XFER",
-    "Always tag XFER because the call was dialed",
-    "Use SPXFER automatically",
-    "Mark DNC immediately"
-  ],
-  "correct": 0,
-  "explanation": "A valid transfer requires a real handoff, not just dialing the advisor."
-},
-{
-  "id": 89,
-  "topic": "callflow",
-  "language": "es",
-  "question": "¿Qué debe pasar antes de marcar al asesor?",
-  "options": [
-    "El cliente debe dar aprobación clara",
-    "El opener debe prometer precio",
-    "El cliente debe dar VIN completo",
-    "El asesor debe enviar un chat"
-  ],
-  "correct": 0,
-  "explanation": "La aprobación del cliente debe ocurrir antes de marcar la transferencia."
-},
-{
-  "id": 90,
-  "topic": "callflow",
-  "language": "es",
-  "question": "En una transferencia en español, ¿qué debe cuidar el opener?",
-  "options": [
-    "Usar la ruta/opción correcta de Spanish transfer",
-    "Usar SPXFER para todo cliente que habla español",
-    "Colgar apenas el asesor conteste",
-    "No presentar al cliente"
-  ],
-  "correct": 0,
-  "explanation": "El flujo en español debe seguir la ruta correcta y mantener un handoff limpio."
-},
-{
-  "id": 91,
-  "topic": "callflow",
-  "language": "es",
-  "question": "¿Qué confirma que el handoff fue seguro?",
-  "options": [
-    "El asesor y el cliente están hablando activamente",
-    "El opener escuchó un ring",
-    "El cliente dijo hello una vez",
-    "El opener presionó transfer"
-  ],
-  "correct": 0,
-  "explanation": "La conversación activa entre asesor y cliente confirma el handoff."
-},
-{
-  "id": 92,
-  "topic": "callflow",
-  "language": "es",
-  "question": "Si el cliente pide callback durante la transferencia, ¿qué debe evitarse?",
-  "options": [
-    "Marcarlo como XFER válido",
-    "Usar CALLBK",
-    "Documentar lo ocurrido",
-    "Respetar el callback"
-  ],
-  "correct": 0,
-  "explanation": "Si el cliente pide callback, no debe contarse como una transferencia limpia."
-},
-{
-  "id": 93,
-  "topic": "dosdonts",
-  "language": "en",
-  "question": "Which source statement is not allowed?",
-  "options": [
-    "The bank gave us your file",
-    "We partner with dealerships and registries",
-    "I only see finance information",
-    "The advisor can review the details"
-  ],
-  "correct": 0,
-  "explanation": "Agents should not say the bank gave the customer information."
-},
-{
-  "id": 94,
-  "topic": "dosdonts",
-  "language": "en",
-  "question": "Which word should agents avoid when describing the quote or coverage?",
-  "options": [
-    "Free",
-    "Review",
-    "Advisor",
-    "Coverage"
-  ],
-  "correct": 0,
-  "explanation": "Using “free” can be misleading and non-compliant."
-},
-{
-  "id": 95,
-  "topic": "dosdonts",
-  "language": "en",
-  "question": "Which disposition rule is correct for blind Spanish routing?",
-  "options": [
-    "Use SPANIS, not SPXFER",
-    "Use SPXFER for every Spanish speaker",
-    "Use XFER even if no closer joins",
-    "Use DNC if the customer speaks Spanish"
-  ],
-  "correct": 0,
-  "explanation": "SPANIS is for blind Spanish speaker routing; SPXFER is for direct Spanish transfer."
-},
-{
-  "id": 96,
-  "topic": "dosdonts",
-  "language": "en",
-  "question": "What should the rep do when the customer asks to be removed?",
-  "options": [
-    "Use DNC and handle it professionally",
-    "Keep rebutting until they listen",
-    "Mark NI only",
-    "Transfer to the advisor"
-  ],
-  "correct": 0,
-  "explanation": "Removal requests must be handled as DNC."
-},
-{
-  "id": 97,
-  "topic": "dosdonts",
-  "language": "es",
-  "question": "¿Qué comportamiento evita errores de compliance?",
-  "options": [
-    "No improvisar ni acortar el script",
-    "Prometer que será gratis",
-    "Decir que el banco pidió la llamada",
-    "Transferir sin aprobación"
-  ],
-  "correct": 0,
-  "explanation": "No improvisar ayuda a mantener consistencia y evitar invalids."
-},
-{
-  "id": 98,
-  "topic": "dosdonts",
-  "language": "es",
-  "question": "¿Qué pause code corresponde al baño/restroom?",
-  "options": [
-    "RR",
-    "Lunch",
-    "Manage",
-    "CB"
-  ],
-  "correct": 0,
-  "explanation": "RR es el código correcto para restroom."
-},
-{
-  "id": 99,
-  "topic": "dosdonts",
-  "language": "es",
-  "question": "¿Qué pause code corresponde a problemas técnicos o del sistema?",
-  "options": [
-    "Tech",
-    "Break",
-    "Lunch",
-    "CALLBK"
-  ],
-  "correct": 0,
-  "explanation": "Tech se usa para problemas técnicos o del sistema."
-},
-{
-  "id": 100,
-  "topic": "dosdonts",
-  "language": "es",
-  "question": "¿Qué combinación ayuda a evitar invalid transfers?",
-  "options": [
-    "Verificar, pedir aprobación, presentar y esperar",
-    "Transferir rápido y colgar",
-    "Usar SPXFER para todo español",
-    "Prometer menos de un minuto"
-  ],
-  "correct": 0,
-  "explanation": "La transferencia limpia requiere verificación, aprobación, introducción y espera suficiente."
-}
+  {
+    "id": 84,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The call reaches a voicemail greeting. Which disposition fits?",
+    "options": [
+      "WRNGVE",
+      "NI",
+      "XFER",
+      "A"
+    ],
+    "correct": 3,
+    "explanation": "Answering Machine is used for voicemail or automated answering systems."
+  },
+  {
+    "id": 85,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The customer says they are busy and still refuses after callback rebuttal. What disposition fits?",
+    "options": [
+      "XFER",
+      "CALLBK",
+      "A",
+      "DAIR"
+    ],
+    "correct": 1,
+    "explanation": "A callback request or clear later-time request should be CALLBK."
+  },
+  {
+    "id": 86,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "A customer needs Spanish, and the agent routes blindly without a Spanish Service Advisor handoff. Which disposition fits?",
+    "options": [
+      "SPANIS",
+      "XFER",
+      "SPXFER",
+      "DAIR"
+    ],
+    "correct": 0,
+    "explanation": "SPANIS is for blind Spanish routing, not a direct Spanish transfer."
+  },
+  {
+    "id": 87,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The agent directly connects a Spanish-speaking customer to a Spanish Service Advisor. Which disposition fits?",
+    "options": [
+      "CALLBK",
+      "A",
+      "SPXFER",
+      "SPANIS"
+    ],
+    "correct": 2,
+    "explanation": "SPXFER is for direct Spanish transfers."
+  },
+  {
+    "id": 88,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The person says this is the wrong number. Which disposition area matters?",
+    "options": [
+      "Wrong Number handling.",
+      "Clean English XFER.",
+      "Answering Machine handling.",
+      "Restroom pause handling."
+    ],
+    "correct": 0,
+    "explanation": "Wrong number should not be forced into a transfer outcome."
+  },
+  {
+    "id": 89,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "What makes XFER valid?",
+    "options": [
+      "English transfer with real advisor/customer handoff.",
+      "Agent dials without customer approval.",
+      "Advisor only receives a ringing call.",
+      "Customer hangs up before advisor speaks."
+    ],
+    "correct": 0,
+    "explanation": "XFER should reflect a successful English transfer, not just a dial attempt."
+  },
+  {
+    "id": 90,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The customer asks about lower payments, and the agent never clarifies. What does this create?",
+    "options": [
+      "A better Answering Machine case.",
+      "A stronger mileage qualification.",
+      "Invalid transfer risk.",
+      "An automatic Spanish transfer."
+    ],
+    "correct": 2,
+    "explanation": "Unanswered questions about call purpose or payments can make the transfer misleading."
+  },
+  {
+    "id": 91,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The agent says “free coverage” during the pitch. What should QA flag?",
+    "options": [
+      "Proper callback handling.",
+      "Correct transfer timing.",
+      "Misleading wording.",
+      "Good language detection."
+    ],
+    "correct": 2,
+    "explanation": "Free coverage language can be misleading and should be avoided."
+  },
+  {
+    "id": 92,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The agent promises, “The advisor will only take two minutes.” What is the issue?",
+    "options": [
+      "Asking if the vehicle runs.",
+      "Promising time not controlled by agent.",
+      "Using Vehicle Services Group.",
+      "Letting the advisor speak first."
+    ],
+    "correct": 1,
+    "explanation": "Agents should not promise specific waiting or advisor times."
+  },
+  {
+    "id": 93,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The agent says the bank provided the information. What rule is broken?",
+    "options": [
+      "Do not say the bank gave the file.",
+      "Do not verify vehicle condition.",
+      "Do not ask language preference.",
+      "Do not use Service Advisor."
+    ],
+    "correct": 0,
+    "explanation": "The approved source explanation is dealerships/registries, not the bank."
+  },
+  {
+    "id": 94,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The agent transfers after a vague “I guess.” What should QA question?",
+    "options": [
+      "Whether consent was clear.",
+      "Whether the vehicle had low mileage.",
+      "Whether RR was the right pause.",
+      "Whether the advisor was in Texas."
+    ],
+    "correct": 0,
+    "explanation": "Vague approval should be clarified before transfer."
+  },
+  {
+    "id": 95,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The customer asks, “What am I agreeing to?” right before transfer. What should the agent do?",
+    "options": [
+      "Tell them it no longer matters.",
+      "Mark XFER after the question.",
+      "Clarify before dialing.",
+      "Dial and let advisor explain later."
+    ],
+    "correct": 2,
+    "explanation": "Consent is not clean if the customer does not understand the transfer."
+  },
+  {
+    "id": 96,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The customer is not the owner and cannot decide. What outcome should be avoided?",
+    "options": [
+      "Offering callback if needed.",
+      "Requesting a decision maker.",
+      "Counting it as a clean transfer.",
+      "Documenting the situation."
+    ],
+    "correct": 2,
+    "explanation": "Decision authority matters for a valid transfer path."
+  },
+  {
+    "id": 97,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The customer hangs up before any advisor conversation, but the agent marks XFER. What is wrong?",
+    "options": [
+      "The vehicle became under mileage.",
+      "The agent should have used SPXFER.",
+      "The call became Answering Machine.",
+      "XFER was used without real handoff."
+    ],
+    "correct": 3,
+    "explanation": "A real advisor/customer conversation is needed for a clean XFER."
+  },
+  {
+    "id": 98,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The agent selects Leave 3-Way Call after the customer disappears. What can happen?",
+    "options": [
+      "Dead air transfer to the Service Advisor.",
+      "Mileage limit correction.",
+      "Advisor receives full customer consent.",
+      "Automatic DNC processing."
+    ],
+    "correct": 0,
+    "explanation": "This is why Hung Up Both Lines matters when the customer hangs up."
+  },
+  {
+    "id": 99,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "The customer speaks English to the agent but clearly cannot follow the call. What should not happen?",
+    "options": [
+      "Checking language preference.",
+      "Slowing down to clarify.",
+      "Forcing an English XFER anyway.",
+      "Using correct Spanish route if needed."
+    ],
+    "correct": 2,
+    "explanation": "Understanding must be clear before moving a customer into an English transfer."
+  },
+  {
+    "id": 100,
+    "topic": "dosdonts",
+    "language": "en",
+    "question": "Which case belongs in Needs Practice coaching?",
+    "options": [
+      "Agent confirms condition and gets consent.",
+      "Agent clarifies language preference.",
+      "Agent waits while both parties talk.",
+      "Agent skips purpose and transfers confused customer."
+    ],
+    "correct": 3,
+    "explanation": "Skipping purpose and transferring confusion creates invalid/QA risk."
+  },
+  {
+    "id": 101,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente pregunta si la llamada bajará sus pagos mensuales, y el agent transfiere sin responder. ¿Qué debería marcar QA?",
+    "options": [
+      "Esperó demasiado después del transfer.",
+      "No aclaró primero la pregunta del cliente.",
+      "Hizo demasiadas preguntas al cliente.",
+      "Explicó el límite de millas muy temprano."
+    ],
+    "correct": 1,
+    "explanation": "El agent debe aclarar la naturaleza de la llamada y responder preguntas clave antes de transferir."
+  },
+  {
+    "id": 102,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente dice: “¿Entonces esto viene de mi banco?” ¿Qué respuesta mantiene el script más seguro?",
+    "options": [
+      "Sí, su banco pidió que llamáramos.",
+      "Trabajamos con dealers y registros vehiculares.",
+      "Su lender aprobó la cobertura.",
+      "La financiera envió el archivo."
+    ],
+    "correct": 1,
+    "explanation": "No se debe decir que el banco o lender entregó el archivo."
+  },
+  {
+    "id": 103,
+    "topic": "script",
+    "language": "es",
+    "question": "El agent dice: “No tiene ningún costo, solo escucha.” ¿Por qué es riesgoso?",
+    "options": [
+      "Diferencia seguro de cobertura.",
+      "Confirma que el vehículo funciona bien.",
+      "Le da contexto suficiente al Advisor.",
+      "Puede sonar como promesa de servicio gratis."
+    ],
+    "correct": 3,
+    "explanation": "No uses wording que se pueda interpretar como cobertura gratis o sin costo garantizado."
+  },
+  {
+    "id": 104,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente dice “okay” al confirmar que el carro funciona, pero nunca acepta el transfer. ¿Qué falta?",
+    "options": [
+      "Una cotización mensual final.",
+      "Aprobación clara para transferir.",
+      "La dirección completa del cliente.",
+      "La marca y modelo exactos."
+    ],
+    "correct": 1,
+    "explanation": "Confirmar que el vehículo funciona no es lo mismo que aceptar la transferencia."
+  },
+  {
+    "id": 105,
+    "topic": "script",
+    "language": "es",
+    "question": "Un cliente responde en inglés, pero parece confundido con preguntas básicas. ¿Qué debe hacer el agent?",
+    "options": [
+      "Preguntar idioma de preferencia.",
+      "Marcar NI sin más contexto.",
+      "Transferir como English XFER igual.",
+      "Leer más rápido en inglés."
+    ],
+    "correct": 0,
+    "explanation": "Si el cliente no parece entender, el agent debe verificar el idioma de preferencia antes de seguir."
+  },
+  {
+    "id": 106,
+    "topic": "script",
+    "language": "es",
+    "question": "El agent cambia palabras pequeñas, pero mantiene el sentido requerido. ¿Cuándo es aceptable?",
+    "options": [
+      "Cuando omite la compañía.",
+      "Cuando mantiene los puntos de compliance.",
+      "Cuando asume aprobación.",
+      "Cuando ignora condición del vehículo."
+    ],
+    "correct": 1,
+    "explanation": "Sonar natural es aceptable solo si mantiene el mínimo requerido del script."
+  },
+  {
+    "id": 107,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente pregunta: “¿De qué se trata?” ¿Qué respuesta es más segura?",
+    "options": [
+      "Se está renovando la garantía de fábrica.",
+      "El dealer ya aprobó su plan.",
+      "Es obligatorio para manejar legalmente.",
+      "Es una revisión de posibles opciones."
+    ],
+    "correct": 3,
+    "explanation": "El propósito debe explicarse como revisión de opciones, no como renovación garantizada."
+  },
+  {
+    "id": 108,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente pregunta: “¿Quiénes son exactamente?” ¿Qué debe evitar el agent?",
+    "options": [
+      "Seguir solo con aprobación.",
+      "Identificarse como Vehicle Services Group.",
+      "Hacerse pasar por el dealer.",
+      "Explicar con calma el propósito."
+    ],
+    "correct": 2,
+    "explanation": "El agent no debe decir que trabaja para el dealer, fabricante o banco."
+  },
+  {
+    "id": 109,
+    "topic": "script",
+    "language": "es",
+    "question": "El agent dice: “Su garantía expiró y es aviso final.” ¿Cuál es el problema?",
+    "options": [
+      "Crea urgencia no respaldada.",
+      "Confirma primero al Service Advisor.",
+      "Pregunta claramente el idioma.",
+      "Da la disposición correcta."
+    ],
+    "correct": 0,
+    "explanation": "No se debe crear urgencia falsa o no respaldada por el script aprobado."
+  },
+  {
+    "id": 110,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente pregunta el precio antes de verificar condición del vehículo. ¿Qué debe hacer el agent?",
+    "options": [
+      "Decir que la cotización siempre es gratis.",
+      "Dar el pago mensual más bajo.",
+      "Saltar condición y transferir rápido.",
+      "Llevar precio al Advisor tras calificar."
+    ],
+    "correct": 3,
+    "explanation": "El agent no cotiza precio; verifica condición y conecta con el Service Advisor."
+  },
+  {
+    "id": 111,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente dice: “Gracias, estoy bien”, y el agent solo dice “sí” antes de transferir. ¿Qué faltó?",
+    "options": [
+      "Manejo de objeción y consentimiento.",
+      "Confirmación de ubicación del dealer.",
+      "Cálculo de millaje solamente.",
+      "Corrección de pause code."
+    ],
+    "correct": 0,
+    "explanation": "Una respuesta casual no reemplaza rebuttal ni consentimiento claro para transferir."
+  },
+  {
+    "id": 112,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente dice que la información del vehículo está mal. ¿Qué dirección del script es mejor?",
+    "options": [
+      "Marcar DNC por datos errados.",
+      "Transferir antes de preguntar.",
+      "Decir que el archivo nunca falla.",
+      "Tratarlo como verificación del vehículo actual."
+    ],
+    "correct": 3,
+    "explanation": "Información errada o vieja se maneja como oportunidad de verificación."
+  },
+  {
+    "id": 113,
+    "topic": "script",
+    "language": "es",
+    "question": "El agent dice: “El Service Advisor le bajará el pago.” ¿Qué está mal?",
+    "options": [
+      "Confirma elegibilidad muy lento.",
+      "Mantiene el handoff muy limpio.",
+      "Pide aprobación demasiado clara.",
+      "Promete un resultado no controlado."
+    ],
+    "correct": 3,
+    "explanation": "El agent no debe prometer pagos más bajos ni resultados garantizados."
+  },
+  {
+    "id": 114,
+    "topic": "script",
+    "language": "es",
+    "question": "El agent dice: “Se lo presento, okay?” y el cliente pregunta: “¿A quién?” ¿Qué debe pasar?",
+    "options": [
+      "Marcar XFER tras la pregunta.",
+      "Ignorarlo como small talk.",
+      "Aclarar el rol del Service Advisor.",
+      "Marcar primero y explicar luego."
+    ],
+    "correct": 2,
+    "explanation": "Si el cliente pregunta con quién lo conectan, se debe aclarar antes de marcar."
+  },
+  {
+    "id": 115,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente pregunta si debe comprar algo hoy. ¿Qué debe decir el agent?",
+    "options": [
+      "El Advisor revisa opciones; el cliente decide.",
+      "Sí, la compra es obligatoria hoy.",
+      "El agent puede aprobar la compra.",
+      "El banco ya eligió el plan."
+    ],
+    "correct": 0,
+    "explanation": "No se debe presentar la llamada como obligatoria ni forzar compra."
+  },
+  {
+    "id": 116,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente pregunta: “¿De qué vehículo hablan?” y el agent no tiene marca/modelo. ¿Qué es más seguro?",
+    "options": [
+      "Saltar verificación del vehículo.",
+      "Usar info financiera y verificar vehículo actual.",
+      "Decir que el cliente debería saber.",
+      "Inventar marca y modelo probable."
+    ],
+    "correct": 1,
+    "explanation": "Se usa la información financiera disponible y se verifica la condición del vehículo actual."
+  },
+  {
+    "id": 117,
+    "topic": "script",
+    "language": "es",
+    "question": "El agent dice que la cobertura viene “del fabricante.” ¿Qué debería marcar QA?",
+    "options": [
+      "Representar mal el origen de cobertura.",
+      "Esperar a que hable el Advisor.",
+      "Preguntar si el vehículo funciona.",
+      "Usar claramente el nombre del cliente."
+    ],
+    "correct": 0,
+    "explanation": "El agent no debe decir que trabaja para marcas o fabricantes."
+  },
+  {
+    "id": 118,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente hace una pregunta directa al inicio. ¿Cuál es la mejor regla?",
+    "options": [
+      "Transferir rápido para evitar objeciones.",
+      "Responder o aclarar antes de avanzar.",
+      "Ignorar preguntas hasta el Advisor.",
+      "Repetir el script más fuerte."
+    ],
+    "correct": 1,
+    "explanation": "Preguntas sin responder pueden volver el transfer confuso o inválido."
+  },
+  {
+    "id": 119,
+    "topic": "script",
+    "language": "es",
+    "question": "El agent obtiene aprobación pero nunca presenta al cliente por nombre al Service Advisor. ¿Cuál es el problema?",
+    "options": [
+      "La llamada se volvió voicemail.",
+      "El handoff quedó incompleto.",
+      "El cliente pidió RR.",
+      "El vehículo se volvió eléctrico."
+    ],
+    "correct": 1,
+    "explanation": "La transferencia requiere presentación profesional, no solo conectar líneas."
+  },
+  {
+    "id": 120,
+    "topic": "script",
+    "language": "es",
+    "question": "El cliente dice: “No entiendo qué quiere decir.” ¿Qué no debe hacer el agent?",
+    "options": [
+      "Repetir el propósito simple.",
+      "Preguntar idioma si aplica.",
+      "Forzar transfer sin aclarar.",
+      "Confirmar comprensión primero."
+    ],
+    "correct": 2,
+    "explanation": "Si no entiende, el agent debe aclarar antes de transferir."
+  },
+  {
+    "id": 121,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “No me interesa”, sin dar razón. ¿Cuál es el mejor primer paso?",
+    "options": [
+      "Discutir costos de reparación.",
+      "Transferir antes de que cuelgue.",
+      "Preguntar una razón breve.",
+      "Marcar DNC inmediatamente."
+    ],
+    "correct": 2,
+    "explanation": "El agent necesita una razón para escoger el rebuttal correcto."
+  },
+  {
+    "id": 122,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “Estoy ocupado”, pero no rechaza totalmente. ¿Qué debe evitar el agent?",
+    "options": [
+      "Respetar la objeción de tiempo.",
+      "Prometer que toma menos de un minuto.",
+      "Ofrecer una hora mejor de callback.",
+      "Preguntar si más tarde sirve."
+    ],
+    "correct": 1,
+    "explanation": "No se deben prometer tiempos exactos o cortos que el agent no controla."
+  },
+  {
+    "id": 123,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “Esto suena a estafa.” ¿Qué tono es más seguro?",
+    "options": [
+      "Rápido y despectivo.",
+      "Defensivo y discutidor.",
+      "Calmado, transparente y controlado.",
+      "Callado hasta que termine."
+    ],
+    "correct": 2,
+    "explanation": "Una duda de scam requiere generar confianza, no presión."
+  },
+  {
+    "id": 124,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “Ya tengo seguro.” ¿Qué diferencia debe explicar el agent?",
+    "options": [
+      "Seguro y cobertura son iguales.",
+      "Cobertura reemplaza seguro legal.",
+      "Seguro paga toda reparación.",
+      "Seguro cubre accidentes; cobertura es mecánica."
+    ],
+    "correct": 3,
+    "explanation": "Se debe diferenciar claramente seguro y cobertura extendida."
+  },
+  {
+    "id": 125,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “Ya tengo garantía.” ¿Cuál es el posicionamiento más seguro?",
+    "options": [
+      "Decir que su plan no sirve.",
+      "Revisar opciones actualizadas o adicionales.",
+      "Prometer reemplazo más barato.",
+      "Decirle que cancele el plan."
+    ],
+    "correct": 1,
+    "explanation": "Si ya tiene cobertura, se maneja como revisión, no como ataque."
+  },
+  {
+    "id": 126,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente pregunta: “¿De dónde sacaron mi información?” ¿Qué respuesta se debe evitar?",
+    "options": [
+      "Nos asociamos con dealers.",
+      "La llamada es revisión de elegibilidad.",
+      "Su banco nos envió el archivo.",
+      "Trabajamos con registros vehiculares."
+    ],
+    "correct": 2,
+    "explanation": "Decir que viene del banco crea riesgo de compliance."
+  },
+  {
+    "id": 127,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente pregunta: “¿Qué vehículo?” y suena desconfiado. ¿Qué ayuda más?",
+    "options": [
+      "Transferir porque es normal.",
+      "Decir que la pregunta no importa.",
+      "Inventar detalles con seguridad.",
+      "Explicar límite del sistema y verificar."
+    ],
+    "correct": 3,
+    "explanation": "Ser transparente con la info financiera ayuda a crear confianza."
+  },
+  {
+    "id": 128,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente pregunta: “¿Cuánto cuesta?” antes de confirmar condición. ¿Qué respuesta es más segura?",
+    "options": [
+      "El agent aprueba descuento.",
+      "Siempre es gratis hoy.",
+      "El banco fija el pago bajo.",
+      "Depende, y el Advisor lo revisa."
+    ],
+    "correct": 3,
+    "explanation": "El agent puede llevar precio al Advisor, pero no cotizar ni prometer."
+  },
+  {
+    "id": 129,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “Mándeme un email primero.” ¿Qué debe evitar el agent?",
+    "options": [
+      "Prometer enviar documentos de póliza.",
+      "Confirmar condición del vehículo.",
+      "Preguntar si el vehículo funciona.",
+      "Explicar que el Advisor revisa detalles."
+    ],
+    "correct": 0,
+    "explanation": "El agent no debe prometer emails o documentos que no puede enviar."
+  },
+  {
+    "id": 130,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice que el vehículo fue pérdida total. ¿Qué debe hacer luego el agent?",
+    "options": [
+      "Marcar XFER si escucha.",
+      "Preguntar por vehículo actual manejable.",
+      "Prometer cobertura de la pérdida.",
+      "Transferir por el totalizado."
+    ],
+    "correct": 1,
+    "explanation": "Un vehículo totalizado no se avanza; se redirige al vehículo actual si existe."
+  },
+  {
+    "id": 131,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “Ese no es mi carro.” ¿Cuál es la mejor ruta?",
+    "options": [
+      "Verificar el vehículo actual.",
+      "Decir que el archivo siempre está correcto.",
+      "Cerrar como DNC.",
+      "Transferir sin corregir."
+    ],
+    "correct": 0,
+    "explanation": "Vehículo incorrecto debe manejarse como verificación."
+  },
+  {
+    "id": 132,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente tiene varios vehículos. ¿Qué debe confirmarse antes de transferir?",
+    "options": [
+      "Todos tienen el mismo millaje.",
+      "Todos se compraron juntos.",
+      "Al menos uno funciona y podría calificar.",
+      "El cliente sabe cada VIN."
+    ],
+    "correct": 2,
+    "explanation": "Con varios carros, se verifica al menos un vehículo actual que pueda calificar."
+  },
+  {
+    "id": 133,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “Eso es muy caro”, antes de que el Advisor revise. ¿Qué debe hacer el agent?",
+    "options": [
+      "Decir que el precio es fijo.",
+      "Prometer el plan más barato.",
+      "Aceptar y cerrar de inmediato.",
+      "Replantear costo vs reparaciones."
+    ],
+    "correct": 3,
+    "explanation": "El agent puede replantear valor, pero no prometer costo exacto."
+  },
+  {
+    "id": 134,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “Ya llamaron y dije que no.” ¿Qué debe usar el agent?",
+    "options": [
+      "Opciones actualizadas como razón.",
+      "Amenazar derechos para manejar.",
+      "Decir que el rechazo expiró.",
+      "Transferir directo sin consentimiento."
+    ],
+    "correct": 0,
+    "explanation": "Reabrir curiosidad con opciones actualizadas es más seguro que presionar."
+  },
+  {
+    "id": 135,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente es grosero y pide que no llamen más. ¿Cuál es el camino profesional?",
+    "options": [
+      "Responder con el mismo tono.",
+      "Seguir rebatiendo fuerte.",
+      "Transferir para evitar conflicto.",
+      "Mantener calma y procesar remoción."
+    ],
+    "correct": 3,
+    "explanation": "Grosería con petición de no llamar se maneja profesionalmente, usualmente DNC."
+  },
+  {
+    "id": 136,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “No soy dueño, solo co-signer.” ¿Qué debe revisar el agent?",
+    "options": [
+      "Si el vehículo tiene radio.",
+      "Si quiere cotización gratis.",
+      "Si puede tomar decisiones.",
+      "Si conoce al Advisor."
+    ],
+    "correct": 2,
+    "explanation": "Ser co-signer no significa automáticamente ser decision maker."
+  },
+  {
+    "id": 137,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente da respuestas tipo “sure” pero suena distraído. ¿Cuál es el riesgo?",
+    "options": [
+      "El consentimiento puede no ser real.",
+      "El Advisor no puede hablar primero.",
+      "El millaje queda desconocido.",
+      "El vehículo queda modificado."
+    ],
+    "correct": 0,
+    "explanation": "El agent debe confirmar comprensión, no depender de un acuerdo débil."
+  },
+  {
+    "id": 138,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente pide: “Dígame los detalles del plan.” ¿Cuál es el mejor puente?",
+    "options": [
+      "El Advisor revisa detalles tras verificación.",
+      "Los detalles nunca se explican.",
+      "El agent debe inventar términos.",
+      "Debe comprar antes de detalles."
+    ],
+    "correct": 0,
+    "explanation": "El agent no debe inventar detalles; debe llevar al Service Advisor."
+  },
+  {
+    "id": 139,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente dice: “Necesito español”, tras batallar en inglés. ¿Qué debe hacer el agent?",
+    "options": [
+      "Ignorarlo hasta el Advisor.",
+      "Usar el manejo correcto en español.",
+      "Marcar XFER como inglés.",
+      "Seguir el script en inglés."
+    ],
+    "correct": 1,
+    "explanation": "Se debe respetar el idioma y usar la ruta correcta."
+  },
+  {
+    "id": 140,
+    "topic": "objections",
+    "language": "es",
+    "question": "El cliente pregunta si el Advisor tomará “unos segundos.” ¿Qué debe evitar el agent?",
+    "options": [
+      "Garantizar espera corta.",
+      "Decir que el Advisor revisa detalles.",
+      "Hacer preguntas de espera.",
+      "Mantener al cliente conectado."
+    ],
+    "correct": 0,
+    "explanation": "El agent no controla el tiempo del Advisor y no debe prometerlo."
+  },
+  {
+    "id": 141,
+    "topic": "product",
+    "language": "es",
+    "question": "¿Qué caso es más seguro para continuar a transfer?",
+    "options": [
+      "Carro eléctrico 2022, 30,000 millas, funciona.",
+      "Sedán gasolina 2016, 110,000 millas, funciona.",
+      "SUV 2010, 80,000 millas, funciona.",
+      "Truck 2019, 181,000 millas, funciona."
+    ],
+    "correct": 1,
+    "explanation": "El caso seguro cumple año, millaje, tipo de vehículo y condición de funcionamiento."
+  },
+  {
+    "id": 142,
+    "topic": "product",
+    "language": "es",
+    "question": "Un vehículo eléctrico 2020 tiene 30,000 millas y funciona. ¿Qué pesa más?",
+    "options": [
+      "El Advisor debe aprobarlo.",
+      "Funcionando anula el tipo.",
+      "Los eléctricos están excluidos.",
+      "Bajo millaje lo hace elegible."
+    ],
+    "correct": 2,
+    "explanation": "La exclusión de eléctricos aplica aunque tenga buen millaje."
+  },
+  {
+    "id": 143,
+    "topic": "product",
+    "language": "es",
+    "question": "Un carro 2011 tiene 176,200 millas y funciona bien. ¿Qué debe entender el agent?",
+    "options": [
+      "Funcionar elimina el límite.",
+      "Califica si fue financiado reciente.",
+      "Está sobre el límite de millaje.",
+      "El año solo lo hace seguro."
+    ],
+    "correct": 2,
+    "explanation": "El límite básico es hasta 175,000 millas."
+  },
+  {
+    "id": 144,
+    "topic": "product",
+    "language": "es",
+    "question": "Un vehículo 2010 tiene 92,000 millas y no tiene problemas. ¿Cuál es la preocupación?",
+    "options": [
+      "No tener problemas es sospechoso.",
+      "El año es anterior a 2011.",
+      "El millaje es muy alto.",
+      "Falta seguro."
+    ],
+    "correct": 1,
+    "explanation": "Vehículos antes de 2011 quedan fuera de la regla básica."
+  },
+  {
+    "id": 145,
+    "topic": "product",
+    "language": "es",
+    "question": "El carro enciende, pero el cliente dice que le falta una llanta. ¿Qué es mejor?",
+    "options": [
+      "Tratarlo como buen funcionamiento.",
+      "Aclarar si puede manejarse seguro ahora.",
+      "Prometer cubrir la llanta.",
+      "Ignorarlo porque enciende."
+    ],
+    "correct": 1,
+    "explanation": "Faltar una llanta crea duda de condición actual y debe aclararse."
+  },
+  {
+    "id": 146,
+    "topic": "product",
+    "language": "es",
+    "question": "El cliente dice que tiene check engine hoy. ¿Qué debe evitar el agent?",
+    "options": [
+      "Tratarlo como claramente calificado.",
+      "Aclarar si todavía maneja.",
+      "Anotar que hay warning light.",
+      "Preguntar qué problema tiene."
+    ],
+    "correct": 0,
+    "explanation": "Luces o problemas actuales deben aclararse antes de transferir."
+  },
+  {
+    "id": 147,
+    "topic": "product",
+    "language": "es",
+    "question": "El vehículo prende pero no cambia de marcha. ¿Qué sugiere eso?",
+    "options": [
+      "No se confirmó buen funcionamiento.",
+      "El vehículo califica automático.",
+      "El problema es cosmético.",
+      "El millaje es la única regla."
+    ],
+    "correct": 0,
+    "explanation": "Un vehículo que no cambia de marcha puede no estar en buenas condiciones."
+  },
+  {
+    "id": 148,
+    "topic": "product",
+    "language": "es",
+    "question": "El cliente pregunta si cubre daño de carrocería por accidente. ¿Qué es más seguro?",
+    "options": [
+      "Todo choque está cubierto.",
+      "Accidentes y carrocería están excluidos.",
+      "Seguro y cobertura son iguales.",
+      "El agent aprueba carrocería."
+    ],
+    "correct": 1,
+    "explanation": "El producto se enfoca en fallas mecánicas, no choque ni estética."
+  },
+  {
+    "id": 149,
+    "topic": "product",
+    "language": "es",
+    "question": "El cliente pregunta si cubre pastillas de freno gastadas. ¿Qué debe saber el agent?",
+    "options": [
+      "El Advisor debe cubrirlas.",
+      "Wear items reemplazan seguro.",
+      "Pastillas gastadas califican el carro.",
+      "Wear items no son el foco."
+    ],
+    "correct": 3,
+    "explanation": "No se deben prometer wear items como cobertura."
+  },
+  {
+    "id": 150,
+    "topic": "product",
+    "language": "es",
+    "question": "Un vehículo tiene suspensión modificada. ¿Qué statement es más seguro?",
+    "options": [
+      "Las partes modificadas se excluyen.",
+      "Todo vehículo modificado se cubre.",
+      "Toda modificación mejora elegibilidad.",
+      "El banco decide reparaciones."
+    ],
+    "correct": 0,
+    "explanation": "Las partes modificadas se excluyen, aunque otras partes podrían revisarse."
+  },
+  {
+    "id": 151,
+    "topic": "product",
+    "language": "es",
+    "question": "¿Dónde se manejan normalmente reparaciones aprobadas?",
+    "options": [
+      "Solo el taller de la financiera.",
+      "Talleres autorizados a nivel nacional.",
+      "Solo el dealer original.",
+      "Solo talleres en Texas."
+    ],
+    "correct": 1,
+    "explanation": "Las reparaciones aprobadas no se limitan al dealer original."
+  },
+  {
+    "id": 152,
+    "topic": "product",
+    "language": "es",
+    "question": "Un cliente tiene motocicleta con bajo millaje. ¿Qué debe recordar el agent?",
+    "options": [
+      "Cobertura es automática con seguro.",
+      "Bajo millaje anula el tipo.",
+      "Las motocicletas están excluidas.",
+      "Califica si el Advisor acepta."
+    ],
+    "correct": 2,
+    "explanation": "Las motocicletas están entre vehículos no cubiertos."
+  },
+  {
+    "id": 153,
+    "topic": "product",
+    "language": "es",
+    "question": "El cliente tiene tres carros. ¿Qué debe ser cierto antes de transferir?",
+    "options": [
+      "Los tres deben ser del mismo año.",
+      "El más viejo decide cobertura.",
+      "Debe saber todos los VIN.",
+      "Al menos uno actual debe calificar."
+    ],
+    "correct": 3,
+    "explanation": "Con varios carros, se califica al menos un vehículo actual que funcione."
+  },
+  {
+    "id": 154,
+    "topic": "product",
+    "language": "es",
+    "question": "El cliente tiene un problema actual de motor. ¿Qué debe evitar prometer el agent?",
+    "options": [
+      "Que la condición importa.",
+      "Que el problema actual será arreglado.",
+      "Que el Advisor revisa opciones.",
+      "Que cobertura mecánica es diferente."
+    ],
+    "correct": 1,
+    "explanation": "No se debe prometer cobertura para problemas actuales o preexistentes."
+  },
+  {
+    "id": 155,
+    "topic": "product",
+    "language": "es",
+    "question": "¿Cómo se compara factory warranty con extended coverage?",
+    "options": [
+      "Factory empieza después de coverage.",
+      "Son exactamente el mismo producto.",
+      "Seguro renueva factory warranty.",
+      "Factory warranty es limitada; extended es separada."
+    ],
+    "correct": 3,
+    "explanation": "Factory warranty y extended coverage son conceptos diferentes."
+  },
+  {
+    "id": 156,
+    "topic": "product",
+    "language": "es",
+    "question": "¿Cuál es la diferencia clave con seguro?",
+    "options": [
+      "Coverage es obligatorio como seguro.",
+      "Seguro cubre toda falla mecánica.",
+      "Seguro cubre accidentes, no fallas mecánicas.",
+      "Seguro y coverage son iguales."
+    ],
+    "correct": 2,
+    "explanation": "El agent debe separar seguro de accidentes de cobertura mecánica."
+  },
+  {
+    "id": 157,
+    "topic": "product",
+    "language": "es",
+    "question": "El cliente pregunta si el plan añade cobertura después de factory coverage. ¿Qué es correcto?",
+    "options": [
+      "Puede agregar millas después de factory.",
+      "Elimina necesidad de seguro.",
+      "Siempre renueva factory warranty.",
+      "Solo cubre responsabilidad por accidente."
+    ],
+    "correct": 0,
+    "explanation": "Extended coverage es separada y puede añadir protección mecánica."
+  },
+  {
+    "id": 158,
+    "topic": "product",
+    "language": "es",
+    "question": "Un vehículo eléctrico financiado está bajo 175,000 millas. ¿Qué debe hacer el agent?",
+    "options": [
+      "No tratarlo como elegible.",
+      "Ignorar la regla de eléctrico.",
+      "Tomar financiamiento como regla principal.",
+      "Transferir porque el millaje sirve."
+    ],
+    "correct": 0,
+    "explanation": "Estar financiado no anula la exclusión de eléctricos."
+  },
+  {
+    "id": 159,
+    "topic": "product",
+    "language": "es",
+    "question": "El cliente no sabe millaje exacto, cree que son 170,000. ¿Qué es mejor?",
+    "options": [
+      "Asumir que está bajo límite.",
+      "Aclarar antes de tratarlo como calificado.",
+      "Decir que millaje no importa.",
+      "Marcar XFER porque está cerca."
+    ],
+    "correct": 1,
+    "explanation": "Cerca del límite, el agent no debe asumir elegibilidad."
+  },
+  {
+    "id": 160,
+    "topic": "product",
+    "language": "es",
+    "question": "¿Qué caso levanta mayor preocupación de elegibilidad?",
+    "options": [
+      "Vehículo 2019 con 182,000 millas.",
+      "Vehículo 2015 con 75,000 millas.",
+      "Vehículo 2012 con 90,000 millas.",
+      "Vehículo 2018 con 120,000 millas."
+    ],
+    "correct": 0,
+    "explanation": "Más de 175,000 millas queda fuera de la regla de millaje."
+  },
+  {
+    "id": 161,
+    "topic": "callflow",
+    "language": "es",
+    "question": "Durante el 3-way, el cliente cuelga antes de hablar con el Service Advisor. ¿Qué debe hacer el agent?",
+    "options": [
+      "Marcar Dead Air al Advisor.",
+      "Usar Leave 3-Way Call y XFER.",
+      "Dejar al Advisor timbrando solo.",
+      "Usar Hung Up Both Lines y Call Back."
+    ],
+    "correct": 3,
+    "explanation": "Eso evita un dead air transfer al Service Advisor."
+  },
+  {
+    "id": 162,
+    "topic": "callflow",
+    "language": "es",
+    "question": "¿Por qué es peligroso usar “Leave 3-Way Call” si el cliente cuelga?",
+    "options": [
+      "El Advisor puede recibir llamada sin cliente.",
+      "Cambia el millaje del vehículo.",
+      "Envía ruta española automática.",
+      "Elimina la opción de callback."
+    ],
+    "correct": 0,
+    "explanation": "Salir del 3-way puede crear dead air para el Service Advisor."
+  },
+  {
+    "id": 163,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El Service Advisor entra, pero se queda callado varios segundos. ¿Qué debe hacer el agent?",
+    "options": [
+      "Llamar al Advisor y controlar el handoff.",
+      "Quedarse callado hasta que cuelguen.",
+      "Colgar y marcar XFER.",
+      "Decirle al cliente que llame luego."
+    ],
+    "correct": 0,
+    "explanation": "El agent debe evitar silencio llamando la atención del Advisor."
+  },
+  {
+    "id": 164,
+    "topic": "callflow",
+    "language": "es",
+    "question": "¿Quién debe hablar primero cuando entra el Service Advisor?",
+    "options": [
+      "El agent antes que todos.",
+      "El Service Advisor.",
+      "Nadie hasta pasar 15 segundos.",
+      "El cliente sin introducción."
+    ],
+    "correct": 1,
+    "explanation": "El agent debe esperar que el Service Advisor conteste antes de presentar."
+  },
+  {
+    "id": 165,
+    "topic": "callflow",
+    "language": "es",
+    "question": "¿Qué confirma un handoff real?",
+    "options": [
+      "Advisor y cliente hablan activamente.",
+      "El agent presionó transfer.",
+      "La línea timbró una vez.",
+      "El cliente dijo hello antes."
+    ],
+    "correct": 0,
+    "explanation": "Un handoff válido requiere comunicación activa, no solo marcar."
+  },
+  {
+    "id": 166,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente pide callback al Service Advisor. ¿Cómo se maneja?",
+    "options": [
+      "SPANIS porque pidió callback.",
+      "Call Back, no XFER limpio.",
+      "DAIR porque cambió la llamada.",
+      "XFER porque entró el Advisor."
+    ],
+    "correct": 1,
+    "explanation": "Un callback con el Advisor no debe contar como XFER limpio."
+  },
+  {
+    "id": 167,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente pide español apenas entra el Advisor, sin conversación en inglés. ¿Cuál es el problema?",
+    "options": [
+      "Debe ser Answering Machine.",
+      "El vehículo pasa a wrong number.",
+      "Es válido porque conectaron líneas.",
+      "No hubo conversación real en inglés con SA."
+    ],
+    "correct": 3,
+    "explanation": "Un English XFER necesita comunicación real en inglés con el Service Advisor."
+  },
+  {
+    "id": 168,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente habla inglés con el Service Advisor por 18 segundos y luego pide español. ¿Cómo lo ve QA?",
+    "options": [
+      "Inválido solo por mencionar español.",
+      "Dead Air porque cambió idioma.",
+      "SPANIS automático sin revisar.",
+      "Probablemente cumplió el handoff en inglés."
+    ],
+    "correct": 3,
+    "explanation": "Si primero hubo conversación significativa en inglés, puede seguir siendo válido."
+  },
+  {
+    "id": 169,
+    "topic": "callflow",
+    "language": "es",
+    "question": "Un niño contesta y acepta “escuchar opciones” del carro familiar. ¿Qué debe hacer el agent?",
+    "options": [
+      "Transferir porque alguien aceptó.",
+      "Pedir un adulto decision maker.",
+      "Marcar XFER tras el sí.",
+      "Pedir millaje al niño solamente."
+    ],
+    "correct": 1,
+    "explanation": "Un menor no puede dar aprobación válida de decisión."
+  },
+  {
+    "id": 170,
+    "topic": "callflow",
+    "language": "es",
+    "question": "Un co-signer dice que no toma decisiones del vehículo. ¿Cuál es la mejor ruta?",
+    "options": [
+      "Presionar hasta que acepte.",
+      "Pedir decision maker o callback.",
+      "Transferir porque aparece en archivo.",
+      "Tratarlo como XFER completo."
+    ],
+    "correct": 1,
+    "explanation": "No se debe forzar si la persona no puede decidir."
+  },
+  {
+    "id": 171,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente dice “sí” a todo, pero responde fuera de contexto. ¿Qué debe verificar el agent?",
+    "options": [
+      "Que realmente entiende la llamada.",
+      "Que le gusta el color del carro.",
+      "Que el archivo tiene dirección.",
+      "Que el Advisor puede cerrar más rápido."
+    ],
+    "correct": 0,
+    "explanation": "Un sí por cortesía no basta si hay duda de comprensión."
+  },
+  {
+    "id": 172,
+    "topic": "callflow",
+    "language": "es",
+    "question": "Mientras esperan al Advisor, hay silencio largo. ¿Qué protege la llamada?",
+    "options": [
+      "Pedir información de tarjeta.",
+      "Hacer preguntas ligeras del vehículo.",
+      "Mutear hasta que entre el Advisor.",
+      "Prometer que el Advisor ya está listo."
+    ],
+    "correct": 1,
+    "explanation": "Preguntas de espera reducen dead air y mantienen al cliente conectado."
+  },
+  {
+    "id": 173,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente dice no al transfer después de calificar. ¿Qué debe evitar el agent?",
+    "options": [
+      "Marcar al Advisor de todas formas.",
+      "Documentar el resultado.",
+      "Usar disposición correcta.",
+      "Respetar el rechazo."
+    ],
+    "correct": 0,
+    "explanation": "Calificar no permite transferir sin consentimiento."
+  },
+  {
+    "id": 174,
+    "topic": "callflow",
+    "language": "es",
+    "question": "La línea del Advisor timbra, pero nadie contesta. ¿Qué debe evitar el agent?",
+    "options": [
+      "Proteger experiencia del cliente.",
+      "Manejar callback si aplica.",
+      "Evitar dead air transfer.",
+      "Contarlo como XFER válido."
+    ],
+    "correct": 3,
+    "explanation": "Un XFER válido requiere handoff entre Service Advisor y cliente."
+  },
+  {
+    "id": 175,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El agent presenta al cliente antes de que el Advisor hable. ¿Cuál es el riesgo?",
+    "options": [
+      "El cliente se vuelve co-signer.",
+      "El millaje se reinicia.",
+      "El handoff puede quedar sin control.",
+      "La llamada se vuelve voicemail."
+    ],
+    "correct": 2,
+    "explanation": "El Advisor debe hablar primero para que la presentación sea limpia."
+  },
+  {
+    "id": 176,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente cuelga después de la introducción pero antes de hablar con Advisor. ¿Qué debe pasar?",
+    "options": [
+      "Usar Answering Machine.",
+      "No contarlo como XFER limpio.",
+      "Marcar SPXFER automático.",
+      "Contarlo porque hubo intro."
+    ],
+    "correct": 1,
+    "explanation": "La introducción sola no prueba conversación activa entre Advisor y cliente."
+  },
+  {
+    "id": 177,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El cliente empieza a hablar español durante la espera de transfer en inglés. ¿Qué debe considerar el agent?",
+    "options": [
+      "DNC es obligatorio.",
+      "El vehículo queda inválido.",
+      "Debe forzar English transfer.",
+      "Puede necesitar confirmar idioma."
+    ],
+    "correct": 3,
+    "explanation": "Un cambio de idioma puede indicar necesidad de manejo en español."
+  },
+  {
+    "id": 178,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El agent se queda mucho tiempo aunque ambos ya hablan. ¿Cuál es el coaching?",
+    "options": [
+      "Mutear y sumar tiempo.",
+      "Quedarse hasta cerrar venta.",
+      "Salir antes que hable el Advisor.",
+      "Esperar suficiente, no innecesario."
+    ],
+    "correct": 3,
+    "explanation": "La regla protege el handoff; no significa quedarse de más."
+  },
+  {
+    "id": 179,
+    "topic": "callflow",
+    "language": "es",
+    "question": "Antes del transfer, el cliente dice: “No quiero hablar con nadie más.” ¿Qué debe evitar el agent?",
+    "options": [
+      "Transferir sin nuevo consentimiento.",
+      "Respetar el rechazo.",
+      "Aclarar la preocupación.",
+      "Ofrecer callback si aplica."
+    ],
+    "correct": 0,
+    "explanation": "Un rechazo claro significa que no hay consentimiento."
+  },
+  {
+    "id": 180,
+    "topic": "callflow",
+    "language": "es",
+    "question": "El Advisor dice hello, el cliente dice hello, y ambos paran. ¿Qué debe hacer el agent antes de salir?",
+    "options": [
+      "Pedir datos de pago.",
+      "Confirmar que hablan activamente.",
+      "Marcar XFER y mutear.",
+      "Salir tras dos hellos."
+    ],
+    "correct": 1,
+    "explanation": "Dos saludos no siempre confirman handoff activo."
+  },
+  {
+    "id": 181,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "¿Cuándo DAIR es la mejor disposición?",
+    "options": [
+      "Nadie responde realmente en la línea.",
+      "El cliente pide español.",
+      "El cliente pide callback.",
+      "El cliente dice no me interesa."
+    ],
+    "correct": 0,
+    "explanation": "DAIR es para dead air real, no rechazo normal o callback."
+  },
+  {
+    "id": 182,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El cliente escucha el script y cuelga. ¿Qué disposición suele encajar mejor que DAIR?",
+    "options": [
+      "NI",
+      "A",
+      "Manage",
+      "SPXFER"
+    ],
+    "correct": 0,
+    "explanation": "Si hubo contacto y cuelga después del pitch, normalmente no es DAIR."
+  },
+  {
+    "id": 183,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El cliente dice: “Dejen de llamar o los reporto.” ¿Qué disposición encaja?",
+    "options": [
+      "CALLBK",
+      "XFER",
+      "DNC",
+      "SPANIS"
+    ],
+    "correct": 2,
+    "explanation": "Pedir que no llamen, amenazas o lenguaje similar se maneja como DNC."
+  },
+  {
+    "id": 184,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "La llamada cae en buzón de voz. ¿Qué disposición encaja?",
+    "options": [
+      "NI",
+      "XFER",
+      "WRNGVE",
+      "A"
+    ],
+    "correct": 3,
+    "explanation": "Answering Machine se usa para voicemail o sistema automático."
+  },
+  {
+    "id": 185,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El cliente está ocupado y sigue sin continuar tras rebuttal de callback. ¿Qué disposición encaja?",
+    "options": [
+      "XFER",
+      "CALLBK",
+      "A",
+      "DAIR"
+    ],
+    "correct": 1,
+    "explanation": "Una solicitud clara para llamar después corresponde a CALLBK."
+  },
+  {
+    "id": 186,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El cliente necesita español y el agent usa ruta ciega sin handoff con Advisor español. ¿Qué disposición encaja?",
+    "options": [
+      "DAIR",
+      "SPXFER",
+      "XFER",
+      "SPANIS"
+    ],
+    "correct": 3,
+    "explanation": "SPANIS es ruta ciega de español, no transfer directo en español."
+  },
+  {
+    "id": 187,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El agent conecta directo a un cliente español con Service Advisor en español. ¿Qué disposición encaja?",
+    "options": [
+      "CALLBK",
+      "A",
+      "SPANIS",
+      "SPXFER"
+    ],
+    "correct": 3,
+    "explanation": "SPXFER es para transferencias directas en español."
+  },
+  {
+    "id": 188,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "La persona dice que es número equivocado. ¿Qué área de disposición importa?",
+    "options": [
+      "Manejo de Wrong Number.",
+      "Manejo de Answering Machine.",
+      "Pause de restroom.",
+      "English XFER limpio."
+    ],
+    "correct": 0,
+    "explanation": "Wrong number no debe forzarse como transferencia."
+  },
+  {
+    "id": 189,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "¿Qué hace válido un XFER?",
+    "options": [
+      "Cliente cuelga antes del Advisor.",
+      "Agent marca sin aprobación.",
+      "Advisor solo recibe timbrando.",
+      "Transfer inglés con handoff real."
+    ],
+    "correct": 3,
+    "explanation": "XFER debe reflejar transferencia inglesa exitosa, no solo intento de marcar."
+  },
+  {
+    "id": 190,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El cliente pregunta por pagos bajos, y el agent nunca aclara. ¿Qué crea esto?",
+    "options": [
+      "Mejor calificación de millaje.",
+      "Transfer español automático.",
+      "Riesgo de transfer inválido.",
+      "Mejor caso de Answering Machine."
+    ],
+    "correct": 2,
+    "explanation": "Preguntas sin aclarar sobre propósito o pagos pueden hacer el transfer engañoso."
+  },
+  {
+    "id": 191,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El agent dice “cobertura gratis” durante el pitch. ¿Qué marca QA?",
+    "options": [
+      "Wording engañoso.",
+      "Manejo correcto de callback.",
+      "Buena detección de idioma.",
+      "Timing correcto de transfer."
+    ],
+    "correct": 0,
+    "explanation": "Decir cobertura gratis puede ser engañoso y debe evitarse."
+  },
+  {
+    "id": 192,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El agent promete: “El Advisor solo toma dos minutos.” ¿Cuál es el problema?",
+    "options": [
+      "Usa Vehicle Services Group.",
+      "Deja hablar primero al Advisor.",
+      "Promete tiempo que no controla.",
+      "Pregunta si el vehículo funciona."
+    ],
+    "correct": 2,
+    "explanation": "No se deben prometer tiempos específicos de espera o Advisor."
+  },
+  {
+    "id": 193,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El agent dice que el banco dio la información. ¿Qué regla rompe?",
+    "options": [
+      "No preguntar idioma.",
+      "No usar Service Advisor.",
+      "No verificar condición del vehículo.",
+      "No decir que el banco dio el archivo."
+    ],
+    "correct": 3,
+    "explanation": "La explicación aprobada es dealers/registros, no el banco."
+  },
+  {
+    "id": 194,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El agent transfiere tras un “supongo.” ¿Qué debe cuestionar QA?",
+    "options": [
+      "Si el Advisor estaba en Texas.",
+      "Si el vehículo tenía bajo millaje.",
+      "Si el consentimiento fue claro.",
+      "Si RR era el pause correcto."
+    ],
+    "correct": 2,
+    "explanation": "Aprobación vaga debe aclararse antes de transferir."
+  },
+  {
+    "id": 195,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El cliente pregunta: “¿A qué estoy aceptando?” justo antes del transfer. ¿Qué debe hacer el agent?",
+    "options": [
+      "Marcar XFER tras la pregunta.",
+      "Decir que ya no importa.",
+      "Aclarar antes de marcar.",
+      "Marcar y que el Advisor explique."
+    ],
+    "correct": 2,
+    "explanation": "El consentimiento no es limpio si el cliente no entiende el transfer."
+  },
+  {
+    "id": 196,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El cliente no es dueño y no puede decidir. ¿Qué resultado debe evitarse?",
+    "options": [
+      "Documentar la situación.",
+      "Pedir decision maker.",
+      "Ofrecer callback si aplica.",
+      "Contarlo como transfer limpio."
+    ],
+    "correct": 3,
+    "explanation": "La autoridad de decisión importa para una transferencia válida."
+  },
+  {
+    "id": 197,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El cliente cuelga antes de hablar con Advisor, pero el agent marca XFER. ¿Qué está mal?",
+    "options": [
+      "El vehículo bajó millaje.",
+      "Debió usar SPXFER.",
+      "La llamada fue Answering Machine.",
+      "Usó XFER sin handoff real."
+    ],
+    "correct": 3,
+    "explanation": "Se necesita conversación real Advisor/cliente para XFER limpio."
+  },
+  {
+    "id": 198,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El agent selecciona Leave 3-Way Call cuando el cliente desaparece. ¿Qué puede pasar?",
+    "options": [
+      "Proceso DNC automático.",
+      "Corrección de límite de millas.",
+      "Advisor recibe consentimiento completo.",
+      "Dead air transfer al Service Advisor."
+    ],
+    "correct": 3,
+    "explanation": "Por eso importa Hung Up Both Lines cuando el cliente cuelga."
+  },
+  {
+    "id": 199,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "El cliente habla inglés con el agent pero claramente no sigue la llamada. ¿Qué no debe pasar?",
+    "options": [
+      "Preguntar idioma preferido.",
+      "Aclarar más despacio.",
+      "Usar ruta española si aplica.",
+      "Forzar un English XFER igual."
+    ],
+    "correct": 3,
+    "explanation": "Debe quedar clara la comprensión antes de un English transfer."
+  },
+  {
+    "id": 200,
+    "topic": "dosdonts",
+    "language": "es",
+    "question": "¿Qué caso pertenece a coaching Needs Practice?",
+    "options": [
+      "Agent aclara idioma preferido.",
+      "Agent confirma condición y consentimiento.",
+      "Agent salta propósito y transfiere cliente confundido.",
+      "Agent espera mientras ambos hablan."
+    ],
+    "correct": 2,
+    "explanation": "Saltar propósito y transferir confusión crea riesgo QA/inválido."
+  }
 ]
+
 
 export const learnCategories = [
   {
