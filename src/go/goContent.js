@@ -497,7 +497,7 @@ export const quizQuestions = [
     "id": 1,
     "topic": "script",
     "language": "en",
-    "question": "A customer asks if the call will lower their monthly payments, and the agent transfers without answering. What should QA flag?",
+    "question": "During script review, a customer asks if the call will lower their monthly payments, and the agent transfers without answering. What should QA flag?",
     "options": [
       "The agent waited too long after transfer.",
       "The mileage limit was explained too early.",
@@ -511,7 +511,7 @@ export const quizQuestions = [
     "id": 2,
     "topic": "script",
     "language": "en",
-    "question": "The customer says, “So this is from my bank?” Which answer keeps the script safest?",
+    "question": "In the opening, the customer says “So this is from my bank?” Which answer keeps the script safest?",
     "options": [
       "Yes, your bank asked us to call you.",
       "The finance company sent the file.",
@@ -525,7 +525,7 @@ export const quizQuestions = [
     "id": 3,
     "topic": "script",
     "language": "en",
-    "question": "The agent says, “There is no cost at all, you only listen.” Why is this risky?",
+    "question": "Before transfer setup, the agent says, “There is no cost at all, you only listen.” Why is this risky?",
     "options": [
       "It can sound like a free service promise.",
       "It confirms the vehicle is running well.",
@@ -539,7 +539,7 @@ export const quizQuestions = [
     "id": 4,
     "topic": "script",
     "language": "en",
-    "question": "The customer says “okay” after the vehicle runs question, but never agrees to the transfer. What is missing?",
+    "question": "On a QA-monitored call, the customer says “okay” after the vehicle runs question, but never agrees to the transfer. What is missing?",
     "options": [
       "The exact make and model.",
       "The customer’s full address.",
@@ -553,7 +553,7 @@ export const quizQuestions = [
     "id": 5,
     "topic": "script",
     "language": "en",
-    "question": "A customer answers in English but sounds unsure and confused by basic questions. What should the agent do?",
+    "question": "While following the approved script, a customer answers in English but sounds unsure and confused by basic questions. What should the agent do?",
     "options": [
       "Ask for the preferred language.",
       "Transfer as English XFER anyway.",
@@ -567,7 +567,7 @@ export const quizQuestions = [
     "id": 6,
     "topic": "script",
     "language": "en",
-    "question": "The agent changes small connector words but keeps the required meaning. When is that acceptable?",
+    "question": "During the first minute, the agent changes small connector words but keeps the required meaning. When is that acceptable?",
     "options": [
       "When the company name is skipped.",
       "When vehicle condition is ignored.",
@@ -581,7 +581,7 @@ export const quizQuestions = [
     "id": 7,
     "topic": "script",
     "language": "en",
-    "question": "The customer asks, “What is this about?” Which response is safest?",
+    "question": "Before the agent dials, the customer asks “What is this about?” Which response is safest?",
     "options": [
       "Your factory warranty is being renewed.",
       "The dealer already approved your plan.",
@@ -595,7 +595,7 @@ export const quizQuestions = [
     "id": 8,
     "topic": "script",
     "language": "en",
-    "question": "The customer asks, “Who are you exactly?” What should the agent avoid?",
+    "question": "In a compliance check, the customer asks “Who are you exactly?” What should the agent avoid?",
     "options": [
       "Explaining the call purpose calmly.",
       "Pretending to be the dealership.",
@@ -609,7 +609,7 @@ export const quizQuestions = [
     "id": 9,
     "topic": "script",
     "language": "en",
-    "question": "The agent says, “Your warranty has expired and this is your final notice.” What is the issue?",
+    "question": "During the call intro, the agent says, “Your warranty has expired and this is your final notice.” What is the issue?",
     "options": [
       "It checks language preference clearly.",
       "It gives the right disposition.",
@@ -623,7 +623,7 @@ export const quizQuestions = [
     "id": 10,
     "topic": "script",
     "language": "en",
-    "question": "The customer asks for the price before vehicle condition is verified. What should the agent do?",
+    "question": "Before the handoff, the customer asks for the price before vehicle condition is verified. What should the agent do?",
     "options": [
       "Skip condition and transfer fast.",
       "Bridge pricing to the Service Advisor after qualification.",
@@ -637,7 +637,7 @@ export const quizQuestions = [
     "id": 11,
     "topic": "script",
     "language": "en",
-    "question": "The customer says, “Thanks, I’m good,” and the agent says only “yeah” before transferring. What was missed?",
+    "question": "During script review, the customer says “Thanks, I’m good,” and the agent says only “yeah” before transferring. What was missed?",
     "options": [
       "Dealer location confirmation.",
       "Objection handling and consent.",
@@ -651,7 +651,7 @@ export const quizQuestions = [
     "id": 12,
     "topic": "script",
     "language": "en",
-    "question": "The customer says the vehicle information is wrong. Which script direction is best?",
+    "question": "In the opening, the customer says the vehicle information is wrong. Which script direction is best?",
     "options": [
       "Say the file is never wrong.",
       "Mark DNC because data is wrong.",
@@ -665,7 +665,7 @@ export const quizQuestions = [
     "id": 13,
     "topic": "script",
     "language": "en",
-    "question": "The agent says, “The Service Advisor will lower your payment.” What is wrong?",
+    "question": "Before transfer setup, the agent says, “The Service Advisor will lower your payment.” What is wrong?",
     "options": [
       "It keeps the handoff too clean.",
       "It promises a result not controlled by the agent.",
@@ -679,7 +679,7 @@ export const quizQuestions = [
     "id": 14,
     "topic": "script",
     "language": "en",
-    "question": "The agent says, “I’ll introduce you, okay?” and the customer says, “To who?” What should happen?",
+    "question": "On a QA-monitored call, the agent says, “I’ll introduce you, okay?” and the customer says, “To who?” What should happen?",
     "options": [
       "Mark XFER after the question.",
       "Dial first and explain later.",
@@ -693,7 +693,7 @@ export const quizQuestions = [
     "id": 15,
     "topic": "script",
     "language": "en",
-    "question": "The customer asks if they must buy anything today. What should the agent say?",
+    "question": "While following the approved script, the customer asks if they must buy anything today. What should the agent say?",
     "options": [
       "The agent can approve the purchase.",
       "The bank already selected the plan.",
@@ -707,7 +707,7 @@ export const quizQuestions = [
     "id": 16,
     "topic": "script",
     "language": "en",
-    "question": "The customer asks, “What vehicle are you calling about?” and the agent lacks make/model. What is safest?",
+    "question": "During the first minute, the customer asks “What vehicle are you calling about?” and the agent lacks make/model. What is safest?",
     "options": [
       "Reference finance info and verify current vehicle.",
       "Invent the likely make and model.",
@@ -721,7 +721,7 @@ export const quizQuestions = [
     "id": 17,
     "topic": "script",
     "language": "en",
-    "question": "The agent says the coverage is “from the manufacturer.” What should QA flag?",
+    "question": "Before the agent dials, the agent says the coverage is “from the manufacturer.” What should QA flag?",
     "options": [
       "Misrepresenting the coverage source.",
       "Using the customer name clearly.",
@@ -735,7 +735,7 @@ export const quizQuestions = [
     "id": 18,
     "topic": "script",
     "language": "en",
-    "question": "The customer asks a direct question during the opening. What is the best rule?",
+    "question": "In a compliance check, the customer asks a direct question during the opening. What is the best rule?",
     "options": [
       "Answer or clarify before pushing forward.",
       "Ignore questions until the advisor joins.",
@@ -749,7 +749,7 @@ export const quizQuestions = [
     "id": 19,
     "topic": "script",
     "language": "en",
-    "question": "The agent gets approval but never introduces the customer by name to the Service Advisor. What is the issue?",
+    "question": "During the call intro, the agent gets approval but never introduces the customer by name to the Service Advisor. What is the issue?",
     "options": [
       "The call became a voicemail.",
       "The customer asked for RR.",
@@ -763,7 +763,7 @@ export const quizQuestions = [
     "id": 20,
     "topic": "script",
     "language": "en",
-    "question": "The customer says, “I don't understand what you mean.” What should the agent not do?",
+    "question": "Before the handoff, the customer says “I don't understand what you mean.” What should the agent not do?",
     "options": [
       "Ask language preference if needed.",
       "Restate the purpose simply.",
@@ -777,7 +777,7 @@ export const quizQuestions = [
     "id": 21,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “Not interested,” but gives no reason. What is the best first move?",
+    "question": "During objection handling, the customer says “Not interested,” but gives no reason. What is the best first move?",
     "options": [
       "Transfer before they hang up.",
       "Ask a short reason to work with.",
@@ -791,7 +791,7 @@ export const quizQuestions = [
     "id": 22,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “I’m busy,” but does not refuse the call. What should the agent avoid?",
+    "question": "On a live rebuttal, the customer says “I’m busy,” but does not refuse the call. What should the agent avoid?",
     "options": [
       "Promising it will take under a minute.",
       "Respecting the time objection.",
@@ -805,7 +805,7 @@ export const quizQuestions = [
     "id": 23,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “This sounds like a scam.” What is the safest tone?",
+    "question": "Before the agent moves forward, the customer says “This sounds like a scam.” What is the safest tone?",
     "options": [
       "Calm, transparent, and controlled.",
       "Defensive and argumentative.",
@@ -819,7 +819,7 @@ export const quizQuestions = [
     "id": 24,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “I already have insurance.” What distinction should the agent make?",
+    "question": "In an objection drill, the customer says “I already have insurance.” What distinction should the agent make?",
     "options": [
       "Insurance pays every repair type.",
       "Coverage replaces legal insurance.",
@@ -833,7 +833,7 @@ export const quizQuestions = [
     "id": 25,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “I already have a warranty.” What is the safest positioning?",
+    "question": "During a QA audit, the customer says “I already have a warranty.” What is the safest positioning?",
     "options": [
       "Promise a cheaper replacement.",
       "Tell them to cancel the plan.",
@@ -847,7 +847,7 @@ export const quizQuestions = [
     "id": 26,
     "topic": "objections",
     "language": "en",
-    "question": "The customer asks, “Where did you get my information?” Which answer should be avoided?",
+    "question": "While keeping the customer engaged, the customer asks “Where did you get my information?” Which answer should be avoided?",
     "options": [
       "The call is for eligibility review.",
       "We partner with dealerships.",
@@ -861,7 +861,7 @@ export const quizQuestions = [
     "id": 27,
     "topic": "objections",
     "language": "en",
-    "question": "The customer asks, “What vehicle?” and seems suspicious. What helps most?",
+    "question": "In a real call scenario, the customer asks “What vehicle?” and seems suspicious. What helps most?",
     "options": [
       "Tell them the question is irrelevant.",
       "Invent details to sound confident.",
@@ -875,7 +875,7 @@ export const quizQuestions = [
     "id": 28,
     "topic": "objections",
     "language": "en",
-    "question": "The customer asks, “How much?” before giving vehicle condition. Which reply is safest?",
+    "question": "Before any transfer attempt, the customer asks “How much?” before giving vehicle condition. Which reply is safest?",
     "options": [
       "Pricing depends, and the advisor reviews it.",
       "It is always free today.",
@@ -889,7 +889,7 @@ export const quizQuestions = [
     "id": 29,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “Send me an email first.” What should the agent avoid?",
+    "question": "During the rebuttal phase, the customer says “Send me an email first.” What should the agent avoid?",
     "options": [
       "Explaining the advisor can review details.",
       "Promising to send policy documents.",
@@ -903,7 +903,7 @@ export const quizQuestions = [
     "id": 30,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says the vehicle was totaled. What should the agent do next?",
+    "question": "On a monitored objection, the customer says the vehicle was totaled. What should the agent do next?",
     "options": [
       "Mark XFER if they listen.",
       "Promise coverage on the loss.",
@@ -917,7 +917,7 @@ export const quizQuestions = [
     "id": 31,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “That’s not my car.” What is the best response path?",
+    "question": "During objection handling, the customer says “That’s not my car.” What is the best response path?",
     "options": [
       "End the call as DNC.",
       "Say the file is always accurate.",
@@ -931,7 +931,7 @@ export const quizQuestions = [
     "id": 32,
     "topic": "objections",
     "language": "en",
-    "question": "The customer has multiple vehicles. What must be confirmed before transfer?",
+    "question": "On a live rebuttal, the customer has multiple vehicles. What must be confirmed before transfer?",
     "options": [
       "At least one vehicle runs and may qualify.",
       "Every vehicle has the same mileage.",
@@ -945,7 +945,7 @@ export const quizQuestions = [
     "id": 33,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “That’s too expensive,” before the advisor reviews anything. What should the agent do?",
+    "question": "Before the agent moves forward, the customer says “That’s too expensive,” before the advisor reviews anything. What should the agent do?",
     "options": [
       "Reframe cost vs major repairs.",
       "Tell them price is fixed.",
@@ -959,7 +959,7 @@ export const quizQuestions = [
     "id": 34,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “You called before and I said no.” What should the agent use?",
+    "question": "In an objection drill, the customer says “You called before and I said no.” What should the agent use?",
     "options": [
       "A claim that refusal expired.",
       "A direct transfer without consent.",
@@ -973,7 +973,7 @@ export const quizQuestions = [
     "id": 35,
     "topic": "objections",
     "language": "en",
-    "question": "The customer is rude and asks to stop calling. What is the professional path?",
+    "question": "During a QA audit, the customer is rude and asks to stop calling. What is the professional path?",
     "options": [
       "Keep rebutting aggressively.",
       "Mirror the customer’s tone.",
@@ -987,7 +987,7 @@ export const quizQuestions = [
     "id": 36,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “I’m not the owner, I just co-signed.” What should the agent check?",
+    "question": "While keeping the customer engaged, the customer says “I’m not the owner, I just co-signed.” What should the agent check?",
     "options": [
       "Whether they know the advisor’s name.",
       "Whether they can make decisions.",
@@ -1001,7 +1001,7 @@ export const quizQuestions = [
     "id": 37,
     "topic": "objections",
     "language": "en",
-    "question": "The customer gives polite “sure” answers but sounds distracted. What is the risk?",
+    "question": "In a real call scenario, the customer gives polite “sure” answers but sounds distracted. What is the risk?",
     "options": [
       "The advisor cannot speak first.",
       "The vehicle becomes modified.",
@@ -1015,7 +1015,7 @@ export const quizQuestions = [
     "id": 38,
     "topic": "objections",
     "language": "en",
-    "question": "The customer asks, “Can you just tell me the plan details?” What is the best bridge?",
+    "question": "Before any transfer attempt, the customer asks “Can you just tell me the plan details?” What is the best bridge?",
     "options": [
       "The customer must buy before details.",
       "The agent should invent plan terms.",
@@ -1029,7 +1029,7 @@ export const quizQuestions = [
     "id": 39,
     "topic": "objections",
     "language": "en",
-    "question": "The customer says, “I need Spanish,” after struggling in English. What should the agent do?",
+    "question": "During the rebuttal phase, the customer says “I need Spanish,” after struggling in English. What should the agent do?",
     "options": [
       "Ignore it until the advisor joins.",
       "Mark XFER as English transfer.",
@@ -1043,7 +1043,7 @@ export const quizQuestions = [
     "id": 40,
     "topic": "objections",
     "language": "en",
-    "question": "The customer asks if the advisor will only take “a few seconds.” What should the agent avoid?",
+    "question": "On a monitored objection, the customer asks if the advisor will only take “a few seconds.” What should the agent avoid?",
     "options": [
       "Saying the advisor reviews details.",
       "Asking vehicle waiting questions.",
@@ -1071,7 +1071,7 @@ export const quizQuestions = [
     "id": 42,
     "topic": "product",
     "language": "en",
-    "question": "A 2020 electric vehicle has 30,000 miles and runs well. What matters most?",
+    "question": "In a vehicle qualification scenario, a 2020 electric vehicle has 30,000 miles and runs well. What matters most?",
     "options": [
       "Running condition overrides type.",
       "The Service Advisor must approve it.",
@@ -1085,7 +1085,7 @@ export const quizQuestions = [
     "id": 43,
     "topic": "product",
     "language": "en",
-    "question": "A 2011 car has 176,200 miles and runs well. What should the agent understand?",
+    "question": "Before treating the vehicle as qualified, a 2011 car has 176,200 miles and runs well. What should the agent understand?",
     "options": [
       "It is over the mileage limit.",
       "It qualifies if financed recently.",
@@ -1099,7 +1099,7 @@ export const quizQuestions = [
     "id": 44,
     "topic": "product",
     "language": "en",
-    "question": "A 2010 vehicle has 92,000 miles and no issues. What is the concern?",
+    "question": "While reviewing vehicle details, a 2010 vehicle has 92,000 miles and no issues. What is the concern?",
     "options": [
       "Model year is before 2011.",
       "No issues makes it suspicious.",
@@ -1113,7 +1113,7 @@ export const quizQuestions = [
     "id": 45,
     "topic": "product",
     "language": "en",
-    "question": "The car runs, but the customer says it is missing a tire. What is best?",
+    "question": "On a product-knowledge check, the car runs, but the customer says it is missing a tire. What is best?",
     "options": [
       "Ignore it because engine runs.",
       "Treat it as good running condition.",
@@ -1127,7 +1127,7 @@ export const quizQuestions = [
     "id": 46,
     "topic": "product",
     "language": "en",
-    "question": "The customer says the check engine light is on today. What should the agent avoid?",
+    "question": "Before the Service Advisor handoff, the customer says the check engine light is on today. What should the agent avoid?",
     "options": [
       "Treating it as clearly qualified.",
       "Asking what issue is happening.",
@@ -1141,7 +1141,7 @@ export const quizQuestions = [
     "id": 47,
     "topic": "product",
     "language": "en",
-    "question": "The vehicle starts but cannot shift into gear. What does that suggest?",
+    "question": "In a coverage eligibility review, the vehicle starts but cannot shift into gear. What does that suggest?",
     "options": [
       "The issue is cosmetic only.",
       "The vehicle is automatically eligible.",
@@ -1155,7 +1155,7 @@ export const quizQuestions = [
     "id": 48,
     "topic": "product",
     "language": "en",
-    "question": "The customer asks if accident body damage is covered. What is safest?",
+    "question": "During vehicle screening, the customer asks if accident body damage is covered. What is safest?",
     "options": [
       "The agent can approve bodywork.",
       "Accident and bodywork damage are excluded.",
@@ -1169,7 +1169,7 @@ export const quizQuestions = [
     "id": 49,
     "topic": "product",
     "language": "en",
-    "question": "The customer asks if worn brake pads are covered. What should the agent know?",
+    "question": "In a qualification drill, the customer asks if worn brake pads are covered. What should the agent know?",
     "options": [
       "Worn pads always qualify the car.",
       "The advisor must cover pads.",
@@ -1183,7 +1183,7 @@ export const quizQuestions = [
     "id": 50,
     "topic": "product",
     "language": "en",
-    "question": "A vehicle has modified suspension. What is the safest statement?",
+    "question": "On a QA product audit, a vehicle has modified suspension. What is the safest statement?",
     "options": [
       "Modified parts themselves are excluded.",
       "All modified vehicles are fully covered.",
@@ -1225,7 +1225,7 @@ export const quizQuestions = [
     "id": 53,
     "topic": "product",
     "language": "en",
-    "question": "The customer has three cars. What must be true before transfer?",
+    "question": "Before treating the vehicle as qualified, the customer has three cars. What must be true before transfer?",
     "options": [
       "At least one current vehicle should qualify.",
       "The customer must know all VINs.",
@@ -1239,7 +1239,7 @@ export const quizQuestions = [
     "id": 54,
     "topic": "product",
     "language": "en",
-    "question": "The customer has a current engine problem. What should the agent avoid promising?",
+    "question": "While reviewing vehicle details, the customer has a current engine problem. What should the agent avoid promising?",
     "options": [
       "That the advisor reviews options.",
       "That mechanical coverage is different.",
@@ -1281,7 +1281,7 @@ export const quizQuestions = [
     "id": 57,
     "topic": "product",
     "language": "en",
-    "question": "The customer asks if the plan can add coverage after factory coverage ends. What is accurate?",
+    "question": "In a coverage eligibility review, the customer asks if the plan can add coverage after factory coverage ends. What is accurate?",
     "options": [
       "It may provide additional miles after factory coverage.",
       "It only covers accident liability.",
@@ -1407,7 +1407,7 @@ export const quizQuestions = [
     "id": 66,
     "topic": "callflow",
     "language": "en",
-    "question": "The customer asks the Service Advisor for a callback. How should it be handled?",
+    "question": "While the Service Advisor joins, the customer asks the Service Advisor for a callback. How should it be handled?",
     "options": [
       "Call Back, not clean XFER.",
       "XFER because the advisor joined.",
@@ -1421,7 +1421,7 @@ export const quizQuestions = [
     "id": 67,
     "topic": "callflow",
     "language": "en",
-    "question": "The customer immediately asks the advisor for Spanish before any English conversation. What is the issue?",
+    "question": "In a transfer protocol drill, the customer immediately asks the advisor for Spanish before any English conversation. What is the issue?",
     "options": [
       "The vehicle becomes wrong number.",
       "It should be Answering Machine.",
@@ -1435,7 +1435,7 @@ export const quizQuestions = [
     "id": 68,
     "topic": "callflow",
     "language": "en",
-    "question": "The customer speaks English with the Service Advisor for 18 seconds, then asks for Spanish. How should QA view it?",
+    "question": "During the waiting period, the customer speaks English with the Service Advisor for 18 seconds, then asks for Spanish. How should QA view it?",
     "options": [
       "Automatic SPANIS with no review.",
       "The English handoff requirement was likely met.",
@@ -1505,7 +1505,7 @@ export const quizQuestions = [
     "id": 73,
     "topic": "callflow",
     "language": "en",
-    "question": "The customer says no to being transferred after qualifying. What should the agent avoid?",
+    "question": "Before counting the call as XFER, the customer says no to being transferred after qualifying. What should the agent avoid?",
     "options": [
       "Respecting the refusal.",
       "Dialing the advisor anyway.",
@@ -1533,7 +1533,7 @@ export const quizQuestions = [
     "id": 75,
     "topic": "callflow",
     "language": "en",
-    "question": "The agent introduces the customer before the advisor speaks. What is the risk?",
+    "question": "On a live transfer audit, the agent introduces the customer before the advisor speaks. What is the risk?",
     "options": [
       "The mileage is reset.",
       "The call becomes a voicemail.",
@@ -1547,7 +1547,7 @@ export const quizQuestions = [
     "id": 76,
     "topic": "callflow",
     "language": "en",
-    "question": "The customer hangs up after agent introduction but before any advisor conversation. What should happen?",
+    "question": "While the Service Advisor joins, the customer hangs up after agent introduction but before any advisor conversation. What should happen?",
     "options": [
       "Count it because intro happened.",
       "Use Answering Machine.",
@@ -1575,7 +1575,7 @@ export const quizQuestions = [
     "id": 78,
     "topic": "callflow",
     "language": "en",
-    "question": "The agent stays on the line for a long time after both parties are talking. What is the coaching point?",
+    "question": "During the waiting period, the agent stays on the line for a long time after both parties are talking. What is the coaching point?",
     "options": [
       "Stay until the full sale closes.",
       "Leave before the advisor speaks.",
@@ -1645,7 +1645,7 @@ export const quizQuestions = [
     "id": 83,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The customer says, “Stop calling me or I’ll report this.” Which disposition fits?",
+    "question": "On a process check, the customer says “Stop calling me or I’ll report this.” Which disposition fits?",
     "options": [
       "DNC",
       "XFER",
@@ -1673,7 +1673,7 @@ export const quizQuestions = [
     "id": 85,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The customer says they are busy and still refuses after callback rebuttal. What disposition fits?",
+    "question": "In a dialer-rule scenario, the customer says they are busy and still refuses after callback rebuttal. What disposition fits?",
     "options": [
       "XFER",
       "CALLBK",
@@ -1701,7 +1701,7 @@ export const quizQuestions = [
     "id": 87,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The agent directly connects a Spanish-speaking customer to a Spanish Service Advisor. Which disposition fits?",
+    "question": "On a QA reminder check, the agent directly connects a Spanish-speaking customer to a Spanish Service Advisor. Which disposition fits?",
     "options": [
       "CALLBK",
       "A",
@@ -1743,7 +1743,7 @@ export const quizQuestions = [
     "id": 90,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The customer asks about lower payments, and the agent never clarifies. What does this create?",
+    "question": "During disposition training, the customer asks about lower payments, and the agent never clarifies. What does this create?",
     "options": [
       "A better Answering Machine case.",
       "A stronger mileage qualification.",
@@ -1757,7 +1757,7 @@ export const quizQuestions = [
     "id": 91,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The agent says “free coverage” during the pitch. What should QA flag?",
+    "question": "In a QA disposition review, the agent says “free coverage” during the pitch. What should QA flag?",
     "options": [
       "Proper callback handling.",
       "Correct transfer timing.",
@@ -1771,7 +1771,7 @@ export const quizQuestions = [
     "id": 92,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The agent promises, “The advisor will only take two minutes.” What is the issue?",
+    "question": "During compliance coaching, the agent promises, “The advisor will only take two minutes.” What is the issue?",
     "options": [
       "Asking if the vehicle runs.",
       "Promising time not controlled by agent.",
@@ -1785,7 +1785,7 @@ export const quizQuestions = [
     "id": 93,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The agent says the bank provided the information. What rule is broken?",
+    "question": "On a process check, the agent says the bank provided the information. What rule is broken?",
     "options": [
       "Do not say the bank gave the file.",
       "Do not verify vehicle condition.",
@@ -1799,7 +1799,7 @@ export const quizQuestions = [
     "id": 94,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The agent transfers after a vague “I guess.” What should QA question?",
+    "question": "Before choosing a disposition, the agent transfers after a vague “I guess.” What should QA question?",
     "options": [
       "Whether consent was clear.",
       "Whether the vehicle had low mileage.",
@@ -1813,7 +1813,7 @@ export const quizQuestions = [
     "id": 95,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The customer asks, “What am I agreeing to?” right before transfer. What should the agent do?",
+    "question": "In a dialer-rule scenario, the customer asks “What am I agreeing to?” right before transfer. What should the agent do?",
     "options": [
       "Tell them it no longer matters.",
       "Mark XFER after the question.",
@@ -1827,7 +1827,7 @@ export const quizQuestions = [
     "id": 96,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The customer is not the owner and cannot decide. What outcome should be avoided?",
+    "question": "During invalid-transfer review, the customer is not the owner and cannot decide. What outcome should be avoided?",
     "options": [
       "Offering callback if needed.",
       "Requesting a decision maker.",
@@ -1841,7 +1841,7 @@ export const quizQuestions = [
     "id": 97,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The customer hangs up before any advisor conversation, but the agent marks XFER. What is wrong?",
+    "question": "On a QA reminder check, the customer hangs up before any advisor conversation, but the agent marks XFER. What is wrong?",
     "options": [
       "The vehicle became under mileage.",
       "The agent should have used SPXFER.",
@@ -1855,7 +1855,7 @@ export const quizQuestions = [
     "id": 98,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The agent selects Leave 3-Way Call after the customer disappears. What can happen?",
+    "question": "In a process audit, the agent selects Leave 3-Way Call after the customer disappears. What can happen?",
     "options": [
       "Dead air transfer to the Service Advisor.",
       "Mileage limit correction.",
@@ -1869,7 +1869,7 @@ export const quizQuestions = [
     "id": 99,
     "topic": "dosdonts",
     "language": "en",
-    "question": "The customer speaks English to the agent but clearly cannot follow the call. What should not happen?",
+    "question": "Before tagging the call, the customer speaks English to the agent but clearly cannot follow the call. What should not happen?",
     "options": [
       "Checking language preference.",
       "Slowing down to clarify.",
@@ -1897,7 +1897,7 @@ export const quizQuestions = [
     "id": 101,
     "topic": "script",
     "language": "es",
-    "question": "El cliente pregunta si la llamada bajará sus pagos mensuales, y el agent transfiere sin responder. ¿Qué debería marcar QA?",
+    "question": "Durante revisión de script, el cliente pregunta si la llamada bajará sus pagos mensuales, y el agent transfiere sin responder. ¿Qué debería marcar QA?",
     "options": [
       "Esperó demasiado después del transfer.",
       "No aclaró primero la pregunta del cliente.",
@@ -1911,7 +1911,7 @@ export const quizQuestions = [
     "id": 102,
     "topic": "script",
     "language": "es",
-    "question": "El cliente dice: “¿Entonces esto viene de mi banco?” ¿Qué respuesta mantiene el script más seguro?",
+    "question": "En la apertura, el cliente dice “¿Entonces esto viene de mi banco?” ¿Qué respuesta mantiene el script más seguro?",
     "options": [
       "Sí, su banco pidió que llamáramos.",
       "Trabajamos con dealers y registros vehiculares.",
@@ -1925,7 +1925,7 @@ export const quizQuestions = [
     "id": 103,
     "topic": "script",
     "language": "es",
-    "question": "El agent dice: “No tiene ningún costo, solo escucha.” ¿Por qué es riesgoso?",
+    "question": "Antes de preparar la transferencia, el agent dice: “No tiene ningún costo, solo escucha.” ¿Por qué es riesgoso?",
     "options": [
       "Diferencia seguro de cobertura.",
       "Confirma que el vehículo funciona bien.",
@@ -1939,7 +1939,7 @@ export const quizQuestions = [
     "id": 104,
     "topic": "script",
     "language": "es",
-    "question": "El cliente dice “okay” al confirmar que el carro funciona, pero nunca acepta el transfer. ¿Qué falta?",
+    "question": "En una llamada auditada por QA, el cliente dice “okay” al confirmar que el carro funciona, pero nunca acepta el transfer. ¿Qué falta?",
     "options": [
       "Una cotización mensual final.",
       "Aprobación clara para transferir.",
@@ -1967,7 +1967,7 @@ export const quizQuestions = [
     "id": 106,
     "topic": "script",
     "language": "es",
-    "question": "El agent cambia palabras pequeñas, pero mantiene el sentido requerido. ¿Cuándo es aceptable?",
+    "question": "Durante el primer minuto, el agent cambia palabras pequeñas, pero mantiene el sentido requerido. ¿Cuándo es aceptable?",
     "options": [
       "Cuando omite la compañía.",
       "Cuando mantiene los puntos de compliance.",
@@ -1981,7 +1981,7 @@ export const quizQuestions = [
     "id": 107,
     "topic": "script",
     "language": "es",
-    "question": "El cliente pregunta: “¿De qué se trata?” ¿Qué respuesta es más segura?",
+    "question": "Antes de que el agent marque, el cliente pregunta “¿De qué se trata?” ¿Qué respuesta es más segura?",
     "options": [
       "Se está renovando la garantía de fábrica.",
       "El dealer ya aprobó su plan.",
@@ -1995,7 +1995,7 @@ export const quizQuestions = [
     "id": 108,
     "topic": "script",
     "language": "es",
-    "question": "El cliente pregunta: “¿Quiénes son exactamente?” ¿Qué debe evitar el agent?",
+    "question": "En un chequeo de compliance, el cliente pregunta “¿Quiénes son exactamente?” ¿Qué debe evitar el agent?",
     "options": [
       "Seguir solo con aprobación.",
       "Identificarse como Vehicle Services Group.",
@@ -2009,7 +2009,7 @@ export const quizQuestions = [
     "id": 109,
     "topic": "script",
     "language": "es",
-    "question": "El agent dice: “Su garantía expiró y es aviso final.” ¿Cuál es el problema?",
+    "question": "Durante la intro de la llamada, el agent dice: “Su garantía expiró y es aviso final.” ¿Cuál es el problema?",
     "options": [
       "Crea urgencia no respaldada.",
       "Confirma primero al Service Advisor.",
@@ -2023,7 +2023,7 @@ export const quizQuestions = [
     "id": 110,
     "topic": "script",
     "language": "es",
-    "question": "El cliente pregunta el precio antes de verificar condición del vehículo. ¿Qué debe hacer el agent?",
+    "question": "Antes del handoff, el cliente pregunta el precio antes de verificar condición del vehículo. ¿Qué debe hacer el agent?",
     "options": [
       "Decir que la cotización siempre es gratis.",
       "Dar el pago mensual más bajo.",
@@ -2037,7 +2037,7 @@ export const quizQuestions = [
     "id": 111,
     "topic": "script",
     "language": "es",
-    "question": "El cliente dice: “Gracias, estoy bien”, y el agent solo dice “sí” antes de transferir. ¿Qué faltó?",
+    "question": "Durante revisión de script, el cliente dice “Gracias, estoy bien” , y el agent solo dice “sí” antes de transferir. ¿Qué faltó?",
     "options": [
       "Manejo de objeción y consentimiento.",
       "Confirmación de ubicación del dealer.",
@@ -2051,7 +2051,7 @@ export const quizQuestions = [
     "id": 112,
     "topic": "script",
     "language": "es",
-    "question": "El cliente dice que la información del vehículo está mal. ¿Qué dirección del script es mejor?",
+    "question": "En la apertura, el cliente dice que la información del vehículo está mal. ¿Qué dirección del script es mejor?",
     "options": [
       "Marcar DNC por datos errados.",
       "Transferir antes de preguntar.",
@@ -2065,7 +2065,7 @@ export const quizQuestions = [
     "id": 113,
     "topic": "script",
     "language": "es",
-    "question": "El agent dice: “El Service Advisor le bajará el pago.” ¿Qué está mal?",
+    "question": "Antes de preparar la transferencia, el agent dice: “El Service Advisor le bajará el pago.” ¿Qué está mal?",
     "options": [
       "Confirma elegibilidad muy lento.",
       "Mantiene el handoff muy limpio.",
@@ -2079,7 +2079,7 @@ export const quizQuestions = [
     "id": 114,
     "topic": "script",
     "language": "es",
-    "question": "El agent dice: “Se lo presento, okay?” y el cliente pregunta: “¿A quién?” ¿Qué debe pasar?",
+    "question": "En una llamada auditada por QA, el agent dice: “Se lo presento, okay?” y el cliente pregunta: “¿A quién?” ¿Qué debe pasar?",
     "options": [
       "Marcar XFER tras la pregunta.",
       "Ignorarlo como small talk.",
@@ -2093,7 +2093,7 @@ export const quizQuestions = [
     "id": 115,
     "topic": "script",
     "language": "es",
-    "question": "El cliente pregunta si debe comprar algo hoy. ¿Qué debe decir el agent?",
+    "question": "Mientras sigue el script aprobado, el cliente pregunta si debe comprar algo hoy. ¿Qué debe decir el agent?",
     "options": [
       "El Advisor revisa opciones; el cliente decide.",
       "Sí, la compra es obligatoria hoy.",
@@ -2107,7 +2107,7 @@ export const quizQuestions = [
     "id": 116,
     "topic": "script",
     "language": "es",
-    "question": "El cliente pregunta: “¿De qué vehículo hablan?” y el agent no tiene marca/modelo. ¿Qué es más seguro?",
+    "question": "Durante el primer minuto, el cliente pregunta “¿De qué vehículo hablan?” y el agent no tiene marca/modelo. ¿Qué es más seguro?",
     "options": [
       "Saltar verificación del vehículo.",
       "Usar info financiera y verificar vehículo actual.",
@@ -2121,7 +2121,7 @@ export const quizQuestions = [
     "id": 117,
     "topic": "script",
     "language": "es",
-    "question": "El agent dice que la cobertura viene “del fabricante.” ¿Qué debería marcar QA?",
+    "question": "Antes de que el agent marque, el agent dice que la cobertura viene “del fabricante.” ¿Qué debería marcar QA?",
     "options": [
       "Representar mal el origen de cobertura.",
       "Esperar a que hable el Advisor.",
@@ -2149,7 +2149,7 @@ export const quizQuestions = [
     "id": 119,
     "topic": "script",
     "language": "es",
-    "question": "El agent obtiene aprobación pero nunca presenta al cliente por nombre al Service Advisor. ¿Cuál es el problema?",
+    "question": "Durante la intro de la llamada, el agent obtiene aprobación pero nunca presenta al cliente por nombre al Service Advisor. ¿Cuál es el problema?",
     "options": [
       "La llamada se volvió voicemail.",
       "El handoff quedó incompleto.",
@@ -2163,7 +2163,7 @@ export const quizQuestions = [
     "id": 120,
     "topic": "script",
     "language": "es",
-    "question": "El cliente dice: “No entiendo qué quiere decir.” ¿Qué no debe hacer el agent?",
+    "question": "Antes del handoff, el cliente dice “No entiendo qué quiere decir.” ¿Qué no debe hacer el agent?",
     "options": [
       "Repetir el propósito simple.",
       "Preguntar idioma si aplica.",
@@ -2177,7 +2177,7 @@ export const quizQuestions = [
     "id": 121,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “No me interesa”, sin dar razón. ¿Cuál es el mejor primer paso?",
+    "question": "Durante manejo de objeción, el cliente dice “No me interesa” , sin dar razón. ¿Cuál es el mejor primer paso?",
     "options": [
       "Discutir costos de reparación.",
       "Transferir antes de que cuelgue.",
@@ -2191,7 +2191,7 @@ export const quizQuestions = [
     "id": 122,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “Estoy ocupado”, pero no rechaza totalmente. ¿Qué debe evitar el agent?",
+    "question": "En un rebuttal en vivo, el cliente dice “Estoy ocupado” , pero no rechaza totalmente. ¿Qué debe evitar el agent?",
     "options": [
       "Respetar la objeción de tiempo.",
       "Prometer que toma menos de un minuto.",
@@ -2205,7 +2205,7 @@ export const quizQuestions = [
     "id": 123,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “Esto suena a estafa.” ¿Qué tono es más seguro?",
+    "question": "Antes de avanzar la llamada, el cliente dice “Esto suena a estafa.” ¿Qué tono es más seguro?",
     "options": [
       "Rápido y despectivo.",
       "Defensivo y discutidor.",
@@ -2219,7 +2219,7 @@ export const quizQuestions = [
     "id": 124,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “Ya tengo seguro.” ¿Qué diferencia debe explicar el agent?",
+    "question": "En práctica de objeciones, el cliente dice “Ya tengo seguro.” ¿Qué diferencia debe explicar el agent?",
     "options": [
       "Seguro y cobertura son iguales.",
       "Cobertura reemplaza seguro legal.",
@@ -2233,7 +2233,7 @@ export const quizQuestions = [
     "id": 125,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “Ya tengo garantía.” ¿Cuál es el posicionamiento más seguro?",
+    "question": "Durante una auditoría QA, el cliente dice “Ya tengo garantía.” ¿Cuál es el posicionamiento más seguro?",
     "options": [
       "Decir que su plan no sirve.",
       "Revisar opciones actualizadas o adicionales.",
@@ -2247,7 +2247,7 @@ export const quizQuestions = [
     "id": 126,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente pregunta: “¿De dónde sacaron mi información?” ¿Qué respuesta se debe evitar?",
+    "question": "Mientras mantiene al cliente conectado, el cliente pregunta “¿De dónde sacaron mi información?” ¿Qué respuesta se debe evitar?",
     "options": [
       "Nos asociamos con dealers.",
       "La llamada es revisión de elegibilidad.",
@@ -2261,7 +2261,7 @@ export const quizQuestions = [
     "id": 127,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente pregunta: “¿Qué vehículo?” y suena desconfiado. ¿Qué ayuda más?",
+    "question": "En un escenario real de llamada, el cliente pregunta “¿Qué vehículo?” y suena desconfiado. ¿Qué ayuda más?",
     "options": [
       "Transferir porque es normal.",
       "Decir que la pregunta no importa.",
@@ -2275,7 +2275,7 @@ export const quizQuestions = [
     "id": 128,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente pregunta: “¿Cuánto cuesta?” antes de confirmar condición. ¿Qué respuesta es más segura?",
+    "question": "Antes de intentar transferir, el cliente pregunta “¿Cuánto cuesta?” antes de confirmar condición. ¿Qué respuesta es más segura?",
     "options": [
       "El agent aprueba descuento.",
       "Siempre es gratis hoy.",
@@ -2289,7 +2289,7 @@ export const quizQuestions = [
     "id": 129,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “Mándeme un email primero.” ¿Qué debe evitar el agent?",
+    "question": "Durante la fase de rebuttal, el cliente dice “Mándeme un email primero.” ¿Qué debe evitar el agent?",
     "options": [
       "Prometer enviar documentos de póliza.",
       "Confirmar condición del vehículo.",
@@ -2303,7 +2303,7 @@ export const quizQuestions = [
     "id": 130,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice que el vehículo fue pérdida total. ¿Qué debe hacer luego el agent?",
+    "question": "En una objeción monitoreada, el cliente dice que el vehículo fue pérdida total. ¿Qué debe hacer luego el agent?",
     "options": [
       "Marcar XFER si escucha.",
       "Preguntar por vehículo actual manejable.",
@@ -2317,7 +2317,7 @@ export const quizQuestions = [
     "id": 131,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “Ese no es mi carro.” ¿Cuál es la mejor ruta?",
+    "question": "Durante manejo de objeción, el cliente dice “Ese no es mi carro.” ¿Cuál es la mejor ruta?",
     "options": [
       "Verificar el vehículo actual.",
       "Decir que el archivo siempre está correcto.",
@@ -2331,7 +2331,7 @@ export const quizQuestions = [
     "id": 132,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente tiene varios vehículos. ¿Qué debe confirmarse antes de transferir?",
+    "question": "En un rebuttal en vivo, el cliente tiene varios vehículos. ¿Qué debe confirmarse antes de transferir?",
     "options": [
       "Todos tienen el mismo millaje.",
       "Todos se compraron juntos.",
@@ -2345,7 +2345,7 @@ export const quizQuestions = [
     "id": 133,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “Eso es muy caro”, antes de que el Advisor revise. ¿Qué debe hacer el agent?",
+    "question": "Antes de avanzar la llamada, el cliente dice “Eso es muy caro” , antes de que el Advisor revise. ¿Qué debe hacer el agent?",
     "options": [
       "Decir que el precio es fijo.",
       "Prometer el plan más barato.",
@@ -2359,7 +2359,7 @@ export const quizQuestions = [
     "id": 134,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “Ya llamaron y dije que no.” ¿Qué debe usar el agent?",
+    "question": "En práctica de objeciones, el cliente dice “Ya llamaron y dije que no.” ¿Qué debe usar el agent?",
     "options": [
       "Opciones actualizadas como razón.",
       "Amenazar derechos para manejar.",
@@ -2387,7 +2387,7 @@ export const quizQuestions = [
     "id": 136,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “No soy dueño, solo co-signer.” ¿Qué debe revisar el agent?",
+    "question": "Mientras mantiene al cliente conectado, el cliente dice “No soy dueño, solo co-signer.” ¿Qué debe revisar el agent?",
     "options": [
       "Si el vehículo tiene radio.",
       "Si quiere cotización gratis.",
@@ -2429,7 +2429,7 @@ export const quizQuestions = [
     "id": 139,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente dice: “Necesito español”, tras batallar en inglés. ¿Qué debe hacer el agent?",
+    "question": "Durante la fase de rebuttal, el cliente dice “Necesito español” , tras batallar en inglés. ¿Qué debe hacer el agent?",
     "options": [
       "Ignorarlo hasta el Advisor.",
       "Usar el manejo correcto en español.",
@@ -2443,7 +2443,7 @@ export const quizQuestions = [
     "id": 140,
     "topic": "objections",
     "language": "es",
-    "question": "El cliente pregunta si el Advisor tomará “unos segundos.” ¿Qué debe evitar el agent?",
+    "question": "En una objeción monitoreada, el cliente pregunta si el Advisor tomará “unos segundos.” ¿Qué debe evitar el agent?",
     "options": [
       "Garantizar espera corta.",
       "Decir que el Advisor revisa detalles.",
@@ -2471,7 +2471,7 @@ export const quizQuestions = [
     "id": 142,
     "topic": "product",
     "language": "es",
-    "question": "Un vehículo eléctrico 2020 tiene 30,000 millas y funciona. ¿Qué pesa más?",
+    "question": "En un escenario de calificación vehicular, un vehículo eléctrico 2020 tiene 30,000 millas y funciona. ¿Qué pesa más?",
     "options": [
       "El Advisor debe aprobarlo.",
       "Funcionando anula el tipo.",
@@ -2485,7 +2485,7 @@ export const quizQuestions = [
     "id": 143,
     "topic": "product",
     "language": "es",
-    "question": "Un carro 2011 tiene 176,200 millas y funciona bien. ¿Qué debe entender el agent?",
+    "question": "Antes de tratar el vehículo como calificado, un carro 2011 tiene 176,200 millas y funciona bien. ¿Qué debe entender el agent?",
     "options": [
       "Funcionar elimina el límite.",
       "Califica si fue financiado reciente.",
@@ -2499,7 +2499,7 @@ export const quizQuestions = [
     "id": 144,
     "topic": "product",
     "language": "es",
-    "question": "Un vehículo 2010 tiene 92,000 millas y no tiene problemas. ¿Cuál es la preocupación?",
+    "question": "Mientras revisa detalles del vehículo, un vehículo 2010 tiene 92,000 millas y no tiene problemas. ¿Cuál es la preocupación?",
     "options": [
       "No tener problemas es sospechoso.",
       "El año es anterior a 2011.",
@@ -2527,7 +2527,7 @@ export const quizQuestions = [
     "id": 146,
     "topic": "product",
     "language": "es",
-    "question": "El cliente dice que tiene check engine hoy. ¿Qué debe evitar el agent?",
+    "question": "Antes del handoff al Service Advisor, el cliente dice que tiene check engine hoy. ¿Qué debe evitar el agent?",
     "options": [
       "Tratarlo como claramente calificado.",
       "Aclarar si todavía maneja.",
@@ -2555,7 +2555,7 @@ export const quizQuestions = [
     "id": 148,
     "topic": "product",
     "language": "es",
-    "question": "El cliente pregunta si cubre daño de carrocería por accidente. ¿Qué es más seguro?",
+    "question": "Durante el screening del vehículo, el cliente pregunta si cubre daño de carrocería por accidente. ¿Qué es más seguro?",
     "options": [
       "Todo choque está cubierto.",
       "Accidentes y carrocería están excluidos.",
@@ -2569,7 +2569,7 @@ export const quizQuestions = [
     "id": 149,
     "topic": "product",
     "language": "es",
-    "question": "El cliente pregunta si cubre pastillas de freno gastadas. ¿Qué debe saber el agent?",
+    "question": "En práctica de calificación, el cliente pregunta si cubre pastillas de freno gastadas. ¿Qué debe saber el agent?",
     "options": [
       "El Advisor debe cubrirlas.",
       "Wear items reemplazan seguro.",
@@ -2583,7 +2583,7 @@ export const quizQuestions = [
     "id": 150,
     "topic": "product",
     "language": "es",
-    "question": "Un vehículo tiene suspensión modificada. ¿Qué statement es más seguro?",
+    "question": "En auditoría de producto, un vehículo tiene suspensión modificada. ¿Qué statement es más seguro?",
     "options": [
       "Las partes modificadas se excluyen.",
       "Todo vehículo modificado se cubre.",
@@ -2625,7 +2625,7 @@ export const quizQuestions = [
     "id": 153,
     "topic": "product",
     "language": "es",
-    "question": "El cliente tiene tres carros. ¿Qué debe ser cierto antes de transferir?",
+    "question": "Antes de tratar el vehículo como calificado, el cliente tiene tres carros. ¿Qué debe ser cierto antes de transferir?",
     "options": [
       "Los tres deben ser del mismo año.",
       "El más viejo decide cobertura.",
@@ -2639,7 +2639,7 @@ export const quizQuestions = [
     "id": 154,
     "topic": "product",
     "language": "es",
-    "question": "El cliente tiene un problema actual de motor. ¿Qué debe evitar prometer el agent?",
+    "question": "Mientras revisa detalles del vehículo, el cliente tiene un problema actual de motor. ¿Qué debe evitar prometer el agent?",
     "options": [
       "Que la condición importa.",
       "Que el problema actual será arreglado.",
@@ -2681,7 +2681,7 @@ export const quizQuestions = [
     "id": 157,
     "topic": "product",
     "language": "es",
-    "question": "El cliente pregunta si el plan añade cobertura después de factory coverage. ¿Qué es correcto?",
+    "question": "En una revisión de cobertura, el cliente pregunta si el plan añade cobertura después de factory coverage. ¿Qué es correcto?",
     "options": [
       "Puede agregar millas después de factory.",
       "Elimina necesidad de seguro.",
@@ -2695,7 +2695,7 @@ export const quizQuestions = [
     "id": 158,
     "topic": "product",
     "language": "es",
-    "question": "Un vehículo eléctrico financiado está bajo 175,000 millas. ¿Qué debe hacer el agent?",
+    "question": "Durante el screening del vehículo, un vehículo eléctrico financiado está bajo 175,000 millas. ¿Qué debe hacer el agent?",
     "options": [
       "No tratarlo como elegible.",
       "Ignorar la regla de eléctrico.",
@@ -2709,7 +2709,7 @@ export const quizQuestions = [
     "id": 159,
     "topic": "product",
     "language": "es",
-    "question": "El cliente no sabe millaje exacto, cree que son 170,000. ¿Qué es mejor?",
+    "question": "En práctica de calificación, el cliente no sabe millaje exacto, cree que son 170,000. ¿Qué es mejor?",
     "options": [
       "Asumir que está bajo límite.",
       "Aclarar antes de tratarlo como calificado.",
@@ -2807,7 +2807,7 @@ export const quizQuestions = [
     "id": 166,
     "topic": "callflow",
     "language": "es",
-    "question": "El cliente pide callback al Service Advisor. ¿Cómo se maneja?",
+    "question": "Mientras entra el Service Advisor, el cliente pide callback al Service Advisor. ¿Cómo se maneja?",
     "options": [
       "SPANIS porque pidió callback.",
       "Call Back, no XFER limpio.",
@@ -2821,7 +2821,7 @@ export const quizQuestions = [
     "id": 167,
     "topic": "callflow",
     "language": "es",
-    "question": "El cliente pide español apenas entra el Advisor, sin conversación en inglés. ¿Cuál es el problema?",
+    "question": "En práctica de protocolo de transferencia, el cliente pide español apenas entra el Advisor, sin conversación en inglés. ¿Cuál es el problema?",
     "options": [
       "Debe ser Answering Machine.",
       "El vehículo pasa a wrong number.",
@@ -2835,7 +2835,7 @@ export const quizQuestions = [
     "id": 168,
     "topic": "callflow",
     "language": "es",
-    "question": "El cliente habla inglés con el Service Advisor por 18 segundos y luego pide español. ¿Cómo lo ve QA?",
+    "question": "Durante el tiempo de espera, el cliente habla inglés con el Service Advisor por 18 segundos y luego pide español. ¿Cómo lo ve QA?",
     "options": [
       "Inválido solo por mencionar español.",
       "Dead Air porque cambió idioma.",
@@ -2877,7 +2877,7 @@ export const quizQuestions = [
     "id": 171,
     "topic": "callflow",
     "language": "es",
-    "question": "El cliente dice “sí” a todo, pero responde fuera de contexto. ¿Qué debe verificar el agent?",
+    "question": "Durante el proceso 3-way, el cliente dice “sí” a todo, pero responde fuera de contexto. ¿Qué debe verificar el agent?",
     "options": [
       "Que realmente entiende la llamada.",
       "Que le gusta el color del carro.",
@@ -2905,7 +2905,7 @@ export const quizQuestions = [
     "id": 173,
     "topic": "callflow",
     "language": "es",
-    "question": "El cliente dice no al transfer después de calificar. ¿Qué debe evitar el agent?",
+    "question": "Antes de contar la llamada como XFER, el cliente dice no al transfer después de calificar. ¿Qué debe evitar el agent?",
     "options": [
       "Marcar al Advisor de todas formas.",
       "Documentar el resultado.",
@@ -2933,7 +2933,7 @@ export const quizQuestions = [
     "id": 175,
     "topic": "callflow",
     "language": "es",
-    "question": "El agent presenta al cliente antes de que el Advisor hable. ¿Cuál es el riesgo?",
+    "question": "En una auditoría de transfer en vivo, el agent presenta al cliente antes de que el Advisor hable. ¿Cuál es el riesgo?",
     "options": [
       "El cliente se vuelve co-signer.",
       "El millaje se reinicia.",
@@ -2947,7 +2947,7 @@ export const quizQuestions = [
     "id": 176,
     "topic": "callflow",
     "language": "es",
-    "question": "El cliente cuelga después de la introducción pero antes de hablar con Advisor. ¿Qué debe pasar?",
+    "question": "Mientras entra el Service Advisor, el cliente cuelga después de la introducción pero antes de hablar con Advisor. ¿Qué debe pasar?",
     "options": [
       "Usar Answering Machine.",
       "No contarlo como XFER limpio.",
@@ -2975,7 +2975,7 @@ export const quizQuestions = [
     "id": 178,
     "topic": "callflow",
     "language": "es",
-    "question": "El agent se queda mucho tiempo aunque ambos ya hablan. ¿Cuál es el coaching?",
+    "question": "Durante el tiempo de espera, el agent se queda mucho tiempo aunque ambos ya hablan. ¿Cuál es el coaching?",
     "options": [
       "Mutear y sumar tiempo.",
       "Quedarse hasta cerrar venta.",
@@ -3045,7 +3045,7 @@ export const quizQuestions = [
     "id": 183,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El cliente dice: “Dejen de llamar o los reporto.” ¿Qué disposición encaja?",
+    "question": "En un chequeo de proceso, el cliente dice “Dejen de llamar o los reporto.” ¿Qué disposición encaja?",
     "options": [
       "CALLBK",
       "XFER",
@@ -3101,7 +3101,7 @@ export const quizQuestions = [
     "id": 187,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El agent conecta directo a un cliente español con Service Advisor en español. ¿Qué disposición encaja?",
+    "question": "En recordatorio QA de proceso, el agent conecta directo a un cliente español con Service Advisor en español. ¿Qué disposición encaja?",
     "options": [
       "CALLBK",
       "A",
@@ -3143,7 +3143,7 @@ export const quizQuestions = [
     "id": 190,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El cliente pregunta por pagos bajos, y el agent nunca aclara. ¿Qué crea esto?",
+    "question": "Durante entrenamiento de disposición, el cliente pregunta por pagos bajos, y el agent nunca aclara. ¿Qué crea esto?",
     "options": [
       "Mejor calificación de millaje.",
       "Transfer español automático.",
@@ -3157,7 +3157,7 @@ export const quizQuestions = [
     "id": 191,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El agent dice “cobertura gratis” durante el pitch. ¿Qué marca QA?",
+    "question": "En revisión QA de disposición, el agent dice “cobertura gratis” durante el pitch. ¿Qué marca QA?",
     "options": [
       "Wording engañoso.",
       "Manejo correcto de callback.",
@@ -3171,7 +3171,7 @@ export const quizQuestions = [
     "id": 192,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El agent promete: “El Advisor solo toma dos minutos.” ¿Cuál es el problema?",
+    "question": "Durante coaching de compliance, el agent promete: “El Advisor solo toma dos minutos.” ¿Cuál es el problema?",
     "options": [
       "Usa Vehicle Services Group.",
       "Deja hablar primero al Advisor.",
@@ -3185,7 +3185,7 @@ export const quizQuestions = [
     "id": 193,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El agent dice que el banco dio la información. ¿Qué regla rompe?",
+    "question": "En un chequeo de proceso, el agent dice que el banco dio la información. ¿Qué regla rompe?",
     "options": [
       "No preguntar idioma.",
       "No usar Service Advisor.",
@@ -3199,7 +3199,7 @@ export const quizQuestions = [
     "id": 194,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El agent transfiere tras un “supongo.” ¿Qué debe cuestionar QA?",
+    "question": "Antes de elegir una disposición, el agent transfiere tras un “supongo.” ¿Qué debe cuestionar QA?",
     "options": [
       "Si el Advisor estaba en Texas.",
       "Si el vehículo tenía bajo millaje.",
@@ -3213,7 +3213,7 @@ export const quizQuestions = [
     "id": 195,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El cliente pregunta: “¿A qué estoy aceptando?” justo antes del transfer. ¿Qué debe hacer el agent?",
+    "question": "En escenario de reglas del dialer, el cliente pregunta “¿A qué estoy aceptando?” justo antes del transfer. ¿Qué debe hacer el agent?",
     "options": [
       "Marcar XFER tras la pregunta.",
       "Decir que ya no importa.",
@@ -3227,7 +3227,7 @@ export const quizQuestions = [
     "id": 196,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El cliente no es dueño y no puede decidir. ¿Qué resultado debe evitarse?",
+    "question": "Durante revisión de invalid transfer, el cliente no es dueño y no puede decidir. ¿Qué resultado debe evitarse?",
     "options": [
       "Documentar la situación.",
       "Pedir decision maker.",
@@ -3241,7 +3241,7 @@ export const quizQuestions = [
     "id": 197,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El cliente cuelga antes de hablar con Advisor, pero el agent marca XFER. ¿Qué está mal?",
+    "question": "En recordatorio QA de proceso, el cliente cuelga antes de hablar con Advisor, pero el agent marca XFER. ¿Qué está mal?",
     "options": [
       "El vehículo bajó millaje.",
       "Debió usar SPXFER.",
@@ -3255,7 +3255,7 @@ export const quizQuestions = [
     "id": 198,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El agent selecciona Leave 3-Way Call cuando el cliente desaparece. ¿Qué puede pasar?",
+    "question": "En auditoría de proceso, el agent selecciona Leave 3-Way Call cuando el cliente desaparece. ¿Qué puede pasar?",
     "options": [
       "Proceso DNC automático.",
       "Corrección de límite de millas.",
@@ -3269,7 +3269,7 @@ export const quizQuestions = [
     "id": 199,
     "topic": "dosdonts",
     "language": "es",
-    "question": "El cliente habla inglés con el agent pero claramente no sigue la llamada. ¿Qué no debe pasar?",
+    "question": "Antes de taggear la llamada, el cliente habla inglés con el agent pero claramente no sigue la llamada. ¿Qué no debe pasar?",
     "options": [
       "Preguntar idioma preferido.",
       "Aclarar más despacio.",
@@ -3294,7 +3294,6 @@ export const quizQuestions = [
     "explanation": "Saltar propósito y transferir confusión crea riesgo QA/inválido."
   }
 ]
-
 
 export const learnCategories = [
   {
