@@ -25,7 +25,11 @@ const OPTS = [
   { c: '#22c55e', s: '■' },
 ]
 
-const LTRS = ['A', 'B', 'C', 'D']
+const LTRS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+
+function getOptionLetter(index) {
+  return getOptionLetter(index) || String(index + 1)
+}
 
 const GO_RESULT_ASSETS = {
   header: '/emojis/goal1.webp',
@@ -119,6 +123,76 @@ function normalizeLang(value) {
   return 'mixed'
 }
 
+function normalizeQuestionStyle(value) {
+  const clean = String(value || 'mc').toLowerCase().trim()
+
+  if (
+    clean === 'mixed' ||
+    clean === 'mix' ||
+    clean === 'varied' ||
+    clean === 'variety'
+  ) {
+    return 'mixed'
+  }
+
+  return 'mc'
+}
+
+function getQuestionKind(question) {
+  const rawKind = String(
+    question?.question_type ||
+    question?.questionType ||
+    question?.answerType ||
+    question?.type ||
+    question?.style ||
+    'mc'
+  )
+    .toLowerCase()
+    .trim()
+
+  if (
+    rawKind === 'short' ||
+    rawKind === 'short-answer' ||
+    rawKind === 'short_answer' ||
+    rawKind === 'text' ||
+    rawKind === 'input'
+  ) {
+    return 'short'
+  }
+
+  if (
+    rawKind === 'binary' ||
+    rawKind === 'two' ||
+    rawKind === 'two-choice' ||
+    rawKind === 'two_choice' ||
+    rawKind === 'valid-invalid' ||
+    rawKind === 'valid_invalid' ||
+    rawKind === 'true-false' ||
+    rawKind === 'true_false'
+  ) {
+    return 'binary'
+  }
+
+  if (Array.isArray(question?.options) && question.options.length === 2) {
+    return 'binary'
+  }
+
+  return 'mc'
+}
+
+function questionFitsStyle(question, questionStyle) {
+  const kind = getQuestionKind(question)
+  const hasOptions = Array.isArray(question?.options) && question.options.length >= 2
+
+  // Written / short-answer questions need answer_text support in Supabase.
+  // For now we safely exclude them until the DB step is added.
+  if (kind === 'short') return false
+
+  if (questionStyle === 'mixed') return hasOptions
+
+  return kind === 'mc' && Array.isArray(question?.options) && question.options.length >= 3
+}
+
 function hashSeed(value) {
   let hash = 2166136261
 
@@ -157,27 +231,44 @@ function getQ(id) {
   return quizQuestions.find((q) => q.id === id) || null
 }
 
-function buildQuestionIds(topic, lang, seed) {
+function buildQuestionIds(topic, lang, questionStyle, seed) {
   const wantedTopic = normalizeTopic(topic)
   const wantedLang = normalizeLang(lang)
+  const wantedStyle = normalizeQuestionStyle(questionStyle)
 
-  let pool = quizQuestions.filter((q) => {
-    const topicOk = wantedTopic === 'all' || normalizeTopic(q.topic) === wantedTopic
+  const matchesTopicAndLang = (question) => {
+    const topicOk = wantedTopic === 'all' || normalizeTopic(question.topic) === wantedTopic
 
     if (wantedLang === 'mixed') return topicOk
 
-    return topicOk && String(q.language || 'en') === wantedLang
-  })
+    return topicOk && String(question.language || 'en') === wantedLang
+  }
+
+  const matchesLangOnly = (question) => {
+    if (wantedLang === 'mixed') return true
+    return String(question.language || 'en') === wantedLang
+  }
+
+  let pool = quizQuestions.filter(
+    (question) => matchesTopicAndLang(question) && questionFitsStyle(question, wantedStyle)
+  )
 
   if (pool.length === 0 && wantedLang !== 'mixed' && wantedTopic !== 'all') {
-    pool = quizQuestions.filter((q) => String(q.language || 'en') === wantedLang)
+    pool = quizQuestions.filter(
+      (question) => matchesLangOnly(question) && questionFitsStyle(question, wantedStyle)
+    )
+  }
+
+  if (pool.length === 0 && wantedStyle !== 'mc') {
+    pool = quizQuestions.filter(
+      (question) => matchesTopicAndLang(question) && questionFitsStyle(question, 'mc')
+    )
   }
 
   if (pool.length === 0) {
-    pool = quizQuestions.filter((q) => {
-      if (wantedLang === 'mixed') return true
-      return String(q.language || 'en') === wantedLang
-    })
+    pool = quizQuestions.filter(
+      (question) => matchesLangOnly(question) && questionFitsStyle(question, 'mc')
+    )
   }
 
   if (pool.length > 0 && pool.length < QUESTION_COUNT) {
@@ -195,13 +286,15 @@ function buildQuestionIds(topic, lang, seed) {
 
   return deterministicShuffle(pool, seed)
     .slice(0, QUESTION_COUNT)
-    .map((q) => q.id)
+    .map((question) => question.id)
 }
 
 function buildDisplayQuestion(rawQuestion, roomCode, currentIndex) {
   if (!rawQuestion) return null
 
-  const mappedOptions = rawQuestion.options.map((text, originalIndex) => ({
+  const options = Array.isArray(rawQuestion.options) ? rawQuestion.options : []
+
+  const mappedOptions = options.map((text, originalIndex) => ({
     text,
     originalIndex,
   }))
@@ -217,6 +310,7 @@ function buildDisplayQuestion(rawQuestion, roomCode, currentIndex) {
 
   return {
     ...rawQuestion,
+    questionKind: getQuestionKind(rawQuestion),
     options: shuffledOptions.map((option) => option.text),
     correct,
   }
@@ -230,15 +324,6 @@ function calcTimeLeft(startedAt) {
   if (!Number.isFinite(startedMs)) return Q_TIME
 
   return Math.max(0, Q_TIME - (Date.now() - startedMs) / 1000)
-}
-
-function rankPlayers(players) {
-  return [...players]
-    .filter((p) => !p.is_kicked)
-    .sort((a, b) => {
-      if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0)
-      return new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
-    })
 }
 
 function useSound() {
@@ -370,6 +455,8 @@ export default function GoQuizRoom() {
   const isHost = urlParams.get('host') === 'true'
   const topic = normalizeTopic(urlParams.get('topic') || 'all')
   const lang = normalizeLang(urlParams.get('lang') || 'mixed')
+  const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
+  const questionStyleLabel = questionStyle === 'mixed' ? 'Mixed Questions' : 'Multiple Choice'
 
   const [room, setRoom] = useState(null)
   const [players, setPlayers] = useState([])
@@ -416,7 +503,6 @@ export default function GoQuizRoom() {
   }, [busy])
 
   const activePlayers = useMemo(() => players.filter((p) => !p.is_kicked), [players])
-  const rankedPlayers = useMemo(() => rankPlayers(players), [players])
   const totalPlayers = activePlayers.length
   const answeredPlayers = activePlayers.filter((p) => p.answered).length
 
@@ -481,10 +567,10 @@ export default function GoQuizRoom() {
           questionId: question.id,
           question: question.question,
           selectedIndex,
-          selectedLetter: Number.isInteger(selectedIndex) ? LTRS[selectedIndex] : null,
+          selectedLetter: Number.isInteger(selectedIndex) ? getOptionLetter(selectedIndex) : null,
           selectedOption: selectedOption || 'No answer',
           correctIndex: question.correct,
-          correctLetter: LTRS[question.correct],
+          correctLetter: getOptionLetter(question.correct),
           correctOption,
           correct: Boolean(answerRow?.correct),
           noAnswer,
@@ -586,7 +672,7 @@ export default function GoQuizRoom() {
   }, [code])
 
   const createHostRoom = useCallback(async () => {
-  const questionIds = buildQuestionIds(topic, lang, `${code}:${Date.now()}`)
+  const questionIds = buildQuestionIds(topic, lang, questionStyle, `${code}:${Date.now()}`)
 
   const roomPayload = {
     code,
@@ -629,7 +715,7 @@ export default function GoQuizRoom() {
 
   setRoom(data)
   return data
-}, [code, topic, lang])
+}, [code, topic, lang, questionStyle])
 
   const fetchRoom = useCallback(async () => {
     if (!code) return null
@@ -1033,7 +1119,7 @@ export default function GoQuizRoom() {
     let questionIds = room?.question_ids || []
 
     if (!Array.isArray(questionIds) || questionIds.length < QUESTION_COUNT) {
-      questionIds = buildQuestionIds(topic, lang, `${code}:${Date.now()}`)
+      questionIds = buildQuestionIds(topic, lang, questionStyle, `${code}:${Date.now()}`)
     }
 
     await supabase.from('pulse_go_answers').delete().eq('room_code', code)
@@ -1188,7 +1274,7 @@ export default function GoQuizRoom() {
 
     setBusy(true)
 
-    const questionIds = buildQuestionIds(topic, lang, `${code}:${Date.now()}`)
+    const questionIds = buildQuestionIds(topic, lang, questionStyle, `${code}:${Date.now()}`)
 
     await supabase.from('pulse_go_answers').delete().eq('room_code', code)
     setAnswers([])
@@ -1265,6 +1351,7 @@ export default function GoQuizRoom() {
       topic,
       lang,
       game: gameMode,
+      qstyle: questionStyle,
     })
 
     const origin = window.location.origin
@@ -1400,6 +1487,12 @@ export default function GoQuizRoom() {
           <span className="grm-lobby-code-wrap">
             Code: <span className="grm-lobby-code">{code}</span>
           </span>
+
+          <span className="grm-lobby-sep">·</span>
+
+          <span className={`grm-lobby-style ${questionStyle}`}>
+            {questionStyleLabel}
+          </span>
         </div>
 
         <div className="grm-lobby-body">
@@ -1453,7 +1546,7 @@ export default function GoQuizRoom() {
                 type="button"
                 onPointerDown={copyCoHostLink}
               >
-                {coHostCopied ? '✅ Co-host Link Copied' : '👥 Copy Co-host Link'}
+                {coHostCopied ? '✅ Co-host Link Copied' : '👥 Add Co-host'}
               </button>
 
               <button
@@ -1489,6 +1582,9 @@ export default function GoQuizRoom() {
           <span className="grm-qnum">
             {(room.current_q || 0) + 1}/{room.question_ids?.length || QUESTION_COUNT}
           </span>
+          <span className={`grm-qstyle ${questionStyle}`}>
+            {questionStyle === 'mixed' ? 'Mixed' : 'MC'}
+          </span>
           <span className="grm-qtimer" style={{ color: timeColor }}>
             {timeDisplay}s
           </span>
@@ -1505,7 +1601,7 @@ export default function GoQuizRoom() {
         <div className="grm-qtext">{currentQ?.question || 'Loading question...'}</div>
 
         {!isHost && (
-          <div className="grm-opts">
+          <div className={`grm-opts ${currentQ?.options?.length === 2 ? 'two-choice' : ''}`}>
             {currentQ?.options.map((option, index) => (
               <button
                 key={index}
@@ -1517,7 +1613,7 @@ export default function GoQuizRoom() {
                 disabled={picked !== null || currentPlayer?.answered}
               >
                 <span className="grm-os">{OPTS[index]?.s || '◆'}</span>
-                <span className="grm-ol">{LTRS[index]}</span>
+                <span className="grm-ol">{getOptionLetter(index)}</span>
                 <span className="grm-ot">{option}</span>
               </button>
             ))}
@@ -1549,7 +1645,7 @@ export default function GoQuizRoom() {
                     <div className="grm-host-option-top">
                       <div className="grm-host-option-left">
                         <span className="grm-os">{meta.s}</span>
-                        <span className="grm-ol">{LTRS[choice.index]}</span>
+                        <span className="grm-ol">{getOptionLetter(choice.index)}</span>
                         <strong>{choice.option}</strong>
                       </div>
 
@@ -1631,7 +1727,7 @@ export default function GoQuizRoom() {
 
         <p className="grm-ring-label">Next in...</p>
 
-        <div className="grm-answer-opts">
+        <div className={`grm-answer-opts ${currentQ?.options?.length === 2 ? 'two-choice' : ''}`}>
           {currentQ?.options.map((option, index) => (
             <div
               key={index}
@@ -1641,7 +1737,7 @@ export default function GoQuizRoom() {
               style={{ '--c': OPTS[index]?.c || '#b9d6ff' }}
             >
               <span className="grm-aopt-s">{OPTS[index]?.s || '◆'}</span>
-              <span className="grm-ol">{LTRS[index]}</span>
+              <span className="grm-ol">{getOptionLetter(index)}</span>
               <span className="grm-aopt-t">{option}</span>
               {index === currentQ.correct && <span className="grm-aopt-check">✓</span>}
 
@@ -1671,12 +1767,15 @@ export default function GoQuizRoom() {
     <span>Leaderboard</span>
   </div>
 
-          {rankedPlayers.slice(0, 6).map((player, index) => (
+          {playerStats.slice(0, 6).map((player) => (
             <div key={player.id} className={`grm-mini-row ${player.id === playerId ? 'me' : ''}`}>
-              <span className="grm-mini-r">{index + 1}</span>
+              <span className="grm-mini-r">{player.rank}</span>
               <span className="grm-mini-a">{player.avatar}</span>
-              <span className="grm-mini-n">{player.name}</span>
-              <span className="grm-mini-s">{(player.score || 0).toLocaleString()}</span>
+              <span className="grm-mini-n">
+                {player.name}
+                <small>{player.correctCount}/{gameQuestionCount} correct</small>
+              </span>
+              <span className="grm-mini-s">{player.accuracy}%</span>
             </div>
           ))}
         </div>
@@ -2014,7 +2113,7 @@ export default function GoQuizRoom() {
                     <span>Q{item.index + 1}</span>
                     <strong>{item.question.question}</strong>
                     <em>
-                      Correct: {LTRS[item.question.correct]} ·{' '}
+                      Correct: {getOptionLetter(item.question.correct)} ·{' '}
                       {item.options[item.question.correct]?.option || 'N/A'}
                     </em>
                   </summary>
@@ -2032,7 +2131,7 @@ export default function GoQuizRoom() {
                         >
                           <div className="grm-report-option-top">
                             <span className="grm-os">{meta.s}</span>
-                            <span className="grm-ol">{LTRS[choice.index]}</span>
+                            <span className="grm-ol">{getOptionLetter(choice.index)}</span>
                             <strong>{choice.option}</strong>
                             <em>{choice.count}/{totalPlayers}</em>
                           </div>

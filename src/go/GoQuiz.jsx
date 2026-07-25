@@ -33,6 +33,7 @@ const GAME_MODES = [
     desc: 'Standard Pulse GO questions by topic.',
     topic: null,
     needsTopic: true,
+    supportsQuestionStyle: true,
   },
   {
     id: 'script-fill',
@@ -41,6 +42,7 @@ const GAME_MODES = [
     desc: 'Practice missing lines and script control.',
     topic: 'script',
     needsTopic: false,
+    supportsQuestionStyle: false,
   },
   {
     id: 'valid-invalid',
@@ -49,6 +51,7 @@ const GAME_MODES = [
     desc: 'Decide if the transfer should count or not.',
     topic: 'dosdonts',
     needsTopic: false,
+    supportsQuestionStyle: false,
   },
   {
     id: 'objection-battle',
@@ -57,15 +60,17 @@ const GAME_MODES = [
     desc: 'Pick the strongest rebuttal under pressure.',
     topic: 'objections',
     needsTopic: false,
+    supportsQuestionStyle: false,
   },
   {
-  id: 'disposition-trainer',
-  icon: '🧾',
-  title: 'Dispose It',
-  desc: 'Pick the correct disposition for each call scenario.',
-  topic: 'disposeit',
-  needsTopic: false,
- },
+    id: 'disposition-trainer',
+    icon: '🧾',
+    title: 'Dispose It',
+    desc: 'Pick the correct disposition for each call scenario.',
+    topic: 'disposeit',
+    needsTopic: false,
+    supportsQuestionStyle: false,
+  },
   {
     id: 'certification',
     icon: '🏅',
@@ -73,6 +78,7 @@ const GAME_MODES = [
     desc: 'Mixed challenge from all training areas.',
     topic: 'all',
     needsTopic: false,
+    supportsQuestionStyle: false,
   },
 ]
 
@@ -115,22 +121,51 @@ const TOPICS = [
   },
 ]
 
+const QUESTION_STYLES = [
+  {
+    id: 'mc',
+    icon: '🔘',
+    badge: 'SAFE',
+    title: 'Multiple Choice Only',
+    desc: 'Current format: A/B/C/D questions only.',
+    details: ['Best for live rooms today', 'No typing required', 'Fast scoring'],
+  },
+  {
+    id: 'mixed',
+    icon: '🔀',
+    badge: 'MIX',
+    title: 'Mixed Questions',
+    desc: 'Allows future 2-option and short-answer questions.',
+    details: ['Multiple choice', 'Valid / Invalid style', 'Short written answers'],
+  },
+]
+
 function makeRoomCode() {
   return `KK${Math.floor(1000 + Math.random() * 9000)}`
 }
 
+function normalizeQuestionStyle(value) {
+  if (value === 'mixed') return 'mixed'
+  return 'mc'
+}
+
 export default function GoQuiz() {
   const navigate = useNavigate()
-const [params] = useSearchParams()
-
-const goHome = () => {
-  const loggedIn = Boolean(localStorage.getItem('pulse_user'))
-  navigate(loggedIn ? '/dashboard' : '/')
-}
+  const [params] = useSearchParams()
 
   const trainingMode = params.get('mode')
   const lang = params.get('lang')
   const game = params.get('game')
+  const topic = params.get('topic')
+  const qstyle = params.get('qstyle')
+
+  const activeGame = GAME_MODES.find((item) => item.id === game)
+  const selectedQuestionStyle = normalizeQuestionStyle(qstyle)
+
+  const goHome = () => {
+    const loggedIn = Boolean(localStorage.getItem('pulse_user'))
+    navigate(loggedIn ? '/dashboard' : '/')
+  }
 
   const goToMode = (nextMode) => {
     navigate(`/go/quiz?mode=${nextMode}`)
@@ -146,26 +181,40 @@ const goHome = () => {
       return
     }
 
-    launchGame(gameMode.id, gameMode.topic)
+    launchGame(gameMode.id, gameMode.topic, 'mc')
   }
 
-  const launchGame = (gameId, topicId) => {
+  const goToTopic = (topicId) => {
+    if (activeGame?.supportsQuestionStyle) {
+      navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}&game=${game}&topic=${topicId}`)
+      return
+    }
+
+    launchGame(game, topicId, 'mc')
+  }
+
+  const goToQuestionStyle = (styleId) => {
+    launchGame(game, topic || 'all', styleId)
+  }
+
+  const launchGame = (gameId, topicId, questionStyleId = selectedQuestionStyle) => {
     const finalTopic = topicId || 'all'
     const finalLang = lang || 'mixed'
     const finalGame = gameId || game || 'classic'
+    const finalQuestionStyle = normalizeQuestionStyle(questionStyleId)
 
     if (trainingMode === 'host') {
       const code = makeRoomCode()
       navigate(
-        `/go/quiz/${code}?host=true&topic=${finalTopic}&lang=${finalLang}&game=${finalGame}`
+        `/go/quiz/${code}?host=true&topic=${finalTopic}&lang=${finalLang}&game=${finalGame}&qstyle=${finalQuestionStyle}`
       )
       return
     }
 
-    navigate(`/go/quiz/play?topic=${finalTopic}&lang=${finalLang}&game=${finalGame}`)
+    navigate(
+      `/go/quiz/play?topic=${finalTopic}&lang=${finalLang}&game=${finalGame}&qstyle=${finalQuestionStyle}`
+    )
   }
-
-  const activeGame = GAME_MODES.find((item) => item.id === game)
 
   return (
     <div className="gq-page">
@@ -273,7 +322,7 @@ const goHome = () => {
         </main>
       )}
 
-      {trainingMode && lang && game && activeGame?.needsTopic && (
+      {trainingMode && lang && game && activeGame?.needsTopic && !topic && (
         <main className="gq-wrap">
           <section className="gq-hero">
             <h1>Choose a Topic</h1>
@@ -281,15 +330,15 @@ const goHome = () => {
           </section>
 
           <section className="gq-card-grid three">
-            {TOPICS.map((topic) => (
+            {TOPICS.map((topicItem) => (
               <button
-                key={topic.id}
+                key={topicItem.id}
                 className="gq-card"
-                onClick={() => launchGame(game, topic.id)}
+                onClick={() => goToTopic(topicItem.id)}
               >
-                <span className="gq-card-icon">{topic.icon}</span>
-                <h2>{topic.title}</h2>
-                <p>{topic.desc}</p>
+                <span className="gq-card-icon">{topicItem.icon}</span>
+                <h2>{topicItem.title}</h2>
+                <p>{topicItem.desc}</p>
               </button>
             ))}
           </section>
@@ -297,6 +346,44 @@ const goHome = () => {
           <div className="gq-bottom-actions">
             <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}`)}>
               ← Game Mode
+            </button>
+          </div>
+        </main>
+      )}
+
+      {trainingMode && lang && game && activeGame?.supportsQuestionStyle && topic && !qstyle && (
+        <main className="gq-wrap">
+          <section className="gq-hero">
+            <h1>Question Style</h1>
+            <p>Choose if this room should stay classic or allow mixed question types.</p>
+          </section>
+
+          <section className="gq-card-grid two gq-style-grid">
+            {QUESTION_STYLES.map((item) => (
+              <button
+                key={item.id}
+                className={`gq-card gq-style-card ${item.id === 'mc' ? 'recommended' : ''}`}
+                onClick={() => goToQuestionStyle(item.id)}
+              >
+                <span className="gq-style-badge">{item.badge}</span>
+                <span className="gq-card-icon">{item.icon}</span>
+                <h2>{item.title}</h2>
+                <p>{item.desc}</p>
+
+                <ul>
+                  {item.details.map((detail) => (
+                    <li key={detail}>{detail}</li>
+                  ))}
+                </ul>
+
+                <b>{item.id === 'mc' ? 'Use safe mode →' : 'Use mixed mode →'}</b>
+              </button>
+            ))}
+          </section>
+
+          <div className="gq-bottom-actions">
+            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}&game=${game}`)}>
+              ← Topic
             </button>
           </div>
         </main>

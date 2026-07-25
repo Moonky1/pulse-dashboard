@@ -3132,3 +3132,82 @@
     justify-self: start;
   }
 }
+/* =========================================================
+   PULSE GO QUESTION STYLE SUPPORT
+   Reads qstyle=mc or qstyle=mixed from the room URL.
+   This is visual-only support for the safe Phase 1.
+========================================================= */
+
+.grm-lobby-style,
+.grm-qstyle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(185, 214, 255, 0.14);
+  background: rgba(185, 214, 255, 0.065);
+  color: #dbeafe;
+  font-family: 'Sora', sans-serif;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.01em;
+}
+
+.grm-lobby-style.mixed,
+.grm-qstyle.mixed {
+  border-color: rgba(168, 85, 247, 0.28);
+  background:
+    radial-gradient(circle at 0% 50%, rgba(168, 85, 247, 0.16), transparent 55%),
+    rgba(185, 214, 255, 0.055);
+  color: #eadcff;
+}
+
+.grm-opts.two-choice {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(820px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.grm-opts.two-choice .grm-opt {
+  min-height: 108px;
+  justify-content: start;
+  font-size: 17px;
+}
+
+.grm-answer-opts.two-choice {
+  width: min(760px, 100%);
+}
+
+.grm-answer-opts.two-choice .grm-aopt {
+  min-height: 70px;
+}
+
+.grm-mini-n {
+  display: grid;
+  gap: 2px;
+}
+
+.grm-mini-n small {
+  color: #9aa7bb;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+@media (max-width: 760px) {
+  .grm-lobby-style {
+    min-height: 30px;
+    font-size: 11px;
+  }
+
+  .grm-opts.two-choice {
+    grid-template-columns: 1fr;
+  }
+
+  .grm-opts.two-choice .grm-opt {
+    min-height: 82px;
+    font-size: 14px;
+  }
+}
