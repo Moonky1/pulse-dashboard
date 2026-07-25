@@ -394,6 +394,7 @@ export default function GoQuizRoom() {
   const [kickBusy, setKickBusy] = useState('')
   const [cancelBusy, setCancelBusy] = useState(false)
   const [lobbyMusicOn, setLobbyMusicOn] = useState(false)
+  const [coHostCopied, setCoHostCopied] = useState(false)
 
   const roomRef = useRef(null)
   const busyRef = useRef(false)
@@ -457,7 +458,7 @@ export default function GoQuizRoom() {
   const gameQuestionCount = gameQuestions.length || QUESTION_COUNT
 
   const playerStats = useMemo(() => {
-    return rankedPlayers.map((player, index) => {
+    const stats = activePlayers.map((player) => {
       const playerAnswers = answers.filter((answer) => answer.player_id === player.id)
       const answerByQuestion = new Map(
         playerAnswers.map((answer) => [Number(answer.question_index), answer])
@@ -494,7 +495,6 @@ export default function GoQuizRoom() {
 
       return {
         ...player,
-        rank: index + 1,
         correctCount,
         answeredCount,
         missedCount: Math.max(0, gameQuestionCount - correctCount),
@@ -503,7 +503,21 @@ export default function GoQuizRoom() {
         questionResults,
       }
     })
-  }, [rankedPlayers, answers, gameQuestionCount, gameQuestions])
+
+    return stats
+      .sort((a, b) => {
+        if (b.correctCount !== a.correctCount) return b.correctCount - a.correctCount
+        if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy
+        if (b.answeredCount !== a.answeredCount) return b.answeredCount - a.answeredCount
+        if (b.score !== a.score) return b.score - a.score
+
+        return new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
+      })
+      .map((player, index) => ({
+        ...player,
+        rank: index + 1,
+      }))
+  }, [activePlayers, answers, gameQuestionCount, gameQuestions])
 
   const questionReport = useMemo(() => {
     const playerById = new Map(activePlayers.map((player) => [player.id, player]))
@@ -769,7 +783,7 @@ export default function GoQuizRoom() {
       if (room.state === 'finished' && !finishSoundPlayedRef.current) {
         finishSoundPlayedRef.current = true
 
-        const myRank = rankedPlayers.findIndex((p) => p.id === playerId) + 1
+        const myRank = playerStats.findIndex((p) => p.id === playerId) + 1
         const topResult = isHost || myRank === 1 || myRank === 2 || myRank === 3
 
         if (topResult) snd.epic()
@@ -778,7 +792,7 @@ export default function GoQuizRoom() {
 
       previousStateRef.current = room.state
     }
-  }, [room?.state, rankedPlayers, playerId, isHost, snd, room])
+  }, [room?.state, playerStats, playerId, isHost, snd, room])
 
   const showAnswer = useCallback(async () => {
     if (!isHost || !room || actionLockRef.current || busy) return
@@ -1241,6 +1255,33 @@ export default function GoQuizRoom() {
     setLobbyMusicOn(true)
   }
 
+  const copyCoHostLink = async () => {
+    if (!isHost || !code) return
+
+    const gameMode = urlParams.get('game') || 'classic'
+    const coHostParams = new URLSearchParams({
+      host: 'true',
+      cohost: 'true',
+      topic,
+      lang,
+      game: gameMode,
+    })
+
+    const origin = window.location.origin
+    const coHostLink = `${origin}/go/quiz/${code}?${coHostParams.toString()}`
+
+    try {
+      await navigator.clipboard.writeText(coHostLink)
+      setCoHostCopied(true)
+
+      window.setTimeout(() => {
+        setCoHostCopied(false)
+      }, 1800)
+    } catch {
+      window.prompt('Copy this co-host link:', coHostLink)
+    }
+  }
+
   if (loading) {
     return (
       <div className="grm grm-center">
@@ -1350,8 +1391,15 @@ export default function GoQuizRoom() {
         {cancelButton}
 
         <div className="grm-lobby-bar">
-          Join at <b>pulse-kk.com/go</b> &nbsp;·&nbsp; Code:{' '}
-          <span className="grm-lobby-code">{code}</span>
+          <span className="grm-lobby-join">
+            Join at <b>pulse-kk.com/go</b>
+          </span>
+
+          <span className="grm-lobby-sep">·</span>
+
+          <span className="grm-lobby-code-wrap">
+            Code: <span className="grm-lobby-code">{code}</span>
+          </span>
         </div>
 
         <div className="grm-lobby-body">
@@ -1398,6 +1446,14 @@ export default function GoQuizRoom() {
                 onPointerDown={toggleLobbyMusic}
               >
                 {lobbyMusicOn ? '🎵 Music On' : '🎵 Lobby Music'}
+              </button>
+
+              <button
+                className={`grm-cohost-btn ${coHostCopied ? 'copied' : ''}`}
+                type="button"
+                onPointerDown={copyCoHostLink}
+              >
+                {coHostCopied ? '✅ Co-host Link Copied' : '👥 Copy Co-host Link'}
               </button>
 
               <button
@@ -1650,10 +1706,23 @@ export default function GoQuizRoom() {
     const currentPlayerStats = playerStats.find((player) => player.id === currentPlayer?.id) || null
     const topPerformers = playerStats.slice(0, Math.min(10, playerStats.length))
 
+    const lowPerformers = [...playerStats]
+      .filter((player) => player.answeredCount > 0 && player.missedCount > 0)
+      .sort((a, b) => {
+        if (a.correctCount !== b.correctCount) return a.correctCount - b.correctCount
+        if (a.accuracy !== b.accuracy) return a.accuracy - b.accuracy
+        if (b.missedCount !== a.missedCount) return b.missedCount - a.missedCount
+        if (a.score !== b.score) return a.score - b.score
+
+        return new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
+      })
+      .slice(0, Math.min(10, playerStats.length))
+
     const needsReview = [...playerStats]
       .filter((player) => player.answeredCount > 0 && player.accuracy < 70)
       .sort((a, b) => {
         if (a.accuracy !== b.accuracy) return a.accuracy - b.accuracy
+        if (a.correctCount !== b.correctCount) return a.correctCount - b.correctCount
         return a.score - b.score
       })
       .slice(0, 12)
@@ -1661,7 +1730,6 @@ export default function GoQuizRoom() {
     return (
       <div className="grm grm-finished">
         <div className="grm-finished-title">
-          <img src={GO_RESULT_ASSETS.header} alt="" className="grm-finished-title-icon" />
           <h1 className="grm-finished-h">Final Results</h1>
         </div>
 
@@ -1734,6 +1802,51 @@ export default function GoQuizRoom() {
                     </span>
 
                     <span className="grm-top-score">{(player.score || 0).toLocaleString()}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {isHost && lowPerformers.length > 0 && (
+          <section className="grm-final-section grm-low-performers">
+            <div className="grm-final-section-head">
+              <div>
+                <span>Performance Review</span>
+                <h2>Low Performers</h2>
+              </div>
+
+              <strong>Top {lowPerformers.length}</strong>
+            </div>
+
+            <div className="grm-top-list grm-low-list">
+              {lowPerformers.map((player, index) => {
+                const practice = getPracticeVisual(player.accuracy) || {
+                  icon: GO_RESULT_ASSETS.review,
+                  label: 'Review',
+                  className: 'soft',
+                }
+
+                return (
+                  <div
+                    key={player.id}
+                    className={`grm-top-row grm-low-row ${practice.className} ${player.id === playerId ? 'me' : ''}`}
+                  >
+                    <span className="grm-top-rank grm-low-rank">
+                      <img src={practice.icon} alt="" />
+                    </span>
+
+                    <span className="grm-top-avatar">{player.avatar}</span>
+
+                    <span className="grm-top-name">
+                      {player.name}
+                      <small>
+                        {player.correctCount}/{gameQuestionCount} correct · {player.accuracy}% · {player.missedCount} missed
+                      </small>
+                    </span>
+
+                    <span className="grm-top-score">#{index + 1}</span>
                   </div>
                 )
               })}

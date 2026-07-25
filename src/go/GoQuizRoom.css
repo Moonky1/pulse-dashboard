@@ -2983,3 +2983,152 @@
     margin-top: 22px;
   }
 }
+/* =========================================================
+   PULSE GO FINAL RESULTS — CORRECT-BASED RANKING POLISH
+   Adds co-host link button, cleaner lobby bar, no title icon,
+   compact next button, and Low Performers section.
+========================================================= */
+
+.grm-lobby-bar {
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.grm-lobby-join,
+.grm-lobby-code-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.grm-lobby-sep {
+  color: rgba(185, 214, 255, 0.48);
+  font-weight: 950;
+}
+
+.grm-cohost-btn {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(185, 214, 255, 0.16);
+  background: rgba(185, 214, 255, 0.055);
+  color: #dbeafe;
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 950;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.grm-cohost-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(185, 214, 255, 0.34);
+  background: rgba(185, 214, 255, 0.09);
+}
+
+.grm-cohost-btn.copied {
+  border-color: rgba(34, 197, 94, 0.34);
+  background: rgba(34, 197, 94, 0.12);
+  color: #bbf7d0;
+}
+
+.grm-finished-title {
+  display: grid;
+  justify-items: center;
+  gap: 0;
+  margin-top: 0;
+}
+
+.grm-finished-title .grm-finished-h {
+  text-align: center;
+}
+
+.grm-finished-title-icon {
+  display: none !important;
+}
+
+.grm-low-performers {
+  width: min(900px, 100%);
+  border-color: rgba(168, 85, 247, 0.18);
+  background:
+    radial-gradient(circle at 0% 20%, rgba(168, 85, 247, 0.09), transparent 34%),
+    rgba(8, 13, 25, 0.72);
+}
+
+.grm-low-list {
+  display: grid;
+  gap: 10px;
+}
+
+.grm-low-row {
+  border-color: rgba(168, 85, 247, 0.13);
+  background: rgba(2, 6, 14, 0.42);
+}
+
+.grm-low-row.soft {
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.grm-low-row.medium {
+  border-color: rgba(249, 115, 22, 0.22);
+}
+
+.grm-low-row.critical {
+  border-color: rgba(168, 85, 247, 0.36);
+  background:
+    radial-gradient(circle at 0% 50%, rgba(168, 85, 247, 0.11), transparent 44%),
+    rgba(2, 6, 14, 0.46);
+}
+
+.grm-low-rank img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.34));
+}
+
+.grm-btn-skip.grm-btn-skip-compact,
+.grm-answer > .grm-btn-skip.grm-btn-skip-compact {
+  width: auto !important;
+  min-width: 150px !important;
+  max-width: 220px !important;
+  margin: 18px auto 0 !important;
+  padding: 0 22px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+@media (max-width: 760px) {
+  .grm-lobby-bar {
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .grm-lobby-join,
+  .grm-lobby-code-wrap {
+    white-space: normal;
+  }
+
+  .grm-cohost-btn,
+  .grm-music-btn {
+    width: min(100%, 240px);
+    justify-content: center;
+  }
+
+  .grm-low-row {
+    grid-template-columns: 36px 36px minmax(0, 1fr);
+  }
+
+  .grm-low-row .grm-top-score {
+    grid-column: 3;
+    justify-self: start;
+  }
+}
