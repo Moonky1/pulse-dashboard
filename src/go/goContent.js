@@ -3293,6 +3293,1312 @@ export const quizQuestions = [
     "correct": 3,
     "explanation": "Saltar el propósito y transferir a un cliente confundido crea riesgo de invalid/QA."
   }
+,
+  // ─────────────────────────────────────────────
+  // MIXED QUESTION STYLE — 2-option questions
+  // These only appear when qstyle=mixed.
+  // Multiple Choice Only mode keeps using 3+ option questions.
+  // ─────────────────────────────────────────────
+{
+  "id": 201,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2016 Toyota Camry, 114,000 miles, gas engine, runs normally. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 0,
+  "explanation": "This vehicle fits the basic year, type, mileage, and running-condition rules."
+},
+{
+  "id": 202,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2020 Tesla Model 3, 40,000 miles, runs well. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 1,
+  "explanation": "Electric vehicles are excluded even when mileage and condition look good."
+},
+{
+  "id": 203,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2011 Honda Accord, exactly 175,000 miles, running fine. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 0,
+  "explanation": "The rule is up to 175,000 miles; over the limit is the issue."
+},
+{
+  "id": 204,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2012 Nissan Altima, 175,001 miles, running fine. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 1,
+  "explanation": "175,001 is over the stated mileage guideline."
+},
+{
+  "id": 205,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2010 Ford Escape, 91,000 miles, no mechanical issues. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 1,
+  "explanation": "Vehicles before 2011 are outside the basic eligibility rule."
+},
+{
+  "id": 206,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2018 Chevy Malibu, 132,000 miles, check-engine light active today. Best action:",
+  "options": [
+    "Clarify before treating as qualified",
+    "Treat as clean qualified"
+  ],
+  "correct": 0,
+  "explanation": "A current warning light must be clarified before moving toward transfer."
+},
+{
+  "id": 207,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2017 Kia Optima starts but cannot shift into gear. Eligibility check:",
+  "options": [
+    "Good running condition confirmed",
+    "Good running condition not confirmed"
+  ],
+  "correct": 1,
+  "explanation": "A vehicle that cannot shift is not clearly in good running condition."
+},
+{
+  "id": 208,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2019 Ford F-150, 169,000 miles, runs well, not electric. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 0,
+  "explanation": "This stays within the basic year, mileage, vehicle type, and running-condition rules."
+},
+{
+  "id": 209,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2021 Chevy Bolt, 25,000 miles, running fine. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 1,
+  "explanation": "The Chevy Bolt is electric, so the exclusion still applies."
+},
+{
+  "id": 210,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2014 Jeep Wrangler with modified suspension. What can the agent say safely?",
+  "options": [
+    "Modified parts are excluded",
+    "Modified parts are guaranteed covered"
+  ],
+  "correct": 0,
+  "explanation": "Modified parts themselves are not covered."
+},
+{
+  "id": 211,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2018 Lamborghini Huracán, 22,000 miles, runs well. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 1,
+  "explanation": "Training material lists exotic exceptions such as Lamborghinis as not covered."
+},
+{
+  "id": 212,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2015 Hyundai Sonata with worn brake pads only. What should the agent avoid?",
+  "options": [
+    "Promising wear items are covered",
+    "Explaining coverage is mechanical"
+  ],
+  "correct": 0,
+  "explanation": "Normal wear items should not be promised as covered."
+},
+{
+  "id": 213,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2016 Honda CR-V, 142,000 miles, currently not drivable in a shop. Eligibility check:",
+  "options": [
+    "Good running condition confirmed",
+    "Good running condition not confirmed"
+  ],
+  "correct": 1,
+  "explanation": "A current non-drivable vehicle is not cleanly qualified."
+},
+{
+  "id": 214,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2019 Dodge Charger with collision body damage. Coverage focus:",
+  "options": [
+    "Mechanical breakdown",
+    "Collision bodywork"
+  ],
+  "correct": 0,
+  "explanation": "This coverage focuses on mechanical breakdown, not accident/cosmetic repairs."
+},
+{
+  "id": 215,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2017 motorcycle, 12,000 miles. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 1,
+  "explanation": "Motorcycles are excluded vehicle types."
+},
+{
+  "id": 216,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2023 Rivian truck, 18,000 miles. Main rule:",
+  "options": [
+    "Electric vehicle exclusion",
+    "Mileage approval"
+  ],
+  "correct": 0,
+  "explanation": "Electric status blocks eligibility regardless of low mileage."
+},
+{
+  "id": 217,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2013 Ford Focus, 172,000 miles, transmission slipping today. Best action:",
+  "options": [
+    "Clarify the current issue",
+    "Promise transmission repair"
+  ],
+  "correct": 0,
+  "explanation": "The agent must clarify current mechanical issues and avoid promises."
+},
+{
+  "id": 218,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "2021 Toyota Corolla, 40,000 miles, runs well, gas vehicle. Eligibility check:",
+  "options": [
+    "Qualifies to continue",
+    "Does not qualify"
+  ],
+  "correct": 0,
+  "explanation": "This case matches the basic eligibility path."
+},
+{
+  "id": 219,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "Customer says the car runs, but it is missing a tire. Best action:",
+  "options": [
+    "Clarify if safely drivable",
+    "Ignore because engine starts"
+  ],
+  "correct": 0,
+  "explanation": "A missing tire creates a running-condition concern."
+},
+{
+  "id": 220,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "en",
+  "question": "Customer has a 2009 SUV and a 2018 sedan that runs well. Best focus:",
+  "options": [
+    "Verify the current 2018 sedan",
+    "Use the 2009 SUV as eligible"
+  ],
+  "correct": 0,
+  "explanation": "The agent should focus on a current vehicle that may meet the rules."
+},
+{
+  "id": 221,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "Customer agrees to vehicle condition but never agrees to speak with the Service Advisor. Transfer status:",
+  "options": [
+    "Valid XFER",
+    "Invalid / not clean"
+  ],
+  "correct": 1,
+  "explanation": "Vehicle condition confirmation is not transfer consent."
+},
+{
+  "id": 222,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "The Service Advisor joins and the customer speaks with them in English for 18 seconds. Then the customer asks for Spanish. Transfer status:",
+  "options": [
+    "English handoff likely met",
+    "Automatically invalid"
+  ],
+  "correct": 0,
+  "explanation": "Meaningful English conversation with the Service Advisor happened before the language switch."
+},
+{
+  "id": 223,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "Customer asks the Service Advisor for Spanish immediately, before any English conversation. Transfer status:",
+  "options": [
+    "Clean English XFER",
+    "Not a clean English XFER"
+  ],
+  "correct": 1,
+  "explanation": "A clean English transfer needs meaningful English communication with the Service Advisor."
+},
+{
+  "id": 224,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "During 3-way, the customer hangs up before the advisor speaks. Correct button/path:",
+  "options": [
+    "Hung Up Both Lines / Call Back",
+    "Leave 3-Way Call / XFER"
+  ],
+  "correct": 0,
+  "explanation": "This prevents ringing the advisor with no customer on the line."
+},
+{
+  "id": 225,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "Advisor says hello, customer says hello, then silence. Before leaving, agent should:",
+  "options": [
+    "Confirm active conversation",
+    "Leave immediately"
+  ],
+  "correct": 0,
+  "explanation": "Two greetings alone may not prove a real handoff."
+},
+{
+  "id": 226,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "A child answers and agrees to hear options for the household vehicle. Best action:",
+  "options": [
+    "Ask for an adult decision maker",
+    "Transfer because someone agreed"
+  ],
+  "correct": 0,
+  "explanation": "A child cannot give decision-maker approval."
+},
+{
+  "id": 227,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "Co-signer says they do not make vehicle decisions. Best action:",
+  "options": [
+    "Ask for decision maker or callback",
+    "Force the transfer"
+  ],
+  "correct": 0,
+  "explanation": "A co-signer is not always the decision maker."
+},
+{
+  "id": 228,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "The advisor joins but stays silent. Best action:",
+  "options": [
+    "Prompt the advisor",
+    "Disconnect and count XFER"
+  ],
+  "correct": 0,
+  "explanation": "The agent should control the handoff and avoid dead air."
+},
+{
+  "id": 229,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "After qualifying, the customer clearly says no to being transferred. Transfer status:",
+  "options": [
+    "Valid XFER",
+    "No consent to transfer"
+  ],
+  "correct": 1,
+  "explanation": "Qualification alone does not replace consent."
+},
+{
+  "id": 230,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "en",
+  "question": "Customer requests a callback while speaking with the Service Advisor. Disposition logic:",
+  "options": [
+    "CALLBK, not clean XFER",
+    "XFER because advisor joined"
+  ],
+  "correct": 0,
+  "explanation": "A callback request with the advisor is not a clean transfer."
+},
+{
+  "id": 231,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "en",
+  "question": "Customer asks if the call will lower payments; agent ignores the question and transfers. QA result:",
+  "options": [
+    "Flag it",
+    "No issue"
+  ],
+  "correct": 0,
+  "explanation": "Customer questions must be answered or clarified before transfer."
+},
+{
+  "id": 232,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "en",
+  "question": "Agent says the bank gave the customer’s information. Script safety:",
+  "options": [
+    "Safe wording",
+    "Unsafe wording"
+  ],
+  "correct": 1,
+  "explanation": "Agents should not say the bank provided the file."
+},
+{
+  "id": 233,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "en",
+  "question": "Agent says, “There is no cost at all.” Script safety:",
+  "options": [
+    "Safe wording",
+    "Risky wording"
+  ],
+  "correct": 1,
+  "explanation": "This can sound like free coverage or guaranteed no cost."
+},
+{
+  "id": 234,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "en",
+  "question": "Caller sounds confused in English. Best first check:",
+  "options": [
+    "Preferred language",
+    "Payment method"
+  ],
+  "correct": 0,
+  "explanation": "Language understanding should be verified before pushing forward."
+},
+{
+  "id": 235,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "en",
+  "question": "Customer asks, “To who?” after transfer setup. Best action:",
+  "options": [
+    "Clarify Service Advisor role",
+    "Dial first and explain later"
+  ],
+  "correct": 0,
+  "explanation": "The customer should understand who they are being transferred to."
+},
+{
+  "id": 236,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "en",
+  "question": "Agent says the coverage is from the manufacturer. QA result:",
+  "options": [
+    "Flag it",
+    "No issue"
+  ],
+  "correct": 0,
+  "explanation": "Agents should not misrepresent the source of coverage."
+},
+{
+  "id": 237,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "en",
+  "question": "Agent changes tiny connector words but keeps every compliance point. QA result:",
+  "options": [
+    "Acceptable",
+    "Always invalid"
+  ],
+  "correct": 0,
+  "explanation": "Natural wording is acceptable if required meaning remains intact."
+},
+{
+  "id": 238,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "en",
+  "question": "Customer asks if purchase is required today. Best answer:",
+  "options": [
+    "Advisor reviews options; customer decides",
+    "Yes, purchase is required today"
+  ],
+  "correct": 0,
+  "explanation": "The call should not be framed as mandatory."
+},
+{
+  "id": 239,
+  "question_type": "binary",
+  "topic": "objections",
+  "language": "en",
+  "question": "Customer says “I’m busy” and refuses after callback rebuttal. Disposition:",
+  "options": [
+    "CALLBK",
+    "XFER"
+  ],
+  "correct": 0,
+  "explanation": "If they will not continue and callback handling applies, CALLBK is the better path."
+},
+{
+  "id": 240,
+  "question_type": "binary",
+  "topic": "objections",
+  "language": "en",
+  "question": "Customer says “I already have insurance.” Best distinction:",
+  "options": [
+    "Insurance is accidents; coverage is mechanical",
+    "Insurance and coverage are the same"
+  ],
+  "correct": 0,
+  "explanation": "Insurance and mechanical coverage must be separated clearly."
+},
+{
+  "id": 241,
+  "question_type": "binary",
+  "topic": "objections",
+  "language": "en",
+  "question": "Customer asks for an email first. Agent promises policy documents by email. QA result:",
+  "options": [
+    "Safe",
+    "Risky"
+  ],
+  "correct": 1,
+  "explanation": "The agent should not promise documents they cannot provide."
+},
+{
+  "id": 242,
+  "question_type": "binary",
+  "topic": "objections",
+  "language": "en",
+  "question": "Customer says “wrong number, stop calling.” Best handling:",
+  "options": [
+    "Wrong number plus removal care",
+    "Force rebuttal and transfer"
+  ],
+  "correct": 0,
+  "explanation": "Wrong number and stop-calling language require careful handling."
+},
+{
+  "id": 243,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Voicemail greeting plays. Disposition:",
+  "options": [
+    "A",
+    "XFER"
+  ],
+  "correct": 0,
+  "explanation": "A is for Answering Machine / voicemail."
+},
+{
+  "id": 244,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Customer hears script and hangs up. Better than DAIR:",
+  "options": [
+    "NI",
+    "DAIR"
+  ],
+  "correct": 0,
+  "explanation": "There was contact; DAIR is for no real response on the line."
+},
+{
+  "id": 245,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Spanish-speaking customer is routed blindly without a Spanish Service Advisor handoff. Disposition:",
+  "options": [
+    "SPANIS",
+    "SPXFER"
+  ],
+  "correct": 0,
+  "explanation": "SPANIS is the blind Spanish route."
+},
+{
+  "id": 246,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Spanish-speaking customer is directly connected to a Spanish Service Advisor. Disposition:",
+  "options": [
+    "SPANIS",
+    "SPXFER"
+  ],
+  "correct": 1,
+  "explanation": "SPXFER is for direct Spanish transfers."
+},
+{
+  "id": 247,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Customer says “stop calling or I’ll report this.” Disposition:",
+  "options": [
+    "DNC",
+    "NI"
+  ],
+  "correct": 0,
+  "explanation": "Stop-calling language and threats should be handled as DNC."
+},
+{
+  "id": 248,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "No real person ever responds on the line. Disposition:",
+  "options": [
+    "DAIR",
+    "CALLBK"
+  ],
+  "correct": 0,
+  "explanation": "DAIR is for true dead air."
+},
+{
+  "id": 249,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Agent dials the advisor without clear customer approval. XFER status:",
+  "options": [
+    "Clean XFER",
+    "Invalid / not clean"
+  ],
+  "correct": 1,
+  "explanation": "Clear consent is required before transfer."
+},
+{
+  "id": 250,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "en",
+  "question": "Advisor receives a ringing call but customer already hung up. XFER status:",
+  "options": [
+    "Clean XFER",
+    "Dead-air risk / not clean"
+  ],
+  "correct": 1,
+  "explanation": "This is the kind of dead-air transfer the process is meant to prevent."
+},
+{
+  "id": 251,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Toyota Camry 2016, 114,000 millas, motor de gasolina y funciona normal. Revisión de elegibilidad:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 0,
+  "explanation": "Este vehículo cumple con año, tipo, millaje y condición de funcionamiento."
+},
+{
+  "id": 252,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Tesla Model 3 2020, 40,000 millas y funciona bien. Revisión de elegibilidad:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 1,
+  "explanation": "Los vehículos eléctricos están excluidos aunque tengan bajo millaje y funcionen bien."
+},
+{
+  "id": 253,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Honda Accord 2011, exactamente 175,000 millas y funcionando bien. Revisión de elegibilidad:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 0,
+  "explanation": "La regla indica hasta 175,000 millas; el problema es estar por encima del límite."
+},
+{
+  "id": 254,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Nissan Altima 2012, 175,001 millas y funcionando bien. Revisión de elegibilidad:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 1,
+  "explanation": "175,001 millas está por encima de la guía de millaje."
+},
+{
+  "id": 255,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Ford Escape 2010, 91,000 millas y sin problemas mecánicos. Revisión de elegibilidad:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 1,
+  "explanation": "Los vehículos anteriores a 2011 están fuera de la regla básica."
+},
+{
+  "id": 256,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Chevy Malibu 2018, 132,000 millas y luz de check engine activa hoy. Mejor acción:",
+  "options": [
+    "Aclarar antes de tratarlo como calificado",
+    "Tratarlo como calificado limpio"
+  ],
+  "correct": 0,
+  "explanation": "Una luz de advertencia actual debe aclararse antes de avanzar al transfer."
+},
+{
+  "id": 257,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Kia Optima 2017 enciende, pero no cambia de marcha. Revisión:",
+  "options": [
+    "Buen funcionamiento confirmado",
+    "Buen funcionamiento no confirmado"
+  ],
+  "correct": 1,
+  "explanation": "Un vehículo que no cambia de marcha no está claramente en buenas condiciones de funcionamiento."
+},
+{
+  "id": 258,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Ford F-150 2019, 169,000 millas, funciona bien y no es eléctrico. Revisión de elegibilidad:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 0,
+  "explanation": "Está dentro de las reglas básicas de año, millaje, tipo de vehículo y condición."
+},
+{
+  "id": 259,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Chevy Bolt 2021, 25,000 millas y funcionando bien. Revisión de elegibilidad:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 1,
+  "explanation": "El Chevy Bolt es eléctrico, por eso aplica la exclusión."
+},
+{
+  "id": 260,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Jeep Wrangler 2014 con suspensión modificada. ¿Qué puede decir el agente con seguridad?",
+  "options": [
+    "Las partes modificadas están excluidas",
+    "Las partes modificadas están garantizadas"
+  ],
+  "correct": 0,
+  "explanation": "Las partes modificadas no están cubiertas."
+},
+{
+  "id": 261,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Lamborghini Huracán 2018, 22,000 millas y funciona bien. Revisión de elegibilidad:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 1,
+  "explanation": "El material de training lista excepciones exóticas como Lamborghinis."
+},
+{
+  "id": 262,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Hyundai Sonata 2015 con pastillas de freno gastadas solamente. ¿Qué debe evitar el agente?",
+  "options": [
+    "Prometer que wear items están cubiertos",
+    "Explicar que la cobertura es mecánica"
+  ],
+  "correct": 0,
+  "explanation": "Los wear items normales no deben prometerse como cubiertos."
+},
+{
+  "id": 263,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Honda CR-V 2016, 142,000 millas, actualmente en taller y no manejable. Revisión:",
+  "options": [
+    "Buen funcionamiento confirmado",
+    "Buen funcionamiento no confirmado"
+  ],
+  "correct": 1,
+  "explanation": "Un vehículo que no se puede manejar actualmente no está limpiamente calificado."
+},
+{
+  "id": 264,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Dodge Charger 2019 con daño de carrocería por accidente. Enfoque de cobertura:",
+  "options": [
+    "Falla mecánica",
+    "Carrocería por choque"
+  ],
+  "correct": 0,
+  "explanation": "La cobertura se enfoca en fallas mecánicas, no en accidentes o reparaciones cosméticas."
+},
+{
+  "id": 265,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Motocicleta 2017 con 12,000 millas. Revisión de elegibilidad:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 1,
+  "explanation": "Las motocicletas son tipos de vehículo excluidos."
+},
+{
+  "id": 266,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Rivian truck 2023, 18,000 millas. Regla principal:",
+  "options": [
+    "Exclusión por vehículo eléctrico",
+    "Aprobación por millaje"
+  ],
+  "correct": 0,
+  "explanation": "Ser eléctrico bloquea la elegibilidad aunque el millaje sea bajo."
+},
+{
+  "id": 267,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Ford Focus 2013, 172,000 millas, transmisión patinando hoy. Mejor acción:",
+  "options": [
+    "Aclarar el problema actual",
+    "Prometer reparación de transmisión"
+  ],
+  "correct": 0,
+  "explanation": "El agente debe aclarar problemas mecánicos actuales y evitar promesas."
+},
+{
+  "id": 268,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "Toyota Corolla 2021, 40,000 millas, funciona bien y es de gasolina. Revisión:",
+  "options": [
+    "Califica para continuar",
+    "No califica"
+  ],
+  "correct": 0,
+  "explanation": "Este caso cumple con el camino básico de elegibilidad."
+},
+{
+  "id": 269,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "El cliente dice que el carro funciona, pero le falta una llanta. Mejor acción:",
+  "options": [
+    "Aclarar si se puede manejar con seguridad",
+    "Ignorarlo porque el motor enciende"
+  ],
+  "correct": 0,
+  "explanation": "Una llanta faltante crea duda sobre la condición de funcionamiento."
+},
+{
+  "id": 270,
+  "question_type": "binary",
+  "topic": "product",
+  "language": "es",
+  "question": "El cliente tiene una SUV 2009 y un sedán 2018 que funciona bien. Mejor enfoque:",
+  "options": [
+    "Verificar el sedán 2018 actual",
+    "Usar la SUV 2009 como elegible"
+  ],
+  "correct": 0,
+  "explanation": "El agente debe enfocarse en un vehículo actual que pueda cumplir las reglas."
+},
+{
+  "id": 271,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "El cliente acepta que el vehículo funciona, pero nunca acepta hablar con el Service Advisor. Estado del transfer:",
+  "options": [
+    "XFER válido",
+    "Inválido / no limpio"
+  ],
+  "correct": 1,
+  "explanation": "Confirmar condición del vehículo no es consentimiento para transferir."
+},
+{
+  "id": 272,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "El Service Advisor entra y el cliente habla con él en inglés por 18 segundos. Luego pide español. Estado:",
+  "options": [
+    "El handoff en inglés probablemente se cumplió",
+    "Automáticamente inválido"
+  ],
+  "correct": 0,
+  "explanation": "Hubo comunicación significativa en inglés con el Service Advisor antes del cambio de idioma."
+},
+{
+  "id": 273,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "El cliente pide español apenas entra el Service Advisor, antes de cualquier conversación en inglés. Estado:",
+  "options": [
+    "English XFER limpio",
+    "No es English XFER limpio"
+  ],
+  "correct": 1,
+  "explanation": "Un English transfer necesita comunicación significativa en inglés con el Service Advisor."
+},
+{
+  "id": 274,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "Durante el 3-way, el cliente cuelga antes de que el advisor hable. Ruta correcta:",
+  "options": [
+    "Hung Up Both Lines / Call Back",
+    "Leave 3-Way Call / XFER"
+  ],
+  "correct": 0,
+  "explanation": "Esto evita que el advisor reciba una llamada timbrando sin cliente."
+},
+{
+  "id": 275,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "El advisor dice hello, el cliente dice hello y luego quedan en silencio. Antes de salir, el agente debe:",
+  "options": [
+    "Confirmar conversación activa",
+    "Salir inmediatamente"
+  ],
+  "correct": 0,
+  "explanation": "Dos saludos no siempre prueban un handoff real."
+},
+{
+  "id": 276,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "Un niño contesta y acepta escuchar opciones del vehículo familiar. Mejor acción:",
+  "options": [
+    "Pedir un adulto decision maker",
+    "Transferir porque alguien aceptó"
+  ],
+  "correct": 0,
+  "explanation": "Un menor no puede dar aprobación válida como decision maker."
+},
+{
+  "id": 277,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "El co-signer dice que no toma decisiones del vehículo. Mejor acción:",
+  "options": [
+    "Pedir al decision maker o callback",
+    "Forzar el transfer"
+  ],
+  "correct": 0,
+  "explanation": "Ser co-signer no siempre significa tener autoridad para decidir."
+},
+{
+  "id": 278,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "El advisor entra, pero se queda en silencio. Mejor acción:",
+  "options": [
+    "Llamar la atención del advisor",
+    "Desconectarse y contar XFER"
+  ],
+  "correct": 0,
+  "explanation": "El agente debe controlar el handoff y evitar dead air."
+},
+{
+  "id": 279,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "Después de calificar, el cliente dice claramente que no quiere ser transferido. Estado:",
+  "options": [
+    "XFER válido",
+    "No hay consentimiento para transferir"
+  ],
+  "correct": 1,
+  "explanation": "La calificación no reemplaza el consentimiento."
+},
+{
+  "id": 280,
+  "question_type": "binary",
+  "topic": "callflow",
+  "language": "es",
+  "question": "El cliente pide callback mientras habla con el Service Advisor. Lógica de disposición:",
+  "options": [
+    "CALLBK, no XFER limpio",
+    "XFER porque entró el advisor"
+  ],
+  "correct": 0,
+  "explanation": "Una solicitud de callback con el advisor no es transferencia limpia."
+},
+{
+  "id": 281,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "es",
+  "question": "El cliente pregunta si la llamada bajará pagos; el agente ignora la pregunta y transfiere. Resultado QA:",
+  "options": [
+    "Marcarlo",
+    "Sin problema"
+  ],
+  "correct": 0,
+  "explanation": "Las preguntas del cliente deben responderse o aclararse antes del transfer."
+},
+{
+  "id": 282,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "es",
+  "question": "El agente dice que el banco dio la información del cliente. Seguridad del script:",
+  "options": [
+    "Wording seguro",
+    "Wording inseguro"
+  ],
+  "correct": 1,
+  "explanation": "El agente no debe decir que el banco entregó el archivo."
+},
+{
+  "id": 283,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "es",
+  "question": "El agente dice: “No tiene ningún costo.” Seguridad del script:",
+  "options": [
+    "Wording seguro",
+    "Wording riesgoso"
+  ],
+  "correct": 1,
+  "explanation": "Puede sonar como cobertura gratis o costo garantizado en cero."
+},
+{
+  "id": 284,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "es",
+  "question": "La persona suena confundida en inglés. Primera verificación:",
+  "options": [
+    "Idioma de preferencia",
+    "Método de pago"
+  ],
+  "correct": 0,
+  "explanation": "Se debe verificar comprensión e idioma antes de avanzar."
+},
+{
+  "id": 285,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "es",
+  "question": "Después del setup de transfer, el cliente pregunta: “¿Con quién?” Mejor acción:",
+  "options": [
+    "Aclarar el rol del Service Advisor",
+    "Marcar primero y explicar después"
+  ],
+  "correct": 0,
+  "explanation": "El cliente debe entender con quién será transferido."
+},
+{
+  "id": 286,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "es",
+  "question": "El agente dice que la cobertura viene del fabricante. Resultado QA:",
+  "options": [
+    "Marcarlo",
+    "Sin problema"
+  ],
+  "correct": 0,
+  "explanation": "El agente no debe representar falsamente el origen de la cobertura."
+},
+{
+  "id": 287,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "es",
+  "question": "El agente cambia conectores pequeños, pero mantiene todos los puntos de compliance. Resultado QA:",
+  "options": [
+    "Aceptable",
+    "Siempre inválido"
+  ],
+  "correct": 0,
+  "explanation": "El wording natural es aceptable si el significado requerido se mantiene."
+},
+{
+  "id": 288,
+  "question_type": "binary",
+  "topic": "script",
+  "language": "es",
+  "question": "El cliente pregunta si debe comprar algo hoy. Mejor respuesta:",
+  "options": [
+    "El advisor revisa opciones; el cliente decide",
+    "Sí, la compra es obligatoria hoy"
+  ],
+  "correct": 0,
+  "explanation": "La llamada no debe presentarse como obligatoria."
+},
+{
+  "id": 289,
+  "question_type": "binary",
+  "topic": "objections",
+  "language": "es",
+  "question": "El cliente dice “estoy ocupado” y se niega después del callback rebuttal. Disposición:",
+  "options": [
+    "CALLBK",
+    "XFER"
+  ],
+  "correct": 0,
+  "explanation": "Si no continúa y aplica callback, CALLBK es el camino correcto."
+},
+{
+  "id": 290,
+  "question_type": "binary",
+  "topic": "objections",
+  "language": "es",
+  "question": "El cliente dice “ya tengo seguro”. Mejor diferencia:",
+  "options": [
+    "Seguro es accidentes; cobertura es mecánica",
+    "Seguro y cobertura son lo mismo"
+  ],
+  "correct": 0,
+  "explanation": "El seguro y la cobertura mecánica deben separarse claramente."
+},
+{
+  "id": 291,
+  "question_type": "binary",
+  "topic": "objections",
+  "language": "es",
+  "question": "El cliente pide un email primero. El agente promete documentos de póliza por email. Resultado QA:",
+  "options": [
+    "Seguro",
+    "Riesgoso"
+  ],
+  "correct": 1,
+  "explanation": "El agente no debe prometer documentos que no puede enviar."
+},
+{
+  "id": 292,
+  "question_type": "binary",
+  "topic": "objections",
+  "language": "es",
+  "question": "El cliente dice “número equivocado, dejen de llamar”. Mejor manejo:",
+  "options": [
+    "Wrong number con cuidado de remoción",
+    "Forzar rebuttal y transfer"
+  ],
+  "correct": 0,
+  "explanation": "Wrong number y stop-calling language requieren manejo cuidadoso."
+},
+{
+  "id": 293,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "Suena un voicemail. Disposición:",
+  "options": [
+    "A",
+    "XFER"
+  ],
+  "correct": 0,
+  "explanation": "A corresponde a Answering Machine / voicemail."
+},
+{
+  "id": 294,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "El cliente escucha el script y cuelga. Mejor que DAIR:",
+  "options": [
+    "NI",
+    "DAIR"
+  ],
+  "correct": 0,
+  "explanation": "Hubo contacto; DAIR es para cuando no hay respuesta real en la línea."
+},
+{
+  "id": 295,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "Cliente que necesita español es enviado por ruta ciega sin handoff con Service Advisor en español. Disposición:",
+  "options": [
+    "SPANIS",
+    "SPXFER"
+  ],
+  "correct": 0,
+  "explanation": "SPANIS corresponde a ruta ciega en español."
+},
+{
+  "id": 296,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "Cliente en español es conectado directamente con un Service Advisor en español. Disposición:",
+  "options": [
+    "SPANIS",
+    "SPXFER"
+  ],
+  "correct": 1,
+  "explanation": "SPXFER es para transferencias directas en español."
+},
+{
+  "id": 297,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "El cliente dice “dejen de llamar o los reporto”. Disposición:",
+  "options": [
+    "DNC",
+    "NI"
+  ],
+  "correct": 0,
+  "explanation": "Peticiones de no llamar y amenazas deben manejarse como DNC."
+},
+{
+  "id": 298,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "Nadie responde realmente en la línea. Disposición:",
+  "options": [
+    "DAIR",
+    "CALLBK"
+  ],
+  "correct": 0,
+  "explanation": "DAIR es para dead air real."
+},
+{
+  "id": 299,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "El agente marca al advisor sin aprobación clara del cliente. Estado de XFER:",
+  "options": [
+    "XFER limpio",
+    "Inválido / no limpio"
+  ],
+  "correct": 1,
+  "explanation": "Se requiere consentimiento claro antes de transferir."
+},
+{
+  "id": 300,
+  "question_type": "binary",
+  "topic": "dosdonts",
+  "language": "es",
+  "question": "El advisor recibe una llamada timbrando, pero el cliente ya colgó. Estado de XFER:",
+  "options": [
+    "XFER limpio",
+    "Riesgo de dead air / no limpio"
+  ],
+  "correct": 1,
+  "explanation": "Este es el tipo de dead-air transfer que el proceso busca evitar."
+}
 ]
 
 
