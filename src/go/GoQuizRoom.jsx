@@ -28,7 +28,7 @@ const OPTS = [
 const LTRS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 function getOptionLetter(index) {
-  return getOptionLetter(index) || String(index + 1)
+  return LTRS[index] || String(index + 1)
 }
 
 const GO_RESULT_ASSETS = {
