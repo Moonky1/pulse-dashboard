@@ -1,7 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  learnCategories,
   scripts,
   objections,
   productKnowledge,
@@ -9,541 +8,408 @@ import {
   dosAndDonts,
   dialer,
 } from './goContent'
-import './GoLanding.css'
+import {
+  ACADEMY_COPY,
+  ACADEMY_SECTIONS,
+  LANG_OPTIONS,
+  getSavedAcademyLang,
+  normalizeSearchText,
+  saveAcademyLang,
+  textFor,
+  trimText,
+} from './academyData'
+import './Academy.css'
 
-const STARS = [
-  { top: '12%', left: '10%' },
-  { top: '16%', left: '28%' },
-  { top: '14%', left: '48%' },
-  { top: '18%', left: '78%' },
-  { top: '24%', left: '84%' },
-  { top: '32%', left: '18%' },
-  { top: '36%', left: '38%' },
-  { top: '30%', left: '62%' },
-  { top: '41%', left: '78%' },
-  { top: '52%', left: '14%' },
-  { top: '58%', left: '28%' },
-  { top: '55%', left: '70%' },
-  { top: '66%', left: '18%' },
-  { top: '72%', left: '42%' },
-  { top: '69%', left: '82%' },
-  { top: '83%', left: '20%' },
-  { top: '86%', left: '58%' },
-  { top: '80%', left: '88%' },
-]
+const FEATURED_IDS = ['script', 'qa-invalid', 'product', 'dispositions']
 
-const SHOOTING_STARS = [
-  { top: '18%', left: '78%', delay: '0s', duration: '6.5s' },
-  { top: '28%', left: '64%', delay: '2.4s', duration: '7.5s' },
-  { top: '12%', left: '58%', delay: '4.8s', duration: '6.8s' },
-  { top: '34%', left: '86%', delay: '7.2s', duration: '8s' },
-  { top: '22%', left: '72%', delay: '9.4s', duration: '7.2s' },
-]
+function getProductItems(lang) {
+  if (lang === 'es') {
+    return [
+      'Motor y transmisión',
+      'Vehículos 2011 o más recientes',
+      'Vehículos con hasta 175,000 millas',
+      'Vehículos que todavía funcionan correctamente',
+      'Reparaciones en talleres autorizados a nivel nacional',
+      'Partes no modificadas en vehículos con modificaciones',
+    ]
+  }
 
-const FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'script', label: 'Scripts' },
-  { id: 'objections', label: 'Objections' },
-  { id: 'product', label: 'Product' },
-  { id: 'callflow', label: 'Call Flow' },
-  { id: 'dosdonts', label: "Do's & Don'ts" },
-  { id: 'dialer', label: 'Dialer' },
-]
-
-function normalizeText(value) {
-  return String(value || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+  return [
+    ...(productKnowledge?.canCover?.items || []),
+    ...(productKnowledge?.cannotCover?.items || []),
+  ]
 }
 
-function trimText(value, max = 145) {
-  const clean = String(value || '').replace(/\s+/g, ' ').trim()
-  if (clean.length <= max) return clean
-  return `${clean.slice(0, max).trim()}...`
-}
+function buildSearchIndex(lang) {
+  const items = []
+  const copy = ACADEMY_COPY[lang]
 
-function getCategoryType(cat) {
-  if (cat.id === 'dialer-guide') return 'dialer'
-  return cat.type || 'general'
-}
-
-function buildSearchIndex() {
-  const index = []
-
-  learnCategories.forEach((cat) => {
-    index.push({
-      id: `category-${cat.id}`,
-      type: getCategoryType(cat),
-      route: `/academy/${cat.id}`,
-      icon: cat.icon,
-      title: cat.title,
-      subtitle: 'Academy section',
-      description: cat.description,
-      keywords: [cat.title, cat.description, cat.id, cat.type, cat.ref].join(' '),
+  ACADEMY_SECTIONS.forEach((section) => {
+    items.push({
+      id: `section-${section.id}`,
+      route: `/academy/${section.id}`,
+      icon: section.icon,
+      type: section.id,
+      title: textFor(section.title, lang),
+      subtitle: section.group,
+      description: textFor(section.desc, lang),
+      keywords: `${section.keywords} ${textFor(section.title, 'en')} ${textFor(section.title, 'es')}`,
     })
   })
 
-  Object.entries(scripts).forEach(([lang, script]) => {
-    const categoryId = lang === 'es' ? 'script-es' : 'script-en'
+  const script = scripts?.[lang] || scripts?.en
 
-    script.steps.forEach((step) => {
-      index.push({
-        id: `script-${lang}-${step.id}`,
-        type: 'script',
-        route: `/academy/${categoryId}`,
-        icon: script.flag,
-        title: step.label,
-        subtitle: script.title,
-        description: step.tip ? `${step.text} ${step.tip}` : step.text,
-        keywords: [script.title, step.label, step.text, step.tip, lang].join(' '),
-      })
+  script?.steps?.forEach((step) => {
+    items.push({
+      id: `script-${step.id}`,
+      route: '/academy/script',
+      icon: '📋',
+      type: 'script',
+      title: step.label,
+      subtitle: script.title,
+      description: `${step.text} ${step.tip || ''}`,
+      keywords: `${step.label} ${step.text} ${step.tip || ''} script service advisor transfer`,
     })
   })
 
-  objections.forEach((obj) => {
-    index.push({
-      id: `objection-en-${obj.id}`,
+  objections?.forEach((item) => {
+    const title = lang === 'es' ? item.titleEs : item.title
+    const rebuttal = lang === 'es' ? item.rebuttalEs : item.rebuttalEn
+
+    items.push({
+      id: `objection-${item.id}`,
+      route: '/academy/objections',
+      icon: item.emoji || '🛡️',
       type: 'objections',
-      route: '/academy/objections-en',
-      icon: obj.emoji,
-      title: obj.title,
-      subtitle: 'English objection',
-      description: `${obj.goal}. ${obj.rebuttalEn}`,
-      keywords: [obj.title, obj.goal, obj.rebuttalEn, 'english objection rebuttal'].join(' '),
-    })
-
-    index.push({
-      id: `objection-es-${obj.id}`,
-      type: 'objections',
-      route: '/academy/objections-es',
-      icon: obj.emoji,
-      title: obj.titleEs,
-      subtitle: 'Spanish objection',
-      description: `${obj.goal}. ${obj.rebuttalEs}`,
-      keywords: [obj.titleEs, obj.goal, obj.rebuttalEs, 'spanish objection rebuttal español'].join(' '),
+      title,
+      subtitle: lang === 'es' ? 'Objeción' : 'Objection',
+      description: `${item.goal}. ${rebuttal}`,
+      keywords: `${item.title} ${item.titleEs} ${item.goal} ${item.rebuttalEn} ${item.rebuttalEs}`,
     })
   })
 
-  productKnowledge.comparison.items.forEach((item) => {
-    index.push({
-      id: `product-${item.name}`,
-      type: 'product',
-      route: '/academy/product-knowledge',
+  getProductItems(lang).forEach((line, index) => {
+    items.push({
+      id: `product-${index}`,
+      route: '/academy/product',
       icon: '📦',
-      title: item.name,
-      subtitle: 'Product knowledge',
-      description: item.points.join(' · '),
-      keywords: [item.name, item.points.join(' '), 'coverage warranty insurance'].join(' '),
-    })
-  })
-
-  productKnowledge.canCover.items.forEach((item, idx) => {
-    index.push({
-      id: `cover-${idx}`,
       type: 'product',
-      route: '/academy/product-knowledge',
-      icon: '✅',
-      title: 'What we cover',
-      subtitle: 'Coverage eligibility',
-      description: item,
-      keywords: [item, 'coverage cover eligible'].join(' '),
+      title: lang === 'es' ? 'Regla de producto' : 'Product rule',
+      subtitle: textFor(ACADEMY_SECTIONS.find((s) => s.id === 'product')?.title, lang),
+      description: line,
+      keywords: `${line} product coverage vehicle mileage 175000 electric 2011`,
     })
   })
 
-  productKnowledge.cannotCover.items.forEach((item, idx) => {
-    index.push({
-      id: `cannot-cover-${idx}`,
-      type: 'product',
-      route: '/academy/product-knowledge',
-      icon: '🚫',
-      title: 'What we cannot cover',
-      subtitle: 'Coverage exclusions',
-      description: item,
-      keywords: [item, 'cannot cover exclusion not eligible'].join(' '),
-    })
-  })
-
-  callFlow.steps.forEach((step) => {
-    index.push({
-      id: `callflow-${step.id}`,
-      type: 'callflow',
+  callFlow?.steps?.forEach((step) => {
+    items.push({
+      id: `flow-${step.id}`,
       route: '/academy/call-flow',
-      icon: step.icon,
+      icon: step.icon || '📞',
+      type: 'call-flow',
       title: step.title,
-      subtitle: 'Call flow',
-      description: `${step.description} ${step.keyPoints.join(' · ')}`,
-      keywords: [step.title, step.description, step.keyPoints.join(' '), 'transfer flow'].join(' '),
+      subtitle: lang === 'es' ? 'Flujo de llamada' : 'Call flow',
+      description: `${step.description} ${(step.keyPoints || []).join(' ')}`,
+      keywords: `${step.title} ${step.description} ${(step.keyPoints || []).join(' ')} transfer handoff 15 seconds`,
     })
   })
 
-  callFlow.transferProtocol.forEach((step, idx) => {
-    index.push({
-      id: `transfer-${idx}`,
-      type: 'callflow',
-      route: '/academy/call-flow',
-      icon: '🔄',
-      title: `Transfer protocol ${idx + 1}`,
-      subtitle: 'Transfer protocol',
-      description: step,
-      keywords: [step, 'transfer protocol service advisor 15 seconds'].join(' '),
-    })
-  })
-
-  callFlow.waitingQuestions.forEach((question, idx) => {
-    index.push({
-      id: `waiting-${idx}`,
-      type: 'callflow',
-      route: '/academy/call-flow',
-      icon: '⏳',
-      title: 'Waiting question',
-      subtitle: 'While waiting for the advisor',
-      description: question,
-      keywords: [question, 'waiting service advisor'].join(' '),
-    })
-  })
-
-  dosAndDonts.donts.forEach((item, idx) => {
-    index.push({
-      id: `dont-${idx}`,
-      type: 'dosdonts',
-      route: '/academy/dos-donts',
+  dosAndDonts?.donts?.forEach((item, index) => {
+    items.push({
+      id: `dont-${index}`,
+      route: '/academy/mistakes',
       icon: '⚠️',
+      type: 'mistakes',
       title: item.rule,
-      subtitle: "Do's and Don'ts",
+      subtitle: lang === 'es' ? 'Compliance' : "Do's & Don'ts",
       description: item.detail,
-      keywords: [item.rule, item.detail, 'compliance do not dont'].join(' '),
+      keywords: `${item.rule} ${item.detail} compliance dont mistake`,
     })
   })
 
-  dosAndDonts.deliveryStandards.forEach((item, idx) => {
-    index.push({
-      id: `standard-${idx}`,
-      type: 'dosdonts',
-      route: '/academy/dos-donts',
-      icon: '🎙️',
-      title: 'Delivery standard',
-      subtitle: "Do's and Don'ts",
-      description: item,
-      keywords: [item, 'delivery standard script compliance'].join(' '),
-    })
-  })
-
-  dialer.dispositions.forEach((item) => {
-    index.push({
+  dialer?.dispositions?.forEach((item) => {
+    items.push({
       id: `disp-${item.code}`,
-      type: 'dialer',
-      route: '/academy/dialer-guide',
-      icon: '🖥️',
+      route: '/academy/dispositions',
+      icon: '🧾',
+      type: 'dispositions',
       title: item.code,
       subtitle: item.label,
       description: item.description,
-      keywords: [item.code, item.label, item.description, 'dialer disposition'].join(' '),
+      keywords: `${item.code} ${item.label} ${item.description} disposition dialer`,
     })
   })
 
-  dialer.pauseCodes.forEach((item) => {
-    index.push({
-      id: `pause-${item.label}`,
-      type: 'dialer',
-      route: '/academy/dialer-guide',
+  dialer?.pauseCodes?.forEach((item, index) => {
+    items.push({
+      id: `pause-${index}`,
+      route: '/academy/dialer',
       icon: '⏸️',
-      title: item.label,
-      subtitle: item.code,
-      description: `${item.desc} · ${item.time}`,
-      keywords: [item.label, item.code, item.desc, item.time, 'pause code'].join(' '),
+      type: 'dialer',
+      title: item.label || item.code,
+      subtitle: item.code || 'Pause code',
+      description: `${item.desc || ''} ${item.time || ''}`,
+      keywords: `${item.label || ''} ${item.code || ''} ${item.desc || ''} ${item.time || ''} pause code rr lunch tech`,
     })
   })
 
-  return index
+  items.push({
+    id: 'search-tip',
+    route: '/academy/overview',
+    icon: '💡',
+    type: 'overview',
+    title: copy.searchLabel,
+    subtitle: copy.updated,
+    description: copy.searchTip,
+    keywords: copy.searchTip,
+  })
+
+  return items
 }
 
-function scoreResult(item, query) {
-  const q = normalizeText(query)
-  const title = normalizeText(item.title)
-  const subtitle = normalizeText(item.subtitle)
-  const desc = normalizeText(item.description)
-  const keywords = normalizeText(item.keywords)
+function scoreItem(item, query) {
+  const q = normalizeSearchText(query)
+  const title = normalizeSearchText(item.title)
+  const subtitle = normalizeSearchText(item.subtitle)
+  const description = normalizeSearchText(item.description)
+  const keywords = normalizeSearchText(item.keywords)
 
   let score = 0
 
-  if (title === q) score += 120
-  if (title.includes(q)) score += 70
-  if (subtitle.includes(q)) score += 35
-  if (desc.includes(q)) score += 25
-  if (keywords.includes(q)) score += 40
+  if (title === q) score += 100
+  if (title.includes(q)) score += 60
+  if (subtitle.includes(q)) score += 25
+  if (description.includes(q)) score += 18
+  if (keywords.includes(q)) score += 35
 
-  q.split(' ')
+  q.split(/\s+/)
     .filter(Boolean)
     .forEach((word) => {
-      if (title.includes(word)) score += 18
-      if (subtitle.includes(word)) score += 10
-      if (desc.includes(word)) score += 8
-      if (keywords.includes(word)) score += 12
+      if (title.includes(word)) score += 16
+      if (subtitle.includes(word)) score += 8
+      if (description.includes(word)) score += 7
+      if (keywords.includes(word)) score += 10
     })
 
   return score
 }
 
 export default function GoLearn() {
- const navigate = useNavigate()
-
-const goHome = () => {
-  const loggedIn = Boolean(localStorage.getItem('pulse_user'))
-  navigate(loggedIn ? '/dashboard' : '/')
-}
-
-const pageRef = useRef(null)
-  const rafRef = useRef(null)
-  const audioRef = useRef(null)
-
+  const navigate = useNavigate()
+  const [lang, setLang] = useState(() => getSavedAcademyLang())
   const [query, setQuery] = useState('')
-  const [activeFilter, setActiveFilter] = useState('all')
-  const [ripples, setRipples] = useState([])
+  const [activeType, setActiveType] = useState('all')
 
-  const searchIndex = useMemo(() => buildSearchIndex(), [])
+  const copy = ACADEMY_COPY[lang]
+
+  const goHome = () => {
+    const loggedIn = Boolean(localStorage.getItem('pulse_user'))
+    navigate(loggedIn ? '/dashboard' : '/')
+  }
+
+  const changeLang = (nextLang) => {
+    setLang(nextLang)
+    saveAcademyLang(nextLang)
+  }
+
+  const searchIndex = useMemo(() => buildSearchIndex(lang), [lang])
 
   const results = useMemo(() => {
     const clean = query.trim()
     if (!clean) return []
 
     return searchIndex
-      .map((item) => ({ ...item, score: scoreResult(item, clean) }))
+      .map((item) => ({ ...item, score: scoreItem(item, clean) }))
       .filter((item) => item.score > 0)
-      .filter((item) => activeFilter === 'all' || item.type === activeFilter)
+      .filter((item) => activeType === 'all' || item.type === activeType)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 18)
-  }, [activeFilter, query, searchIndex])
+      .slice(0, 16)
+  }, [activeType, query, searchIndex])
 
-  const playClickSound = () => {
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext
-      if (!AudioContext) return
-
-      if (!audioRef.current) audioRef.current = new AudioContext()
-
-      const ctx = audioRef.current
-      if (ctx.state === 'suspended') ctx.resume()
-
-      const now = ctx.currentTime
-      const oscillator = ctx.createOscillator()
-      const gain = ctx.createGain()
-
-      oscillator.type = 'sine'
-      oscillator.frequency.setValueAtTime(520, now)
-      oscillator.frequency.exponentialRampToValueAtTime(300, now + 0.07)
-
-      gain.gain.setValueAtTime(0.0001, now)
-      gain.gain.exponentialRampToValueAtTime(0.045, now + 0.01)
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09)
-
-      oscillator.connect(gain)
-      gain.connect(ctx.destination)
-
-      oscillator.start(now)
-      oscillator.stop(now + 0.1)
-    } catch {
-      // ignore
-    }
-  }
-
-  const handleMouseMove = (e) => {
-    const page = pageRef.current
-    if (!page) return
-
-    const rect = page.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-
-    rafRef.current = requestAnimationFrame(() => {
-      page.style.setProperty('--mx', `${x}px`)
-      page.style.setProperty('--my', `${y}px`)
-    })
-  }
-
-  const handlePointerDown = (e) => {
-    const page = pageRef.current
-    if (!page) return
-
-    const rect = page.getBoundingClientRect()
-    const ripple = {
-      id: Date.now() + Math.random(),
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    }
-
-    setRipples((prev) => [...prev.slice(-4), ripple])
-
-    setTimeout(() => {
-      setRipples((prev) => prev.filter((item) => item.id !== ripple.id))
-    }, 650)
-
-    if (!e.target.closest('input')) playClickSound()
-  }
-
-  const handlePreventCopy = (e) => {
-    if (!e.target.closest('.academy-search-input')) e.preventDefault()
-  }
+  const featuredSections = FEATURED_IDS
+    .map((id) => ACADEMY_SECTIONS.find((section) => section.id === id))
+    .filter(Boolean)
 
   return (
-    <div
-      ref={pageRef}
-      className="pgl-page"
-      onMouseMove={handleMouseMove}
-      onPointerDown={handlePointerDown}
-      onCopy={handlePreventCopy}
-      onCut={handlePreventCopy}
-      onContextMenu={handlePreventCopy}
-      onDragStart={handlePreventCopy}
-    >
-      <div className="pgl-bg" />
-      <div className="pgl-grid" />
-      <div className="pgl-soft-glow" />
-      <div className="pgl-cursor-glow" />
-
-      <div className="pgl-stars" aria-hidden="true">
-        {STARS.map((star, index) => (
-          <span
-            key={index}
-            className="pgl-star"
-            style={{
-              top: star.top,
-              left: star.left,
-              animationDelay: `${index * 0.35}s`,
-            }}
-          />
-        ))}
+    <div className="ac-page">
+      <div className="ac-stars" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+        <span />
       </div>
 
-      <div className="pgl-shooting-stars" aria-hidden="true">
-        {SHOOTING_STARS.map((item, index) => (
-          <span
-            key={index}
-            className="pgl-shooting-star"
-            style={{
-              top: item.top,
-              left: item.left,
-              animationDelay: item.delay,
-              animationDuration: item.duration,
-            }}
-          />
-        ))}
-      </div>
+      <header className="ac-topnav">
+        <button className="ac-nav-btn" onClick={goHome}>
+          {copy.navHome}
+        </button>
 
-      <div className="pgl-ripples" aria-hidden="true">
-        {ripples.map((ripple) => (
-          <span
-            key={ripple.id}
-            className="pgl-ripple"
-            style={{
-              left: `${ripple.x}px`,
-              top: `${ripple.y}px`,
-            }}
-          />
-        ))}
-      </div>
-
-      <nav className="pgl-nav">
-        <div className="pgl-nav-pill">
-<button className="pgl-nav-link" onClick={goHome}>
-  Home
-</button>
-
-          <button className="pgl-nav-link" onClick={() => navigate('/go')}>
-            Pulse GO
+        <nav className="ac-nav-pill">
+          <button onClick={goHome}>{copy.navHome}</button>
+          <button onClick={() => navigate('/go')}>{copy.navGo}</button>
+          <button className="active" onClick={() => navigate('/academy')}>
+            {copy.navAcademy}
           </button>
+        </nav>
 
-          <button className="pgl-nav-link pgl-nav-link-active" onClick={() => navigate('/academy')}>
-            Academy
-          </button>
+        <div className="ac-lang-switch" aria-label="Academy language">
+          {LANG_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              className={lang === option.id ? 'active' : ''}
+              onClick={() => changeLang(option.id)}
+            >
+              <span>{option.icon}</span>
+              {option.short}
+            </button>
+          ))}
         </div>
-      </nav>
+      </header>
 
-      <main className="pgl-content academy-home-content">
-        <h1 className="pgl-title academy-title" draggable="false">
-          <span className="pgl-title-main">ACADEMY</span>
-        </h1>
-
-        <section className="academy-main-card">
-          <span className="academy-card-kicker">Search academy</span>
-
-          <div className="academy-search-box academy-search-box-large">
-            <span className="academy-search-icon">⌕</span>
-
-            <input
-              className="academy-search-input"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search SPXFER, 15 seconds, not interested, pause codes..."
-              autoComplete="off"
-              spellCheck="false"
-            />
-
-            {query.trim() && (
-              <button className="academy-search-clear" onClick={() => setQuery('')}>
-                Clear
-              </button>
-            )}
-          </div>
-
-          <div className="academy-filter-row">
-            {FILTERS.map((filter) => (
-              <button
-                key={filter.id}
-                className={`academy-filter-chip ${activeFilter === filter.id ? 'active' : ''}`}
-                onClick={() => setActiveFilter(filter.id)}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
+      <main className="ac-home">
+        <section className="ac-hero">
+          <span className="ac-eyebrow">{copy.eyebrow}</span>
+          <h1>{copy.title}</h1>
+          <p>{copy.subtitle}</p>
         </section>
 
-        {query.trim() ? (
-          <section className="academy-results-wrap">
-            <div className="academy-results-top">
-              <span>
-                {results.length > 0
-                  ? `${results.length} result${results.length === 1 ? '' : 's'}`
-                  : 'No results found'}
-              </span>
+        <section className="ac-wiki-grid">
+          <aside className="ac-sidebar">
+            <div className="ac-sidebar-head">
+              <strong>{copy.sidebarTitle}</strong>
+              <span>{copy.sectionLibrary}</span>
             </div>
 
-            {results.length > 0 ? (
-              <div className="academy-results-grid">
-                {results.map((item) => (
+            <div className="ac-side-list">
+              {ACADEMY_SECTIONS.map((section) => (
+                <button key={section.id} onClick={() => navigate(`/academy/${section.id}`)}>
+                  <span>{section.icon}</span>
+                  <b>{textFor(section.title, lang)}</b>
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          <section className="ac-main-panel">
+            <div className="ac-search-card">
+              <span className="ac-kicker">{copy.searchLabel}</span>
+
+              <div className="ac-search-box">
+                <span>⌕</span>
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={copy.searchPlaceholder}
+                  autoComplete="off"
+                />
+
+                {query.trim() && (
+                  <button onClick={() => setQuery('')}>
+                    {lang === 'es' ? 'Limpiar' : 'Clear'}
+                  </button>
+                )}
+              </div>
+
+              <div className="ac-filter-row">
+                <button
+                  className={activeType === 'all' ? 'active' : ''}
+                  onClick={() => setActiveType('all')}
+                >
+                  {copy.all}
+                </button>
+
+                {ACADEMY_SECTIONS.filter((section) => section.id !== 'overview').map((section) => (
                   <button
-                    key={item.id}
-                    className="academy-glass-card academy-result-card"
-                    onClick={() => navigate(item.route)}
+                    key={section.id}
+                    className={activeType === section.id ? 'active' : ''}
+                    onClick={() => setActiveType(section.id)}
                   >
-                    <span className="academy-card-icon">{item.icon}</span>
-
-                    <span className="academy-result-body">
-                      <span className="academy-result-title">{item.title}</span>
-                      <span className="academy-result-sub">{item.subtitle}</span>
-                      <span className="academy-result-desc">{trimText(item.description)}</span>
-                    </span>
-
-                    <span className="academy-card-arrow">→</span>
+                    {section.icon} {textFor(section.title, lang)}
                   </button>
                 ))}
               </div>
+            </div>
+
+            {query.trim() ? (
+              <section className="ac-results">
+                <div className="ac-section-title">
+                  <span>{results.length ? `${results.length} ${copy.results}` : copy.noResults}</span>
+                </div>
+
+                <div className="ac-result-list">
+                  {results.map((item) => (
+                    <button key={item.id} className="ac-result-card" onClick={() => navigate(item.route)}>
+                      <span className="ac-result-icon">{item.icon}</span>
+
+                      <span className="ac-result-body">
+                        <b>{item.title}</b>
+                        <small>{item.subtitle}</small>
+                        <em>{trimText(item.description, 170)}</em>
+                      </span>
+
+                      <span>→</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
             ) : (
-              <div className="academy-main-card academy-empty-state">
-                <span>🔎</span>
-                <h2>No match yet</h2>
-                <p>Try: SPXFER, CALLBK, 15 seconds, insurance, not interested, pause code.</p>
-              </div>
+              <>
+                <section className="ac-start-card">
+                  <div>
+                    <span className="ac-kicker">{copy.startHere}</span>
+                    <h2>{lang === 'es' ? 'Todo el training en un solo lugar' : 'Everything training in one place'}</h2>
+                    <p>{copy.startDesc}</p>
+                  </div>
+
+                  <button onClick={() => navigate('/academy/overview')}>
+                    {copy.openGuide} →
+                  </button>
+                </section>
+
+                <section>
+                  <div className="ac-section-title">
+                    <span>{copy.quickCards}</span>
+                  </div>
+
+                  <div className="ac-card-grid">
+                    {featuredSections.map((section) => (
+                      <button
+                        key={section.id}
+                        className="ac-section-card"
+                        onClick={() => navigate(`/academy/${section.id}`)}
+                      >
+                        <span>{section.icon}</span>
+                        <h3>{textFor(section.title, lang)}</h3>
+                        <p>{textFor(section.desc, lang)}</p>
+                        <b>{copy.openGuide} →</b>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="ac-tip-card">
+                  <span>💡</span>
+                  <p>{copy.searchTip}</p>
+                </section>
+              </>
             )}
           </section>
-        ) : (
-          <p className="academy-empty-hint">
-            Start typing to search scripts, rebuttals, compliance rules, product notes, and dialer guides.
-          </p>
-        )}
+
+          <aside className="ac-right-rail">
+            <div className="ac-rail-card">
+              <span>{copy.updated}</span>
+              <strong>{ACADEMY_SECTIONS.length}</strong>
+              <small>{lang === 'es' ? 'secciones disponibles' : 'available sections'}</small>
+            </div>
+
+            <div className="ac-rail-card">
+              <span>{lang === 'es' ? 'Idioma activo' : 'Active language'}</span>
+              <strong>{lang === 'es' ? 'ES' : 'EN'}</strong>
+              <small>{lang === 'es' ? 'Click EN para cambiar' : 'Click ES to switch'}</small>
+            </div>
+          </aside>
+        </section>
       </main>
     </div>
   )
