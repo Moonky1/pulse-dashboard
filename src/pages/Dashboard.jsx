@@ -43,6 +43,10 @@ import {
 } from '../features/pulse/components/DashboardTeamsPage'
 
 import {
+  useDashboardData,
+} from '../features/pulse/hooks/useDashboardData'
+
+import {
   CLEAN_START_DATE,
   POLL_MS,
   TEAM_ORDER,
@@ -78,175 +82,44 @@ import './dashboardStyles/dashboardPolish.css'
 
 export default function Dashboard() {
   const navigate = useNavigate()
+    const [selectedTeam, setSelectedTeam] =
+    useState('all')
 
-  const [selectedDate, setSelectedDate] = useState(todayKey())
-  const [selectedTeam, setSelectedTeam] = useState('all')
-  const [sortMetric, setSortMetric] = useState('english')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [teamData, setTeamData] = useState({})
-  const [remoteDates, setRemoteDates] = useState([])
-  const [lastUpdate, setLastUpdate] = useState(null)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 760)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [rangeMode, setRangeMode] = useState('all_time')
-  const [activeView, setActiveView] = useState('overview')
-  const [teamReveal, setTeamReveal] = useState(null)
-  const [historyState, setHistoryState] = useState({ insights: null, loading: false, error: '' })
+  const [sortMetric, setSortMetric] =
+    useState('english')
 
-  const isToday = selectedDate === todayKey()
-  const selectedDateRef = useRef(selectedDate)
-  const teamDataRef = useRef({})
-  const goalSoundSeenRef = useRef(new Set())
+  const [sidebarCollapsed, setSidebarCollapsed] =
+    useState(() => (
+      typeof window !== 'undefined'
+      && window.innerWidth <= 760
+    ))
 
-  const setSelectedDateSafe = useCallback(date => {
-    selectedDateRef.current = date
-    setSelectedDate(date)
-  }, [])
+  const [searchQuery, setSearchQuery] =
+    useState('')
 
-  useEffect(() => {
-    selectedDateRef.current = selectedDate
-  }, [selectedDate])
+  const [userMenuOpen, setUserMenuOpen] =
+    useState(false)
 
-  useEffect(() => {
-    teamDataRef.current = teamData
-  }, [teamData])
+  const [rangeMode, setRangeMode] =
+    useState('all_time')
 
-  const loadRemoteDates = useCallback(async () => {
-    const dates = await fetchSupabaseDates()
-    setRemoteDates(dates)
-  }, [])
+  const [activeView, setActiveView] =
+    useState('overview')
 
-  const loadDashboardDate = useCallback(async date => {
-    setError('')
-    const supabaseData = await fetchSupabaseDashboardDate(date)
-    setTeamData(supabaseData)
-    setLastUpdate(date === todayKey() ? new Date() : null)
-  }, [])
+  const [teamReveal, setTeamReveal] =
+    useState(null)
 
-  const loadToday = useCallback(async () => {
-    await loadDashboardDate(todayKey())
-    loadRemoteDates().catch(() => {})
-  }, [loadDashboardDate, loadRemoteDates])
-
-  const loadHistory = useCallback(async () => {
-    setHistoryState(prev => ({ ...prev, loading: true, error: '' }))
-
-    try {
-      const insights = await fetchHistoryRows()
-      setHistoryState({ insights, loading: false, error: '' })
-    } catch (err) {
-      console.error('Failed loading history:', err)
-      setHistoryState({
-        insights: null,
-        loading: false,
-        error: String(err?.message || err || 'Failed loading history'),
-      })
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    const requestedDate = selectedDate
-
-    const run = async () => {
-      selectedDateRef.current = requestedDate
-      setLoading(true)
-      setError('')
-      teamDataRef.current = {}
-      setTeamData({})
-
-      try {
-        await loadDashboardDate(requestedDate)
-      } catch (err) {
-        if (!cancelled) setError(String(err?.message || err || 'Failed to load dashboard data'))
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    run()
-
-    return () => {
-      cancelled = true
-    }
-  }, [selectedDate, loadDashboardDate])
-
-  useEffect(() => {
-    loadRemoteDates().catch(() => {})
-  }, [loadRemoteDates])
-
-  useEffect(() => {
-    if (activeView !== 'rankings' && activeView !== 'teams' && activeView !== 'analytics') return
-    if (historyState.loading || historyState.insights) return
-    loadHistory().catch(() => {})
-  }, [activeView, historyState.insights, historyState.loading, loadHistory])
-
-  useEffect(() => {
-    if (!isToday) return
-
-    let cancelled = false
-    let timer = null
-
-    const scheduleNext = () => {
-      if (cancelled) return
-
-      timer = window.setTimeout(async () => {
-        try {
-          await loadToday()
-        } catch (err) {
-          console.warn('Live refresh failed:', err)
-        } finally {
-          scheduleNext()
-        }
-      }, POLL_MS)
-    }
-
-    scheduleNext()
-
-    return () => {
-      cancelled = true
-      if (timer) window.clearTimeout(timer)
-    }
-  }, [isToday, loadToday])
-
-  useEffect(() => {
-    if (!isToday || !teamData || !Object.keys(teamData).length) return
-
-    const reachedNow = new Set()
-
-    TEAM_ORDER.forEach(teamId => {
-      const parsed = teamData[teamId]
-      ;(parsed?.agents || []).forEach(agent => {
-        if (!agent?.ext) return
-        const candidate = {
-          ...agent,
-          teamId,
-          team: teamId,
-          date: selectedDate,
-          total: Number(agent.total || agent.rawTotal || 0),
-          rawTotal: Number(agent.rawTotal || agent.total || 0),
-        }
-
-        if (agentReachedGoal(candidate)) reachedNow.add(`${selectedDate}|${teamId}|${agent.ext}`)
-      })
-    })
-
-    const previous = goalSoundSeenRef.current
-    const hasPrevious = previous.size > 0
-    const hasNewGoal = hasPrevious && [...reachedNow].some(key => !previous.has(key))
-
-    goalSoundSeenRef.current = reachedNow
-
-    if (hasNewGoal) playPulseSound('goal')
-  }, [isToday, selectedDate, teamData])
-
-  const dateTabs = useMemo(() => {
-    const set = new Set([todayKey(), ...remoteDates])
-    return [...set].filter(date => date >= CLEAN_START_DATE).sort((a, b) => b.localeCompare(a))
-  }, [remoteDates])
-
+  const {
+    selectedDate,
+    setSelectedDateSafe,
+    loading,
+    error,
+    teamData,
+    dateTabs,
+    historyState,
+    loadToday,
+  } = useDashboardData(activeView)
+  
   const allTeamCards = useMemo(() => {
     const liveCards = TEAM_ORDER
       .filter(teamId => teamData[teamId])
