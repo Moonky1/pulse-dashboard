@@ -1,6 +1,4 @@
 import {
-  useCallback,
-  useMemo,
   useState,
 } from 'react'
 
@@ -49,22 +47,17 @@ import {
 } from '../features/pulse/hooks/useDashboardViewModel'
 
 import {
-  TEAM_ORDER,
+  useDashboardActions,
+} from '../features/pulse/hooks/useDashboardActions'
+
+import {
   TEAMS,
 } from '../features/pulse/config/dashboardConfig'
 
 import {
   formatDateLabel,
-  normalizeSearchText,
-  playPulseSound,
   todayKey,
 } from '../features/pulse/utils/dashboardViewHelpers'
-
-import {
-  buildSearchSuggestions,
-  filterParsedBySearch,
-  teamMatchesSearch,
-} from '../features/pulse/utils/dashboardSearchHelpers'
 
 import './dashboard.css'
 import './dashboardStyles/teamReveal.css'
@@ -129,130 +122,40 @@ export default function Dashboard() {
     teamData,
   })
   
-  const handleSidebarNavigate = useCallback(item => {
-    playPulseSound('click')
-
-    if (item.id === 'overview') {
-      setActiveView('overview')
-      setSelectedTeam('all')
-      setSelectedDateSafe(todayKey())
-      setSortMetric('english')
-      setRangeMode('day')
-      setSearchQuery('')
-      setUserMenuOpen(false)
-      navigate('/dashboard')
-      loadToday().catch(() => {})
-      return
-    }
-
-    if (item.id === 'teams') {
-      setActiveView('teams')
-      setSelectedTeam('all')
-      setRangeMode('all_time')
-      setSearchQuery('')
-      setUserMenuOpen(false)
-      return
-    }
-
-    if (item.id === 'rankings') {
-      setActiveView('rankings')
-      setSelectedTeam('all')
-      setRangeMode('all_time')
-      setSearchQuery('')
-      setUserMenuOpen(false)
-      return
-    }
-
-    if (item.id === 'analytics') {
-      setActiveView('analytics')
-      setSelectedTeam('all')
-      setRangeMode('all_time')
-      setSearchQuery('')
-      setUserMenuOpen(false)
-      return
-    }
-
-    if (item.id === 'pulse-go') {
-      navigate('/go')
-      return
-    }
-
-    if (item.id === 'settings') {
-      navigate('/settings')
-      return
-    }
-
-    window.alert(`${item.label} is coming soon.`)
-  }, [loadToday, navigate, setSelectedDateSafe])
-
-  const openTeamWithReveal = useCallback(teamId => {
-    if (!teamId || teamId === 'all') {
-      playPulseSound('click')
-      setActiveView('overview')
-      setRangeMode('day')
-      setSelectedTeam('all')
-      return
-    }
-
-    playPulseSound('team')
-    setTeamReveal({ teamId, key: `${teamId}-${Date.now()}` })
-    setActiveView('overview')
-    setRangeMode('day')
-    setSelectedTeam(teamId)
-  }, [])
-
-  const handleTeamTabChange = useCallback(teamId => {
-    openTeamWithReveal(teamId)
-  }, [openTeamWithReveal])
-
-  const handleSuggestionClick = useCallback(item => {
-    if (!item) return
-    playPulseSound('click')
-
-    if (item.type === 'agent') {
-      setSearchQuery('')
-      setUserMenuOpen(false)
-      navigate(`/profile/${item.id}`)
-      return
-    }
-
-    if (item.type === 'team') {
-      setSearchQuery('')
-      setUserMenuOpen(false)
-      openTeamWithReveal(item.id)
-    }
-  }, [navigate, openTeamWithReveal])
-
-  const handleSearchSubmit = useCallback(() => {
-    const first = searchSuggestions[0]
-    if (first) handleSuggestionClick(first)
-  }, [searchSuggestions, handleSuggestionClick])
-
-  const handleUserAction = useCallback(action => {
-    setUserMenuOpen(false)
-
-    if (action === 'profile') {
-      navigate('/profile/3134')
-      return
-    }
-
-    if (action === 'settings') {
-      navigate('/settings')
-      return
-    }
-
-    if (action === 'logout') {
-      localStorage.removeItem('pulse_user')
-      navigate('/signin')
-    }
-  }, [navigate])
+  const {
+    handleAcademy,
+    handleCloseSidebar,
+    handlePulseGo,
+    handleSearchSubmit,
+    handleSidebarNavigate,
+    handleSuggestionClick,
+    handleTeamRevealDone,
+    handleTeamTabChange,
+    handleToggleSidebar,
+    handleToggleUserMenu,
+    handleUserAction,
+    openTeamWithReveal,
+  } = useDashboardActions({
+    loadToday,
+    navigate,
+    searchSuggestions,
+    setActiveView,
+    setRangeMode,
+    setSearchQuery,
+    setSelectedDateSafe,
+    setSelectedTeam,
+    setSidebarCollapsed,
+    setSortMetric,
+    setTeamReveal,
+    setUserMenuOpen,
+  })
 
   return (
     <div className={`dash-root ${sidebarCollapsed ? 'lov-sidebar-collapsed' : ''}`}>
       {teamReveal ? (
         <TeamRevealOverlay
           reveal={teamReveal}
-          onDone={() => setTeamReveal(null)}
+          onDone={handleTeamRevealDone}
         />
       ) : null}
 
@@ -268,33 +171,24 @@ export default function Dashboard() {
             type="button"
             className="lov-mobile-sidebar-backdrop"
             aria-label="Close sidebar"
-            onClick={() => setSidebarCollapsed(true)}
+            onClick={handleCloseSidebar}
           />
         ) : null}
 
         <div className="lov-main">
           <LovableHeader
             sidebarCollapsed={sidebarCollapsed}
-            onToggleSidebar={() => {
-              playPulseSound('click')
-              setSidebarCollapsed(prev => !prev)
-            }}
+            onToggleSidebar={handleToggleSidebar}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onSearchSubmit={handleSearchSubmit}
             suggestions={searchSuggestions}
             onSuggestionClick={handleSuggestionClick}
             userMenuOpen={userMenuOpen}
-            onToggleUserMenu={() => setUserMenuOpen(prev => !prev)}
+            onToggleUserMenu={handleToggleUserMenu}
             onUserAction={handleUserAction}
-            onPulseGo={() => {
-              playPulseSound('click')
-              navigate('/go')
-            }}
-            onAcademy={() => {
-  playPulseSound('click')
-  navigate('/academy')
-}}
+            onPulseGo={handlePulseGo}
+            onAcademy={handleAcademy}
           />
 
           <main className="lov-content">
@@ -379,7 +273,7 @@ export default function Dashboard() {
                         team={team}
                         parsed={parsed}
                         sortMetric={sortMetric}
-                        onOpen={teamId => openTeamWithReveal(teamId)}
+                        onOpen={openTeamWithReveal}
                         rankIndex={index}
                       />
                     )
