@@ -100,53 +100,6 @@ import {
 import './dashboard.css'
 import './dashboardStyles/teamReveal.css'
 
-function flattenAgentsForRankings(teamData) {
-  const agents = []
-
-  TEAM_ORDER.forEach(teamId => {
-    const parsed = teamData?.[teamId]
-    ;(parsed?.agents || []).forEach(agent => {
-      if (!agent?.ext) return
-      if (Number(agent.english || 0) <= 0 && Number(agent.spanish || 0) <= 0 && Number(agent.total || 0) <= 0) return
-
-      agents.push({
-        ...agent,
-        teamId,
-        teamLabel: getTeamLabel(teamId),
-        teamFlag: getTeamFlag(teamId),
-      })
-    })
-  })
-
-  return agents
-}
-
-function buildCurrentTeamRankings(teamData, metric = 'total') {
-  return TEAM_ORDER
-    .map(teamId => {
-      const parsed = teamData?.[teamId]
-      if (!parsed) return null
-
-      return {
-        teamId,
-        teamLabel: getTeamLabel(teamId),
-        teamFlag: getTeamFlag(teamId),
-        english: Number(parsed?.totals?.english || 0),
-        spanish: Number(parsed?.totals?.spanish || 0),
-        invalidTransfers: Number(parsed?.invalidTransfers || 0),
-        total: Number(parsed?.totals?.total || 0),
-        activeAgents: Number(parsed?.totals?.activeAgents || parsed?.agents?.length || 0),
-        value: Number(metric === 'invalid' ? parsed?.invalidTransfers || 0 : parsed?.totals?.[metric] || 0),
-      }
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-      const metricDiff = Number(b?.value || 0) - Number(a?.value || 0)
-      if (metricDiff !== 0) return metricDiff
-      return Number(b?.total || 0) - Number(a?.total || 0)
-    })
-}
-
 function DashboardResponsivePolishStyle() {
   return (
     <style>{`
