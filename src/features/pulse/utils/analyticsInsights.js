@@ -60,10 +60,6 @@ function isDateInsideRange(date, start, end) {
   return normalized >= start && normalized <= end
 }
 
-function isTeamSelected(teamId, selectedTeams = []) {
-  return selectedTeams.includes('all') || selectedTeams.length === 0 || selectedTeams.includes(teamId)
-}
-
 export function buildAnalyticsInsights(history, selectedTeams = ['all'], rangeMode = 'week', anchorDate = todayKey()) {
   const dailyAgents = history?.dailyAgents || []
   const dailyTeams = history?.dailyTeams || []

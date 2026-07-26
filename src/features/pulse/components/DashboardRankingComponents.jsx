@@ -531,7 +531,9 @@ export function RankingsPage({
   historyError,
   navigate,
 }) {
-  const rankingAgents = history?.allTimeAgents || []
+ const rankingAgents = useMemo(() => {
+  return history?.allTimeAgents || []
+}, [history?.allTimeAgents])
 
   const topEnglish = useMemo(() => {
     return sortAgentsByMetric(

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import {
   SORT_OPTIONS,
@@ -59,17 +59,36 @@ export function AnalyticsPage({ history, historyLoading, historyError, dateTabs 
     return dates[0] || todayKey()
   }, [history?.dates])
 
-  useEffect(() => {
-    if (historyLoading || !latestSavedDate) return
-    const hasTodayData = (history?.dates || []).includes(todayKey())
-    if (!hasTodayData) {
-      setAnalyticsDate(prev => ((history?.dates || []).includes(prev) ? prev : latestSavedDate))
+    const resolvedAnalyticsDate = useMemo(() => {
+    if (historyLoading) {
+      return analyticsDate
     }
-  }, [historyLoading, latestSavedDate, history?.dates])
 
-  const analytics = useMemo(() => {
-    return buildAnalyticsInsights(history, analyticsTeams, analyticsRange, analyticsDate)
-  }, [analyticsDate, analyticsRange, analyticsTeams, history])
+    const savedDates = history?.dates || []
+
+    return savedDates.includes(analyticsDate)
+      ? analyticsDate
+      : latestSavedDate
+  }, [
+    analyticsDate,
+    history?.dates,
+    historyLoading,
+    latestSavedDate,
+  ])
+
+const analytics = useMemo(() => {
+  return buildAnalyticsInsights(
+    history,
+    analyticsTeams,
+    analyticsRange,
+    resolvedAnalyticsDate
+  )
+}, [
+  analyticsRange,
+  analyticsTeams,
+  history,
+  resolvedAnalyticsDate,
+])
 
   const toggleTeam = teamId => {
     playPulseSound('click')
@@ -136,7 +155,11 @@ export function AnalyticsPage({ history, historyLoading, historyError, dateTabs 
 
             <div className="pulse-analytics-control-block pulse-analytics-date-control">
               <span className="pulse-control-label">Day</span>
-              <DateSelectorRow dates={availableDates} selectedDate={analyticsDate} onChange={setDateWithSound} />
+              <DateSelectorRow
+              dates={availableDates}
+              selectedDate={resolvedAnalyticsDate}
+              onChange={setDateWithSound}
+             />
             </div>
           </div>
 
