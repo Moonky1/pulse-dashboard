@@ -1,0 +1,792 @@
+      .lov-content {
+        width: 100%;
+        max-width: 1540px;
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+      }
+
+      .lov-kpi-grid-main {
+        width: min(100%, 1280px);
+        margin: 0 auto 18px !important;
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(170px, 1fr)) !important;
+        gap: 16px !important;
+        align-items: stretch;
+        justify-content: center;
+      }
+
+      .lov-kpi-grid-main .lov-kpi-card,
+      .pulse-team-summary-grid .pulse-summary-card {
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .pulse-teams-list {
+        width: min(100%, 1380px);
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .pulse-team-card {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0 !important;
+        padding: 18px 20px 20px !important;
+        overflow: hidden;
+      }
+
+      .pulse-team-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 0 14px;
+        padding-left: 8px;
+      }
+
+      .pulse-team-card-header img,
+      .pulse-team-card-header span:first-child {
+        flex: 0 0 auto;
+      }
+
+      .pulse-team-summary-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(170px, 1fr)) !important;
+        gap: 14px !important;
+        margin: 0 0 14px !important;
+        width: 100%;
+      }
+
+      .pulse-team-week-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(210px, 1fr)) !important;
+        gap: 14px !important;
+        width: 100%;
+        align-items: stretch;
+      }
+
+      .pulse-team-week-grid .pulse-top-block {
+        min-width: 0;
+        height: 100%;
+        box-sizing: border-box;
+        margin: 0 !important;
+      }
+
+      .pulse-top-block-item {
+        min-width: 0;
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+      }
+
+      .pulse-top-block-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 400 !important;
+      }
+
+      .pulse-top-block-title,
+      .pulse-summary-title,
+      .lov-kpi-title,
+      .pulse-table-title {
+        font-weight: 800 !important;
+      }
+
+      .pulse-table td,
+      .pulse-table .linkish,
+      .pulse-top-block-name,
+      .pulse-top3-name {
+        font-weight: 400 !important;
+      }
+
+      .pulse-table th {
+        font-weight: 800 !important;
+      }
+
+      .pulse-hero-sub:empty,
+      .pulse-summary-subtitle:empty {
+        display: none;
+      }
+
+
+      .pulse-analytics-page {
+        width: min(100%, 1380px);
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .pulse-analytics-hero {
+        margin: 0 !important;
+      }
+
+      .pulse-analytics-controls {
+        display: grid;
+        grid-template-columns: minmax(280px, 1fr) minmax(230px, 320px);
+        gap: 14px;
+        align-items: end;
+        width: 100%;
+      }
+
+      .pulse-analytics-control-block {
+        background: linear-gradient(135deg, rgba(255,255,255,.035), rgba(255,138,42,.075));
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 20px;
+        padding: 12px;
+        min-width: 0;
+      }
+
+      .pulse-control-label {
+        display: block;
+        margin: 0 0 8px;
+        color: #8f8178;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      .pulse-range-pills,
+      .pulse-mini-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pulse-range-pills button,
+      .pulse-mini-tabs button,
+      .pulse-team-filter {
+        border: 1px solid rgba(255,255,255,.09);
+        background: rgba(255,255,255,.035);
+        color: #d8cec8;
+        border-radius: 999px;
+        padding: 10px 13px;
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      .pulse-range-pills button.active,
+      .pulse-mini-tabs button.active,
+      .pulse-team-filter.active {
+        background: #d7b987;
+        border-color: rgba(215, 185, 135, .72);
+        color: #15110b;
+      }
+
+      .pulse-analytics-date-control .lov-date-row {
+        width: 100%;
+        margin: 0 !important;
+      }
+
+      .pulse-analytics-date-control .lov-date-btn {
+        width: 100%;
+        min-width: 0 !important;
+      }
+
+      .pulse-team-filter-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .pulse-team-filter {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .pulse-analytics-kpis {
+        margin-bottom: 0 !important;
+      }
+
+      .lov-kpi-card.purple .lov-kpi-value {
+        color: #c084fc;
+      }
+
+      .pulse-analytics-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(340px, .85fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .pulse-chart-card {
+        min-width: 0;
+        margin: 0 !important;
+        overflow: hidden;
+      }
+
+      .pulse-chart-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 12px;
+      }
+
+      .pulse-chart-scroll {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+
+      .pulse-line-chart {
+        display: block;
+        width: 100%;
+        min-width: 620px;
+        height: auto;
+      }
+
+      .pulse-chart-grid-line {
+        stroke: rgba(255, 255, 255, .08);
+        stroke-dasharray: 5 5;
+      }
+
+      .pulse-chart-axis-text {
+        fill: #a99c94;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .pulse-chart-legend {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        color: #d8cec8;
+        font-weight: 800;
+      }
+
+      .pulse-chart-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .pulse-chart-legend i {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        display: inline-block;
+      }
+
+      .pulse-bar-chart {
+        display: grid;
+        gap: 14px;
+        padding: 8px 0 2px;
+      }
+
+      .pulse-bar-row {
+        display: grid;
+        grid-template-columns: minmax(120px, 160px) minmax(120px, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .pulse-bar-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        color: #f6eee8;
+        font-weight: 800;
+      }
+
+      .pulse-bar-label span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .pulse-bar-track {
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.06);
+        overflow: hidden;
+      }
+
+      .pulse-bar-fill {
+        height: 100%;
+        border-radius: inherit;
+        min-width: 8px;
+        box-shadow: 0 0 24px rgba(255, 138, 42, .22);
+      }
+
+      .pulse-analytics-top-grid {
+        grid-template-columns: repeat(4, minmax(210px, 1fr)) !important;
+      }
+
+      .analytics-table-card {
+        margin: 0 !important;
+      }
+
+      .dash-root {
+        --pulse-accent: #b9976b;
+        --pulse-accent-soft: rgba(185, 151, 107, .14);
+      }
+
+      .lov-hero,
+      .pulse-hero-card {
+        background: radial-gradient(circle at 92% 12%, rgba(185,151,107,.12), transparent 34%), linear-gradient(135deg, rgba(255,255,255,.035), rgba(12,11,10,.72)) !important;
+      }
+
+      .lov-nav-pill button.active,
+      .pulse-range-pills button.active,
+      .pulse-mini-tabs button.active,
+      .pulse-team-filter.active,
+      .lov-date-btn.active,
+      .pulse-sort-tab.active,
+      .pulse-tab.active {
+        background: linear-gradient(135deg, #e4c896, #b9976b) !important;
+        color: #14100b !important;
+      }
+
+      .lov-search-wrap {
+        z-index: 80;
+      }
+
+      .lov-search input,
+      .pulse-dark-search input {
+        color: #f7eee7 !important;
+        -webkit-text-fill-color: #f7eee7 !important;
+        caret-color: #d7b987;
+      }
+
+      .lov-search input::placeholder,
+      .pulse-dark-search input::placeholder {
+        color: rgba(247, 238, 231, .45) !important;
+        -webkit-text-fill-color: rgba(247, 238, 231, .45) !important;
+      }
+
+      .lov-search input:-webkit-autofill,
+      .pulse-dark-search input:-webkit-autofill {
+        box-shadow: 0 0 0 1000px #100b08 inset !important;
+        -webkit-text-fill-color: #f7eee7 !important;
+        transition: background-color 9999s ease-in-out 0s;
+      }
+
+      .lov-search-suggestions {
+        background: linear-gradient(180deg, rgba(17, 11, 8, .98), rgba(7, 5, 4, .99)) !important;
+        border: 1px solid rgba(185, 151, 107, .28) !important;
+        border-radius: 18px !important;
+        box-shadow: 0 24px 70px rgba(0,0,0,.72) !important;
+        overflow: hidden;
+      }
+
+      .lov-search-suggestion {
+        background: transparent !important;
+        color: #f7eee7 !important;
+      }
+
+      .lov-search-suggestion:hover {
+        background: rgba(185, 151, 107, .14) !important;
+      }
+
+      .pulse-analytics-hero-clean {
+        min-height: 120px;
+      }
+
+      .pulse-analytics-controls-polished {
+        grid-template-columns: minmax(320px, 1fr) minmax(260px, 360px);
+      }
+
+      .pulse-team-filter-wrap-analytics {
+        background: rgba(255,255,255,.025);
+        border: 1px solid rgba(255,255,255,.07);
+        border-radius: 22px;
+        padding: 10px;
+      }
+
+      .pulse-analytics-grid-main,
+      .pulse-analytics-grid-secondary {
+        grid-template-columns: minmax(0, 1.55fr) minmax(340px, .85fr);
+      }
+
+      .pulse-all-teams-card {
+        width: 100%;
+      }
+
+      .pulse-multiline-wrap {
+        position: relative;
+        min-height: 290px;
+      }
+
+      .pulse-chart-hover-line {
+        stroke: rgba(255,255,255,.5);
+        stroke-width: 1.5;
+      }
+
+      .pulse-chart-tooltip {
+        position: absolute;
+        right: 18px;
+        top: 58px;
+        min-width: 180px;
+        display: grid;
+        gap: 8px;
+        padding: 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(9, 7, 6, .92);
+        box-shadow: 0 18px 50px rgba(0,0,0,.5);
+        color: #f7eee7;
+        pointer-events: none;
+        z-index: 5;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .pulse-radar-wrap {
+        display: grid;
+        place-items: center;
+        gap: 12px;
+        min-height: 330px;
+      }
+
+      .pulse-radar-chart {
+        width: min(100%, 320px);
+        height: auto;
+      }
+
+      .pulse-radar-ring {
+        fill: transparent;
+        stroke: rgba(255,255,255,.08);
+        stroke-width: 1;
+      }
+
+      .pulse-radar-axis {
+        stroke: rgba(255,255,255,.06);
+        stroke-width: 1;
+      }
+
+      .pulse-radar-label {
+        fill: #c9bdb5;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .pulse-chart-legend.compact {
+        margin-top: 0;
+      }
+
+      .pulse-language-mix {
+        display: grid;
+        gap: 14px;
+        padding-top: 8px;
+      }
+
+      .pulse-language-row {
+        display: grid;
+        grid-template-columns: minmax(130px, 180px) minmax(120px, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .pulse-language-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        color: #f7eee7;
+        font-weight: 800;
+      }
+
+      .pulse-language-label span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .pulse-language-track {
+        height: 14px;
+        overflow: hidden;
+        display: flex;
+        border-radius: 999px;
+        background: rgba(255,255,255,.06);
+      }
+
+      .pulse-language-track span {
+        min-width: 2px;
+        height: 100%;
+      }
+
+      .pulse-language-track .eng { background: #38bdf8; }
+      .pulse-language-track .spa { background: #34d399; }
+      .pulse-language-track .bad { background: #fb7185; }
+
+      .pulse-language-values {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .pulse-hour-goal-line {
+        stroke: rgba(251, 191, 36, .75);
+        stroke-width: 2;
+        stroke-dasharray: 7 7;
+      }
+
+      .pulse-dark-search {
+        min-width: 250px;
+        max-width: 360px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255,255,255,.035);
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 999px;
+        padding: 10px 12px;
+      }
+
+      .pulse-dark-search.mini {
+        min-width: 220px;
+      }
+
+      .pulse-dark-search input {
+        width: 100%;
+        min-width: 0;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        font-weight: 700;
+      }
+
+      .pulse-dark-search button {
+        border: 0;
+        background: rgba(255,255,255,.08);
+        color: #f7eee7;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+
+      .pulse-agents-panel .pulse-chart-card-head {
+        align-items: center;
+      }
+
+      .yellow {
+        color: #fbbf24;
+      }
+
+      @media (max-width: 1250px) {
+        .lov-kpi-grid-main,
+        .pulse-team-summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+
+        .pulse-team-week-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .lov-content {
+          padding-left: 14px !important;
+          padding-right: 14px !important;
+        }
+
+        .lov-kpi-grid-main,
+        .pulse-team-summary-grid,
+        .pulse-team-week-grid {
+          grid-template-columns: 1fr !important;
+          width: 100%;
+        }
+
+        .pulse-team-card {
+          padding: 16px 14px !important;
+          border-radius: 22px;
+        }
+
+        .pulse-team-card-header {
+          padding-left: 4px;
+        }
+      }
+
+      /* Final chart polish overrides */
+      .pulse-chart-card {
+        padding: 22px !important;
+        overflow: visible !important;
+        border-radius: 24px !important;
+      }
+
+      .pulse-chart-card .pulse-table-title {
+        padding: 0 !important;
+        border-bottom: 0 !important;
+        font-size: 18px !important;
+        line-height: 1.15 !important;
+      }
+
+      .pulse-chart-card .pulse-summary-subtitle {
+        display: none !important;
+      }
+
+      .pulse-chart-card-head {
+        align-items: center !important;
+        gap: 16px !important;
+        margin-bottom: 18px !important;
+        padding: 0 !important;
+      }
+
+      .pulse-chart-scroll {
+        position: relative !important;
+        width: 100%;
+        padding: 4px 10px 2px !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+      }
+
+      .pulse-line-chart {
+        min-width: 720px !important;
+        overflow: visible !important;
+      }
+
+      .pulse-chart-tooltip {
+        position: absolute !important;
+        right: auto !important;
+        top: auto !important;
+        min-width: 170px !important;
+        max-width: 260px;
+        z-index: 35 !important;
+        background: rgba(6, 7, 8, .94) !important;
+        border-color: rgba(255,255,255,.10) !important;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+
+      .pulse-bar-row {
+        grid-template-columns: minmax(150px, 210px) minmax(220px, 1fr) minmax(62px, auto) !important;
+        gap: 18px !important;
+      }
+
+      .pulse-language-row {
+        grid-template-columns: minmax(150px, 200px) minmax(140px, 1fr) minmax(155px, auto) !important;
+        gap: 14px !important;
+      }
+
+      .pulse-language-values {
+        justify-content: flex-end !important;
+      }
+
+      .pulse-radar-wrap {
+        position: relative !important;
+        min-height: 345px !important;
+        overflow: visible !important;
+      }
+
+      .pulse-radar-chart {
+        width: min(100%, 330px) !important;
+        overflow: visible !important;
+      }
+
+      .team-reveal-card,
+      .team-reveal-line,
+      .team-reveal-orb,
+      .team-reveal-flag-glow {
+        display: none !important;
+      }
+
+      .team-reveal-overlay {
+        animation: teamRevealOutSoft 1.22s cubic-bezier(.2,.8,.2,1) forwards !important;
+      }
+
+      .team-reveal-bg {
+        background: rgba(3, 4, 5, .62) !important;
+        backdrop-filter: blur(13px) saturate(115%);
+        -webkit-backdrop-filter: blur(13px) saturate(115%);
+      }
+
+      .team-reveal-natural {
+        position: relative;
+        isolation: isolate;
+        display: grid;
+        justify-items: center;
+        gap: 12px;
+        padding: 24px 28px;
+        animation: teamRevealNaturalIn .62s cubic-bezier(.17,.84,.44,1) both;
+      }
+
+      .team-reveal-warm-glow {
+        position: absolute;
+        inset: 50% auto auto 50%;
+        width: min(520px, 82vw);
+        height: min(280px, 42vh);
+        border-radius: 999px;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle at 50% 50%, rgba(215,185,135,.30) 0%, transparent 60%);
+        opacity: .8;
+        filter: blur(34px);
+        z-index: -1;
+      }
+
+      .team-reveal-flag-wrap {
+        width: auto !important;
+        height: auto !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+
+      .team-reveal-flag-wrap img,
+      .team-reveal-flag-wrap span {
+        transform: scale(1.2) !important;
+        filter: drop-shadow(0 18px 34px rgba(0,0,0,.45));
+      }
+
+      .team-reveal-kicker {
+        margin-top: 8px !important;
+        color: rgba(244, 228, 200, .82) !important;
+        font-size: 13px !important;
+        letter-spacing: .10em !important;
+      }
+
+      .team-reveal-name {
+        margin-top: 0 !important;
+        color: #fff8ee !important;
+        font-size: clamp(44px, 8vw, 96px) !important;
+        text-shadow: 0 22px 60px rgba(0,0,0,.62);
+      }
+
+      @keyframes teamRevealNaturalIn {
+        0% { opacity: 0; transform: translateY(18px) scale(.92); filter: blur(8px); }
+        68% { opacity: 1; transform: translateY(0) scale(1.04); filter: blur(0); }
+        100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      }
+
+      @keyframes teamRevealOutSoft {
+        0%, 70% { opacity: 1; }
+        100% { opacity: 0; visibility: hidden; }
+      }
+
+      @media (max-width: 980px) {
+        .pulse-analytics-grid,
+        .pulse-analytics-grid-main,
+        .pulse-analytics-grid-secondary {
+          grid-template-columns: 1fr !important;
+        }
+
+        .pulse-bar-row,
+        .pulse-language-row {
+          grid-template-columns: 1fr !important;
+          gap: 8px !important;
+        }
+
+        .pulse-mini-tabs {
+          width: 100%;
+          overflow-x: auto;
+          justify-content: flex-start;
+        }
+
+        .pulse-chart-card-head {
+          align-items: flex-start !important;
+          flex-direction: column;
+        }
+      }
