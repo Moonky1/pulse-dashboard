@@ -1,8 +1,6 @@
 import {
   useCallback,
-  useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react'
 
@@ -47,28 +45,16 @@ import {
 } from '../features/pulse/hooks/useDashboardData'
 
 import {
-  CLEAN_START_DATE,
-  POLL_MS,
   TEAM_ORDER,
   TEAMS,
-} from './dashboardConfig'
+} from '../features/pulse/config/dashboardConfig'
 
 import {
-  fetchSupabaseDashboardDate,
-  fetchSupabaseDates,
-} from './dashboardData'
-
-import {
-  agentReachedGoal,
   formatDateLabel,
   normalizeSearchText,
   playPulseSound,
   todayKey,
 } from '../features/pulse/utils/dashboardViewHelpers'
-
-import {
-  fetchHistoryRows,
-} from '../features/pulse/utils/historyInsights'
 
 import {
   buildSearchSuggestions,
@@ -82,7 +68,8 @@ import './dashboardStyles/dashboardPolish.css'
 
 export default function Dashboard() {
   const navigate = useNavigate()
-    const [selectedTeam, setSelectedTeam] =
+
+  const [selectedTeam, setSelectedTeam] =
     useState('all')
 
   const [sortMetric, setSortMetric] =
