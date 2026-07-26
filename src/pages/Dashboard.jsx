@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
 import {
+  FlagImg,
   LovableKpi,
   SummaryCard,
 } from '../features/pulse/components/DashboardPrimitives'
@@ -223,21 +224,6 @@ function getGoalRuleLabel(teamId, dateKey = null) {
   if (teamId === 'asia') return 'Mon-Fri goal: 20 English • Saturday: 10 Total'
   return 'Mon-Fri goal: 10 English • Saturday: 10 Total'
 }
-
-function FlagImg({ src, size = 18, alt = '' }) {
-  if (!src) return <span style={{ fontSize: size * 0.9, lineHeight: 1 }}>🌎</span>
-
-  return (
-    <img
-      src={src}
-      alt={alt}
-      width={size}
-      height={Math.round(size * 0.72)}
-      style={{ borderRadius: 3, objectFit: 'cover', display: 'inline-block' }}
-    />
-  )
-}
-
 function Medal({ index, size = 18 }) {
   return <img src={MEDALS[index]} alt="" width={size} height={size} style={{ objectFit: 'contain' }} />
 }
