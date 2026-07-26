@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
+import { LovableKpi } from '../features/pulse/components/DashboardPrimitives'
 
 import {
   BUSINESS_HOURS,
@@ -289,15 +290,6 @@ function SummaryCard({ title, value, color, subtitle, titleColor }) {
       <div className="pulse-summary-title" style={{ color: titleColor || undefined }}>{title}</div>
       <div className="pulse-summary-value" style={{ color }}>{Number(value || 0).toLocaleString()}</div>
       <div className="pulse-summary-subtitle">{subtitle || ''}</div>
-    </div>
-  )
-}
-
-function LovableKpi({ title, value, tone }) {
-  return (
-    <div className={`lov-kpi-card ${tone}`}>
-      <div className="lov-kpi-title">{title}</div>
-      <div className="lov-kpi-value">{Number(value || 0).toLocaleString()}</div>
     </div>
   )
 }
