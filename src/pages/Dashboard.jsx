@@ -45,6 +45,10 @@ import {
 } from '../features/pulse/hooks/useDashboardData'
 
 import {
+  useDashboardViewModel,
+} from '../features/pulse/hooks/useDashboardViewModel'
+
+import {
   TEAM_ORDER,
   TEAMS,
 } from '../features/pulse/config/dashboardConfig'
@@ -107,108 +111,24 @@ export default function Dashboard() {
     loadToday,
   } = useDashboardData(activeView)
   
-  const allTeamCards = useMemo(() => {
-    const liveCards = TEAM_ORDER
-      .filter(teamId => teamData[teamId])
-      .map(teamId => ({ team: TEAMS[teamId], parsed: teamData[teamId] }))
-      .sort((a, b) => {
-        const diff = (b.parsed?.totals?.[sortMetric] || 0) - (a.parsed?.totals?.[sortMetric] || 0)
-        if (diff !== 0) return diff
-        return (b.parsed?.totals?.total || 0) - (a.parsed?.totals?.total || 0)
-      })
-
-    const missingCards = TEAM_ORDER
-      .filter(teamId => !teamData[teamId])
-      .map(teamId => ({ team: TEAMS[teamId], parsed: null }))
-
-    return [...liveCards, ...missingCards]
-  }, [sortMetric, teamData])
-
-  const selectedParsed = selectedTeam !== 'all' ? teamData[selectedTeam] : null
-  const selectedTeamMeta = selectedTeam !== 'all' ? TEAMS[selectedTeam] : null
-
-  const dashboardTotals = useMemo(() => {
-    if (activeView === 'teams') {
-      const weeklyTeams = historyState.insights?.weeklyTeams || []
-
-      return weeklyTeams.reduce((acc, teamInsight) => {
-        const totals = teamInsight?.thisWeek?.totals || {}
-        acc.english += Number(totals.english || 0)
-        acc.spanish += Number(totals.spanish || 0)
-        acc.invalid += Number(totals.invalidTransfers || 0)
-        acc.total += Number(totals.total || 0)
-        acc.activeAgents += Number(totals.activeAgents || 0)
-        return acc
-      }, { english: 0, spanish: 0, invalid: 0, total: 0, activeAgents: 0 })
-    }
-
-    if ((activeView === 'rankings' || activeView === 'analytics') && rangeMode === 'all_time') {
-      const allTimeAgents = historyState.insights?.allTimeAgents || []
-
-      return allTimeAgents.reduce((acc, agent) => {
-        acc.english += Number(agent?.english || 0)
-        acc.spanish += Number(agent?.spanish || 0)
-        acc.invalid += Number(agent?.invalidTransfers || 0)
-        acc.total += Number(agent?.total || 0)
-        acc.activeAgents += 1
-        return acc
-      }, { english: 0, spanish: 0, invalid: 0, total: 0, activeAgents: 0 })
-    }
-
-    const source = selectedTeam === 'all'
-      ? TEAM_ORDER.map(teamId => teamData[teamId]).filter(Boolean)
-      : selectedParsed
-        ? [selectedParsed]
-        : []
-
-    return source.reduce((acc, parsed) => {
-      acc.english += Number(parsed?.totals?.english || 0)
-      acc.spanish += Number(parsed?.totals?.spanish || 0)
-      acc.invalid += Number(parsed?.invalidTransfers || 0)
-      acc.total += Number(parsed?.totals?.total || 0)
-      acc.activeAgents += Number(parsed?.totals?.activeAgents || parsed?.agents?.length || 0)
-      return acc
-    }, { english: 0, spanish: 0, invalid: 0, total: 0, activeAgents: 0 })
-  }, [activeView, historyState.insights, rangeMode, selectedParsed, selectedTeam, teamData])
-
-  const normalizedSearch = useMemo(() => normalizeSearchText(searchQuery), [searchQuery])
-
-  const visibleAllTeamCards = useMemo(() => {
-    if (!normalizedSearch) return allTeamCards
-
-    return allTeamCards
-      .map(({ team, parsed }) => {
-        const teamMatch = teamMatchesSearch(team, normalizedSearch)
-
-        if (!parsed) return teamMatch ? { team, parsed } : null
-
-        const filteredParsed = filterParsedBySearch(parsed, normalizedSearch)
-        const hasAgentMatches = (filteredParsed?.agents || []).length > 0
-        if (!teamMatch && !hasAgentMatches) return null
-
-        return { team, parsed: teamMatch ? parsed : filteredParsed }
-      })
-      .filter(Boolean)
-  }, [allTeamCards, normalizedSearch])
-
-  const selectedParsedForView = useMemo(() => {
-    return filterParsedBySearch(selectedParsed, normalizedSearch)
-  }, [selectedParsed, normalizedSearch])
-
-  const searchSuggestions = useMemo(() => {
-    return buildSearchSuggestions(teamData, searchQuery)
-  }, [teamData, searchQuery])
-
-  const activeSidebarItem = activeView === 'rankings'
-    ? 'rankings'
-    : activeView === 'teams'
-      ? 'teams'
-      : activeView === 'analytics'
-        ? 'analytics'
-        : selectedTeam === 'all'
-          ? 'overview'
-          : 'teams'
-
+  const {
+    activeSidebarItem,
+    dashboardTotals,
+    searchSuggestions,
+    selectedParsed,
+    selectedParsedForView,
+    selectedTeamMeta,
+    visibleAllTeamCards,
+  } = useDashboardViewModel({
+    activeView,
+    historyState,
+    rangeMode,
+    searchQuery,
+    selectedTeam,
+    sortMetric,
+    teamData,
+  })
+  
   const handleSidebarNavigate = useCallback(item => {
     playPulseSound('click')
 
