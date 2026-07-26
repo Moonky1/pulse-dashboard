@@ -1,102 +1,77 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../utils/supabase'
 import {
-  FlagImg,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+
+import { useNavigate } from 'react-router-dom'
+
+import {
   LovableKpi,
-  Medal,
-  RankMarker,
-  SummaryCard,
-  TeamInlineLabel,
 } from '../features/pulse/components/DashboardPrimitives'
+
 import {
   LovableHeader,
   LovableSidebar,
   TeamRevealOverlay,
 } from '../features/pulse/components/DashboardShell'
+
 import {
   DateSelectorRow,
   SortTabs,
   TeamTabs,
 } from '../features/pulse/components/DashboardControls'
+
 import {
-  AgentTable,
   TeamComingSoonCard,
   TeamDetail,
   TeamOverviewCard,
-  TopRow,
 } from '../features/pulse/components/DashboardTeamComponents'
+
 import {
   RankingsPage,
 } from '../features/pulse/components/DashboardRankingComponents'
-import {
-  AnalyticsAgentTable,
-  AnalyticsAgentsPanel,
-  HourlyPaceChart,
-  LanguageMixChart,
-  MultiTeamLineChart,
-  RadarChart,
-  SimpleBarChart,
-  SimpleLineChart,
-} from '../features/pulse/components/DashboardAnalyticsComponents'
+
 import {
   AnalyticsPage,
 } from '../features/pulse/components/DashboardAnalyticsPage'
+
 import {
   TeamsInsightsPage,
 } from '../features/pulse/components/DashboardTeamsPage'
 
 import {
   CLEAN_START_DATE,
-  OFFICIAL_DATA_START,
   POLL_MS,
-  SORT_OPTIONS,
-  SUPABASE_PAGE_SIZE,
-  TEAM_COLORS,
   TEAM_ORDER,
-  TEAM_RANK_EMOJIS,
-  TEAM_TARGETS,
   TEAMS,
 } from './dashboardConfig'
+
 import {
   fetchSupabaseDashboardDate,
   fetchSupabaseDates,
 } from './dashboardData'
-import {
-  getTeamColor,
-  getTeamFlag,
-  getTeamGoal,
-  getTeamLabel,
-  sortAgentsByLowestXfers,
-  sortAgentsByMetric,
-} from './dashboardHelpers'
+
 import {
   agentReachedGoal,
-  dateAddKey,
   formatDateLabel,
-  getBusinessHoursForDate,
-  getGoalRuleLabel,
-  getMetricColor,
-  getMetricLabel,
-  getWeekEndKey,
-  getWeekStartKey,
-  normalizeDate,
   normalizeSearchText,
   playPulseSound,
   todayKey,
 } from '../features/pulse/utils/dashboardViewHelpers'
+
 import {
   fetchHistoryRows,
 } from '../features/pulse/utils/historyInsights'
+
 import {
-  buildAnalyticsInsights,
-} from '../features/pulse/utils/analyticsInsights'
-import {
-  agentMatchesSearch,
   buildSearchSuggestions,
   filterParsedBySearch,
   teamMatchesSearch,
 } from '../features/pulse/utils/dashboardSearchHelpers'
+
 import './dashboard.css'
 import './dashboardStyles/teamReveal.css'
 import './dashboardStyles/dashboardPolish.css'
