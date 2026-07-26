@@ -4,13 +4,15 @@ import { supabase } from '../utils/supabase'
 import {
   FlagImg,
   LovableKpi,
+  Medal,
+  RankMarker,
   SummaryCard,
+  TeamInlineLabel,
 } from '../features/pulse/components/DashboardPrimitives'
 
 import {
   BUSINESS_HOURS,
   CLEAN_START_DATE,
-  MEDALS,
   OFFICIAL_DATA_START,
   POLL_MS,
   SIDEBAR_GROUPS,
@@ -223,23 +225,6 @@ function getGoalRuleLabel(teamId, dateKey = null) {
   if (dateKey && isSaturdayDateKey(dateKey)) return 'Saturday goal: 10 Total'
   if (teamId === 'asia') return 'Mon-Fri goal: 20 English • Saturday: 10 Total'
   return 'Mon-Fri goal: 10 English • Saturday: 10 Total'
-}
-function Medal({ index, size = 18 }) {
-  return <img src={MEDALS[index]} alt="" width={size} height={size} style={{ objectFit: 'contain' }} />
-}
-
-function RankMarker({ index }) {
-  if (index < 3) return <Medal index={index} size={20} />
-  return <span className="pulse-team-rank-text">#{index + 1}</span>
-}
-
-function TeamInlineLabel({ teamId, teamFlag, teamLabel }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 900 }}>
-      <FlagImg src={teamFlag || getTeamFlag(teamId)} size={18} alt="" />
-      {teamLabel || getTeamLabel(teamId)}
-    </span>
-  )
 }
 
 function TeamRevealOverlay({ reveal, onDone }) {
