@@ -167,6 +167,7 @@ export function DateSelectorRow({
 
       {open ? (
         <div
+        className="lov-date-menu"
           style={{
             position: 'absolute',
             top: 'calc(100% + 10px)',

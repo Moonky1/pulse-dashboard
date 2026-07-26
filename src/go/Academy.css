@@ -801,14 +801,28 @@
   .ac-topnav {
     grid-template-columns: 1fr;
     justify-items: center;
+    gap: 12px;
+    padding: 16px 12px 18px;
   }
 
   .ac-nav-btn {
-    justify-self: start;
+    justify-self: center;
+  }
+
+  .ac-nav-pill {
+    width: 100%;
+    max-width: 340px;
+    justify-content: center;
   }
 
   .ac-nav-pill button {
-    padding: 11px 16px;
+    flex: 1;
+    padding: 11px 10px;
+    text-align: center;
+  }
+
+  .ac-lang-switch {
+    justify-self: center;
   }
 
   .ac-home,
@@ -854,5 +868,155 @@
 
   .ac-start-card button {
     width: 100%;
+  }
+}
+@media (max-width: 720px) {
+  .ac-topnav {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .ac-nav-pill {
+    width: 100%;
+    max-width: none;
+    padding: 5px;
+  }
+
+  .ac-nav-pill button {
+    min-height: 38px;
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .ac-lang-switch {
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .ac-lang-switch button {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+
+  .ac-home,
+  .ac-detail-layout {
+    width: calc(100% - 20px);
+    padding-top: 20px;
+    padding-bottom: 50px;
+  }
+
+  .ac-hero {
+    margin-bottom: 22px;
+  }
+
+  .ac-hero h1 {
+    margin: 10px 0;
+    font-size: clamp(42px, 13vw, 58px);
+    line-height: 0.9;
+  }
+
+  .ac-hero p {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .ac-wiki-grid,
+  .ac-detail-layout,
+  .ac-main-panel {
+    gap: 14px;
+  }
+
+  /* Academy navigation becomes a compact horizontal sidebar */
+  .ac-sidebar {
+    padding: 10px;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .ac-sidebar-head {
+    display: none;
+  }
+
+  .ac-side-list {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .ac-side-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ac-side-list button {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: auto;
+    padding: 9px 11px;
+    border: 1px solid var(--ac-border);
+    border-radius: 999px;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  .ac-search-card,
+  .ac-start-card,
+  .ac-panel,
+  .ac-article-hero {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .ac-search-box {
+    min-height: 52px;
+    margin-top: 10px;
+    padding: 0 13px;
+    border-radius: 16px;
+    gap: 8px;
+  }
+
+  .ac-search-box input {
+    font-size: 14px;
+  }
+
+  .ac-filter-row {
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .ac-filter-row button {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .ac-start-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .ac-start-card h2,
+  .ac-panel h2,
+  .ac-article-hero h1 {
+    font-size: 30px;
+    line-height: 0.95;
+  }
+
+  .ac-section-card {
+    min-height: 0;
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .ac-section-card h3 {
+    margin-top: 12px;
+    font-size: 20px;
+  }
+
+  .ac-right-rail {
+    display: none;
   }
 }

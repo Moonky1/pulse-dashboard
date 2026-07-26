@@ -241,10 +241,6 @@ export default function GoLearn() {
       </div>
 
       <header className="ac-topnav">
-        <button className="ac-nav-btn" onClick={goHome}>
-          {copy.navHome}
-        </button>
-
         <nav className="ac-nav-pill">
           <button onClick={goHome}>{copy.navHome}</button>
           <button onClick={() => navigate('/go')}>{copy.navGo}</button>
