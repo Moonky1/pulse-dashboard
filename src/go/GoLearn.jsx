@@ -390,20 +390,6 @@ export default function GoLearn() {
               </>
             )}
           </section>
-
-          <aside className="ac-right-rail">
-            <div className="ac-rail-card">
-              <span>{copy.updated}</span>
-              <strong>{ACADEMY_SECTIONS.length}</strong>
-              <small>{lang === 'es' ? 'secciones disponibles' : 'available sections'}</small>
-            </div>
-
-            <div className="ac-rail-card">
-              <span>{lang === 'es' ? 'Idioma activo' : 'Active language'}</span>
-              <strong>{lang === 'es' ? 'ES' : 'EN'}</strong>
-              <small>{lang === 'es' ? 'Click EN para cambiar' : 'Click ES to switch'}</small>
-            </div>
-          </aside>
         </section>
       </main>
     </div>

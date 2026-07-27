@@ -242,7 +242,7 @@
 
 .ac-wiki-grid {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 230px;
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
@@ -301,6 +301,7 @@
   display: grid;
   gap: 8px;
 }
+
 
 .ac-side-list button {
   display: grid;
@@ -693,6 +694,26 @@
   background: rgba(12, 19, 32, 0.82);
 }
 
+.ac-step-card.script,
+.ac-step-card.flow {
+  display: block;
+  grid-template-columns: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.ac-step-card.script .ac-step-flow-body,
+.ac-step-card.flow .ac-step-flow-body {
+  width: 100%;
+  min-width: 0;
+}
+
+.ac-step-card.script p,
+.ac-step-card.flow p {
+  max-width: 100%;
+  overflow-wrap: normal;
+  word-break: normal;
+}
 .ac-step-num {
   width: 54px;
   height: 54px;

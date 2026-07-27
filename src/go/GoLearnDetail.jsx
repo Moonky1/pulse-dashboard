@@ -19,6 +19,8 @@ import {
   saveAcademyLang,
   textFor,
 } from './academyData'
+import DialerGuide from './DialerGuide'
+
 import './Academy.css'
 
 const PRODUCT_ES = {
@@ -580,37 +582,6 @@ function DispositionsContent({ lang }) {
   )
 }
 
-function DialerContent({ lang }) {
-  return (
-    <div className="ac-content-stack">
-      <section id="pause-codes" className="ac-panel">
-        <span className="ac-kicker">{lang === 'es' ? 'Códigos de pausa' : 'Pause codes'}</span>
-        <h2>{lang === 'es' ? 'Uso correcto de pausas' : 'Correct pause usage'}</h2>
-
-        <div className="ac-mini-grid">
-          {dialer.pauseCodes.map((item) => (
-            <div key={`${item.code}-${item.label}`} className="ac-mini-card">
-              <strong>{item.label}</strong>
-              <span>{item.code}</span>
-              <small>{item.time} · {item.desc}</small>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="visual-guide" className="ac-panel">
-        <span className="ac-kicker">{lang === 'es' ? 'Guía visual' : 'Visual guide'}</span>
-        <h2>{lang === 'es' ? 'Referencias del dialer' : 'Dialer references'}</h2>
-        <p>
-           {lang === 'es'
-            ? 'Muy pronto agregaremos guías visuales del dialer, disposiciones, códigos de pausa y pantallas de acceso.'
-            : 'Visual guides for the dialer, dispositions, pause codes, and login screens are coming soon.'}
-      </p>
-      </section>
-    </div>
-  )
-}
-
 function RoleplaysContent({ lang }) {
   const items = (roleplayScenarios || [])
     .filter((item) => !item.language || item.language === lang)
@@ -678,10 +649,16 @@ function getToc(id, lang) {
     ],
     'qa-invalid': [['#rules', lang === 'es' ? 'Reglas QA' : 'QA rules']],
     dispositions: [['#dispositions', lang === 'es' ? 'Disposiciones' : 'Dispositions']],
-    dialer: [
-      ['#pause-codes', lang === 'es' ? 'Pausas' : 'Pause codes'],
-      ['#visual-guide', lang === 'es' ? 'Guía visual' : 'Visual guide'],
-    ],
+dialer: [
+  ['#validate-ip', lang === 'es' ? 'Validar IP' : 'Validate IP'],
+  ['#login', lang === 'es' ? 'Login' : 'Login'],
+  ['#go-active', lang === 'es' ? 'Ponerse activo' : 'Go active'],
+  ['#transfer-english', lang === 'es' ? 'Transferir en inglés' : 'English transfer'],
+  ['#transfer-spanish', lang === 'es' ? 'Transferir en español' : 'Spanish transfer'],
+  ['#read-lead', lang === 'es' ? 'Leer un lead' : 'Read a lead'],
+  ['#pause-codes', lang === 'es' ? 'Pausas' : 'Pause codes'],
+  ['#dispositions', lang === 'es' ? 'Disposiciones' : 'Dispositions'],
+],
     roleplays: [['#roleplay-list', 'Roleplays']],
     mistakes: [['#mistakes', lang === 'es' ? 'Errores' : 'Mistakes']],
   }
@@ -705,7 +682,7 @@ export default function GoLearnDetail() {
     'call-flow': <CallFlowContent lang={lang} />,
     'qa-invalid': <QAContent lang={lang} />,
     dispositions: <DispositionsContent lang={lang} />,
-    dialer: <DialerContent lang={lang} />,
+    dialer: <DialerGuide lang={lang} />,
     roleplays: <RoleplaysContent lang={lang} />,
     mistakes: <MistakesContent lang={lang} />,
   }[section.id] || <OverviewContent lang={lang} />

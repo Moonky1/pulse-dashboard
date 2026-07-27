@@ -1,0 +1,368 @@
+.dg-guide {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 14px;
+}
+
+.dg-hero,
+.dg-section,
+.dg-login-step,
+.dg-visual-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--ac-border, rgba(188, 215, 255, 0.14));
+  background:
+    radial-gradient(
+      circle at 85% 12%,
+      rgba(188, 215, 255, 0.08),
+      transparent 12rem
+    ),
+    rgba(17, 28, 45, 0.84);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.18);
+}
+
+.dg-hero {
+  padding: 18px 16px;
+  border-radius: 22px;
+  text-align: center;
+}
+
+.dg-hero h2,
+.dg-section-heading h2,
+.dg-step-heading h3,
+.dg-visual-card-heading h3 {
+  font-family: 'Sora', sans-serif;
+}
+
+.dg-hero h2 {
+  margin: 7px 0 8px;
+  color: var(--ac-text, #f4f7fc);
+  font-size: 29px;
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.dg-hero p {
+  max-width: 320px;
+  margin: 0 auto;
+  color: var(--ac-muted, #a8b4c7);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.dg-eyebrow {
+  display: block;
+  color: var(--ac-blue, #9fc8ff);
+  font-family: 'Sora', sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dg-section {
+  padding: 16px;
+  border-radius: 22px;
+}
+
+.dg-section-important {
+  border-color: var(--ac-border, rgba(188, 215, 255, 0.14));
+  background:
+    radial-gradient(
+      circle at 85% 12%,
+      rgba(188, 215, 255, 0.08),
+      transparent 13rem
+    ),
+    rgba(17, 28, 45, 0.84);
+}
+
+.dg-section-heading {
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.dg-section-heading h2 {
+  margin: 7px 0 7px;
+  color: var(--ac-text, #f4f7fc);
+  font-size: 25px;
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+  overflow-wrap: anywhere;
+}
+
+.dg-section-heading p {
+  max-width: 315px;
+  margin: 0 auto;
+  color: var(--ac-muted, #a8b4c7);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.dg-image-frame {
+  width: 100%;
+  margin: 0 0 14px;
+  overflow: hidden;
+  border: 1px solid rgba(188, 215, 255, 0.15);
+  border-radius: 16px;
+  background: rgba(5, 10, 18, 0.86);
+}
+
+.dg-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 360px;
+  object-fit: contain;
+  background: rgba(5, 10, 18, 0.94);
+}
+
+.dg-instruction-list {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dg-instruction-list li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid rgba(188, 215, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(6, 13, 24, 0.72);
+  color: var(--ac-muted, #b5c0d2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.dg-instruction-number {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    #eef5ff 0%,
+    #b9d6ff 100%
+  );
+  color: #07101d;
+  font-family: 'Sora', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.dg-note {
+  margin-top: 13px;
+  padding: 13px;
+  border: 1px solid rgba(255, 194, 92, 0.32);
+  border-radius: 15px;
+  background: rgba(255, 194, 92, 0.07);
+}
+
+.dg-note strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #ffd58e;
+  font-family: 'Sora', sans-serif;
+  font-size: 12px;
+}
+
+.dg-note p {
+  margin: 0;
+  color: var(--ac-muted, #b5c0d2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.dg-login-list {
+  display: grid;
+  gap: 13px;
+}
+
+.dg-login-step {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(7, 14, 25, 0.67);
+}
+
+.dg-step-heading {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: start;
+  gap: 11px;
+  margin-bottom: 13px;
+}
+
+.dg-step-number {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(188, 215, 255, 0.18);
+  border-radius: 13px;
+  background: rgba(188, 215, 255, 0.09);
+  color: var(--ac-blue, #bcd7ff);
+  font-family: 'Sora', sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.dg-step-heading h3 {
+  margin: 1px 0 5px;
+  color: var(--ac-text, #f4f7fc);
+  font-size: 18px;
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.dg-step-heading p {
+  margin: 0;
+  color: var(--ac-muted, #a8b4c7);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.dg-login-step .dg-image-frame {
+  margin-bottom: 12px;
+}
+
+.dg-login-step .dg-instruction-list li {
+  padding: 9px 10px;
+  font-size: 12px;
+}
+
+.dg-login-step .dg-instruction-number {
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+}
+
+.dg-field-grid {
+  display: grid;
+  gap: 9px;
+}
+
+.dg-field-card {
+  padding: 13px;
+  border: 1px solid rgba(188, 215, 255, 0.13);
+  border-radius: 15px;
+  background: rgba(6, 13, 24, 0.7);
+}
+
+.dg-field-card strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ac-blue, #bcd7ff);
+  font-family: 'Sora', sans-serif;
+  font-size: 12px;
+}
+
+.dg-field-card p {
+  margin: 0;
+  color: var(--ac-muted, #b5c0d2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.dg-disposition-list {
+  display: grid;
+  gap: 13px;
+}
+
+.dg-visual-card {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(7, 14, 25, 0.68);
+}
+
+.dg-visual-card-heading {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.dg-visual-card-heading > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    #eef5ff 0%,
+    #b9d6ff 100%
+  );
+  color: #07101d;
+  font-family: 'Sora', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.dg-visual-card-heading h3 {
+  margin: 0 0 5px;
+  color: var(--ac-text, #f4f7fc);
+  font-size: 17px;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.dg-visual-card-heading p {
+  margin: 0;
+  color: var(--ac-muted, #a8b4c7);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.dg-visual-card .dg-image-frame {
+  margin-bottom: 0;
+}
+
+/* Make screenshots easier to inspect */
+.dg-section:nth-of-type(3) .dg-image,
+.dg-section:nth-of-type(4) .dg-image,
+.dg-section:nth-of-type(5) .dg-image,
+.dg-section:nth-of-type(6) .dg-image {
+  padding: 8px;
+}
+
+/* Prevent long English labels from leaving the screen */
+.dg-guide h2,
+.dg-guide h3,
+.dg-guide p,
+.dg-guide li,
+.dg-guide strong,
+.dg-guide span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 390px) {
+  .dg-section {
+    padding: 14px;
+  }
+
+  .dg-hero h2 {
+    font-size: 27px;
+  }
+
+  .dg-section-heading h2 {
+    font-size: 23px;
+  }
+
+  .dg-step-heading {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .dg-step-number {
+    width: 38px;
+    height: 38px;
+  }
+}
