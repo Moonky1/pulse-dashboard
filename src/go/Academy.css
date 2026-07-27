@@ -867,23 +867,39 @@
     display: none;
   }
 
-  .ac-side-list {
-    display: flex;
-    width: 100%;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 2px;
-    scroll-snap-type: x proximity;
-    scroll-padding-inline: 2px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x;
-  }
+.ac-side-list {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 9px;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(203, 223, 255, 0.34) transparent;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+  touch-action: pan-x;
+}
 
-  .ac-side-list::-webkit-scrollbar {
-    display: none;
-  }
+.ac-side-list::-webkit-scrollbar {
+  display: block;
+  height: 6px;
+}
+
+.ac-side-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ac-side-list::-webkit-scrollbar-thumb {
+  background: rgba(203, 223, 255, 0.28);
+  border-radius: 999px;
+}
+
+.ac-side-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(203, 223, 255, 0.48);
+}
 
   .ac-side-list button {
     flex: 0 0 auto;
