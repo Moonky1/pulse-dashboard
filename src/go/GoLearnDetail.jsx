@@ -19,6 +19,8 @@ import {
   saveAcademyLang,
   textFor,
 } from './academyData'
+import DialerGuide from './DialerGuide'
+
 import './Academy.css'
 
 const PRODUCT_ES = {
@@ -237,10 +239,6 @@ function DetailShell({ lang, setLang, section, children, toc }) {
       </div>
 
       <header className="ac-topnav">
-        <button className="ac-nav-btn" onClick={() => navigate('/academy')}>
-          ← {copy.backAcademy}
-        </button>
-
         <nav className="ac-nav-pill">
           <button onClick={goHome}>{copy.navHome}</button>
           <button onClick={() => navigate('/go')}>{copy.navGo}</button>
@@ -364,15 +362,25 @@ function ScriptContent({ lang }) {
 
       <section id="steps" className="ac-step-list">
         {script.steps.map((step) => (
-          <div key={step.id} className={`ac-step-card ${step.type}`}>
-            <span className="ac-step-num">{String(step.id).padStart(2, '0')}</span>
-            <div>
-              <small>{step.type}</small>
-              <h3>{step.label}</h3>
-              <p>{step.text}</p>
-              {step.tip && <em>💡 {step.tip}</em>}
-            </div>
-          </div>
+<div key={step.id} className={`ac-step-card script ${step.type}`}>
+  <div className="ac-step-flow-body">
+    <small className="ac-step-flow-label">
+      {lang === 'es' ? `Paso ${step.id}` : `Step ${step.id}`}
+    </small>
+
+    <h3 className="ac-script-step-title">
+      {step.label}
+    </h3>
+
+    <p>{step.text}</p>
+
+    {step.tip ? (
+      <em className="ac-script-step-tip">
+        💡 {step.tip}
+      </em>
+    ) : null}
+  </div>
+</div>
         ))}
       </section>
     </div>
@@ -395,17 +403,36 @@ function ObjectionsContent({ lang }) {
 }
 
 function ProductContent({ lang }) {
-  const comparison = lang === 'es' ? PRODUCT_ES.comparison : productKnowledge.comparison.items
-  const canCover = lang === 'es' ? PRODUCT_ES.canCover : productKnowledge.canCover.items
-  const cannotCover = lang === 'es' ? PRODUCT_ES.cannotCover : productKnowledge.cannotCover.items
+  const comparison =
+    lang === 'es'
+      ? PRODUCT_ES.comparison
+      : productKnowledge.comparison.items
+
+  const canCover =
+    lang === 'es'
+      ? PRODUCT_ES.canCover
+      : productKnowledge.canCover.items
+
+  const cannotCover =
+    lang === 'es'
+      ? PRODUCT_ES.cannotCover
+      : productKnowledge.cannotCover.items
 
   return (
     <div className="ac-content-stack">
       <section id="comparison" className="ac-card-grid detail three">
         {comparison.map((item) => (
           <div key={item.name} className="ac-topic-card">
-            <span>📦</span>
-            <h3>{item.name}</h3>
+            <h3 className="ac-product-title">
+              <span>{item.name}</span>
+              <span
+                className="ac-product-title-icon"
+                aria-hidden="true"
+              >
+                📦
+              </span>
+            </h3>
+
             <ul>
               {item.points.map((point) => (
                 <li key={point}>{point}</li>
@@ -417,18 +444,48 @@ function ProductContent({ lang }) {
 
       <section id="coverage" className="ac-two-col">
         <div className="ac-topic-card good">
-          <span>✅</span>
-          <h3>{lang === 'es' ? 'Lo que sí se puede cubrir' : productKnowledge.canCover.title}</h3>
+          <h3 className="ac-product-title">
+            <span>
+              {lang === 'es'
+                ? 'Lo que sí se puede cubrir'
+                : productKnowledge.canCover.title}
+            </span>
+
+            <span
+              className="ac-product-title-icon"
+              aria-hidden="true"
+            >
+              ✅
+            </span>
+          </h3>
+
           <ul>
-            {canCover.map((item) => <li key={item}>{item}</li>)}
+            {canCover.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
           </ul>
         </div>
 
         <div className="ac-topic-card bad">
-          <span>🚫</span>
-          <h3>{lang === 'es' ? 'Lo que no se puede cubrir' : productKnowledge.cannotCover.title}</h3>
+          <h3 className="ac-product-title">
+            <span>
+              {lang === 'es'
+                ? 'Lo que no se puede cubrir'
+                : productKnowledge.cannotCover.title}
+            </span>
+
+            <span
+              className="ac-product-title-icon"
+              aria-hidden="true"
+            >
+              🚫
+            </span>
+          </h3>
+
           <ul>
-            {cannotCover.map((item) => <li key={item}>{item}</li>)}
+            {cannotCover.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
           </ul>
         </div>
       </section>
@@ -445,17 +502,28 @@ function CallFlowContent({ lang }) {
     <div className="ac-content-stack">
       <section id="flow" className="ac-step-list">
         {steps.map((step) => (
-          <div key={step.id} className="ac-step-card flow">
-            <span className="ac-step-num">{step.icon}</span>
-            <div>
-              <small>{lang === 'es' ? `Paso ${step.id}` : `Step ${step.id}`}</small>
-              <h3>{step.title}</h3>
-              <p>{step.description}</p>
-              <div className="ac-chip-row">
-                {step.keyPoints.map((point) => <span key={point}>{point}</span>)}
-              </div>
-            </div>
-          </div>
+<div key={step.id} className="ac-step-card flow">
+  <div className="ac-step-flow-body">
+    <small className="ac-step-flow-label">
+      {lang === 'es' ? `Paso ${step.id}` : `Step ${step.id}`}
+    </small>
+
+    <h3 className="ac-step-flow-title">
+      <span>{step.title}</span>
+      <span className="ac-step-flow-icon" aria-hidden="true">
+        {step.icon}
+      </span>
+    </h3>
+
+    <p>{step.description}</p>
+
+    <div className="ac-chip-row">
+      {step.keyPoints.map((point) => (
+        <span key={point}>{point}</span>
+      ))}
+    </div>
+  </div>
+</div>
         ))}
       </section>
 
@@ -490,7 +558,6 @@ function QAContent({ lang }) {
     <section id="rules" className="ac-card-grid detail">
       {QA_RULES[lang].map((item) => (
         <div key={item.title} className="ac-topic-card danger">
-          <span>🚨</span>
           <h3>{item.title}</h3>
           <p>{item.body}</p>
         </div>
@@ -510,37 +577,6 @@ function DispositionsContent({ lang }) {
             <p>{lang === 'es' ? DISPOSITION_ES[item.code] || item.description : item.description}</p>
           </div>
         ))}
-      </section>
-    </div>
-  )
-}
-
-function DialerContent({ lang }) {
-  return (
-    <div className="ac-content-stack">
-      <section id="pause-codes" className="ac-panel">
-        <span className="ac-kicker">{lang === 'es' ? 'Códigos de pausa' : 'Pause codes'}</span>
-        <h2>{lang === 'es' ? 'Uso correcto de pausas' : 'Correct pause usage'}</h2>
-
-        <div className="ac-mini-grid">
-          {dialer.pauseCodes.map((item) => (
-            <div key={`${item.code}-${item.label}`} className="ac-mini-card">
-              <strong>{item.label}</strong>
-              <span>{item.code}</span>
-              <small>{item.time} · {item.desc}</small>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="visual-guide" className="ac-panel">
-        <span className="ac-kicker">{lang === 'es' ? 'Guía visual' : 'Visual guide'}</span>
-        <h2>{lang === 'es' ? 'Referencias del dialer' : 'Dialer references'}</h2>
-        <p>
-          {lang === 'es'
-            ? 'Aquí puedes conectar después capturas de Vici, disposiciones y pantallas de login.'
-            : 'This section can connect Vici screenshots, dispositions, and login screens later.'}
-        </p>
       </section>
     </div>
   )
@@ -583,7 +619,6 @@ function MistakesContent({ lang }) {
     <section id="mistakes" className="ac-card-grid detail">
       {COMMON_MISTAKES[lang].map(([title, body]) => (
         <div key={title} className="ac-topic-card warning">
-          <span>⚠️</span>
           <h3>{title}</h3>
           <p>{body}</p>
         </div>
@@ -614,10 +649,16 @@ function getToc(id, lang) {
     ],
     'qa-invalid': [['#rules', lang === 'es' ? 'Reglas QA' : 'QA rules']],
     dispositions: [['#dispositions', lang === 'es' ? 'Disposiciones' : 'Dispositions']],
-    dialer: [
-      ['#pause-codes', lang === 'es' ? 'Pausas' : 'Pause codes'],
-      ['#visual-guide', lang === 'es' ? 'Guía visual' : 'Visual guide'],
-    ],
+dialer: [
+  ['#validate-ip', lang === 'es' ? 'Validar IP' : 'Validate IP'],
+  ['#login', lang === 'es' ? 'Login' : 'Login'],
+  ['#go-active', lang === 'es' ? 'Ponerse activo' : 'Go active'],
+  ['#transfer-english', lang === 'es' ? 'Transferir en inglés' : 'English transfer'],
+  ['#transfer-spanish', lang === 'es' ? 'Transferir en español' : 'Spanish transfer'],
+  ['#read-lead', lang === 'es' ? 'Leer un lead' : 'Read a lead'],
+  ['#pause-codes', lang === 'es' ? 'Pausas' : 'Pause codes'],
+  ['#dispositions', lang === 'es' ? 'Disposiciones' : 'Dispositions'],
+],
     roleplays: [['#roleplay-list', 'Roleplays']],
     mistakes: [['#mistakes', lang === 'es' ? 'Errores' : 'Mistakes']],
   }
@@ -641,7 +682,7 @@ export default function GoLearnDetail() {
     'call-flow': <CallFlowContent lang={lang} />,
     'qa-invalid': <QAContent lang={lang} />,
     dispositions: <DispositionsContent lang={lang} />,
-    dialer: <DialerContent lang={lang} />,
+    dialer: <DialerGuide lang={lang} />,
     roleplays: <RoleplaysContent lang={lang} />,
     mistakes: <MistakesContent lang={lang} />,
   }[section.id] || <OverviewContent lang={lang} />

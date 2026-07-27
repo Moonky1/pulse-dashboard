@@ -13,7 +13,7 @@ export const ACADEMY_COPY = {
     eyebrow: 'Pulse knowledge base',
     title: 'Pulse Academy',
     subtitle:
-      'A searchable wiki for scripts, objections, product knowledge, QA rules, dispositions, and transfer standards.',
+      'Everything you need to master scripts, objections, product knowledge, QA standards, dispositions, and transfers.',
     searchLabel: 'Search Academy',
     searchPlaceholder: 'Search SPXFER, 15 seconds, not interested, mileage, callbacks...',
     startHere: 'Start here',
@@ -38,8 +38,8 @@ export const ACADEMY_COPY = {
     navAcademy: 'Academy',
     eyebrow: 'Base de conocimiento Pulse',
     title: 'Pulse Academy',
-    subtitle:
-      'Una wiki buscable para scripts, objeciones, producto, reglas de QA, disposiciones y estándares de transferencia.',
+subtitle:
+  'Todo lo que necesitas para dominar scripts, objeciones, producto, reglas de QA, disposiciones y transferencias.',
     searchLabel: 'Buscar en Academy',
     searchPlaceholder: 'Busca SPXFER, 15 segundos, no interesado, millaje, callbacks...',
     startHere: 'Empieza aquí',
