@@ -360,15 +360,25 @@ function ScriptContent({ lang }) {
 
       <section id="steps" className="ac-step-list">
         {script.steps.map((step) => (
-          <div key={step.id} className={`ac-step-card ${step.type}`}>
-            <span className="ac-step-num">{String(step.id).padStart(2, '0')}</span>
-            <div>
-              <small>{step.type}</small>
-              <h3>{step.label}</h3>
-              <p>{step.text}</p>
-              {step.tip && <em>💡 {step.tip}</em>}
-            </div>
-          </div>
+<div key={step.id} className={`ac-step-card script ${step.type}`}>
+  <div className="ac-step-flow-body">
+    <small className="ac-step-flow-label">
+      {lang === 'es' ? `Paso ${step.id}` : `Step ${step.id}`}
+    </small>
+
+    <h3 className="ac-script-step-title">
+      {step.label}
+    </h3>
+
+    <p>{step.text}</p>
+
+    {step.tip ? (
+      <em className="ac-script-step-tip">
+        💡 {step.tip}
+      </em>
+    ) : null}
+  </div>
+</div>
         ))}
       </section>
     </div>
@@ -391,17 +401,36 @@ function ObjectionsContent({ lang }) {
 }
 
 function ProductContent({ lang }) {
-  const comparison = lang === 'es' ? PRODUCT_ES.comparison : productKnowledge.comparison.items
-  const canCover = lang === 'es' ? PRODUCT_ES.canCover : productKnowledge.canCover.items
-  const cannotCover = lang === 'es' ? PRODUCT_ES.cannotCover : productKnowledge.cannotCover.items
+  const comparison =
+    lang === 'es'
+      ? PRODUCT_ES.comparison
+      : productKnowledge.comparison.items
+
+  const canCover =
+    lang === 'es'
+      ? PRODUCT_ES.canCover
+      : productKnowledge.canCover.items
+
+  const cannotCover =
+    lang === 'es'
+      ? PRODUCT_ES.cannotCover
+      : productKnowledge.cannotCover.items
 
   return (
     <div className="ac-content-stack">
       <section id="comparison" className="ac-card-grid detail three">
         {comparison.map((item) => (
           <div key={item.name} className="ac-topic-card">
-            <span>📦</span>
-            <h3>{item.name}</h3>
+            <h3 className="ac-product-title">
+              <span>{item.name}</span>
+              <span
+                className="ac-product-title-icon"
+                aria-hidden="true"
+              >
+                📦
+              </span>
+            </h3>
+
             <ul>
               {item.points.map((point) => (
                 <li key={point}>{point}</li>
@@ -413,18 +442,48 @@ function ProductContent({ lang }) {
 
       <section id="coverage" className="ac-two-col">
         <div className="ac-topic-card good">
-          <span>✅</span>
-          <h3>{lang === 'es' ? 'Lo que sí se puede cubrir' : productKnowledge.canCover.title}</h3>
+          <h3 className="ac-product-title">
+            <span>
+              {lang === 'es'
+                ? 'Lo que sí se puede cubrir'
+                : productKnowledge.canCover.title}
+            </span>
+
+            <span
+              className="ac-product-title-icon"
+              aria-hidden="true"
+            >
+              ✅
+            </span>
+          </h3>
+
           <ul>
-            {canCover.map((item) => <li key={item}>{item}</li>)}
+            {canCover.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
           </ul>
         </div>
 
         <div className="ac-topic-card bad">
-          <span>🚫</span>
-          <h3>{lang === 'es' ? 'Lo que no se puede cubrir' : productKnowledge.cannotCover.title}</h3>
+          <h3 className="ac-product-title">
+            <span>
+              {lang === 'es'
+                ? 'Lo que no se puede cubrir'
+                : productKnowledge.cannotCover.title}
+            </span>
+
+            <span
+              className="ac-product-title-icon"
+              aria-hidden="true"
+            >
+              🚫
+            </span>
+          </h3>
+
           <ul>
-            {cannotCover.map((item) => <li key={item}>{item}</li>)}
+            {cannotCover.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
           </ul>
         </div>
       </section>
@@ -589,7 +648,6 @@ function MistakesContent({ lang }) {
     <section id="mistakes" className="ac-card-grid detail">
       {COMMON_MISTAKES[lang].map(([title, body]) => (
         <div key={title} className="ac-topic-card warning">
-          <span>⚠️</span>
           <h3>{title}</h3>
           <p>{body}</p>
         </div>
