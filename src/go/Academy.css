@@ -854,6 +854,61 @@
   }
 }
 
+/* Tablet: compact horizontal Academy navigation */
+@media (min-width: 721px) and (max-width: 1180px) {
+  .ac-sidebar {
+    width: 100%;
+    padding: 10px;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .ac-sidebar-head {
+    display: none;
+  }
+
+  .ac-side-list {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+
+  .ac-side-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ac-side-list button {
+    flex: 0 0 auto;
+    display: inline-flex;
+    grid-template-columns: none;
+    align-items: center;
+    width: auto;
+    min-width: max-content;
+    gap: 7px;
+    padding: 10px 13px;
+    border: 1px solid var(--ac-border);
+    border-radius: 999px;
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+
+  .ac-side-list button span {
+    flex: 0 0 auto;
+  }
+
+  .ac-side-list button b {
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 720px) {
   .ac-topnav {
     grid-template-columns: 1fr;
