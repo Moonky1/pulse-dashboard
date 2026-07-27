@@ -38,6 +38,18 @@
   font-family: 'DM Sans', system-ui, sans-serif;
 }
 
+.ac-nav-pill button,
+.ac-lang-switch button,
+.ac-hero h1,
+.ac-article-hero h1,
+.ac-start-card h2,
+.ac-panel h2,
+.ac-section-card h3,
+.ac-topic-card h3,
+.ac-mini-card strong {
+  font-family: 'Sora', sans-serif;
+}
+
 .ac-page::before {
   content: '';
   position: fixed;
@@ -1019,4 +1031,139 @@
   .ac-right-rail {
     display: none;
   }
+
+  .ac-article-hero {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 10px;
+    padding: 16px 14px;
+    text-align: center;
+  }
+
+  .ac-article-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    font-size: 22px;
+  }
+
+  .ac-article-hero .ac-eyebrow {
+    justify-content: center;
+  }
+
+  .ac-article-hero h1 {
+    margin: 5px 0 7px;
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  .ac-article-hero p {
+    max-width: 300px;
+    margin: 0 auto;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+    .ac-card-grid.detail {
+    gap: 12px;
+  }
+
+  .ac-topic-card {
+    min-height: 0;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .ac-topic-card.code > span {
+    width: fit-content;
+    height: auto;
+    min-width: 0;
+    padding: 7px 11px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+
+  .ac-topic-card h3 {
+    margin: 12px 0 6px;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .ac-topic-card p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .ac-content-stack {
+    gap: 14px;
+  }
+
+  .ac-panel {
+    padding: 16px;
+  }
+
+  .ac-mini-grid {
+    gap: 10px;
+  }
+
+  .ac-mini-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+  .ac-step-card.flow {
+    display: block;
+    padding: 16px;
+  }
+
+  .ac-step-flow-body {
+    min-width: 0;
+  }
+
+  .ac-step-flow-label {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--ac-blue);
+    text-align: center;
+    font-family: 'Sora', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .ac-step-flow-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin: 0 0 10px;
+    font-family: 'Sora', sans-serif;
+    font-size: clamp(14px, 4.2vw, 18px);
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .ac-step-flow-icon {
+    flex: 0 0 auto;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .ac-step-card.flow p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .ac-step-card.flow .ac-chip-row {
+    justify-content: center;
+  }
+
+  .ac-topic-card.danger > h3:first-child {
+    margin-top: 0;
+  }
+
 }

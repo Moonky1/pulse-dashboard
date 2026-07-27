@@ -237,10 +237,6 @@ function DetailShell({ lang, setLang, section, children, toc }) {
       </div>
 
       <header className="ac-topnav">
-        <button className="ac-nav-btn" onClick={() => navigate('/academy')}>
-          ← {copy.backAcademy}
-        </button>
-
         <nav className="ac-nav-pill">
           <button onClick={goHome}>{copy.navHome}</button>
           <button onClick={() => navigate('/go')}>{copy.navGo}</button>
@@ -445,17 +441,28 @@ function CallFlowContent({ lang }) {
     <div className="ac-content-stack">
       <section id="flow" className="ac-step-list">
         {steps.map((step) => (
-          <div key={step.id} className="ac-step-card flow">
-            <span className="ac-step-num">{step.icon}</span>
-            <div>
-              <small>{lang === 'es' ? `Paso ${step.id}` : `Step ${step.id}`}</small>
-              <h3>{step.title}</h3>
-              <p>{step.description}</p>
-              <div className="ac-chip-row">
-                {step.keyPoints.map((point) => <span key={point}>{point}</span>)}
-              </div>
-            </div>
-          </div>
+<div key={step.id} className="ac-step-card flow">
+  <div className="ac-step-flow-body">
+    <small className="ac-step-flow-label">
+      {lang === 'es' ? `Paso ${step.id}` : `Step ${step.id}`}
+    </small>
+
+    <h3 className="ac-step-flow-title">
+      <span>{step.title}</span>
+      <span className="ac-step-flow-icon" aria-hidden="true">
+        {step.icon}
+      </span>
+    </h3>
+
+    <p>{step.description}</p>
+
+    <div className="ac-chip-row">
+      {step.keyPoints.map((point) => (
+        <span key={point}>{point}</span>
+      ))}
+    </div>
+  </div>
+</div>
         ))}
       </section>
 
@@ -490,7 +497,6 @@ function QAContent({ lang }) {
     <section id="rules" className="ac-card-grid detail">
       {QA_RULES[lang].map((item) => (
         <div key={item.title} className="ac-topic-card danger">
-          <span>🚨</span>
           <h3>{item.title}</h3>
           <p>{item.body}</p>
         </div>
@@ -537,10 +543,10 @@ function DialerContent({ lang }) {
         <span className="ac-kicker">{lang === 'es' ? 'Guía visual' : 'Visual guide'}</span>
         <h2>{lang === 'es' ? 'Referencias del dialer' : 'Dialer references'}</h2>
         <p>
-          {lang === 'es'
-            ? 'Aquí puedes conectar después capturas de Vici, disposiciones y pantallas de login.'
-            : 'This section can connect Vici screenshots, dispositions, and login screens later.'}
-        </p>
+           {lang === 'es'
+            ? 'Muy pronto agregaremos guías visuales del dialer, disposiciones, códigos de pausa y pantallas de acceso.'
+            : 'Visual guides for the dialer, dispositions, pause codes, and login screens are coming soon.'}
+      </p>
       </section>
     </div>
   )

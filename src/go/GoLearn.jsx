@@ -265,7 +265,6 @@ export default function GoLearn() {
 
       <main className="ac-home">
         <section className="ac-hero">
-          <span className="ac-eyebrow">{copy.eyebrow}</span>
           <h1>{copy.title}</h1>
           <p>{copy.subtitle}</p>
         </section>
