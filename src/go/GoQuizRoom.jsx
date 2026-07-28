@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
-import { quizQuestions } from './goContent'
+import {
+  buildQuestionIds as buildQuizQuestionIds,
+  getQuestionById as getQuizQuestionById,
+  normalizeGame as normalizeGameParam,
+} from './quizPools'
 import './GoQuizRoom.css'
 
 const QUESTION_COUNT = 10
@@ -228,65 +232,18 @@ function deterministicShuffle(array, seedText) {
 }
 
 function getQ(id) {
-  return quizQuestions.find((q) => q.id === id) || null
+  return getQuizQuestionById(id)
 }
 
-function buildQuestionIds(topic, lang, questionStyle, seed) {
-  const wantedTopic = normalizeTopic(topic)
-  const wantedLang = normalizeLang(lang)
-  const wantedStyle = normalizeQuestionStyle(questionStyle)
-
-  const matchesTopicAndLang = (question) => {
-    const topicOk = wantedTopic === 'all' || normalizeTopic(question.topic) === wantedTopic
-
-    if (wantedLang === 'mixed') return topicOk
-
-    return topicOk && String(question.language || 'en') === wantedLang
-  }
-
-  const matchesLangOnly = (question) => {
-    if (wantedLang === 'mixed') return true
-    return String(question.language || 'en') === wantedLang
-  }
-
-  let pool = quizQuestions.filter(
-    (question) => matchesTopicAndLang(question) && questionFitsStyle(question, wantedStyle)
-  )
-
-  if (pool.length === 0 && wantedLang !== 'mixed' && wantedTopic !== 'all') {
-    pool = quizQuestions.filter(
-      (question) => matchesLangOnly(question) && questionFitsStyle(question, wantedStyle)
-    )
-  }
-
-  if (pool.length === 0 && wantedStyle !== 'mc') {
-    pool = quizQuestions.filter(
-      (question) => matchesTopicAndLang(question) && questionFitsStyle(question, 'mc')
-    )
-  }
-
-  if (pool.length === 0) {
-    pool = quizQuestions.filter(
-      (question) => matchesLangOnly(question) && questionFitsStyle(question, 'mc')
-    )
-  }
-
-  if (pool.length > 0 && pool.length < QUESTION_COUNT) {
-    const expanded = []
-    let round = 0
-
-    while (expanded.length < QUESTION_COUNT) {
-      expanded.push(...deterministicShuffle(pool, `${seed}:repeat:${round}`))
-      round += 1
-      if (round > 20) break
-    }
-
-    pool = expanded
-  }
-
-  return deterministicShuffle(pool, seed)
-    .slice(0, QUESTION_COUNT)
-    .map((question) => question.id)
+function buildQuestionIds(game, topic, lang, questionStyle, seed) {
+  return buildQuizQuestionIds({
+    game,
+    topic,
+    lang,
+    questionStyle,
+    seed,
+    count: QUESTION_COUNT,
+  })
 }
 
 function buildDisplayQuestion(rawQuestion, roomCode, currentIndex) {
@@ -453,9 +410,10 @@ export default function GoQuizRoom() {
 
   const code = normalizeCode(params.code)
   const isHost = urlParams.get('host') === 'true'
-  const topic = normalizeTopic(urlParams.get('topic') || 'all')
-  const lang = normalizeLang(urlParams.get('lang') || 'mixed')
-  const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
+const game = normalizeGameParam(urlParams.get('game') || 'classic')
+const topic = normalizeTopic(urlParams.get('topic') || 'all')
+const lang = normalizeLang(urlParams.get('lang') || 'mixed')
+const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
   const questionStyleLabel = questionStyle === 'mixed' ? 'Mixed Questions' : 'Multiple Choice'
 
   const [room, setRoom] = useState(null)
@@ -672,7 +630,7 @@ export default function GoQuizRoom() {
   }, [code])
 
   const createHostRoom = useCallback(async () => {
-  const questionIds = buildQuestionIds(topic, lang, questionStyle, `${code}:${Date.now()}`)
+  const questionIds = buildQuestionIds(game, topic, lang, questionStyle, `${code}:${Date.now()}`)
 
   const roomPayload = {
     code,
@@ -715,7 +673,7 @@ export default function GoQuizRoom() {
 
   setRoom(data)
   return data
-}, [code, topic, lang, questionStyle])
+}, [code, game, topic, lang, questionStyle])
 
   const fetchRoom = useCallback(async () => {
     if (!code) return null

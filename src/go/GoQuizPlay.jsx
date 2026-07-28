@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { quizQuestions } from './goContent'
+import { buildQuestionSet as buildQuizQuestionSet } from './quizPools'
 import './GoQuizPlay.css'
 
 const QUESTION_COUNT = 10
@@ -13,98 +13,15 @@ const OPTION_META = [
   { letter: 'D', shape: '■', color: '#22c55e' },
 ]
 
-function shuffle(array) {
-  const copy = [...array]
-
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
-  }
-
-  return copy
-}
-
-function normalizeTopic(value) {
-  const clean = String(value || 'all').toLowerCase()
-
-  if (clean === 'all') return 'all'
-  if (clean === 'script') return 'script'
-  if (clean === 'objections') return 'objections'
-  if (clean === 'product') return 'product'
-  if (clean === 'product-knowledge') return 'product'
-  if (clean === 'callflow') return 'callflow'
-  if (clean === 'call-flow') return 'callflow'
-  if (clean === 'dosdonts') return 'dosdonts'
-  if (clean === 'dos-donts') return 'dosdonts'
-
-  return 'all'
-}
-
-function normalizeLang(value) {
-  const clean = String(value || 'mixed').toLowerCase()
-
-  if (clean === 'en' || clean === 'english') return 'en'
-  if (clean === 'es' || clean === 'spanish') return 'es'
-  return 'mixed'
-}
-
-function buildQuestionSet(topic, lang) {
-  const wantedTopic = normalizeTopic(topic)
-  const wantedLang = normalizeLang(lang)
-
-  let pool = quizQuestions.filter((q) => {
-    const topicOk = wantedTopic === 'all' || normalizeTopic(q.topic) === wantedTopic
-
-    if (wantedLang === 'mixed') return topicOk
-
-    return topicOk && String(q.language || 'en') === wantedLang
+function buildQuestionSet(game, topic, lang, questionStyle) {
+  return buildQuizQuestionSet({
+    game,
+    topic,
+    lang,
+    questionStyle,
+    seed: `solo:${game}:${topic}:${lang}:${questionStyle}:${Date.now()}`,
+    count: QUESTION_COUNT,
   })
-
-  // Important:
-  // English mode = English only.
-  // Spanish mode = Spanish only.
-  // Never refill Spanish mode with English questions or English mode with Spanish questions.
-  if (pool.length === 0 && wantedLang !== 'mixed' && wantedTopic !== 'all') {
-    pool = quizQuestions.filter((q) => String(q.language || 'en') === wantedLang)
-  }
-
-  if (pool.length === 0) {
-    pool = quizQuestions.filter((q) => {
-      if (wantedLang === 'mixed') return true
-      return String(q.language || 'en') === wantedLang
-    })
-  }
-
-  if (pool.length > 0 && pool.length < QUESTION_COUNT) {
-    const expanded = []
-    let round = 0
-
-    while (expanded.length < QUESTION_COUNT) {
-      expanded.push(...shuffle(pool))
-      round += 1
-      if (round > 20) break
-    }
-
-    pool = expanded
-  }
-
-  return shuffle(pool)
-    .slice(0, QUESTION_COUNT)
-    .map((q) => {
-      const mapped = q.options.map((text, originalIndex) => ({
-        text,
-        originalIndex,
-      }))
-
-      const shuffledOptions = shuffle(mapped)
-      const correctIndex = shuffledOptions.findIndex((item) => item.originalIndex === q.correct)
-
-      return {
-        ...q,
-        options: shuffledOptions.map((item) => item.text),
-        correctIndex,
-      }
-    })
 }
 
 function useQuizSound() {
@@ -174,12 +91,17 @@ export default function GoQuizPlay() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
 
-  const topic = params.get('topic') || 'all'
-  const lang = params.get('lang') || 'mixed'
+const game = params.get('game') || 'classic'
+const topic = params.get('topic') || 'all'
+const lang = params.get('lang') || 'mixed'
+const questionStyle = params.get('qstyle') || 'mc'
 
-  const sounds = useQuizSound()
+const sounds = useQuizSound()
 
-  const questions = useMemo(() => buildQuestionSet(topic, lang), [topic, lang])
+const questions = useMemo(
+  () => buildQuestionSet(game, topic, lang, questionStyle),
+  [game, topic, lang, questionStyle]
+)
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedIndex, setSelectedIndex] = useState(null)
