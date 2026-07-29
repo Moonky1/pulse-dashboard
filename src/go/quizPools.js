@@ -1,4 +1,5 @@
-import { quizQuestions, scripts, dialer } from './goContent'
+import { quizQuestions } from './questions'
+import { scripts, dialer } from './goContent'
 
 const DEFAULT_COUNT = 10
 const LTRS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
