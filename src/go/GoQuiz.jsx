@@ -27,14 +27,14 @@ const LANG_OPTIONS = [
 
 const GAME_MODES = [
   {
-    id: 'classic',
-    icon: '🧠',
-    title: 'Classic Quiz',
-    desc: 'Standard Pulse GO questions by topic.',
-    topic: null,
-    needsTopic: true,
-    supportsQuestionStyle: true,
-  },
+  id: 'classic',
+  icon: '🧠',
+  title: 'Classic Quiz',
+  desc: 'Standard Pulse GO questions from all training areas.',
+  topic: 'all',
+  needsTopic: false,
+  supportsQuestionStyle: true,
+   },
   {
     id: 'script-fill',
     icon: '📝',
@@ -175,14 +175,21 @@ export default function GoQuiz() {
     navigate(`/go/quiz?mode=${trainingMode}&lang=${nextLang}`)
   }
 
-  const goToGame = (gameMode) => {
-    if (gameMode.needsTopic) {
-      navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}&game=${gameMode.id}`)
-      return
-    }
-
-    launchGame(gameMode.id, gameMode.topic, 'mc')
+const goToGame = (gameMode) => {
+  if (gameMode.supportsQuestionStyle) {
+    navigate(
+      `/go/quiz?mode=${trainingMode}&lang=${lang}&game=${gameMode.id}&topic=${gameMode.topic || 'all'}`
+    )
+    return
   }
+
+  if (gameMode.needsTopic) {
+    navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}&game=${gameMode.id}`)
+    return
+  }
+
+  launchGame(gameMode.id, gameMode.topic, 'mc')
+}
 
   const goToTopic = (topicId) => {
     if (activeGame?.supportsQuestionStyle) {
@@ -309,7 +316,7 @@ export default function GoQuiz() {
                 <span className="gq-card-icon">{item.icon}</span>
                 <h2>{item.title}</h2>
                 <p>{item.desc}</p>
-                <b>{item.needsTopic ? 'Choose Topic →' : 'Start →'}</b>
+                <b>{item.supportsQuestionStyle ? 'Choose Style →' : item.needsTopic ? 'Choose Topic →' : 'Start →'}</b>
               </button>
             ))}
           </section>
@@ -382,9 +389,9 @@ export default function GoQuiz() {
           </section>
 
           <div className="gq-bottom-actions">
-            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}&game=${game}`)}>
-              ← Topic
-            </button>
+            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}`)}>
+            ← Game Mode
+          </button>
           </div>
         </main>
       )}
