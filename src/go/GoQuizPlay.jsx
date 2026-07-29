@@ -13,6 +13,37 @@ const OPTION_META = [
   { letter: 'D', shape: '■', color: '#22c55e' },
 ]
 
+const GAME_LABELS = {
+  classic: {
+    icon: '🧠',
+    title: 'Classic Quiz',
+  },
+  'valid-invalid': {
+    icon: '✅',
+    title: 'Valid or Invalid XFER',
+  },
+  'objection-battle': {
+    icon: '🛡️',
+    title: 'Objection Battle',
+  },
+  'disposition-trainer': {
+    icon: '🧾',
+    title: 'Dispose It',
+  },
+  eligible: {
+    icon: '🚗',
+    title: 'Eligible or Not Eligible',
+  },
+  certification: {
+    icon: '🏅',
+    title: 'Certification Mode',
+  },
+}
+
+function getGameLabel(game) {
+  return GAME_LABELS[game] || GAME_LABELS.classic
+}
+
 function buildQuestionSet(game, topic, lang, questionStyle) {
   return buildQuizQuestionSet({
     game,
@@ -95,6 +126,8 @@ const game = params.get('game') || 'classic'
 const topic = params.get('topic') || 'all'
 const lang = params.get('lang') || 'mixed'
 const questionStyle = params.get('qstyle') || 'mc'
+
+const gameLabel = getGameLabel(game)
 
 const sounds = useQuizSound()
 
@@ -223,9 +256,9 @@ const questions = useMemo(
     setAnswered(false)
   }
 
-  const tryAgain = () => {
-    window.location.href = `/go/quiz/play?topic=${topic}&lang=${lang}`
-  }
+const tryAgain = () => {
+  window.location.href = `/go/quiz/play?topic=${topic}&lang=${lang}&game=${game}&qstyle=${questionStyle}`
+}
 
   const changeTopic = () => {
     navigate('/go/quiz?mode=solo')
@@ -335,7 +368,7 @@ const questions = useMemo(
           </button>
 
           <div className="gqp-nav-center">
-            <span>🧠 Classic Quiz</span>
+            <span>{gameLabel.icon} {gameLabel.title}</span>
           </div>
 
           <button className="gqp-exit-btn" onClick={() => navigate('/go')}>
@@ -344,7 +377,9 @@ const questions = useMemo(
         </nav>
 
         <main className="gqp-results-card">
-          <span className="gqp-results-mode">🧠 Classic Quiz</span>
+          <span className="gqp-results-mode">
+             {gameLabel.icon} {gameLabel.title}
+            </span>
 
           <h1 style={{ color: grade.color }}>{percent}%</h1>
           <h2 style={{ color: grade.color }}>{grade.emoji} {grade.label}</h2>
@@ -400,7 +435,7 @@ const questions = useMemo(
         </button>
 
         <div className="gqp-nav-center">
-          <span>🧠 Classic Quiz</span>
+          <span>{gameLabel.icon} {gameLabel.title}</span>
           <span>{currentIndex + 1} / {total}</span>
           <span style={{ color: timerColor }}>{timeLeft}s</span>
         </div>
