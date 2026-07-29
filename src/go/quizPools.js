@@ -1,4 +1,12 @@
-import { quizQuestions } from './questions'
+import {
+  quizQuestions,
+  classicQuestions,
+  objectionBattleQuestions,
+  validInvalidQuestions,
+  disposeItQuestions,
+  eligibleQuestions,
+  certificationQuestions,
+} from './questions'
 import { scripts, dialer } from './goContent'
 
 const DEFAULT_COUNT = 10
@@ -33,7 +41,13 @@ export function normalizeTopic(value) {
   if (clean === 'disposeit' || clean === 'disposition' || clean === 'dispositions' || clean === 'dialer') {
     return 'disposeit'
   }
+if (clean === 'eligible' || clean === 'eligibility' || clean === 'eligibleornoteligible') {
+  return 'eligible'
+}
 
+if (clean === 'certification' || clean === 'certified') {
+  return 'certification'
+}
   return 'all'
 }
 
@@ -53,7 +67,8 @@ export function normalizeGame(value) {
   if (clean === 'validinvalid') return 'valid-invalid'
   if (clean === 'objectionbattle') return 'objection-battle'
   if (clean === 'dispositiontrainer' || clean === 'disposeit') return 'disposition-trainer'
-  if (clean === 'certification') return 'certification'
+  if (clean === 'eligible' || clean === 'eligibility' || clean === 'eligibleornoteligible') return 'eligible'
+  if (clean === 'certification' || clean === 'certified') return 'certification'
 
   return 'classic'
 }
@@ -304,7 +319,19 @@ const GENERATED_QUESTIONS = [
   ...buildGeneratedDispositionQuestions(),
 ]
 
-const ALL_QUESTIONS = [...quizQuestions, ...GENERATED_QUESTIONS]
+const DIRECT_MODE_QUESTIONS = [
+  ...objectionBattleQuestions,
+  ...validInvalidQuestions,
+  ...disposeItQuestions,
+  ...eligibleQuestions,
+  ...certificationQuestions,
+]
+
+const ALL_QUESTIONS = [
+  ...quizQuestions,
+  ...DIRECT_MODE_QUESTIONS,
+  ...GENERATED_QUESTIONS,
+]
 
 function languageOk(question, lang) {
   const wantedLang = normalizeLang(lang)
@@ -318,10 +345,27 @@ function topicOk(question, topic) {
   return normalizeTopic(question?.topic) === wantedTopic
 }
 
+function usableChoiceQuestion(question) {
+  return (
+    getQuestionKind(question) !== 'short' &&
+    Array.isArray(question?.options) &&
+    question.options.length >= 2
+  )
+}
+
+function modeFilePool(source, { lang }) {
+  return source.filter(
+    (question) =>
+      languageOk(question, lang) &&
+      usableChoiceQuestion(question)
+  )
+}
+
 function poolClassic({ topic, lang, questionStyle }) {
   const wantedStyle = normalizeQuestionStyle(questionStyle)
+  const source = classicQuestions.length ? classicQuestions : quizQuestions
 
-  return quizQuestions.filter(
+  return source.filter(
     (question) =>
       languageOk(question, lang) &&
       topicOk(question, topic) &&
@@ -334,68 +378,91 @@ function poolScriptFill({ lang }) {
     (question) =>
       languageOk(question, lang) &&
       question?.mode === 'script-fill' &&
-      Array.isArray(question?.options) &&
-      question.options.length >= 2
+      usableChoiceQuestion(question)
   )
 
   const backup = quizQuestions.filter(
     (question) =>
       languageOk(question, lang) &&
       normalizeTopic(question?.topic) === 'script' &&
-      Array.isArray(question?.options) &&
-      question.options.length >= 2
+      usableChoiceQuestion(question)
   )
 
   return generated.length ? generated : backup
 }
 
 function poolValidInvalid({ lang }) {
+  const direct = modeFilePool(validInvalidQuestions, { lang })
+
+  if (direct.length) return direct
+
   return ALL_QUESTIONS.filter(
     (question) =>
       languageOk(question, lang) &&
       isValidInvalidQuestion(question) &&
-      Array.isArray(question?.options) &&
-      question.options.length >= 2
+      usableChoiceQuestion(question)
   )
 }
 
 function poolObjectionBattle({ lang }) {
+  const direct = modeFilePool(objectionBattleQuestions, { lang })
+
+  if (direct.length) return direct
+
   return quizQuestions.filter(
     (question) =>
       languageOk(question, lang) &&
       normalizeTopic(question?.topic) === 'objections' &&
-      Array.isArray(question?.options) &&
-      question.options.length >= 2
+      usableChoiceQuestion(question)
   )
 }
 
 function poolDispositionTrainer({ lang }) {
+  const direct = modeFilePool(disposeItQuestions, { lang })
+
+  if (direct.length) return direct
+
   const generated = ALL_QUESTIONS.filter(
     (question) =>
       languageOk(question, lang) &&
       question?.mode === 'disposition-trainer' &&
-      Array.isArray(question?.options) &&
-      question.options.length >= 2
+      usableChoiceQuestion(question)
   )
 
   const existing = quizQuestions.filter(
     (question) =>
       languageOk(question, lang) &&
       isDispositionQuestion(question) &&
-      Array.isArray(question?.options) &&
-      question.options.length >= 2
+      usableChoiceQuestion(question)
   )
 
   return [...generated, ...existing]
 }
 
+function poolEligible({ lang }) {
+  const direct = modeFilePool(eligibleQuestions, { lang })
+
+  if (direct.length) return direct
+
+  return quizQuestions.filter(
+    (question) =>
+      languageOk(question, lang) &&
+      normalizeTopic(question?.topic) === 'product' &&
+      usableChoiceQuestion(question)
+  )
+}
+
 function poolCertification({ lang, questionStyle }) {
+  const direct = modeFilePool(certificationQuestions, { lang })
+
+  if (direct.length) return direct
+
   const buckets = [
     poolClassic({ topic: 'script', lang, questionStyle }),
     poolObjectionBattle({ lang }),
     poolValidInvalid({ lang }),
     poolDispositionTrainer({ lang }),
-    poolClassic({ topic: 'product', lang, questionStyle }),
+    poolEligible({ lang }),
     poolClassic({ topic: 'callflow', lang, questionStyle }),
     poolClassic({ topic: 'dosdonts', lang, questionStyle }),
   ]
@@ -404,16 +471,15 @@ function poolCertification({ lang, questionStyle }) {
     deterministicShuffle(bucket, `certification-bucket-${index}`).slice(0, 4)
   )
 }
-
 export function getQuestionPool({ game = 'classic', topic = 'all', lang = 'mixed', questionStyle = 'mc' } = {}) {
   const wantedGame = normalizeGame(game)
 
   if (wantedGame === 'script-fill') return poolScriptFill({ lang })
   if (wantedGame === 'valid-invalid') return poolValidInvalid({ lang })
   if (wantedGame === 'objection-battle') return poolObjectionBattle({ lang })
-  if (wantedGame === 'disposition-trainer') return poolDispositionTrainer({ lang })
-  if (wantedGame === 'certification') return poolCertification({ lang, questionStyle })
-
+if (wantedGame === 'disposition-trainer') return poolDispositionTrainer({ lang })
+if (wantedGame === 'eligible') return poolEligible({ lang })
+if (wantedGame === 'certification') return poolCertification({ lang, questionStyle })
   return poolClassic({ topic, lang, questionStyle })
 }
 
