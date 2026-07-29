@@ -440,6 +440,7 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
   const [cancelBusy, setCancelBusy] = useState(false)
   const [lobbyMusicOn, setLobbyMusicOn] = useState(false)
   const [coHostCopied, setCoHostCopied] = useState(false)
+  const [resultsCopied, setResultsCopied] = useState(false)
 
   const roomRef = useRef(null)
   const busyRef = useRef(false)
@@ -1077,7 +1078,7 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
     let questionIds = room?.question_ids || []
 
     if (!Array.isArray(questionIds) || questionIds.length < QUESTION_COUNT) {
-      questionIds = buildQuestionIds(topic, lang, questionStyle, `${code}:${Date.now()}`)
+      questionIds = buildQuestionIds(game, topic, lang, questionStyle, `${code}:${Date.now()}`)
     }
 
     await supabase.from('pulse_go_answers').delete().eq('room_code', code)
@@ -1298,6 +1299,27 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
 
     setLobbyMusicOn(true)
   }
+  
+  const copyResultsLink = async () => {
+  if (!code) return
+
+  const resultsLink = `${window.location.origin}/go/results/${code}`
+
+  try {
+    await navigator.clipboard.writeText(resultsLink)
+    setResultsCopied(true)
+
+    window.setTimeout(() => {
+      setResultsCopied(false)
+    }, 1800)
+  } catch {
+    window.prompt('Copy this results link:', resultsLink)
+  }
+}
+
+const playAnotherGame = () => {
+  nav(`/go/quiz?mode=host&lang=${lang || 'mixed'}`)
+}
 
   const copyCoHostLink = async () => {
     if (!isHost || !code) return
@@ -1763,17 +1785,24 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
     const currentPlayerStats = playerStats.find((player) => player.id === currentPlayer?.id) || null
     const topPerformers = playerStats.slice(0, Math.min(10, playerStats.length))
 
-    const lowPerformers = [...playerStats]
-      .filter((player) => player.answeredCount > 0 && player.missedCount > 0)
-      .sort((a, b) => {
-        if (a.correctCount !== b.correctCount) return a.correctCount - b.correctCount
-        if (a.accuracy !== b.accuracy) return a.accuracy - b.accuracy
-        if (b.missedCount !== a.missedCount) return b.missedCount - a.missedCount
-        if (a.score !== b.score) return a.score - b.score
+const lowPerformers = [...playerStats]
+  .filter((player) => {
+    if (player.answeredCount <= 0) return false
 
-        return new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
-      })
-      .slice(0, Math.min(10, playerStats.length))
+    const missedEnough = player.missedCount >= 3
+    const lowAccuracy = player.accuracy < 80
+
+    return missedEnough || lowAccuracy
+  })
+  .sort((a, b) => {
+    if (a.correctCount !== b.correctCount) return a.correctCount - b.correctCount
+    if (a.accuracy !== b.accuracy) return a.accuracy - b.accuracy
+    if (b.missedCount !== a.missedCount) return b.missedCount - a.missedCount
+    if (a.score !== b.score) return a.score - b.score
+
+    return new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
+  })
+  .slice(0, 10)
 
     const needsReview = [...playerStats]
       .filter((player) => player.answeredCount > 0 && player.accuracy < 70)
@@ -2133,17 +2162,21 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
           </section>
         )}
 
-        <div className="grm-finished-btns">
-          {isHost && (
-            <button className="grm-btn-primary" onPointerDown={resetRoomToLobby} disabled={busy}>
-              🔄 New Game
-            </button>
-          )}
+<div className="grm-finished-btns">
+  <button className="grm-btn-primary" onPointerDown={copyResultsLink}>
+    {resultsCopied ? '✅ Results Link Copied' : '🔗 Copy Results Link'}
+  </button>
 
-          <button className="grm-btn-outline" onPointerDown={() => nav('/go')}>
-            Home
-          </button>
-        </div>
+  {isHost && (
+    <button className="grm-btn-outline" onPointerDown={playAnotherGame}>
+      🎮 Play Another Game
+    </button>
+  )}
+
+  <button className="grm-btn-outline" onPointerDown={() => nav('/go')}>
+    Home
+  </button>
+</div>
       </div>
     )
   }
