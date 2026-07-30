@@ -5,6 +5,7 @@ import {
   buildQuestionIds as buildQuizQuestionIds,
   getQuestionById as getQuizQuestionById,
   normalizeGame as normalizeGameParam,
+  normalizeDifficulty as normalizeDifficultyParam,
 } from './quizPools'
 import './GoQuizRoom.css'
 
@@ -30,6 +31,13 @@ const OPTS = [
 ]
 
 const LTRS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+
+function getDifficultyLabel(difficulty) {
+  if (difficulty === 'easy') return 'Easy'
+  if (difficulty === 'medium') return 'Medium'
+  if (difficulty === 'advanced') return 'Advanced'
+  return 'All Levels'
+}
 
 function getOptionLetter(index) {
   return LTRS[index] || String(index + 1)
@@ -235,12 +243,13 @@ function getQ(id) {
   return getQuizQuestionById(id)
 }
 
-function buildQuestionIds(game, topic, lang, questionStyle, seed) {
+function buildQuestionIds(game, topic, lang, questionStyle, difficulty, seed) {
   return buildQuizQuestionIds({
     game,
     topic,
     lang,
     questionStyle,
+    difficulty,
     seed,
     count: QUESTION_COUNT,
   })
@@ -414,7 +423,9 @@ const game = normalizeGameParam(urlParams.get('game') || 'classic')
 const topic = normalizeTopic(urlParams.get('topic') || 'all')
 const lang = normalizeLang(urlParams.get('lang') || 'mixed')
 const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
-  const questionStyleLabel = questionStyle === 'mixed' ? 'Mixed Questions' : 'Multiple Choice'
+const difficulty = normalizeDifficultyParam(urlParams.get('difficulty') || 'all')
+const questionStyleLabel = questionStyle === 'mixed' ? 'Mixed Questions' : 'Multiple Choice'
+const difficultyLabel = getDifficultyLabel(difficulty)
 
   const [room, setRoom] = useState(null)
   const [players, setPlayers] = useState([])
@@ -631,7 +642,7 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
   }, [code])
 
   const createHostRoom = useCallback(async () => {
-  const questionIds = buildQuestionIds(game, topic, lang, questionStyle, `${code}:${Date.now()}`)
+  const questionIds = buildQuestionIds(game, topic, lang, questionStyle, difficulty, `${code}:${Date.now()}`)
 
   const roomPayload = {
     code,
@@ -665,7 +676,7 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
       if (!existingError && existingRoom) {
         setRoom(existingRoom)
         return existingRoom
-      }
+      } 
     }
 
     setFatalError(error.message || 'Could not create room.')
@@ -674,7 +685,7 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
 
   setRoom(data)
   return data
-}, [code, game, topic, lang, questionStyle])
+}, [code, game, topic, lang, questionStyle, difficulty])
 
   const fetchRoom = useCallback(async () => {
     if (!code) return null
@@ -1078,7 +1089,7 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
     let questionIds = room?.question_ids || []
 
     if (!Array.isArray(questionIds) || questionIds.length < QUESTION_COUNT) {
-      questionIds = buildQuestionIds(game, topic, lang, questionStyle, `${code}:${Date.now()}`)
+      questionIds = buildQuestionIds(game, topic, lang, questionStyle, difficulty, `${code}:${Date.now()}`)
     }
 
     await supabase.from('pulse_go_answers').delete().eq('room_code', code)
@@ -1233,7 +1244,7 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
 
     setBusy(true)
 
-    const questionIds = buildQuestionIds(topic, lang, questionStyle, `${code}:${Date.now()}`)
+    const questionIds = buildQuestionIds(game, topic, lang, questionStyle, difficulty, `${code}:${Date.now()}`)
 
     await supabase.from('pulse_go_answers').delete().eq('room_code', code)
     setAnswers([])
@@ -1325,14 +1336,15 @@ const playAnotherGame = () => {
     if (!isHost || !code) return
 
     const gameMode = urlParams.get('game') || 'classic'
-    const coHostParams = new URLSearchParams({
-      host: 'true',
-      cohost: 'true',
-      topic,
-      lang,
-      game: gameMode,
-      qstyle: questionStyle,
-    })
+ const coHostParams = new URLSearchParams({
+  host: 'true',
+  cohost: 'true',
+  topic,
+  lang,
+  game: gameMode,
+  qstyle: questionStyle,
+  difficulty,
+})
 
     const origin = window.location.origin
     const coHostLink = `${origin}/go/quiz/${code}?${coHostParams.toString()}`

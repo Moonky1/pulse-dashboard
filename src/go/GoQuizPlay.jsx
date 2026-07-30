@@ -44,13 +44,21 @@ function getGameLabel(game) {
   return GAME_LABELS[game] || GAME_LABELS.classic
 }
 
-function buildQuestionSet(game, topic, lang, questionStyle) {
+function getDifficultyLabel(difficulty) {
+  if (difficulty === 'easy') return 'Easy'
+  if (difficulty === 'medium') return 'Medium'
+  if (difficulty === 'advanced') return 'Advanced'
+  return 'All Levels'
+}
+
+function buildQuestionSet(game, topic, lang, questionStyle, difficulty = 'all') {
   return buildQuizQuestionSet({
     game,
     topic,
     lang,
     questionStyle,
-    seed: `solo:${game}:${topic}:${lang}:${questionStyle}:${Date.now()}`,
+    difficulty,
+    seed: `solo:${game}:${topic}:${lang}:${questionStyle}:${difficulty}:${Date.now()}`,
     count: QUESTION_COUNT,
   })
 }
@@ -126,14 +134,16 @@ const game = params.get('game') || 'classic'
 const topic = params.get('topic') || 'all'
 const lang = params.get('lang') || 'mixed'
 const questionStyle = params.get('qstyle') || 'mc'
+const difficulty = params.get('difficulty') || 'all'
 
 const gameLabel = getGameLabel(game)
+const difficultyLabel = getDifficultyLabel(difficulty)
 
 const sounds = useQuizSound()
 
 const questions = useMemo(
-  () => buildQuestionSet(game, topic, lang, questionStyle),
-  [game, topic, lang, questionStyle]
+  () => buildQuestionSet(game, topic, lang, questionStyle, difficulty),
+  [game, topic, lang, questionStyle, difficulty]
 )
 
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -257,7 +267,9 @@ const questions = useMemo(
   }
 
 const tryAgain = () => {
-  window.location.href = `/go/quiz/play?topic=${topic}&lang=${lang}&game=${game}&qstyle=${questionStyle}`
+  navigate(
+    `/go/quiz/play?topic=${topic}&lang=${lang}&game=${game}&qstyle=${questionStyle}&difficulty=${difficulty}`
+  )
 }
 
   const changeTopic = () => {
@@ -377,9 +389,10 @@ const tryAgain = () => {
         </nav>
 
         <main className="gqp-results-card">
-          <span className="gqp-results-mode">
-             {gameLabel.icon} {gameLabel.title}
-            </span>
+<span className="gqp-results-mode">
+  {gameLabel.icon} {gameLabel.title}
+  {game === 'classic' ? ` • ${difficultyLabel}` : ''}
+</span>
 
           <h1 style={{ color: grade.color }}>{percent}%</h1>
           <h2 style={{ color: grade.color }}>{grade.emoji} {grade.label}</h2>
@@ -434,11 +447,12 @@ const tryAgain = () => {
           <b>GO</b>
         </button>
 
-        <div className="gqp-nav-center">
-          <span>{gameLabel.icon} {gameLabel.title}</span>
-          <span>{currentIndex + 1} / {total}</span>
-          <span style={{ color: timerColor }}>{timeLeft}s</span>
-        </div>
+<div className="gqp-nav-center">
+  <span>{gameLabel.icon} {gameLabel.title}</span>
+  {game === 'classic' && <span>{difficultyLabel}</span>}
+  <span>{currentIndex + 1} / {total}</span>
+  <span style={{ color: timerColor }}>{timeLeft}s</span>
+</div>
 
         <button className="gqp-exit-btn" onClick={() => navigate('/go/quiz?mode=solo')}>
           ✕ Exit

@@ -25,15 +25,40 @@ const LANG_OPTIONS = [
   },
 ]
 
+const DIFFICULTY_OPTIONS = [
+  {
+    id: 'easy',
+    badge: 'EASY',
+    icon: '🟢',
+    title: 'Easy',
+    desc: 'Basic questions for new agents: dispositions, consent, simple eligibility, and safe wording.',
+  },
+  {
+    id: 'medium',
+    badge: 'MEDIUM',
+    icon: '🟡',
+    title: 'Medium',
+    desc: 'Scenario-based questions with more QA judgment and call flow decisions.',
+  },
+  {
+    id: 'advanced',
+    badge: 'ADVANCED',
+    icon: '🔴',
+    title: 'Advanced',
+    desc: 'Harder QA scenarios with tricky consent, handoff, eligibility, and compliance details.',
+  },
+]
+
 const GAME_MODES = [
   {
     id: 'classic',
     icon: '🧠',
     title: 'Classic Quiz',
-    desc: 'Standard Pulse GO questions from all training areas.',
+    desc: 'Standard Pulse GO questions by difficulty level.',
     topic: 'all',
     needsTopic: false,
-    supportsQuestionStyle: true,
+    supportsDifficulty: true,
+    supportsQuestionStyle: false,
   },
   {
     id: 'valid-invalid',
@@ -149,6 +174,18 @@ function normalizeQuestionStyle(value) {
   return 'mc'
 }
 
+function normalizeDifficulty(value) {
+  const clean = String(value || 'all')
+    .toLowerCase()
+    .trim()
+
+  if (clean === 'easy') return 'easy'
+  if (clean === 'medium') return 'medium'
+  if (clean === 'advanced') return 'advanced'
+
+  return 'all'
+}
+
 export default function GoQuiz() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -158,6 +195,7 @@ export default function GoQuiz() {
   const game = params.get('game')
   const topic = params.get('topic')
   const qstyle = params.get('qstyle')
+  const difficulty = params.get('difficulty')
 
   const activeGame = GAME_MODES.find((item) => item.id === game)
   const selectedQuestionStyle = normalizeQuestionStyle(qstyle)
@@ -176,6 +214,13 @@ export default function GoQuiz() {
   }
 
 const goToGame = (gameMode) => {
+  if (gameMode.supportsDifficulty) {
+    navigate(
+      `/go/quiz?mode=${trainingMode}&lang=${lang}&game=${gameMode.id}&topic=${gameMode.topic || 'all'}`
+    )
+    return
+  }
+
   if (gameMode.supportsQuestionStyle) {
     navigate(
       `/go/quiz?mode=${trainingMode}&lang=${lang}&game=${gameMode.id}&topic=${gameMode.topic || 'all'}`
@@ -188,7 +233,7 @@ const goToGame = (gameMode) => {
     return
   }
 
-  launchGame(gameMode.id, gameMode.topic, 'mc')
+  launchGame(gameMode.id, gameMode.topic, 'mc', 'all')
 }
 
   const goToTopic = (topicId) => {
@@ -197,29 +242,39 @@ const goToGame = (gameMode) => {
       return
     }
 
-    launchGame(game, topicId, 'mc')
+    launchGame(game, topicId, 'mc', 'all')
+  }
+
+  const goToDifficulty = (difficultyId) => {
+    launchGame(game, topic || 'all', 'mc', difficultyId)
   }
 
   const goToQuestionStyle = (styleId) => {
-    launchGame(game, topic || 'all', styleId)
+    launchGame(game, topic || 'all', styleId, difficulty || 'all')
   }
 
-  const launchGame = (gameId, topicId, questionStyleId = selectedQuestionStyle) => {
+  const launchGame = (
+    gameId,
+    topicId,
+    questionStyleId = selectedQuestionStyle,
+    difficultyId = difficulty || 'all'
+  ) => {
     const finalTopic = topicId || 'all'
     const finalLang = lang || 'mixed'
     const finalGame = gameId || game || 'classic'
     const finalQuestionStyle = normalizeQuestionStyle(questionStyleId)
+    const finalDifficulty = normalizeDifficulty(difficultyId)
 
     if (trainingMode === 'host') {
       const code = makeRoomCode()
       navigate(
-        `/go/quiz/${code}?host=true&topic=${finalTopic}&lang=${finalLang}&game=${finalGame}&qstyle=${finalQuestionStyle}`
+        `/go/quiz/${code}?host=true&topic=${finalTopic}&lang=${finalLang}&game=${finalGame}&qstyle=${finalQuestionStyle}&difficulty=${finalDifficulty}`
       )
       return
     }
 
     navigate(
-      `/go/quiz/play?topic=${finalTopic}&lang=${finalLang}&game=${finalGame}&qstyle=${finalQuestionStyle}`
+      `/go/quiz/play?topic=${finalTopic}&lang=${finalLang}&game=${finalGame}&qstyle=${finalQuestionStyle}&difficulty=${finalDifficulty}`
     )
   }
 
@@ -316,7 +371,7 @@ const goToGame = (gameMode) => {
                 <span className="gq-card-icon">{item.icon}</span>
                 <h2>{item.title}</h2>
                 <p>{item.desc}</p>
-                <b>{item.supportsQuestionStyle ? 'Choose Style →' : item.needsTopic ? 'Choose Topic →' : 'Start →'}</b>
+                <b>{item.supportsDifficulty ? 'Choose Difficulty →' : item.supportsQuestionStyle ? 'Choose Style →' : item.needsTopic ? 'Choose Topic →' : 'Start →'}</b>
               </button>
             ))}
           </section>
@@ -324,6 +379,41 @@ const goToGame = (gameMode) => {
           <div className="gq-bottom-actions">
             <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}`)}>
               ← Language
+            </button>
+          </div>
+        </main>
+      )}
+
+
+            {trainingMode && lang && game && activeGame?.supportsDifficulty && topic && !difficulty && (
+        <main className="gq-wrap">
+          <section className="gq-hero">
+            <h1>Choose Difficulty</h1>
+            <p>Select the Classic Quiz level for this game.</p>
+          </section>
+
+          <section className="gq-card-grid three">
+            {DIFFICULTY_OPTIONS.map((item) => (
+<button
+  key={item.id}
+  className="gq-card gq-difficulty-card"
+  onClick={() => goToDifficulty(item.id)}
+>
+  <div className="gq-difficulty-top">
+    <span className="gq-card-badge">{item.badge}</span>
+    <span className="gq-card-icon">{item.icon}</span>
+  </div>
+
+  <h2>{item.title}</h2>
+  <p>{item.desc}</p>
+  <b>Start →</b>
+</button>
+            ))}
+          </section>
+
+          <div className="gq-bottom-actions">
+            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}`)}>
+              ← Game Mode
             </button>
           </div>
         </main>

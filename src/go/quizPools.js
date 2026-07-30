@@ -81,6 +81,19 @@ export function normalizeQuestionStyle(value) {
   return 'mc'
 }
 
+export function normalizeDifficulty(value) {
+  const clean = cleanText(value || 'all').replace(/[^a-z0-9]/g, '')
+
+  if (!clean || clean === 'all') return 'all'
+  if (clean === 'easy' || clean === 'facil' || clean === 'fácil') return 'easy'
+  if (clean === 'medium' || clean === 'medio' || clean === 'media') return 'medium'
+  if (clean === 'advanced' || clean === 'hard' || clean === 'dificil' || clean === 'difícil') {
+    return 'advanced'
+  }
+
+  return 'all'
+}
+
 export function getQuestionKind(question) {
   const rawKind = cleanText(
     question?.question_type ||
@@ -361,7 +374,14 @@ function modeFilePool(source, { lang }) {
   )
 }
 
-function poolClassic({ topic, lang, questionStyle }) {
+function difficultyOk(question, difficulty) {
+  const wantedDifficulty = normalizeDifficulty(difficulty)
+  if (wantedDifficulty === 'all') return true
+
+  return normalizeDifficulty(question?.difficulty) === wantedDifficulty
+}
+
+function poolClassic({ topic, lang, questionStyle, difficulty = 'all' }) {
   const wantedStyle = normalizeQuestionStyle(questionStyle)
   const source = classicQuestions.length ? classicQuestions : quizQuestions
 
@@ -369,6 +389,7 @@ function poolClassic({ topic, lang, questionStyle }) {
     (question) =>
       languageOk(question, lang) &&
       topicOk(question, topic) &&
+      difficultyOk(question, difficulty) &&
       questionFitsStyle(question, wantedStyle)
   )
 }
@@ -452,26 +473,32 @@ function poolEligible({ lang }) {
   )
 }
 
-function poolCertification({ lang, questionStyle }) {
+function poolCertification({ lang, questionStyle, difficulty = 'all' }) {
   const direct = modeFilePool(certificationQuestions, { lang })
 
   if (direct.length) return direct
 
   const buckets = [
-    poolClassic({ topic: 'script', lang, questionStyle }),
+    poolClassic({ topic: 'script', lang, questionStyle, difficulty }),
     poolObjectionBattle({ lang }),
     poolValidInvalid({ lang }),
     poolDispositionTrainer({ lang }),
     poolEligible({ lang }),
-    poolClassic({ topic: 'callflow', lang, questionStyle }),
-    poolClassic({ topic: 'dosdonts', lang, questionStyle }),
+poolClassic({ topic: 'callflow', lang, questionStyle, difficulty }),
+poolClassic({ topic: 'dosdonts', lang, questionStyle, difficulty }),
   ]
 
   return buckets.flatMap((bucket, index) =>
     deterministicShuffle(bucket, `certification-bucket-${index}`).slice(0, 4)
   )
 }
-export function getQuestionPool({ game = 'classic', topic = 'all', lang = 'mixed', questionStyle = 'mc' } = {}) {
+export function getQuestionPool({
+  game = 'classic',
+  topic = 'all',
+  lang = 'mixed',
+  questionStyle = 'mc',
+  difficulty = 'all',
+} = {}) {
   const wantedGame = normalizeGame(game)
 
   if (wantedGame === 'script-fill') return poolScriptFill({ lang })
@@ -479,8 +506,8 @@ export function getQuestionPool({ game = 'classic', topic = 'all', lang = 'mixed
   if (wantedGame === 'objection-battle') return poolObjectionBattle({ lang })
 if (wantedGame === 'disposition-trainer') return poolDispositionTrainer({ lang })
 if (wantedGame === 'eligible') return poolEligible({ lang })
-if (wantedGame === 'certification') return poolCertification({ lang, questionStyle })
-  return poolClassic({ topic, lang, questionStyle })
+if (wantedGame === 'certification') return poolCertification({ lang, questionStyle, difficulty })
+return poolClassic({ topic, lang, questionStyle, difficulty })
 }
 
 export function expandPoolToCount(pool, count, seed) {
@@ -507,10 +534,11 @@ export function buildQuestionIds({
   topic = 'all',
   lang = 'mixed',
   questionStyle = 'mc',
+  difficulty = 'all',
   seed = 'pulse-go',
   count = DEFAULT_COUNT,
 } = {}) {
-  const pool = getQuestionPool({ game, topic, lang, questionStyle })
+  const pool = getQuestionPool({ game, topic, lang, questionStyle, difficulty })
   return expandPoolToCount(pool, count, seed).map((question) => question.id)
 }
 
@@ -544,6 +572,7 @@ export function buildQuestionSet({
   topic = 'all',
   lang = 'mixed',
   questionStyle = 'mc',
+  difficulty = 'all',
   seed = `${Date.now()}`,
   count = DEFAULT_COUNT,
 } = {}) {
@@ -552,6 +581,7 @@ export function buildQuestionSet({
     topic,
     lang,
     questionStyle,
+    difficulty,
     seed,
     count,
   })
@@ -564,14 +594,21 @@ export function buildQuestionSet({
     .filter(Boolean)
 }
 
-export function getQuestionPoolDebug({ game = 'classic', topic = 'all', lang = 'mixed', questionStyle = 'mc' } = {}) {
-  const pool = getQuestionPool({ game, topic, lang, questionStyle })
+export function getQuestionPoolDebug({
+  game = 'classic',
+  topic = 'all',
+  lang = 'mixed',
+  questionStyle = 'mc',
+  difficulty = 'all',
+} = {}) {
+  const pool = getQuestionPool({ game, topic, lang, questionStyle, difficulty })
 
   return {
     game: normalizeGame(game),
     topic: normalizeTopic(topic),
     lang: normalizeLang(lang),
     questionStyle: normalizeQuestionStyle(questionStyle),
+    difficulty: normalizeDifficulty(difficulty),
     count: pool.length,
     ids: pool.map((question) => question.id),
     topics: [...new Set(pool.map((question) => normalizeTopic(question.topic)))],

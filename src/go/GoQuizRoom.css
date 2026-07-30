@@ -3211,3 +3211,40 @@
     font-size: 14px;
   }
 }
+
+.grm-q {
+  width: min(1080px, calc(100% - 34px));
+}
+
+.grm-qtext {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 34px 42px;
+  text-align: center;
+}
+
+.grm-host-q {
+  width: min(860px, 100%);
+  text-align: center;
+}
+
+.grm-host-option-card {
+  text-align: left;
+}
+
+.grm-host-option-top {
+  align-items: center;
+}
+
+.grm-host-option-left {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.grm-host-option-left strong {
+  line-height: 1.25;
+}
