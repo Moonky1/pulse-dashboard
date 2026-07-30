@@ -51,14 +51,14 @@ function getDifficultyLabel(difficulty) {
   return 'All Levels'
 }
 
-function buildQuestionSet(game, topic, lang, questionStyle, difficulty = 'all') {
+function buildQuestionSet(game, topic, lang, questionStyle, difficulty = 'all', quizSeed = '') {
   return buildQuizQuestionSet({
     game,
     topic,
     lang,
     questionStyle,
     difficulty,
-    seed: `solo:${game}:${topic}:${lang}:${questionStyle}:${difficulty}:${Date.now()}`,
+    seed: `solo:${game}:${topic}:${lang}:${questionStyle}:${difficulty}:${quizSeed}`,
     count: QUESTION_COUNT,
   })
 }
@@ -140,10 +140,11 @@ const gameLabel = getGameLabel(game)
 const difficultyLabel = getDifficultyLabel(difficulty)
 
 const sounds = useQuizSound()
+const [quizSeed, setQuizSeed] = useState(() => `${Date.now()}`)
 
 const questions = useMemo(
-  () => buildQuestionSet(game, topic, lang, questionStyle, difficulty),
-  [game, topic, lang, questionStyle, difficulty]
+  () => buildQuestionSet(game, topic, lang, questionStyle, difficulty, quizSeed),
+  [game, topic, lang, questionStyle, difficulty, quizSeed]
 )
 
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -267,9 +268,21 @@ const questions = useMemo(
   }
 
 const tryAgain = () => {
-  navigate(
-    `/go/quiz/play?topic=${topic}&lang=${lang}&game=${game}&qstyle=${questionStyle}&difficulty=${difficulty}`
-  )
+  clearInterval(timerRef.current)
+
+  setCurrentIndex(0)
+  setSelectedIndex(null)
+  setAnswered(false)
+  setTimeLeft(TIME_PER_QUESTION)
+  setResults([])
+  setFinished(false)
+  setReviewMode(false)
+
+  finishSoundRef.current = false
+  lastTickRef.current = null
+  deadlineRef.current = null
+
+  setQuizSeed(`${Date.now()}`)
 }
 
   const changeTopic = () => {
