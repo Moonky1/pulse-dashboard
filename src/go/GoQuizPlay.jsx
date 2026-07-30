@@ -320,8 +320,8 @@ const tryAgain = () => {
 
         <main className="gqp-review-wrap">
           <header className="gqp-review-header">
-            <h1>Review Answers</h1>
-            <p>Check what you chose and what the correct answer was.</p>
+<h1>Answer Breakdown</h1>
+<p>Check your answers, correct choices, and explanations.</p>
           </header>
 
           <section className="gqp-review-list">
@@ -427,13 +427,21 @@ const tryAgain = () => {
             </div>
           </div>
 
-          <div className="gqp-results-actions">
-            <button className="gqp-primary-btn" onClick={tryAgain}>🔄 Try Again</button>
-            <button className="gqp-secondary-btn" onClick={changeTopic}>Change Topic</button>
-            <button className="gqp-secondary-btn" onClick={() => setReviewMode(true)}>
-              📚 Review
-            </button>
-          </div>
+<div className="gqp-results-actions">
+  <button className="gqp-primary-btn" onClick={tryAgain}>🔄 Try Again</button>
+
+  <button className="gqp-secondary-btn" onClick={changeTopic}>
+    Change Topic
+  </button>
+
+  <button className="gqp-secondary-btn" onClick={() => setReviewMode(true)}>
+    🧾 Answer Breakdown
+  </button>
+
+  <button className="gqp-secondary-btn" onClick={() => navigate(academyReviewPath)}>
+    🎓 Academy Guide
+  </button>
+</div>
         </main>
       </div>
     )
