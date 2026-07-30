@@ -1392,10 +1392,20 @@
   }
 
 /* Mobile nav must match Pulse GO */
+/* Mobile nav must match Pulse GO */
 @media (max-width: 640px) {
   .ac-topnav {
-    padding: 24px 16px 12px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 10px;
+    padding: 24px 16px 0;
     background: transparent;
     border-bottom: 0;
     backdrop-filter: none;
@@ -1403,21 +1413,32 @@
   }
 
   .ac-nav-pill {
-    width: min(330px, calc(100% - 48px));
-    max-width: 330px;
+    width: min(302px, calc(100% - 32px));
+    max-width: 302px;
+    height: 51px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     padding: 6px;
     margin: 0 auto;
+    border-radius: 999px;
   }
 
   .ac-nav-pill button {
     flex: 1 1 0;
-    padding: 13px 0;
-    font-size: 12px;
+    height: 39px;
+    padding: 0;
+    font-size: 11px;
     text-align: center;
+  }
+
+  .ac-home {
+    padding-top: 146px;
+  }
+
+  .ac-article {
+    padding-top: 146px;
   }
 }
 
