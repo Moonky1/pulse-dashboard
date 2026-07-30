@@ -1391,4 +1391,34 @@
     vertical-align: 0.05em;
   }
 
+/* Mobile nav must match Pulse GO */
+@media (max-width: 640px) {
+  .ac-topnav {
+    padding: 24px 16px 12px;
+    gap: 10px;
+    background: transparent;
+    border-bottom: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .ac-nav-pill {
+    width: min(330px, calc(100% - 48px));
+    max-width: 330px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px;
+    margin: 0 auto;
+  }
+
+  .ac-nav-pill button {
+    flex: 1 1 0;
+    padding: 13px 0;
+    font-size: 12px;
+    text-align: center;
+  }
+}
+
 }
