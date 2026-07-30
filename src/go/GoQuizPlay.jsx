@@ -51,6 +51,53 @@ function getDifficultyLabel(difficulty) {
   return 'All Levels'
 }
 
+function normalizeAcademyTopic(topic) {
+  const clean = String(topic || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+
+  if (clean.includes('script')) return 'script'
+  if (clean.includes('objection')) return 'objections'
+  if (clean.includes('product') || clean.includes('eligible') || clean.includes('eligibility')) return 'product'
+  if (clean.includes('callflow') || clean.includes('handoff') || clean.includes('transfer')) return 'call-flow'
+  if (clean.includes('dispose') || clean.includes('disposition')) return 'dispositions'
+  if (clean.includes('validinvalid') || clean.includes('qa') || clean.includes('invalid')) return 'qa-invalid'
+  if (clean.includes('dosdonts') || clean.includes('compliance') || clean.includes('mistake')) return 'mistakes'
+
+  return ''
+}
+
+function getAcademyGuidePath({ game, topic, results }) {
+  const missed = Array.isArray(results)
+    ? results.filter((item) => item && !item.correct)
+    : []
+
+  const missedTopicCounts = missed.reduce((acc, item) => {
+    const academyTopic = normalizeAcademyTopic(item.topic)
+
+    if (!academyTopic) return acc
+
+    acc[academyTopic] = (acc[academyTopic] || 0) + 1
+    return acc
+  }, {})
+
+  const topMissedTopic = Object.entries(missedTopicCounts)
+    .sort((a, b) => b[1] - a[1])[0]?.[0]
+
+  if (topMissedTopic) return `/academy/${topMissedTopic}`
+
+  if (game === 'valid-invalid') return '/academy/qa-invalid'
+  if (game === 'objection-battle') return '/academy/objections'
+  if (game === 'disposition-trainer') return '/academy/dispositions'
+  if (game === 'eligible') return '/academy/product'
+  if (game === 'certification') return '/academy/qa-invalid'
+
+  const topicPath = normalizeAcademyTopic(topic)
+  if (topicPath) return `/academy/${topicPath}`
+
+  return '/academy'
+}
+
 function buildQuestionSet(game, topic, lang, questionStyle, difficulty = 'all', quizSeed = '') {
   return buildQuizQuestionSet({
     game,
@@ -298,6 +345,11 @@ const tryAgain = () => {
 
   const timerPercent = Math.max(0, Math.min(100, (timeLeft / TIME_PER_QUESTION) * 100))
   const timerColor = timeLeft <= 5 ? '#ef4444' : timeLeft <= 10 ? '#f59e0b' : '#b9d6ff'
+  const academyGuidePath = getAcademyGuidePath({
+  game,
+  topic,
+  results,
+  })
 
   if (finished && reviewMode) {
     return (
@@ -438,9 +490,9 @@ const tryAgain = () => {
     🧾 Answer Breakdown
   </button>
 
-  <button className="gqp-secondary-btn" onClick={() => navigate(academyReviewPath)}>
-    🎓 Academy Guide
-  </button>
+<button className="gqp-secondary-btn" onClick={() => navigate(academyGuidePath)}>
+  🎓 Academy Guide
+</button>
 </div>
         </main>
       </div>
