@@ -279,6 +279,17 @@ export const objections = [
     rebuttalEs:
       'Esta llamada es simplemente una oportunidad para extender la protección de su vehículo antes de que surja algún problema.',
   },
+  {
+    id: 'send-email',
+    emoji: '📧',
+    title: 'Can you send an email?',
+    titleEs: '¿Me puede mandar un email?',
+    goal: 'Acknowledge the request and move toward the specialist',
+    rebuttalEn:
+      'Of course. However, since we offer several protection options, my specialist will first need to determine which coverage best fits your vehicle and your specific needs. Please allow me just a moment while I connect you with them so they can provide the most accurate information and recommendations.',
+    rebuttalEs:
+      'Por supuesto. Sin embargo, como ofrecemos varias opciones de protección, mi especialista primero necesita determinar qué cobertura se ajusta mejor a su vehículo y a sus necesidades específicas. Permítame un momento mientras lo conecto con ellos para que puedan darle la información y recomendaciones más precisas.',
+  },
 ]
 
 export const productKnowledge = {

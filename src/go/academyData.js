@@ -92,7 +92,7 @@ export const ACADEMY_SECTIONS = [
       en: 'Approved rebuttals and how to keep control of the call.',
       es: 'Respuestas aprobadas y cómo mantener control de la llamada.',
     },
-    keywords: 'objection rebuttal not interested scam busy email already coverage',
+    keywords: 'objection rebuttal not interested scam busy email send email specialist protection options coverage recommendations already coverage',
   },
   {
     id: 'product',
