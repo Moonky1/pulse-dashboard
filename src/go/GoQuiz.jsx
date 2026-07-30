@@ -404,7 +404,6 @@ const goToGame = (gameMode) => {
     <span className="gq-card-icon">{item.icon}</span>
   </div>
 
-  <h2>{item.title}</h2>
   <p>{item.desc}</p>
   <b>Start →</b>
 </button>

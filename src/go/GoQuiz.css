@@ -529,13 +529,9 @@
   font-size: 20px;
 }
 
-.gq-difficulty-card h2 {
-  margin: 4px 0 0;
-}
-
 .gq-difficulty-card p {
   max-width: 92%;
-  margin: 0 auto;
+  margin: 6px auto 0;
 }
 
 .gq-difficulty-card b {
