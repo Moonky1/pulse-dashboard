@@ -8,6 +8,7 @@ import {
   normalizeDifficulty as normalizeDifficultyParam,
 } from './quizPools'
 import './GoQuizRoom.css'
+import '../pages/Register.css'
 
 const QUESTION_COUNT = 10
 const POLL_MS = 1200
@@ -292,6 +293,23 @@ function calcTimeLeft(startedAt) {
   return Math.max(0, Q_TIME - (Date.now() - startedMs) / 1000)
 }
 
+function GameWelcome({ name, avatar }) {
+  if (!name) return null
+
+  return (
+    <div className="auth-welcome-overlay">
+      <div className="auth-welcome-bg" />
+      <div className="auth-welcome-card">
+        <div className="auth-welcome-glow" />
+        <div className="auth-welcome-logo">{avatar || 'P'}</div>
+        <div className="auth-welcome-kicker">Welcome back</div>
+        <div className="auth-welcome-name">{name}</div>
+        <div className="auth-welcome-sub">Joining Pulse GO...</div>
+      </div>
+    </div>
+  )
+}
+
 function useSound() {
   const ctx = useRef(null)
   const lobbyMusicRef = useRef({
@@ -442,6 +460,7 @@ const difficultyLabel = getDifficultyLabel(difficulty)
   const [joinAvatar, setJoinAvatar] = useState('🦊')
   const [joinError, setJoinError] = useState('')
   const [joinBusy, setJoinBusy] = useState(false)
+  const [welcomePlayer, setWelcomePlayer] = useState(null)
 
   const [picked, setPicked] = useState(null)
   const [timeLeft, setTimeLeft] = useState(Q_TIME)
@@ -1066,14 +1085,22 @@ const difficultyLabel = getDifficultyLabel(difficulty)
       })
     )
 
-    setPlayerId(data.id)
-    setMyName(data.name)
-    setMyAvatar(data.avatar)
-    setJoined(true)
-    snd.join()
-    await fetchPlayers()
+setPlayerId(data.id)
+setMyName(data.name)
+setMyAvatar(data.avatar)
+setWelcomePlayer({
+  name: data.name,
+  avatar: data.avatar,
+})
 
-    setJoinBusy(false)
+snd.join()
+await fetchPlayers()
+
+window.setTimeout(() => {
+  setJoined(true)
+  setWelcomePlayer(null)
+  setJoinBusy(false)
+}, 1800)
   }
 
   const hostStart = async () => {
@@ -1416,10 +1443,12 @@ const playAnotherGame = () => {
     )
   }
 
-  if (!joined) {
-    return (
-      <div className="grm grm-join">
-        <div className="grm-join-box">
+if (!joined) {
+  return (
+    <div className="grm grm-join">
+      <GameWelcome name={welcomePlayer?.name} avatar={welcomePlayer?.avatar} />
+
+      <div className="grm-join-box">
           <div className="grm-code-display">
             <small>Room Code</small>
             <strong>{code}</strong>
@@ -2175,14 +2204,16 @@ const lowPerformers = [...playerStats]
         )}
 
 <div className="grm-finished-btns">
-  <button className="grm-btn-primary" onPointerDown={copyResultsLink}>
-    {resultsCopied ? '✅ Results Link Copied' : '🔗 Copy Results Link'}
-  </button>
-
   {isHost && (
-    <button className="grm-btn-outline" onPointerDown={playAnotherGame}>
-      🎮 Play Another Game
-    </button>
+    <>
+      <button className="grm-btn-primary" onPointerDown={copyResultsLink}>
+        {resultsCopied ? '✅ Results Link Copied' : '🔗 Copy Results Link'}
+      </button>
+
+      <button className="grm-btn-outline" onPointerDown={playAnotherGame}>
+        🎮 Play Another Game
+      </button>
+    </>
   )}
 
   <button className="grm-btn-outline" onPointerDown={() => nav('/go')}>
