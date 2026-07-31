@@ -357,7 +357,9 @@ if (trainingMode === 'host') {
         >
           <img
             className="gq-team-flag"
-            src={`https://flagcdn.com/w80/${item.code}.png`}
+            src={`https://flagcdn.com/w80/${
+  item.id === 'asia' ? 'ph' : item.id === 'central' ? 'gt' : item.code
+}.png`}
             alt={item.name}
           />
 
