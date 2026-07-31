@@ -3248,3 +3248,18 @@
 .grm-host-option-left strong {
   line-height: 1.25;
 }
+.grm-lobby-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #d9e8ff;
+  font-weight: 900;
+}
+
+.grm-lobby-team img {
+  width: 24px;
+  height: 17px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}

@@ -1,4 +1,5 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { APP_CONFIG } from '../config'
 import './GoQuiz.css'
 
 const LANG_OPTIONS = [
@@ -191,6 +192,7 @@ export default function GoQuiz() {
   const [params] = useSearchParams()
 
   const trainingMode = params.get('mode')
+  const team = params.get('team')
   const lang = params.get('lang')
   const game = params.get('game')
   const topic = params.get('topic')
@@ -199,6 +201,13 @@ export default function GoQuiz() {
 
   const activeGame = GAME_MODES.find((item) => item.id === game)
   const selectedQuestionStyle = normalizeQuestionStyle(qstyle)
+
+  const selectedTeam = APP_CONFIG.teams.find((item) => item.id === team) || null
+
+  const getTeamQuery = () => {
+  if (trainingMode !== 'host' || !team) return ''
+  return `&team=${encodeURIComponent(team)}`
+}
 
   const goHome = () => {
     const loggedIn = Boolean(localStorage.getItem('pulse_user'))
@@ -209,41 +218,45 @@ export default function GoQuiz() {
     navigate(`/go/quiz?mode=${nextMode}`)
   }
 
-  const goToLanguage = (nextLang) => {
-    navigate(`/go/quiz?mode=${trainingMode}&lang=${nextLang}`)
-  }
+const goToTeam = (nextTeam) => {
+  navigate(`/go/quiz?mode=host&team=${encodeURIComponent(nextTeam)}`)
+}
+
+const goToLanguage = (nextLang) => {
+  navigate(`/go/quiz?mode=${trainingMode}${getTeamQuery()}&lang=${nextLang}`)
+}
 
 const goToGame = (gameMode) => {
   if (gameMode.supportsDifficulty) {
     navigate(
-      `/go/quiz?mode=${trainingMode}&lang=${lang}&game=${gameMode.id}&topic=${gameMode.topic || 'all'}`
+      `/go/quiz?mode=${trainingMode}${getTeamQuery()}&lang=${lang}&game=${gameMode.id}&topic=${gameMode.topic || 'all'}`
     )
     return
   }
 
   if (gameMode.supportsQuestionStyle) {
     navigate(
-      `/go/quiz?mode=${trainingMode}&lang=${lang}&game=${gameMode.id}&topic=${gameMode.topic || 'all'}`
+      `/go/quiz?mode=${trainingMode}${getTeamQuery()}&lang=${lang}&game=${gameMode.id}&topic=${gameMode.topic || 'all'}`
     )
     return
   }
 
   if (gameMode.needsTopic) {
-    navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}&game=${gameMode.id}`)
+    navigate(`/go/quiz?mode=${trainingMode}${getTeamQuery()}&lang=${lang}&game=${gameMode.id}`)
     return
   }
 
   launchGame(gameMode.id, gameMode.topic, 'mc', 'all')
 }
 
-  const goToTopic = (topicId) => {
-    if (activeGame?.supportsQuestionStyle) {
-      navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}&game=${game}&topic=${topicId}`)
-      return
-    }
-
-    launchGame(game, topicId, 'mc', 'all')
+const goToTopic = (topicId) => {
+  if (activeGame?.supportsQuestionStyle) {
+    navigate(`/go/quiz?mode=${trainingMode}${getTeamQuery()}&lang=${lang}&game=${game}&topic=${topicId}`)
+    return
   }
+
+  launchGame(game, topicId, 'mc', 'all')
+}
 
   const goToDifficulty = (difficultyId) => {
     launchGame(game, topic || 'all', 'mc', difficultyId)
@@ -265,13 +278,15 @@ const goToGame = (gameMode) => {
     const finalQuestionStyle = normalizeQuestionStyle(questionStyleId)
     const finalDifficulty = normalizeDifficulty(difficultyId)
 
-    if (trainingMode === 'host') {
-      const code = makeRoomCode()
-      navigate(
-        `/go/quiz/${code}?host=true&topic=${finalTopic}&lang=${finalLang}&game=${finalGame}&qstyle=${finalQuestionStyle}&difficulty=${finalDifficulty}`
-      )
-      return
-    }
+if (trainingMode === 'host') {
+  const code = makeRoomCode()
+  const finalTeam = team || selectedTeam?.id || 'all'
+
+  navigate(
+    `/go/quiz/${code}?host=true&team=${encodeURIComponent(finalTeam)}&topic=${finalTopic}&lang=${finalLang}&game=${finalGame}&qstyle=${finalQuestionStyle}&difficulty=${finalDifficulty}`
+  )
+  return
+}
 
     navigate(
       `/go/quiz/play?topic=${finalTopic}&lang=${finalLang}&game=${finalGame}&qstyle=${finalQuestionStyle}&difficulty=${finalDifficulty}`
@@ -326,11 +341,50 @@ const goToGame = (gameMode) => {
         </main>
       )}
 
-      {trainingMode && !lang && (
+      {trainingMode === 'host' && !team && (
+  <main className="gq-wrap">
+    <section className="gq-hero">
+      <h1>Choose Team</h1>
+      <p>Select which team will play this live game.</p>
+    </section>
+
+    <section className="gq-card-grid three gq-team-grid">
+      {APP_CONFIG.teams.map((item) => (
+        <button
+          key={item.id}
+          className="gq-card gq-team-card"
+          onClick={() => goToTeam(item.id)}
+        >
+          <img
+            className="gq-team-flag"
+            src={`https://flagcdn.com/w80/${item.code}.png`}
+            alt={item.name}
+          />
+
+          <h2>{item.name}</h2>
+          <p>{item.agents} agents</p>
+          <b>Select Team →</b>
+        </button>
+      ))}
+    </section>
+
+    <div className="gq-bottom-actions">
+      <button onClick={() => navigate('/go/quiz')}>← Change Mode</button>
+    </div>
+  </main>
+)}
+
+
+
+      {trainingMode && (trainingMode !== 'host' || team) && !lang && (
         <main className="gq-wrap">
           <section className="gq-hero">
             <h1>Choose Language</h1>
-            <p>Pick how questions and answers should appear.</p>
+            <p>
+  {trainingMode === 'host' && selectedTeam
+    ? `${selectedTeam.name} selected. Pick how questions and answers should appear.`
+    : 'Pick how questions and answers should appear.'}
+</p>
           </section>
 
           <section className="gq-card-grid three">
@@ -349,7 +403,9 @@ const goToGame = (gameMode) => {
           </section>
 
           <div className="gq-bottom-actions">
-            <button onClick={() => navigate('/go/quiz')}>Change Mode</button>
+            <button onClick={() => navigate(trainingMode === 'host' ? '/go/quiz?mode=host' : '/go/quiz')}>
+  {trainingMode === 'host' ? '← Team' : 'Change Mode'}
+</button>
           </div>
         </main>
       )}
@@ -377,7 +433,7 @@ const goToGame = (gameMode) => {
           </section>
 
           <div className="gq-bottom-actions">
-            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}`)}>
+            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}${getTeamQuery()}`)}>
               ← Language
             </button>
           </div>
@@ -411,7 +467,7 @@ const goToGame = (gameMode) => {
           </section>
 
           <div className="gq-bottom-actions">
-            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}`)}>
+            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}${getTeamQuery()}&lang=${lang}`)}>
               ← Game Mode
             </button>
           </div>
@@ -440,7 +496,7 @@ const goToGame = (gameMode) => {
           </section>
 
           <div className="gq-bottom-actions">
-            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}`)}>
+            <button onClick={() =>navigate(`/go/quiz?mode=${trainingMode}${getTeamQuery()}&lang=${lang}`) }>
               ← Game Mode
             </button>
           </div>
@@ -478,7 +534,7 @@ const goToGame = (gameMode) => {
           </section>
 
           <div className="gq-bottom-actions">
-            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}&lang=${lang}`)}>
+            <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}${getTeamQuery()}&lang=${lang}`)}>
             ← Game Mode
           </button>
           </div>

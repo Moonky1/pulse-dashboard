@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
+import { APP_CONFIG } from '../config'
 import {
   buildQuestionIds as buildQuizQuestionIds,
   getQuestionById as getQuizQuestionById,
@@ -442,6 +443,8 @@ const topic = normalizeTopic(urlParams.get('topic') || 'all')
 const lang = normalizeLang(urlParams.get('lang') || 'mixed')
 const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
 const difficulty = normalizeDifficultyParam(urlParams.get('difficulty') || 'all')
+const selectedTeam = String(urlParams.get('team') || '').toLowerCase().trim()
+const selectedTeamInfo = APP_CONFIG.teams.find((item) => item.id === selectedTeam) || null
 const questionStyleLabel = questionStyle === 'mixed' ? 'Mixed Questions' : 'Multiple Choice'
 const difficultyLabel = getDifficultyLabel(difficulty)
 
@@ -1363,7 +1366,7 @@ const playAnotherGame = () => {
     if (!isHost || !code) return
 
     const gameMode = urlParams.get('game') || 'classic'
- const coHostParams = new URLSearchParams({
+const coHostParams = new URLSearchParams({
   host: 'true',
   cohost: 'true',
   topic,
@@ -1372,6 +1375,10 @@ const playAnotherGame = () => {
   qstyle: questionStyle,
   difficulty,
 })
+
+if (selectedTeam) {
+  coHostParams.set('team', selectedTeam)
+}
 
     const origin = window.location.origin
     const coHostLink = `${origin}/go/quiz/${code}?${coHostParams.toString()}`
@@ -1505,15 +1512,29 @@ if (!joined) {
 
           <span className="grm-lobby-sep">·</span>
 
-          <span className="grm-lobby-code-wrap">
-            Code: <span className="grm-lobby-code">{code}</span>
-          </span>
+<span className="grm-lobby-code-wrap">
+  Code: <span className="grm-lobby-code">{code}</span>
+</span>
 
-          <span className="grm-lobby-sep">·</span>
+{selectedTeamInfo && (
+  <>
+    <span className="grm-lobby-sep">·</span>
 
-          <span className={`grm-lobby-style ${questionStyle}`}>
-            {questionStyleLabel}
-          </span>
+    <span className="grm-lobby-team">
+      <img
+        src={`https://flagcdn.com/w40/${selectedTeamInfo.code}.png`}
+        alt={selectedTeamInfo.name}
+      />
+      {selectedTeamInfo.name}
+    </span>
+  </>
+)}
+
+<span className="grm-lobby-sep">·</span>
+
+<span className={`grm-lobby-style ${questionStyle}`}>
+  {questionStyleLabel}
+</span>
         </div>
 
         <div className="grm-lobby-body">
