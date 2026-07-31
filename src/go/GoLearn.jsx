@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PulseGoBackground from './PulseGoBackground'
 import {
   scripts,
   objections,
@@ -198,7 +199,7 @@ export default function GoLearn() {
   const navigate = useNavigate()
   const [lang, setLang] = useState(() => getSavedAcademyLang())
   const [query, setQuery] = useState('')
-  const [activeType, setActiveType] = useState('all')
+  const activeType = 'all'
 
   const copy = ACADEMY_COPY[lang]
 
@@ -224,7 +225,7 @@ export default function GoLearn() {
       .filter((item) => activeType === 'all' || item.type === activeType)
       .sort((a, b) => b.score - a.score)
       .slice(0, 16)
-  }, [activeType, query, searchIndex])
+  }, [query, searchIndex])
 
   const featuredSections = FEATURED_IDS
     .map((id) => ACADEMY_SECTIONS.find((section) => section.id === id))
@@ -232,13 +233,7 @@ export default function GoLearn() {
 
   return (
     <div className="ac-page">
-      <div className="ac-stars" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
+      <PulseGoBackground />
 
       <header className="ac-topnav">
         <nav className="ac-nav-pill">
@@ -306,24 +301,6 @@ export default function GoLearn() {
                 )}
               </div>
 
-              <div className="ac-filter-row">
-                <button
-                  className={activeType === 'all' ? 'active' : ''}
-                  onClick={() => setActiveType('all')}
-                >
-                  {copy.all}
-                </button>
-
-                {ACADEMY_SECTIONS.filter((section) => section.id !== 'overview').map((section) => (
-                  <button
-                    key={section.id}
-                    className={activeType === section.id ? 'active' : ''}
-                    onClick={() => setActiveType(section.id)}
-                  >
-                    {section.icon} {textFor(section.title, lang)}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {query.trim() ? (
