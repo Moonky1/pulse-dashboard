@@ -666,16 +666,21 @@ const difficultyLabel = getDifficultyLabel(difficulty)
   const createHostRoom = useCallback(async () => {
   const questionIds = buildQuestionIds(game, topic, lang, questionStyle, difficulty, `${code}:${Date.now()}`)
 
-  const roomPayload = {
-    code,
-    state: 'lobby',
-    topic,
-    lang,
-    question_ids: questionIds,
-    current_q: 0,
-    question_started_at: null,
-    updated_at: new Date().toISOString(),
-  }
+const roomPayload = {
+  code,
+  state: 'lobby',
+  team: selectedTeam || null,
+  game,
+  topic,
+  lang,
+  qstyle: questionStyle,
+  difficulty,
+  results_url: `${window.location.origin}/go/results/${code}`,
+  question_ids: questionIds,
+  current_q: 0,
+  question_started_at: null,
+  updated_at: new Date().toISOString(),
+}
 
   const { data, error } = await supabase
     .from('pulse_go_rooms')
@@ -912,10 +917,11 @@ const difficultyLabel = getDifficultyLabel(difficulty)
       if (nextIndex >= totalQuestions) {
         const { error } = await supabase
           .from('pulse_go_rooms')
-          .update({
-            state: 'finished',
-            updated_at: new Date().toISOString(),
-          })
+.update({
+  state: 'finished',
+  results_url: `${window.location.origin}/go/results/${code}`,
+  updated_at: new Date().toISOString(),
+})
           .eq('code', code)
 
         if (error) setFatalError(error.message || 'Could not finish game.')
