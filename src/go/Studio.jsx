@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Studio.css'
 
@@ -39,8 +39,6 @@ const STUDIO_MODULES = [
     desc: 'Launch the official Pulse GO live room flow for teams.',
     icon: '🎮',
     action: 'Start hosting',
-    theme: 'blue',
-    enabled: true,
   },
   {
     id: 'create',
@@ -49,8 +47,6 @@ const STUDIO_MODULES = [
     desc: 'Build custom questions, answers, timers, and future game styles.',
     icon: '🧩',
     action: 'Coming soon',
-    theme: 'violet',
-    enabled: false,
   },
   {
     id: 'audio',
@@ -59,8 +55,6 @@ const STUDIO_MODULES = [
     desc: 'Upload a real call, add questions, and turn QA into a game.',
     icon: '🎧',
     action: 'Coming soon',
-    theme: 'mint',
-    enabled: false,
   },
   {
     id: 'bank',
@@ -69,8 +63,6 @@ const STUDIO_MODULES = [
     desc: 'Browse and organize questions by language, mode, topic, and difficulty.',
     icon: '🧠',
     action: 'Coming soon',
-    theme: 'gold',
-    enabled: false,
   },
   {
     id: 'reports',
@@ -79,18 +71,8 @@ const STUDIO_MODULES = [
     desc: 'Open a KK room report and review performance.',
     icon: '📊',
     action: 'Open reports',
-    theme: 'blue',
-    enabled: true,
   },
 ]
-
-const SHARDS = Array.from({ length: 18 }, (_, index) => ({
-  id: index,
-  x: `${Math.sin(index * 1.7) * 130}px`,
-  y: `${Math.cos(index * 1.3) * 110}px`,
-  r: `${index * 23 - 120}deg`,
-  d: `${index * 0.025}s`,
-}))
 
 function cleanRoomCode(value) {
   return String(value || '')
@@ -102,33 +84,11 @@ function cleanRoomCode(value) {
 
 export default function Studio() {
   const navigate = useNavigate()
-  const pageRef = useRef(null)
   const [reportCode, setReportCode] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
-  const [isPressed, setIsPressed] = useState(false)
-  const [theme, setTheme] = useState('blue')
 
   const activeModule = STUDIO_MODULES[activeIndex] || STUDIO_MODULES[0]
   const cleanCode = useMemo(() => cleanRoomCode(reportCode), [reportCode])
-
-  useEffect(() => {
-    const onScroll = () => {
-      const maxScroll = Math.max(1, document.body.scrollHeight - window.innerHeight)
-      const progress = window.scrollY / maxScroll
-      const nextIndex = Math.min(
-        STUDIO_MODULES.length - 1,
-        Math.floor(progress * STUDIO_MODULES.length)
-      )
-
-      setActiveIndex(nextIndex)
-      setTheme(STUDIO_MODULES[nextIndex]?.theme || 'blue')
-    }
-
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
 
   const openLiveGame = () => {
     navigate('/go/quiz?mode=host')
@@ -141,43 +101,22 @@ export default function Studio() {
 
   const handleModuleClick = (item, index) => {
     setActiveIndex(index)
-    setTheme(item.theme)
 
-    if (item.id === 'live') openLiveGame()
+    if (item.id === 'live') {
+      openLiveGame()
+      return
+    }
 
     if (item.id === 'reports') {
       document.getElementById('studio-reports')?.scrollIntoView({ behavior: 'smooth' })
     }
   }
 
-  const handleMouseMove = (event) => {
-    const page = pageRef.current
-    if (!page) return
-
-    const rect = page.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const y = event.clientY - rect.top
-    const px = x / rect.width
-    const py = y / rect.height
-
-    page.style.setProperty('--mx', `${x}px`)
-    page.style.setProperty('--my', `${y}px`)
-    page.style.setProperty('--rx', `${(py - 0.5) * -9}deg`)
-    page.style.setProperty('--ry', `${(px - 0.5) * 12}deg`)
-    page.style.setProperty('--tx', `${(px - 0.5) * 24}px`)
-    page.style.setProperty('--ty', `${(py - 0.5) * 24}px`)
-  }
-
   return (
-<div
-  ref={pageRef}
-  className={`studio-page theme-${theme} ${isPressed ? 'is-pressed' : ''}`}
-  onMouseMove={handleMouseMove}
->
+    <div className="studio-page">
       <div className="studio-bg" />
       <div className="studio-grid" />
       <div className="studio-soft-glow" />
-      <div className="studio-cursor-glow" />
 
       <div className="studio-stars" aria-hidden="true">
         {STARS.map((star, index) => (
@@ -221,11 +160,6 @@ export default function Studio() {
 
       <main className="studio-hero">
         <section className="studio-copy">
-          <div className="studio-kicker">
-            <span />
-            Host tools for QA, supervisors, and leaders
-          </div>
-
           <h1 className="studio-title">
             <span className="studio-title-main">PULSE</span>
             <span className="studio-title-badge">Studio</span>
@@ -252,17 +186,8 @@ export default function Studio() {
           </div>
         </section>
 
-        <section className="studio-stage" aria-label="Pulse Studio interactive object">
-          <div
-  className="studio-device"
-  onPointerDown={(event) => {
-    event.currentTarget.setPointerCapture?.(event.pointerId)
-    setIsPressed(true)
-  }}
-  onPointerUp={() => setIsPressed(false)}
-  onPointerCancel={() => setIsPressed(false)}
-  onPointerLeave={() => setIsPressed(false)}
->
+        <section className="studio-stage" aria-label="Pulse Studio glass object">
+          <div className="studio-device">
             <div className="studio-device-glow" />
 
             <div className="studio-device-shell">
@@ -270,19 +195,6 @@ export default function Studio() {
                 <span>PULSE</span>
                 <strong>STUDIO</strong>
               </div>
-
-              {SHARDS.map((shard) => (
-                <i
-                  key={shard.id}
-                  className="studio-shard"
-                  style={{
-                    '--sx': shard.x,
-                    '--sy': shard.y,
-                    '--sr': shard.r,
-                    '--sd': shard.d,
-                  }}
-                />
-              ))}
             </div>
           </div>
         </section>
