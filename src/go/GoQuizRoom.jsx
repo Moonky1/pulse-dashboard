@@ -700,10 +700,40 @@ const roomPayload = {
         .eq('code', code)
         .maybeSingle()
 
-      if (!existingError && existingRoom) {
-        setRoom(existingRoom)
-        return existingRoom
-      } 
+if (!existingError && existingRoom) {
+  const needsMetadataUpdate =
+    !existingRoom.team ||
+    !existingRoom.game ||
+    !existingRoom.qstyle ||
+    !existingRoom.difficulty ||
+    !existingRoom.results_url
+
+  if (needsMetadataUpdate) {
+    const { data: updatedRoom } = await supabase
+      .from('pulse_go_rooms')
+      .update({
+        team: existingRoom.team || selectedTeam || null,
+        game: existingRoom.game || game,
+        qstyle: existingRoom.qstyle || questionStyle,
+        difficulty: existingRoom.difficulty || difficulty,
+        results_url:
+          existingRoom.results_url ||
+          `${window.location.origin}/go/results/${code}`,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('code', code)
+      .select('*')
+      .single()
+
+    if (updatedRoom) {
+      setRoom(updatedRoom)
+      return updatedRoom
+    }
+  }
+
+  setRoom(existingRoom)
+  return existingRoom
+}
     }
 
     setFatalError(error.message || 'Could not create room.')
@@ -712,7 +742,7 @@ const roomPayload = {
 
   setRoom(data)
   return data
-}, [code, game, topic, lang, questionStyle, difficulty])
+}, [code, game, topic, lang, questionStyle, difficulty, selectedTeam])
 
   const fetchRoom = useCallback(async () => {
     if (!code) return null
