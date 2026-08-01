@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Studio.css'
 
@@ -39,14 +39,18 @@ const STUDIO_MODULES = [
     desc: 'Launch the official Pulse GO live room flow for teams.',
     icon: '🎮',
     action: 'Start hosting',
+    theme: 'blue',
+    enabled: true,
   },
   {
     id: 'create',
     eyebrow: 'Builder',
     title: 'Create Your Game',
-    desc: 'Build custom questions, timers, answers, and future game styles.',
+    desc: 'Build custom questions, answers, timers, and future game styles.',
     icon: '🧩',
     action: 'Coming soon',
+    theme: 'violet',
+    enabled: false,
   },
   {
     id: 'audio',
@@ -55,53 +59,38 @@ const STUDIO_MODULES = [
     desc: 'Upload a real call, add questions, and turn QA into a game.',
     icon: '🎧',
     action: 'Coming soon',
+    theme: 'mint',
+    enabled: false,
   },
   {
     id: 'bank',
     eyebrow: 'Question Bank',
     title: 'Official Questions',
-    desc: 'Browse questions by language, mode, topic, and difficulty.',
+    desc: 'Browse and organize questions by language, mode, topic, and difficulty.',
     icon: '🧠',
     action: 'Coming soon',
+    theme: 'gold',
+    enabled: false,
   },
   {
     id: 'reports',
     eyebrow: 'Reports',
     title: 'Final Results',
-    desc: 'Open a KK room report and review final performance.',
+    desc: 'Open a KK room report and review performance.',
     icon: '📊',
     action: 'Open reports',
+    theme: 'blue',
+    enabled: true,
   },
 ]
 
-const STUDIO_TEAMS = [
-  { id: 'philippines', name: 'Philippines', flag: '🇵🇭' },
-  { id: 'venezuela', name: 'Venezuela', flag: '🇻🇪' },
-  { id: 'colombia', name: 'Colombia', flag: '🇨🇴' },
-  { id: 'mexico', name: 'Mexico BJ', flag: '🇲🇽' },
-  { id: 'central', name: 'Central America', flag: '🇭🇳' },
-  { id: 'asia', name: 'Asia', flag: '🇵🇭' },
-]
-
-const SHARDS = Array.from({ length: 52 }, (_, index) => {
-  const angle = (index / 52) * Math.PI * 2
-  const ring = index % 4
-  const distance = 135 + ring * 58
-  const verticalPull = 0.72 + (index % 5) * 0.05
-  const spin = index % 2 === 0 ? 1 : -1
-
-  return {
-    id: index,
-    x: `${Math.cos(angle) * distance}px`,
-    y: `${Math.sin(angle) * distance * verticalPull}px`,
-    z: `${80 + (index % 8) * 34}px`,
-    r: `${index * 29 * spin}deg`,
-    s: `${0.72 + (index % 6) * 0.1}`,
-    w: `${18 + (index % 7) * 7}px`,
-    h: `${22 + (index % 8) * 8}px`,
-    d: `${index * 0.012}s`,
-  }
-})
+const SHARDS = Array.from({ length: 18 }, (_, index) => ({
+  id: index,
+  x: `${Math.sin(index * 1.7) * 130}px`,
+  y: `${Math.cos(index * 1.3) * 110}px`,
+  r: `${index * 23 - 120}deg`,
+  d: `${index * 0.025}s`,
+}))
 
 function cleanRoomCode(value) {
   return String(value || '')
@@ -113,20 +102,36 @@ function cleanRoomCode(value) {
 
 export default function Studio() {
   const navigate = useNavigate()
+  const pageRef = useRef(null)
   const [reportCode, setReportCode] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const [isPressed, setIsPressed] = useState(false)
-  const [hostZoom, setHostZoom] = useState(false)
+  const [theme, setTheme] = useState('blue')
 
   const activeModule = STUDIO_MODULES[activeIndex] || STUDIO_MODULES[0]
   const cleanCode = useMemo(() => cleanRoomCode(reportCode), [reportCode])
 
-  const beginHostFlow = () => {
-    setHostZoom(true)
-  }
+  useEffect(() => {
+    const onScroll = () => {
+      const maxScroll = Math.max(1, document.body.scrollHeight - window.innerHeight)
+      const progress = window.scrollY / maxScroll
+      const nextIndex = Math.min(
+        STUDIO_MODULES.length - 1,
+        Math.floor(progress * STUDIO_MODULES.length)
+      )
 
-  const chooseTeam = (teamId) => {
-    navigate(`/go/quiz?mode=host&team=${teamId}`)
+      setActiveIndex(nextIndex)
+      setTheme(STUDIO_MODULES[nextIndex]?.theme || 'blue')
+    }
+
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const openLiveGame = () => {
+    navigate('/go/quiz?mode=host')
   }
 
   const openReport = () => {
@@ -136,23 +141,47 @@ export default function Studio() {
 
   const handleModuleClick = (item, index) => {
     setActiveIndex(index)
+    setTheme(item.theme)
 
-    if (item.id === 'live') {
-      beginHostFlow()
-      return
-    }
+    if (item.id === 'live') openLiveGame()
 
     if (item.id === 'reports') {
       document.getElementById('studio-reports')?.scrollIntoView({ behavior: 'smooth' })
     }
   }
 
+  const handleMouseMove = (event) => {
+    const page = pageRef.current
+    if (!page) return
+
+    const rect = page.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    const px = x / rect.width
+    const py = y / rect.height
+
+    page.style.setProperty('--mx', `${x}px`)
+    page.style.setProperty('--my', `${y}px`)
+    page.style.setProperty('--rx', `${(py - 0.5) * -9}deg`)
+    page.style.setProperty('--ry', `${(px - 0.5) * 12}deg`)
+    page.style.setProperty('--tx', `${(px - 0.5) * 24}px`)
+    page.style.setProperty('--ty', `${(py - 0.5) * 24}px`)
+  }
+
   return (
-    <div className={`studio-page ${isPressed ? 'is-pressed' : ''} ${hostZoom ? 'host-zoom' : ''}`}>
+    <div
+      ref={pageRef}
+      className={`studio-page theme-${theme} ${isPressed ? 'is-pressed' : ''}`}
+      onMouseMove={handleMouseMove}
+      onPointerDown={() => setIsPressed(true)}
+      onPointerUp={() => setIsPressed(false)}
+      onPointerCancel={() => setIsPressed(false)}
+      onPointerLeave={() => setIsPressed(false)}
+    >
       <div className="studio-bg" />
-      <div className="studio-aurora" />
       <div className="studio-grid" />
       <div className="studio-soft-glow" />
+      <div className="studio-cursor-glow" />
 
       <div className="studio-stars" aria-hidden="true">
         {STARS.map((star, index) => (
@@ -211,7 +240,7 @@ export default function Studio() {
           </p>
 
           <div className="studio-actions">
-            <button className="studio-primary" onClick={beginHostFlow}>
+            <button className="studio-primary" onClick={openLiveGame}>
               Host a Game →
             </button>
 
@@ -227,23 +256,12 @@ export default function Studio() {
           </div>
         </section>
 
-        <section className="studio-stage" aria-label="Pulse Studio glass interaction">
-          <div
-            className="studio-crystal-scene"
-            onPointerDown={(event) => {
-              event.currentTarget.setPointerCapture?.(event.pointerId)
-              setIsPressed(true)
-            }}
-            onPointerUp={() => setIsPressed(false)}
-            onPointerCancel={() => setIsPressed(false)}
-            onPointerLeave={() => setIsPressed(false)}
-          >
-            <div className="studio-crystal-glow" />
-            <div className="studio-orbit-ring one" />
-            <div className="studio-orbit-ring two" />
+        <section className="studio-stage" aria-label="Pulse Studio interactive object">
+          <div className="studio-device">
+            <div className="studio-device-glow" />
 
-            <div className="studio-glass-orb">
-              <div className="studio-glass-core">
+            <div className="studio-device-shell">
+              <div className="studio-device-face">
                 <span>PULSE</span>
                 <strong>STUDIO</strong>
               </div>
@@ -255,37 +273,12 @@ export default function Studio() {
                   style={{
                     '--sx': shard.x,
                     '--sy': shard.y,
-                    '--sz': shard.z,
                     '--sr': shard.r,
-                    '--ss': shard.s,
-                    '--sw': shard.w,
-                    '--sh': shard.h,
                     '--sd': shard.d,
                   }}
                 />
               ))}
             </div>
-
-            {hostZoom && (
-              <div className="studio-team-panel">
-                <button className="studio-back" onClick={() => setHostZoom(false)}>
-                  ← Back
-                </button>
-
-                <span className="studio-panel-kicker">Create Live Game</span>
-                <h2>Choose Team</h2>
-                <p>Select which team will play this live game.</p>
-
-                <div className="studio-team-grid">
-                  {STUDIO_TEAMS.map((team) => (
-                    <button key={team.id} onClick={() => chooseTeam(team.id)}>
-                      <span>{team.flag}</span>
-                      <strong>{team.name}</strong>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </section>
       </main>
