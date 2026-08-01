@@ -938,27 +938,31 @@ const fetchRoom = useCallback(async () => {
     }
   }, [room?.state, playerStats, playerId, isHost, snd, room])
 
-  const showAnswer = useCallback(async () => {
-    if (!isHost || !room || actionLockRef.current || busy) return
+const showAnswer = useCallback(async () => {
+  if (!isHost || !room || actionLockRef.current || busy) return
 
-    actionLockRef.current = true
-    setBusy(true)
+  actionLockRef.current = true
+  setBusy(true)
 
-    const { error } = await supabase
-      .from('pulse_go_rooms')
-      .update({
-        state: 'showAnswer',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('code', code)
+  const { data, error } = await supabase
+    .from('pulse_go_rooms')
+    .update({
+      state: 'showAnswer',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('code', code)
+    .select('*')
+    .single()
 
-    if (error) {
-      actionLockRef.current = false
-      setFatalError(error.message || 'Could not show answer.')
-    }
+  if (error) {
+    actionLockRef.current = false
+    setFatalError(error.message || 'Could not show answer.')
+  } else if (data) {
+    setRoom(data)
+  }
 
-    setBusy(false)
-  }, [isHost, room, busy, code])
+  setBusy(false)
+}, [isHost, room, busy, code])
 
 const nextQuestion = useCallback(async (force = false) => {
   const currentRoom = roomRef.current
@@ -976,7 +980,7 @@ const nextQuestion = useCallback(async (force = false) => {
     const totalQuestions = currentRoom.question_ids?.length || QUESTION_COUNT
 
     if (nextIndex >= totalQuestions) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('pulse_go_rooms')
         .update({
           state: 'finished',
@@ -987,8 +991,15 @@ const nextQuestion = useCallback(async (force = false) => {
           updated_at: new Date().toISOString(),
         })
         .eq('code', code)
+        .select('*')
+        .single()
 
-      if (error) setFatalError(error.message || 'Could not finish game.')
+      if (error) {
+        setFatalError(error.message || 'Could not finish game.')
+      } else if (data) {
+        setRoom(data)
+      }
+
       return
     }
 
@@ -1003,7 +1014,7 @@ const nextQuestion = useCallback(async (force = false) => {
       .eq('room_code', code)
       .eq('is_kicked', false)
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('pulse_go_rooms')
       .update({
         state: 'question',
@@ -1015,8 +1026,14 @@ const nextQuestion = useCallback(async (force = false) => {
         updated_at: new Date().toISOString(),
       })
       .eq('code', code)
+      .select('*')
+      .single()
 
-    if (error) setFatalError(error.message || 'Could not go to next question.')
+    if (error) {
+      setFatalError(error.message || 'Could not go to next question.')
+    } else if (data) {
+      setRoom(data)
+    }
   } finally {
     busyRef.current = false
     setBusy(false)
@@ -1217,7 +1234,7 @@ const hostStart = async () => {
     .eq('room_code', code)
     .eq('is_kicked', false)
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('pulse_go_rooms')
     .update({
       state: 'question',
@@ -1230,8 +1247,14 @@ const hostStart = async () => {
       updated_at: new Date().toISOString(),
     })
     .eq('code', code)
+    .select('*')
+    .single()
 
-  if (error) setFatalError(error.message || 'Could not start game.')
+  if (error) {
+    setFatalError(error.message || 'Could not start game.')
+  } else if (data) {
+    setRoom(data)
+  }
 
   setBusy(false)
 }
@@ -1374,7 +1397,7 @@ const resetRoomToLobby = async () => {
     .delete()
     .eq('room_code', code)
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('pulse_go_rooms')
     .update({
       state: 'lobby',
@@ -1387,8 +1410,14 @@ const resetRoomToLobby = async () => {
       updated_at: new Date().toISOString(),
     })
     .eq('code', code)
+    .select('*')
+    .single()
 
-  if (error) setFatalError(error.message || 'Could not reset room.')
+  if (error) {
+    setFatalError(error.message || 'Could not reset room.')
+  } else if (data) {
+    setRoom(data)
+  }
 
   setBusy(false)
 }
