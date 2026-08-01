@@ -169,15 +169,11 @@ export default function Studio() {
   }
 
   return (
-    <div
-      ref={pageRef}
-      className={`studio-page theme-${theme} ${isPressed ? 'is-pressed' : ''}`}
-      onMouseMove={handleMouseMove}
-      onPointerDown={() => setIsPressed(true)}
-      onPointerUp={() => setIsPressed(false)}
-      onPointerCancel={() => setIsPressed(false)}
-      onPointerLeave={() => setIsPressed(false)}
-    >
+<div
+  ref={pageRef}
+  className={`studio-page theme-${theme} ${isPressed ? 'is-pressed' : ''}`}
+  onMouseMove={handleMouseMove}
+>
       <div className="studio-bg" />
       <div className="studio-grid" />
       <div className="studio-soft-glow" />
@@ -257,7 +253,16 @@ export default function Studio() {
         </section>
 
         <section className="studio-stage" aria-label="Pulse Studio interactive object">
-          <div className="studio-device">
+          <div
+  className="studio-device"
+  onPointerDown={(event) => {
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    setIsPressed(true)
+  }}
+  onPointerUp={() => setIsPressed(false)}
+  onPointerCancel={() => setIsPressed(false)}
+  onPointerLeave={() => setIsPressed(false)}
+>
             <div className="studio-device-glow" />
 
             <div className="studio-device-shell">

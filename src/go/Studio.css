@@ -800,3 +800,171 @@
     transition: none !important;
   }
 }
+/* =========================================================
+   Pulse Studio - final glass interaction override
+   Solo afecta el vidrio y su glow, no el fondo general.
+========================================================= */
+
+.studio-device {
+  cursor: pointer;
+  user-select: none;
+  transform-style: preserve-3d;
+}
+
+.studio-device-glow {
+  background:
+    radial-gradient(circle at 46% 42%, rgba(216, 232, 255, 0.24), transparent 28%),
+    radial-gradient(circle at 54% 58%, rgba(126, 249, 212, 0.16), transparent 44%),
+    radial-gradient(circle at center, rgba(158, 214, 255, 0.12), transparent 68%);
+  animation: studioGlassGlowCycle 13s ease-in-out infinite alternate;
+}
+
+@keyframes studioGlassGlowCycle {
+  0% {
+    opacity: 0.72;
+    filter: blur(48px) hue-rotate(0deg) saturate(130%);
+  }
+
+  25% {
+    opacity: 0.9;
+    filter: blur(54px) hue-rotate(70deg) saturate(170%);
+  }
+
+  50% {
+    opacity: 0.82;
+    filter: blur(50px) hue-rotate(145deg) saturate(155%);
+  }
+
+  75% {
+    opacity: 0.95;
+    filter: blur(56px) hue-rotate(230deg) saturate(180%);
+  }
+
+  100% {
+    opacity: 0.86;
+    filter: blur(52px) hue-rotate(320deg) saturate(170%);
+  }
+}
+
+.studio-device-shell::before {
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.32), transparent 17%),
+    linear-gradient(135deg, rgba(255,255,255,0.24), transparent 35%),
+    linear-gradient(145deg, rgba(216,232,255,0.2), rgba(8,13,24,0.96));
+  animation: studioGlassPanelCycle 13s ease-in-out infinite alternate;
+}
+
+.studio-device-face {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(216, 232, 255, 0.18), transparent 44%),
+    rgba(255,255,255,0.035);
+  animation: studioGlassFaceCycle 13s ease-in-out infinite alternate;
+}
+
+.studio-shard {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.36), rgba(255,255,255,0.04)),
+    rgba(216, 232, 255, 0.12);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow:
+    inset 0 0 18px rgba(255,255,255,0.08),
+    0 18px 34px rgba(0,0,0,0.3),
+    0 0 28px rgba(158, 214, 255, 0.12);
+  backdrop-filter: blur(10px);
+  clip-path: polygon(18% 0, 100% 14%, 82% 100%, 0 78%);
+  animation: studioGlassShardCycle 13s ease-in-out infinite alternate;
+}
+
+@keyframes studioGlassPanelCycle {
+  0% {
+    filter: hue-rotate(0deg) saturate(125%) brightness(1);
+    box-shadow:
+      inset 0 0 34px rgba(255, 255, 255, 0.05),
+      0 40px 95px rgba(0, 0, 0, 0.52),
+      0 0 80px rgba(158, 214, 255, 0.13);
+  }
+
+  30% {
+    filter: hue-rotate(82deg) saturate(165%) brightness(1.06);
+    box-shadow:
+      inset 0 0 38px rgba(255, 255, 255, 0.06),
+      0 40px 95px rgba(0, 0, 0, 0.52),
+      0 0 94px rgba(126, 249, 212, 0.17);
+  }
+
+  65% {
+    filter: hue-rotate(180deg) saturate(155%) brightness(1.03);
+    box-shadow:
+      inset 0 0 36px rgba(255, 255, 255, 0.055),
+      0 40px 95px rgba(0, 0, 0, 0.52),
+      0 0 88px rgba(185, 167, 255, 0.16);
+  }
+
+  100% {
+    filter: hue-rotate(310deg) saturate(175%) brightness(1.08);
+    box-shadow:
+      inset 0 0 40px rgba(255, 255, 255, 0.07),
+      0 40px 95px rgba(0, 0, 0, 0.52),
+      0 0 98px rgba(255, 154, 213, 0.16);
+  }
+}
+
+@keyframes studioGlassFaceCycle {
+  0% {
+    filter: hue-rotate(0deg) saturate(120%);
+  }
+
+  30% {
+    filter: hue-rotate(82deg) saturate(165%);
+  }
+
+  65% {
+    filter: hue-rotate(180deg) saturate(155%);
+  }
+
+  100% {
+    filter: hue-rotate(310deg) saturate(175%);
+  }
+}
+
+@keyframes studioGlassShardCycle {
+  0% {
+    filter: hue-rotate(0deg) saturate(125%) brightness(1);
+  }
+
+  30% {
+    filter: hue-rotate(82deg) saturate(170%) brightness(1.16);
+  }
+
+  65% {
+    filter: hue-rotate(180deg) saturate(160%) brightness(1.08);
+  }
+
+  100% {
+    filter: hue-rotate(310deg) saturate(180%) brightness(1.18);
+  }
+}
+
+/* Click sobre el vidrio: se abre/se rompe suave y al soltar vuelve */
+.studio-page.is-pressed .studio-device-shell {
+  filter: brightness(1.2) saturate(1.2);
+  transform: rotateX(64deg) rotateZ(-31deg) translateY(-12px) scale(0.94);
+}
+
+.studio-page.is-pressed .studio-device-shell::before {
+  opacity: 0.6;
+}
+
+.studio-page.is-pressed .studio-device-face {
+  opacity: 0.68;
+  transform: translateZ(74px) translate(-10px, -24px) rotate(-4deg) scale(0.94);
+}
+
+.studio-page.is-pressed .studio-shard {
+  opacity: 1;
+  transform:
+    translate(-50%, -50%)
+    translate3d(var(--sx), var(--sy), 145px)
+    rotate(var(--sr))
+    scale(1.06);
+}
