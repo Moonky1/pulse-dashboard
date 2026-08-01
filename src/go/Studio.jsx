@@ -8,6 +8,7 @@ const STUDIO_MODULES = [
     eyebrow: 'Live Games',
     title: 'Host a Game',
     desc: 'Start hosting',
+    longDesc: 'Launch the official Pulse GO live room flow for teams.',
     icon: '🎮',
     action: 'Open',
   },
@@ -16,6 +17,7 @@ const STUDIO_MODULES = [
     eyebrow: 'Builder',
     title: 'Create Your Game',
     desc: 'Coming soon',
+    longDesc: 'Build custom game flows, topics, and future training experiences.',
     icon: '🧩',
     action: 'Soon',
   },
@@ -24,6 +26,7 @@ const STUDIO_MODULES = [
     eyebrow: 'Audio Audit',
     title: 'Call-based Training',
     desc: 'Coming soon',
+    longDesc: 'Upload a real call, add questions, and turn QA into a game.',
     icon: '🎧',
     action: 'Soon',
   },
@@ -32,6 +35,7 @@ const STUDIO_MODULES = [
     eyebrow: 'Question Bank',
     title: 'Official Questions',
     desc: 'Coming soon',
+    longDesc: 'Manage official questions by language, topic, mode, and difficulty.',
     icon: '🧠',
     action: 'Soon',
   },
@@ -40,41 +44,40 @@ const STUDIO_MODULES = [
     eyebrow: 'Reports',
     title: 'Final Results',
     desc: 'Open reports',
+    longDesc: 'Open a KK room report and review performance.',
     icon: '📊',
     action: 'Open',
   },
 ]
 
 const STARS = [
-  { top: '10%', left: '10%' },
-  { top: '12%', left: '30%' },
-  { top: '14%', left: '52%' },
-  { top: '15%', left: '76%' },
-  { top: '22%', left: '18%' },
-  { top: '26%', left: '42%' },
-  { top: '24%', left: '66%' },
-  { top: '28%', left: '86%' },
-  { top: '36%', left: '12%' },
-  { top: '40%', left: '32%' },
-  { top: '38%', left: '58%' },
-  { top: '44%', left: '82%' },
-  { top: '56%', left: '14%' },
-  { top: '58%', left: '44%' },
-  { top: '54%', left: '72%' },
-  { top: '64%', left: '24%' },
-  { top: '70%', left: '54%' },
-  { top: '68%', left: '84%' },
-  { top: '80%', left: '18%' },
-  { top: '82%', left: '40%' },
-  { top: '78%', left: '64%' },
-  { top: '84%', left: '88%' },
+  { top: '9%', left: '12%' },
+  { top: '14%', left: '34%' },
+  { top: '18%', left: '58%' },
+  { top: '11%', left: '81%' },
+  { top: '27%', left: '10%' },
+  { top: '33%', left: '28%' },
+  { top: '29%', left: '49%' },
+  { top: '35%', left: '72%' },
+  { top: '43%', left: '16%' },
+  { top: '48%', left: '36%' },
+  { top: '45%', left: '61%' },
+  { top: '52%', left: '83%' },
+  { top: '62%', left: '11%' },
+  { top: '68%', left: '32%' },
+  { top: '64%', left: '53%' },
+  { top: '70%', left: '77%' },
+  { top: '83%', left: '15%' },
+  { top: '79%', left: '39%' },
+  { top: '85%', left: '59%' },
+  { top: '82%', left: '87%' },
 ]
 
 const SHOOTING_STARS = [
-  { top: '20%', left: '76%', delay: '0s', duration: '7s' },
-  { top: '30%', left: '63%', delay: '2.3s', duration: '7.4s' },
-  { top: '18%', left: '56%', delay: '4.4s', duration: '6.8s' },
-  { top: '38%', left: '84%', delay: '6.8s', duration: '7.8s' },
+  { top: '22%', left: '75%', delay: '0s', duration: '7.2s' },
+  { top: '31%', left: '61%', delay: '2.5s', duration: '7.4s' },
+  { top: '41%', left: '71%', delay: '5s', duration: '7.1s' },
+  { top: '54%', left: '46%', delay: '7.4s', duration: '7.8s' },
 ]
 
 function cleanRoomCode(value) {
@@ -88,12 +91,20 @@ function cleanRoomCode(value) {
 export default function Studio() {
   const navigate = useNavigate()
   const [reportCode, setReportCode] = useState('')
-  const [activeCard, setActiveCard] = useState('reports')
+  const [activeCard, setActiveCard] = useState('audio-audits')
 
   const cleanCode = useMemo(() => cleanRoomCode(reportCode), [reportCode])
 
+  const activeModule =
+    STUDIO_MODULES.find((item) => item.id === activeCard) || STUDIO_MODULES[0]
+
   const openHostGame = () => {
     navigate('/go/quiz?mode=host')
+  }
+
+  const openCreateGame = () => {
+    // por ahora no hace nada real
+    // luego aquí lo conectamos con el builder/studio flow
   }
 
   const openReport = () => {
@@ -104,20 +115,15 @@ export default function Studio() {
   const handleCardClick = (moduleId) => {
     setActiveCard(moduleId)
 
-    if (moduleId === 'live-games') {
-      openHostGame()
-      return
-    }
-
-    if (moduleId === 'reports') {
-      document.getElementById('studio-reports')?.scrollIntoView({ behavior: 'smooth' })
-    }
+    if (moduleId === 'live-games') return
+    if (moduleId === 'reports') return
   }
 
   return (
     <div className="studio-page">
       <div className="studio-bg" />
       <div className="studio-grid" />
+
       <div className="studio-stars" aria-hidden="true">
         {STARS.map((star, index) => (
           <span
@@ -126,7 +132,7 @@ export default function Studio() {
             style={{
               top: star.top,
               left: star.left,
-              animationDelay: `${index * 0.2}s`,
+              animationDelay: `${index * 0.22}s`,
             }}
           />
         ))}
@@ -160,42 +166,45 @@ export default function Studio() {
 
       <main className="studio-main">
         <section className="studio-hero">
-          <div className="studio-kicker">
-            <span />
-            Host tools for QA, supervisors, and leaders
+          <div className="studio-copy">
+            <h1 className="studio-title">
+              <span className="studio-title-main">PULSE</span>
+              <span className="studio-title-badge">STUDIO</span>
+            </h1>
+
+            <p className="studio-subtitle">
+              Create live games, build future audio audits, review reports, and manage
+              training content from one interactive workspace.
+            </p>
+
+            <div className="studio-actions">
+              <button className="studio-primary" onClick={openHostGame}>
+                Host a Game →
+              </button>
+
+              <button className="studio-secondary" onClick={openCreateGame}>
+                Create Your Game
+              </button>
+            </div>
+
+            <article className="studio-feature-card">
+              <span>{activeModule.eyebrow}</span>
+              <h2>{activeModule.title}</h2>
+              <p>{activeModule.longDesc}</p>
+            </article>
           </div>
 
-          <h1 className="studio-title">
-            <span className="studio-title-main">PULSE</span>
-            <span className="studio-title-badge">Studio</span>
-          </h1>
-
-          <p className="studio-subtitle">
-            Create live games, build future audio audits, review reports, and manage training content
-            from one interactive workspace.
-          </p>
-
-          <div className="studio-crystal-wrap">
-            <div className="studio-crystal-glow" />
-            <div className="studio-glass-stack" aria-hidden="true">
-              <div className="studio-glass-base" />
-              <div className="studio-glass-layer studio-layer-3" />
-              <div className="studio-glass-layer studio-layer-2" />
-              <div className="studio-glass-layer studio-layer-1">
-                <span>PULSE</span>
+          <div className="studio-visual">
+            <div className="studio-glass-aura" />
+            <div className="studio-glass-wrap">
+              <div className="studio-glass-shadow" />
+              <div className="studio-glass layer-back" />
+              <div className="studio-glass layer-middle" />
+              <div className="studio-glass layer-front">
+                <small>PULSE</small>
                 <strong>STUDIO</strong>
               </div>
             </div>
-          </div>
-
-          <div className="studio-actions">
-            <button className="studio-primary" onClick={openHostGame}>
-              Host a Game →
-            </button>
-
-            <button className="studio-secondary" type="button">
-              Create Your Game
-            </button>
           </div>
         </section>
 
@@ -203,15 +212,15 @@ export default function Studio() {
           {STUDIO_MODULES.map((item) => (
             <button
               key={item.id}
+              type="button"
               className={`studio-module ${activeCard === item.id ? 'active' : ''}`}
               onClick={() => handleCardClick(item.id)}
-              type="button"
             >
               <div className="studio-module-icon">{item.icon}</div>
 
               <div className="studio-module-copy">
                 <span>{item.eyebrow}</span>
-                <h2>{item.title}</h2>
+                <h3>{item.title}</h3>
                 <p>{item.desc}</p>
               </div>
             </button>
