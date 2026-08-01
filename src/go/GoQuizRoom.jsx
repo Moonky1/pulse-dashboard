@@ -448,13 +448,18 @@ const difficulty = normalizeDifficultyParam(urlParams.get('difficulty') || 'all'
 const selectedTeam = String(urlParams.get('team') || '').toLowerCase().trim()
 const selectedTeamInfo = APP_CONFIG.teams.find((item) => item.id === selectedTeam) || null
 
+const resultsOrigin =
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'https://pulse-kk.com'
+    : window.location.origin
+
 const roomMetadata = useMemo(() => ({
   team: selectedTeam || 'all',
   game,
   qstyle: questionStyle,
   difficulty,
-  results_url: `${window.location.origin}/go/results/${code}`,
-}), [selectedTeam, game, questionStyle, difficulty, code])
+  results_url: `${resultsOrigin}/go/results/${code}`,
+}), [selectedTeam, game, questionStyle, difficulty, resultsOrigin, code])
 
 const questionStyleLabel = questionStyle === 'mixed' ? 'Mixed Questions' : 'Multiple Choice'
 const difficultyLabel = getDifficultyLabel(difficulty)
@@ -955,62 +960,68 @@ const fetchRoom = useCallback(async () => {
     setBusy(false)
   }, [isHost, room, busy, code])
 
-  const nextQuestion = useCallback(async (force = false) => {
-    const currentRoom = roomRef.current
+const nextQuestion = useCallback(async (force = false) => {
+  const currentRoom = roomRef.current
 
-    if (!isHost || !currentRoom) return
-    if (!force && busyRef.current) return
+  if (!isHost || !currentRoom) return
+  if (!force && busyRef.current) return
 
-    busyRef.current = true
-    setBusy(true)
-    resultAutoRef.current = false
-    actionLockRef.current = false
+  busyRef.current = true
+  setBusy(true)
+  resultAutoRef.current = false
+  actionLockRef.current = false
 
-    try {
-      const nextIndex = (currentRoom.current_q || 0) + 1
-      const totalQuestions = currentRoom.question_ids?.length || QUESTION_COUNT
+  try {
+    const nextIndex = (currentRoom.current_q || 0) + 1
+    const totalQuestions = currentRoom.question_ids?.length || QUESTION_COUNT
 
-      if (nextIndex >= totalQuestions) {
-        const { error } = await supabase
-          .from('pulse_go_rooms')
-.update({
-  state: 'finished',
-  results_url: `${window.location.origin}/go/results/${code}`,
-  updated_at: new Date().toISOString(),
-})
-          .eq('code', code)
-
-        if (error) setFatalError(error.message || 'Could not finish game.')
-        return
-      }
-
-      await supabase
-        .from('pulse_go_players')
-        .update({
-          answered: false,
-          last_answer: null,
-          last_time_left: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('room_code', code)
-        .eq('is_kicked', false)
-
+    if (nextIndex >= totalQuestions) {
       const { error } = await supabase
         .from('pulse_go_rooms')
         .update({
-          state: 'question',
-          current_q: nextIndex,
-          question_started_at: new Date().toISOString(),
+          state: 'finished',
+          ...roomMetadata,
+          topic,
+          lang,
+          results_url: roomMetadata.results_url,
           updated_at: new Date().toISOString(),
         })
         .eq('code', code)
 
-      if (error) setFatalError(error.message || 'Could not go to next question.')
-    } finally {
-      busyRef.current = false
-      setBusy(false)
+      if (error) setFatalError(error.message || 'Could not finish game.')
+      return
     }
-  }, [isHost, code])
+
+    await supabase
+      .from('pulse_go_players')
+      .update({
+        answered: false,
+        last_answer: null,
+        last_time_left: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('room_code', code)
+      .eq('is_kicked', false)
+
+    const { error } = await supabase
+      .from('pulse_go_rooms')
+      .update({
+        state: 'question',
+        ...roomMetadata,
+        topic,
+        lang,
+        current_q: nextIndex,
+        question_started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('code', code)
+
+    if (error) setFatalError(error.message || 'Could not go to next question.')
+  } finally {
+    busyRef.current = false
+    setBusy(false)
+  }
+}, [isHost, code, roomMetadata, topic, lang])
 
   useEffect(() => {
     clearInterval(timerRef.current)
@@ -1168,52 +1179,62 @@ window.setTimeout(() => {
 }, 1800)
   }
 
-  const hostStart = async () => {
-    if (!isHost || busy || totalPlayers <= 0) return
+const hostStart = async () => {
+  if (!isHost || busy || totalPlayers <= 0) return
 
-    snd.lobbyStop()
-    setLobbyMusicOn(false)
+  snd.lobbyStop()
+  setLobbyMusicOn(false)
 
-    setBusy(true)
-    finishSoundPlayedRef.current = false
-    actionLockRef.current = false
+  setBusy(true)
+  finishSoundPlayedRef.current = false
+  actionLockRef.current = false
 
-    let questionIds = room?.question_ids || []
+  let questionIds = room?.question_ids || []
 
-    if (!Array.isArray(questionIds) || questionIds.length < QUESTION_COUNT) {
-      questionIds = buildQuestionIds(game, topic, lang, questionStyle, difficulty, `${code}:${Date.now()}`)
-    }
-
-    await supabase.from('pulse_go_answers').delete().eq('room_code', code)
-    setAnswers([])
-
-    await supabase
-      .from('pulse_go_players')
-      .update({
-        score: 0,
-        answered: false,
-        last_answer: null,
-        last_time_left: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('room_code', code)
-      .eq('is_kicked', false)
-
-    const { error } = await supabase
-      .from('pulse_go_rooms')
-      .update({
-        state: 'question',
-        question_ids: questionIds,
-        current_q: 0,
-        question_started_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('code', code)
-
-    if (error) setFatalError(error.message || 'Could not start game.')
-
-    setBusy(false)
+  if (!Array.isArray(questionIds) || questionIds.length < QUESTION_COUNT) {
+    questionIds = buildQuestionIds(
+      roomMetadata.game,
+      topic,
+      lang,
+      roomMetadata.qstyle,
+      roomMetadata.difficulty,
+      `${code}:${Date.now()}`
+    )
   }
+
+  await supabase.from('pulse_go_answers').delete().eq('room_code', code)
+  setAnswers([])
+
+  await supabase
+    .from('pulse_go_players')
+    .update({
+      score: 0,
+      answered: false,
+      last_answer: null,
+      last_time_left: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('room_code', code)
+    .eq('is_kicked', false)
+
+  const { error } = await supabase
+    .from('pulse_go_rooms')
+    .update({
+      state: 'question',
+      ...roomMetadata,
+      topic,
+      lang,
+      question_ids: questionIds,
+      current_q: 0,
+      question_started_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('code', code)
+
+  if (error) setFatalError(error.message || 'Could not start game.')
+
+  setBusy(false)
+}
 
   const handleKickPlayer = async (targetPlayer) => {
     if (!isHost || !targetPlayer?.id || kickBusy) return
@@ -1331,36 +1352,46 @@ window.setTimeout(() => {
     await Promise.all([fetchPlayers(), fetchAnswers()])
   }
 
-  const resetRoomToLobby = async () => {
-    if (!isHost || !room) return
+const resetRoomToLobby = async () => {
+  if (!isHost || !room) return
 
-    setBusy(true)
+  setBusy(true)
 
-    const questionIds = buildQuestionIds(game, topic, lang, questionStyle, difficulty, `${code}:${Date.now()}`)
+  const questionIds = buildQuestionIds(
+    roomMetadata.game,
+    topic,
+    lang,
+    roomMetadata.qstyle,
+    roomMetadata.difficulty,
+    `${code}:${Date.now()}`
+  )
 
-    await supabase.from('pulse_go_answers').delete().eq('room_code', code)
-    setAnswers([])
+  await supabase.from('pulse_go_answers').delete().eq('room_code', code)
+  setAnswers([])
 
-    await supabase
-      .from('pulse_go_players')
-      .delete()
-      .eq('room_code', code)
+  await supabase
+    .from('pulse_go_players')
+    .delete()
+    .eq('room_code', code)
 
-    const { error } = await supabase
-      .from('pulse_go_rooms')
-      .update({
-        state: 'lobby',
-        question_ids: questionIds,
-        current_q: 0,
-        question_started_at: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('code', code)
+  const { error } = await supabase
+    .from('pulse_go_rooms')
+    .update({
+      state: 'lobby',
+      ...roomMetadata,
+      topic,
+      lang,
+      question_ids: questionIds,
+      current_q: 0,
+      question_started_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('code', code)
 
-    if (error) setFatalError(error.message || 'Could not reset room.')
+  if (error) setFatalError(error.message || 'Could not reset room.')
 
-    setBusy(false)
-  }
+  setBusy(false)
+}
 
   const timeDisplay = Math.ceil(timeLeft)
   const timeColor = timeDisplay <= 5 ? '#ef4444' : timeDisplay <= 10 ? '#f59e0b' : '#b9d6ff'
@@ -1421,7 +1452,22 @@ window.setTimeout(() => {
 }
 
 const playAnotherGame = () => {
-  nav(`/go/quiz?mode=host&lang=${lang || 'mixed'}`)
+  const nextTeam = room?.team || selectedTeam || roomMetadata.team
+  const nextLang = room?.lang || lang || 'mixed'
+
+  const nextParams = new URLSearchParams({
+    mode: 'host',
+  })
+
+  if (nextTeam && nextTeam !== 'all') {
+    nextParams.set('team', nextTeam)
+  }
+
+  if (nextLang) {
+    nextParams.set('lang', nextLang)
+  }
+
+  nav(`/go/quiz?${nextParams.toString()}`)
 }
 
   const copyCoHostLink = async () => {
