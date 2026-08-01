@@ -3,74 +3,77 @@ import { useNavigate } from 'react-router-dom'
 import './Studio.css'
 
 const STARS = [
-  { top: '12%', left: '10%' },
-  { top: '16%', left: '28%' },
-  { top: '14%', left: '48%' },
-  { top: '18%', left: '72%' },
-  { top: '24%', left: '84%' },
-  { top: '32%', left: '18%' },
-  { top: '36%', left: '38%' },
-  { top: '30%', left: '62%' },
-  { top: '41%', left: '78%' },
-  { top: '52%', left: '14%' },
-  { top: '58%', left: '28%' },
-  { top: '55%', left: '70%' },
-  { top: '66%', left: '18%' },
-  { top: '72%', left: '42%' },
-  { top: '69%', left: '82%' },
-  { top: '83%', left: '20%' },
-  { top: '86%', left: '58%' },
-  { top: '80%', left: '88%' },
+  { top: '10%', left: '10%' },
+  { top: '12%', left: '30%' },
+  { top: '14%', left: '52%' },
+  { top: '15%', left: '76%' },
+  { top: '22%', left: '18%' },
+  { top: '26%', left: '42%' },
+  { top: '24%', left: '66%' },
+  { top: '28%', left: '86%' },
+  { top: '36%', left: '12%' },
+  { top: '40%', left: '32%' },
+  { top: '38%', left: '58%' },
+  { top: '44%', left: '82%' },
+  { top: '56%', left: '14%' },
+  { top: '58%', left: '44%' },
+  { top: '54%', left: '72%' },
+  { top: '64%', left: '24%' },
+  { top: '70%', left: '54%' },
+  { top: '68%', left: '84%' },
+  { top: '80%', left: '18%' },
+  { top: '82%', left: '40%' },
+  { top: '78%', left: '64%' },
+  { top: '84%', left: '88%' },
 ]
 
 const SHOOTING_STARS = [
-  { top: '18%', left: '78%', delay: '0s', duration: '6.5s' },
-  { top: '28%', left: '64%', delay: '2.4s', duration: '7.5s' },
-  { top: '12%', left: '58%', delay: '4.8s', duration: '6.8s' },
-  { top: '34%', left: '86%', delay: '7.2s', duration: '8s' },
-  { top: '22%', left: '72%', delay: '9.4s', duration: '7.2s' },
+  { top: '20%', left: '76%', delay: '0s', duration: '7s' },
+  { top: '30%', left: '63%', delay: '2.3s', duration: '7.4s' },
+  { top: '18%', left: '56%', delay: '4.4s', duration: '6.8s' },
+  { top: '38%', left: '84%', delay: '6.8s', duration: '7.8s' },
 ]
 
-const STUDIO_MODULES = [
+const STUDIO_OPTIONS = [
   {
-    id: 'live',
-    eyebrow: 'Live Games',
-    title: 'Host a Game',
-    desc: 'Launch the official Pulse GO live room flow for teams.',
-    icon: '🎮',
-    action: 'Start hosting',
-  },
-  {
-    id: 'create',
+    id: 'builder',
     eyebrow: 'Builder',
     title: 'Create Your Game',
-    desc: 'Build custom questions, timers, answers, and future game styles.',
+    desc: 'Build future custom games, questions, timers, and answer flows.',
     icon: '🧩',
-    action: 'Coming soon',
+    action: 'Soon',
   },
   {
     id: 'audio',
     eyebrow: 'Audio Audit',
-    title: 'Call-based Training',
-    desc: 'Upload a real call, add questions, and turn QA into a game.',
+    title: 'Call Training',
+    desc: 'Turn real calls into training scenarios with audio-based questions.',
     icon: '🎧',
-    action: 'Coming soon',
+    action: 'Soon',
   },
   {
-    id: 'bank',
+    id: 'question-bank',
     eyebrow: 'Question Bank',
     title: 'Official Questions',
-    desc: 'Browse questions by language, mode, topic, and difficulty.',
+    desc: 'Manage questions by mode, topic, language, and difficulty.',
     icon: '🧠',
-    action: 'Coming soon',
+    action: 'Soon',
   },
   {
     id: 'reports',
     eyebrow: 'Reports',
     title: 'Final Results',
-    desc: 'Open a KK room report and review final performance.',
+    desc: 'Search any KK room and open the final results report.',
     icon: '📊',
-    action: 'Open reports',
+    action: 'Open',
+  },
+  {
+    id: 'proposals',
+    eyebrow: 'Proposals',
+    title: 'Ideas & Submissions',
+    desc: 'Let supervisors and QA suggest new questions safely.',
+    icon: '📝',
+    action: 'Planned',
   },
 ]
 
@@ -83,26 +86,6 @@ const STUDIO_TEAMS = [
   { id: 'asia', name: 'Asia', flag: '🇵🇭' },
 ]
 
-const SHARDS = Array.from({ length: 52 }, (_, index) => {
-  const angle = (index / 52) * Math.PI * 2
-  const ring = index % 4
-  const distance = 135 + ring * 58
-  const verticalPull = 0.72 + (index % 5) * 0.05
-  const spin = index % 2 === 0 ? 1 : -1
-
-  return {
-    id: index,
-    x: `${Math.cos(angle) * distance}px`,
-    y: `${Math.sin(angle) * distance * verticalPull}px`,
-    z: `${80 + (index % 8) * 34}px`,
-    r: `${index * 29 * spin}deg`,
-    s: `${0.72 + (index % 6) * 0.1}`,
-    w: `${18 + (index % 7) * 7}px`,
-    h: `${22 + (index % 8) * 8}px`,
-    d: `${index * 0.012}s`,
-  }
-})
-
 function cleanRoomCode(value) {
   return String(value || '')
     .toUpperCase()
@@ -113,15 +96,20 @@ function cleanRoomCode(value) {
 
 export default function Studio() {
   const navigate = useNavigate()
+
   const [reportCode, setReportCode] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const [isPressed, setIsPressed] = useState(false)
   const [hostZoom, setHostZoom] = useState(false)
 
-  const activeModule = STUDIO_MODULES[activeIndex] || STUDIO_MODULES[0]
   const cleanCode = useMemo(() => cleanRoomCode(reportCode), [reportCode])
 
-  const beginHostFlow = () => {
+  const openReport = () => {
+    if (cleanCode.length < 4) return
+    navigate(`/go/results/KK${cleanCode}`)
+  }
+
+  const openHostFlow = () => {
     setHostZoom(true)
   }
 
@@ -129,18 +117,8 @@ export default function Studio() {
     navigate(`/go/quiz?mode=host&team=${teamId}`)
   }
 
-  const openReport = () => {
-    if (cleanCode.length < 4) return
-    navigate(`/go/results/KK${cleanCode}`)
-  }
-
-  const handleModuleClick = (item, index) => {
+  const handleOptionClick = (item, index) => {
     setActiveIndex(index)
-
-    if (item.id === 'live') {
-      beginHostFlow()
-      return
-    }
 
     if (item.id === 'reports') {
       document.getElementById('studio-reports')?.scrollIntoView({ behavior: 'smooth' })
@@ -162,7 +140,7 @@ export default function Studio() {
             style={{
               top: star.top,
               left: star.left,
-              animationDelay: `${index * 0.35}s`,
+              animationDelay: `${index * 0.2}s`,
             }}
           />
         ))}
@@ -194,8 +172,8 @@ export default function Studio() {
         </div>
       </nav>
 
-      <main className="studio-hero">
-        <section className="studio-copy">
+      <main className="studio-main">
+        <section className="studio-header">
           <div className="studio-kicker">
             <span />
             Host tools for QA, supervisors, and leaders
@@ -206,30 +184,15 @@ export default function Studio() {
             <span className="studio-title-badge">Studio</span>
           </h1>
 
-          <p>
-            Create live games, build future audio audits, review reports, and manage training content from one interactive workspace.
+          <p className="studio-subtitle">
+            Create live games, build future audio audits, review reports, and manage training content
+            from one interactive workspace.
           </p>
-
-          <div className="studio-actions">
-            <button className="studio-primary" onClick={beginHostFlow}>
-              Host a Game →
-            </button>
-
-            <button className="studio-secondary" onClick={() => setActiveIndex(1)}>
-              Create Your Game
-            </button>
-          </div>
-
-          <div className="studio-active-preview">
-            <span>{activeModule.eyebrow}</span>
-            <strong>{activeModule.title}</strong>
-            <p>{activeModule.desc}</p>
-          </div>
         </section>
 
-        <section className="studio-stage" aria-label="Pulse Studio glass interaction">
+        <section className="studio-stage">
           <div
-            className="studio-crystal-scene"
+            className="studio-glass-scene"
             onPointerDown={(event) => {
               event.currentTarget.setPointerCapture?.(event.pointerId)
               setIsPressed(true)
@@ -238,32 +201,16 @@ export default function Studio() {
             onPointerCancel={() => setIsPressed(false)}
             onPointerLeave={() => setIsPressed(false)}
           >
-            <div className="studio-crystal-glow" />
-            <div className="studio-orbit-ring one" />
-            <div className="studio-orbit-ring two" />
+            <div className="studio-stage-glow" />
 
-            <div className="studio-glass-orb">
-              <div className="studio-glass-core">
+            <div className="studio-glass-stack">
+              <div className="studio-glass-base" />
+              <div className="studio-glass-layer studio-layer-3" />
+              <div className="studio-glass-layer studio-layer-2" />
+              <div className="studio-glass-layer studio-layer-1">
                 <span>PULSE</span>
                 <strong>STUDIO</strong>
               </div>
-
-              {SHARDS.map((shard) => (
-                <i
-                  key={shard.id}
-                  className="studio-shard"
-                  style={{
-                    '--sx': shard.x,
-                    '--sy': shard.y,
-                    '--sz': shard.z,
-                    '--sr': shard.r,
-                    '--ss': shard.s,
-                    '--sw': shard.w,
-                    '--sh': shard.h,
-                    '--sd': shard.d,
-                  }}
-                />
-              ))}
             </div>
 
             {hostZoom && (
@@ -288,49 +235,62 @@ export default function Studio() {
             )}
           </div>
         </section>
-      </main>
 
-      <section className="studio-option-deck">
-        {STUDIO_MODULES.map((item, index) => (
+        <section className="studio-primary-actions">
+          <button className="studio-primary" onClick={openHostFlow}>
+            Host a Game →
+          </button>
+
           <button
-            key={item.id}
-            className={`studio-option-card ${activeIndex === index ? 'active' : ''}`}
-            onClick={() => handleModuleClick(item, index)}
+            className="studio-secondary"
+            onClick={() => setActiveIndex(0)}
           >
-            <span className="studio-option-icon">{item.icon}</span>
-
-            <span className="studio-option-copy">
-              <small>{item.eyebrow}</small>
-              <strong>{item.title}</strong>
-              <em>{item.action}</em>
-            </span>
+            Create Your Game
           </button>
-        ))}
-      </section>
+        </section>
 
-      <section id="studio-reports" className="studio-report-panel">
-        <div>
-          <span>Reports</span>
-          <h2>Open a final report by room code.</h2>
-          <p>Type a KK code and jump directly to the results page.</p>
-        </div>
+        <section className="studio-option-deck">
+          {STUDIO_OPTIONS.map((item, index) => (
+            <button
+              key={item.id}
+              className={`studio-option-card ${activeIndex === index ? 'active' : ''}`}
+              onClick={() => handleOptionClick(item, index)}
+            >
+              <span className="studio-option-icon">{item.icon}</span>
 
-        <div className="studio-report-box">
-          <span>KK</span>
+              <span className="studio-option-copy">
+                <small>{item.eyebrow}</small>
+                <strong>{item.title}</strong>
+                <em>{item.action}</em>
+              </span>
+            </button>
+          ))}
+        </section>
 
-          <input
-            value={reportCode}
-            onChange={(event) => setReportCode(cleanRoomCode(event.target.value))}
-            onKeyDown={(event) => event.key === 'Enter' && openReport()}
-            placeholder="1234"
-            autoComplete="off"
-          />
+        <section id="studio-reports" className="studio-report-panel">
+          <div className="studio-report-copy">
+            <span>Reports</span>
+            <h2>Open a final report by room code.</h2>
+            <p>Type a KK code and jump directly to the results page.</p>
+          </div>
 
-          <button onClick={openReport} disabled={cleanCode.length < 4}>
-            View Report →
-          </button>
-        </div>
-      </section>
+          <div className="studio-report-box">
+            <span>KK</span>
+
+            <input
+              value={reportCode}
+              onChange={(event) => setReportCode(cleanRoomCode(event.target.value))}
+              onKeyDown={(event) => event.key === 'Enter' && openReport()}
+              placeholder="1234"
+              autoComplete="off"
+            />
+
+            <button onClick={openReport} disabled={cleanCode.length < 4}>
+              View Report →
+            </button>
+          </div>
+        </section>
+      </main>
     </div>
   )
 }
