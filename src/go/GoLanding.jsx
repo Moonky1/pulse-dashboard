@@ -118,10 +118,6 @@ const pageRef = useRef(null)
     }
   }
 
-  const handleHostGame = () => {
-    navigate('/go/quiz?mode=host')
-  }
-
   const handlePractice = () => {
     navigate('/go/quiz?mode=solo')
   }
@@ -236,15 +232,11 @@ const pageRef = useRef(null)
           <span className="pgl-title-go">GO</span>
         </h1>
 
-        <div className="pgl-actions">
-          <button className="pgl-action-btn" onClick={handleHostGame}>
-            Host a Game →
-          </button>
-
-          <button className="pgl-action-btn" onClick={handlePractice}>
-            Practice
-          </button>
-        </div>
+<div className="pgl-actions">
+  <button className="pgl-action-btn" onClick={handlePractice}>
+    Practice
+  </button>
+</div>
 
         <section className="pgl-room-card">
           <span className="pgl-room-kicker">Join room</span>
