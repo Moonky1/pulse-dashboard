@@ -79,18 +79,28 @@ const STUDIO_MODULES = [
     desc: 'Open a KK room report and review performance.',
     icon: '📊',
     action: 'Open reports',
-    theme: 'blue',
+    theme: 'rose',
     enabled: true,
   },
 ]
 
-const SHARDS = Array.from({ length: 18 }, (_, index) => ({
-  id: index,
-  x: `${Math.sin(index * 1.7) * 130}px`,
-  y: `${Math.cos(index * 1.3) * 110}px`,
-  r: `${index * 23 - 120}deg`,
-  d: `${index * 0.025}s`,
-}))
+const SHARDS = Array.from({ length: 42 }, (_, index) => {
+  const angle = (index / 42) * Math.PI * 2
+  const distance = 180 + (index % 7) * 34
+  const drift = index % 2 === 0 ? 1 : -1
+
+  return {
+    id: index,
+    x: `${Math.cos(angle) * distance}px`,
+    y: `${Math.sin(angle) * distance * 0.72}px`,
+    z: `${90 + (index % 8) * 28}px`,
+    r: `${index * 31 * drift}deg`,
+    s: `${0.72 + (index % 5) * 0.12}`,
+    w: `${20 + (index % 6) * 8}px`,
+    h: `${24 + (index % 7) * 9}px`,
+    d: `${index * 0.018}s`,
+  }
+})
 
 function cleanRoomCode(value) {
   return String(value || '')
@@ -103,6 +113,7 @@ function cleanRoomCode(value) {
 export default function Studio() {
   const navigate = useNavigate()
   const pageRef = useRef(null)
+
   const [reportCode, setReportCode] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const [isPressed, setIsPressed] = useState(false)
@@ -115,6 +126,7 @@ export default function Studio() {
     const onScroll = () => {
       const maxScroll = Math.max(1, document.body.scrollHeight - window.innerHeight)
       const progress = window.scrollY / maxScroll
+
       const nextIndex = Math.min(
         STUDIO_MODULES.length - 1,
         Math.floor(progress * STUDIO_MODULES.length)
@@ -179,6 +191,7 @@ export default function Studio() {
       onPointerLeave={() => setIsPressed(false)}
     >
       <div className="studio-bg" />
+      <div className="studio-aurora" />
       <div className="studio-grid" />
       <div className="studio-soft-glow" />
       <div className="studio-cursor-glow" />
@@ -257,27 +270,37 @@ export default function Studio() {
         </section>
 
         <section className="studio-stage" aria-label="Pulse Studio interactive object">
-          <div className="studio-device">
-            <div className="studio-device-glow" />
+          <div className="studio-crystal-field">
+            <span className="studio-field-ring one" />
+            <span className="studio-field-ring two" />
+            <span className="studio-field-ring three" />
 
-            <div className="studio-device-shell">
-              <div className="studio-device-face">
-                <span>PULSE</span>
-                <strong>STUDIO</strong>
+            <div className="studio-device">
+              <div className="studio-device-glow" />
+
+              <div className="studio-device-shell">
+                <div className="studio-device-face">
+                  <span>PULSE</span>
+                  <strong>STUDIO</strong>
+                </div>
+
+                {SHARDS.map((shard) => (
+                  <i
+                    key={shard.id}
+                    className="studio-shard"
+                    style={{
+                      '--sx': shard.x,
+                      '--sy': shard.y,
+                      '--sz': shard.z,
+                      '--sr': shard.r,
+                      '--ss': shard.s,
+                      '--sw': shard.w,
+                      '--sh': shard.h,
+                      '--sd': shard.d,
+                    }}
+                  />
+                ))}
               </div>
-
-              {SHARDS.map((shard) => (
-                <i
-                  key={shard.id}
-                  className="studio-shard"
-                  style={{
-                    '--sx': shard.x,
-                    '--sy': shard.y,
-                    '--sr': shard.r,
-                    '--sd': shard.d,
-                  }}
-                />
-              ))}
             </div>
           </div>
         </section>

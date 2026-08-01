@@ -7,6 +7,7 @@
   --ty: 0px;
   --studio-accent: #9ed6ff;
   --studio-accent-2: #d8e8ff;
+  --studio-accent-rgb: 158, 214, 255;
   --studio-bg: #040812;
   --studio-bg-2: #07101e;
   --studio-text: #f7f8fc;
@@ -27,19 +28,29 @@
 .studio-page.theme-violet {
   --studio-accent: #b9a7ff;
   --studio-accent-2: #eadfff;
+  --studio-accent-rgb: 185, 167, 255;
 }
 
 .studio-page.theme-mint {
   --studio-accent: #7ef9d4;
   --studio-accent-2: #d9fff3;
+  --studio-accent-rgb: 126, 249, 212;
 }
 
 .studio-page.theme-gold {
   --studio-accent: #ffd98a;
   --studio-accent-2: #fff2ca;
+  --studio-accent-rgb: 255, 217, 138;
+}
+
+.studio-page.theme-rose {
+  --studio-accent: #ff9ad5;
+  --studio-accent-2: #ffe1f3;
+  --studio-accent-rgb: 255, 154, 213;
 }
 
 .studio-bg,
+.studio-aurora,
 .studio-grid,
 .studio-soft-glow,
 .studio-cursor-glow,
@@ -53,15 +64,50 @@
 .studio-bg {
   z-index: 0;
   background:
-    radial-gradient(circle at 50% 22%, color-mix(in srgb, var(--studio-accent) 16%, transparent), transparent 22%),
+    radial-gradient(circle at 50% 22%, rgba(var(--studio-accent-rgb), 0.08), transparent 22%),
     radial-gradient(circle at 18% 72%, rgba(169, 194, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 72%, color-mix(in srgb, var(--studio-accent) 10%, transparent), transparent 26%),
+    radial-gradient(circle at 82% 72%, rgba(var(--studio-accent-rgb), 0.06), transparent 26%),
     linear-gradient(180deg, #040812 0%, #07101e 52%, #040812 100%);
-  transition: background 0.55s ease;
+  transition: background 0.7s ease;
+}
+
+.studio-aurora {
+  z-index: 1;
+  opacity: 0.32;
+  filter: blur(62px) saturate(150%);
+  background:
+    conic-gradient(
+      from 130deg at 50% 50%,
+      rgba(158, 214, 255, 0.18),
+      rgba(185, 167, 255, 0.17),
+      rgba(126, 249, 212, 0.15),
+      rgba(255, 217, 138, 0.14),
+      rgba(255, 154, 213, 0.16),
+      rgba(158, 214, 255, 0.18)
+    );
+  animation: studioAuroraFlow 16s ease-in-out infinite alternate;
+  transform: scale(1.1);
+}
+
+@keyframes studioAuroraFlow {
+  0% {
+    filter: blur(62px) saturate(140%) hue-rotate(0deg);
+    transform: translate3d(-3%, -2%, 0) scale(1.1) rotate(0deg);
+  }
+
+  50% {
+    filter: blur(72px) saturate(170%) hue-rotate(95deg);
+    transform: translate3d(4%, 2%, 0) scale(1.18) rotate(12deg);
+  }
+
+  100% {
+    filter: blur(66px) saturate(160%) hue-rotate(190deg);
+    transform: translate3d(-1%, 4%, 0) scale(1.14) rotate(-10deg);
+  }
 }
 
 .studio-grid {
-  z-index: 1;
+  z-index: 2;
   opacity: 0.28;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -73,9 +119,9 @@
 }
 
 .studio-soft-glow {
-  z-index: 2;
+  z-index: 3;
   background:
-    radial-gradient(ellipse at 50% 58%, color-mix(in srgb, var(--studio-accent) 14%, transparent), transparent 34%),
+    radial-gradient(ellipse at 50% 58%, rgba(var(--studio-accent-rgb), 0.12), transparent 34%),
     radial-gradient(ellipse at 50% 78%, rgba(255, 255, 255, 0.02), transparent 36%);
   opacity: 0.9;
   animation: studioGlowDrift 9s ease-in-out infinite alternate;
@@ -94,14 +140,14 @@
 }
 
 .studio-cursor-glow {
-  z-index: 3;
+  z-index: 4;
   background:
-    radial-gradient(circle 150px at var(--mx) var(--my), color-mix(in srgb, var(--studio-accent) 13%, transparent), transparent 72%);
+    radial-gradient(circle 170px at var(--mx) var(--my), rgba(var(--studio-accent-rgb), 0.16), transparent 72%);
   mix-blend-mode: screen;
 }
 
 .studio-stars {
-  z-index: 4;
+  z-index: 5;
 }
 
 .studio-star {
@@ -129,7 +175,7 @@
 }
 
 .studio-shooting-stars {
-  z-index: 5;
+  z-index: 6;
   overflow: hidden;
 }
 
@@ -158,7 +204,7 @@
   background: linear-gradient(
     90deg,
     rgba(180, 220, 255, 0),
-    color-mix(in srgb, var(--studio-accent) 30%, transparent),
+    rgba(var(--studio-accent-rgb), 0.24),
     rgba(255, 255, 255, 0.7)
   );
   filter: blur(0.3px);
@@ -229,7 +275,7 @@
 .studio-nav-pill button.active {
   color: #07101d;
   background: linear-gradient(135deg, #f6f6f2 0%, #e1e5ef 50%, var(--studio-accent-2) 100%);
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--studio-accent) 20%, transparent);
+  box-shadow: 0 10px 30px rgba(var(--studio-accent-rgb), 0.2);
 }
 
 .studio-hero {
@@ -301,7 +347,7 @@
   font-weight: 950;
   letter-spacing: -0.08em;
   text-transform: uppercase;
-  box-shadow: 0 22px 60px color-mix(in srgb, var(--studio-accent) 22%, transparent);
+  box-shadow: 0 22px 60px rgba(var(--studio-accent-rgb), 0.22);
 }
 
 .studio-copy > p {
@@ -336,7 +382,7 @@
   border: 0;
   color: #07101d;
   background: linear-gradient(135deg, #f6f6f2 0%, #e1e5ef 50%, var(--studio-accent-2) 100%);
-  box-shadow: 0 18px 48px color-mix(in srgb, var(--studio-accent) 22%, transparent);
+  box-shadow: 0 18px 48px rgba(var(--studio-accent-rgb), 0.22);
 }
 
 .studio-secondary {
@@ -399,10 +445,67 @@
   transition: transform 0.08s linear;
 }
 
+.studio-crystal-field {
+  position: relative;
+  width: 520px;
+  height: 520px;
+  display: grid;
+  place-items: center;
+  transform-style: preserve-3d;
+}
+
+.studio-field-ring {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--studio-accent-rgb), 0.14);
+  transform-style: preserve-3d;
+  opacity: 0.65;
+}
+
+.studio-field-ring.one {
+  width: 460px;
+  height: 460px;
+  animation: studioRingSpin 18s linear infinite;
+}
+
+.studio-field-ring.two {
+  width: 350px;
+  height: 350px;
+  border-style: dashed;
+  animation: studioRingSpinReverse 14s linear infinite;
+}
+
+.studio-field-ring.three {
+  width: 240px;
+  height: 240px;
+  opacity: 0.35;
+  animation: studioRingSpin 10s linear infinite;
+}
+
+@keyframes studioRingSpin {
+  from {
+    rotate: 0deg;
+  }
+
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes studioRingSpinReverse {
+  from {
+    rotate: 360deg;
+  }
+
+  to {
+    rotate: 0deg;
+  }
+}
+
 .studio-device {
   position: relative;
-  width: 390px;
-  height: 390px;
+  width: 410px;
+  height: 410px;
   display: grid;
   place-items: center;
   transform-style: preserve-3d;
@@ -412,20 +515,24 @@
   position: absolute;
   inset: 20px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--studio-accent) 18%, transparent);
-  filter: blur(48px);
-  opacity: 0.78;
+  background: rgba(var(--studio-accent-rgb), 0.2);
+  filter: blur(58px);
+  opacity: 0.9;
   transform: translateZ(-80px);
+  transition: background 0.6s ease;
 }
 
 .studio-device-shell {
   position: relative;
-  width: 290px;
-  height: 290px;
-  border-radius: 38px;
+  width: 300px;
+  height: 300px;
+  border-radius: 42px;
   transform-style: preserve-3d;
   transform: rotateX(58deg) rotateZ(-36deg);
-  transition: transform 0.65s cubic-bezier(.2, .9, .16, 1), filter 0.45s ease;
+  transition:
+    transform 0.95s cubic-bezier(0.18, 0.92, 0.2, 1),
+    filter 0.45s ease,
+    opacity 0.45s ease;
 }
 
 .studio-device-shell::before,
@@ -438,17 +545,17 @@
 
 .studio-device-shell::before {
   background:
-    linear-gradient(135deg, rgba(255,255,255,0.22), transparent 35%),
+    linear-gradient(135deg, rgba(255,255,255,0.25), transparent 35%),
     linear-gradient(145deg, rgba(216,232,255,0.18), rgba(8,13,24,0.96));
   border: 1px solid rgba(255, 255, 255, 0.13);
   box-shadow:
     inset 0 0 34px rgba(255, 255, 255, 0.05),
     0 40px 95px rgba(0, 0, 0, 0.52),
-    0 0 80px color-mix(in srgb, var(--studio-accent) 12%, transparent);
+    0 0 90px rgba(var(--studio-accent-rgb), 0.16);
 }
 
 .studio-device-shell::after {
-  transform: translateZ(-34px) translate(22px, 22px);
+  transform: translateZ(-38px) translate(25px, 25px);
   background: rgba(2, 7, 17, 0.82);
   border: 1px solid rgba(255,255,255,0.05);
   filter: blur(0.2px);
@@ -460,12 +567,13 @@
   z-index: 3;
   display: grid;
   place-items: center;
-  border-radius: 28px;
+  border-radius: 30px;
   background:
-    radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--studio-accent) 20%, transparent), transparent 44%),
+    radial-gradient(circle at 50% 30%, rgba(var(--studio-accent-rgb), 0.22), transparent 44%),
     rgba(255,255,255,0.035);
-  transform: translateZ(44px);
+  transform: translateZ(46px);
   border: 1px solid rgba(255,255,255,0.08);
+  transition: opacity 0.55s ease, transform 0.9s cubic-bezier(0.18, 0.92, 0.2, 1);
 }
 
 .studio-device-face span,
@@ -492,43 +600,61 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  z-index: 2;
-  width: 34px;
-  height: 46px;
+  z-index: 5;
+  width: var(--sw);
+  height: var(--sh);
   border-radius: 10px;
   background:
-    linear-gradient(135deg, rgba(255,255,255,0.24), rgba(255,255,255,0.02)),
-    color-mix(in srgb, var(--studio-accent) 14%, rgba(8,13,24,0.9));
-  border: 1px solid rgba(255,255,255,0.1);
+    linear-gradient(135deg, rgba(255,255,255,0.38), rgba(255,255,255,0.06)),
+    rgba(var(--studio-accent-rgb), 0.16);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow:
+    inset 0 0 18px rgba(255,255,255,0.08),
+    0 16px 34px rgba(0,0,0,0.32),
+    0 0 28px rgba(var(--studio-accent-rgb), 0.1);
+  backdrop-filter: blur(10px);
+  clip-path: polygon(18% 0, 100% 14%, 82% 100%, 0 78%);
   opacity: 0;
   transform:
     translate(-50%, -50%)
-    translateZ(50px)
+    translateZ(54px)
     rotate(var(--sr))
-    scale(0.35);
+    scale(0.28);
   transition:
-    transform 0.72s cubic-bezier(.18,.92,.2,1),
-    opacity 0.3s ease;
+    transform 1.05s cubic-bezier(0.16, 0.95, 0.18, 1),
+    opacity 0.38s ease,
+    filter 0.45s ease;
   transition-delay: var(--sd);
 }
 
 .studio-page.is-pressed .studio-device-shell {
-  filter: brightness(1.16);
-  transform: rotateX(70deg) rotateZ(-28deg) scale(0.92);
+  filter: brightness(1.22) saturate(1.25);
+  opacity: 0.92;
+  transform: rotateX(72deg) rotateZ(-28deg) scale(0.9);
 }
 
-.studio-page.is-pressed .studio-device-shell::before,
+.studio-page.is-pressed .studio-device-shell::before {
+  opacity: 0.52;
+}
+
 .studio-page.is-pressed .studio-device-face {
-  opacity: 0.42;
+  opacity: 0.34;
+  transform: translateZ(38px) scale(0.92);
 }
 
 .studio-page.is-pressed .studio-shard {
   opacity: 1;
+  filter: brightness(1.22) saturate(1.35);
   transform:
     translate(-50%, -50%)
-    translate3d(var(--sx), var(--sy), 120px)
+    translate3d(var(--sx), var(--sy), var(--sz))
     rotate(var(--sr))
-    scale(1);
+    scale(var(--ss));
+}
+
+.studio-page.is-pressed .studio-field-ring {
+  opacity: 0.18;
+  scale: 1.18;
 }
 
 .studio-option-deck {
@@ -562,9 +688,9 @@
 .studio-option-card:hover,
 .studio-option-card.active {
   transform: translateY(-7px);
-  border-color: color-mix(in srgb, var(--studio-accent) 44%, rgba(255,255,255,0.08));
+  border-color: rgba(var(--studio-accent-rgb), 0.44);
   background:
-    radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--studio-accent) 12%, transparent), transparent 45%),
+    radial-gradient(circle at 70% 20%, rgba(var(--studio-accent-rgb), 0.14), transparent 45%),
     rgba(11, 16, 28, 0.78);
 }
 
@@ -623,7 +749,7 @@
   padding: 30px;
   border-radius: 34px;
   background:
-    radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--studio-accent) 14%, transparent), transparent 35%),
+    radial-gradient(circle at 80% 20%, rgba(var(--studio-accent-rgb), 0.14), transparent 35%),
     linear-gradient(135deg, rgba(18, 27, 45, 0.92), rgba(7, 11, 22, 0.96));
   border: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow: 0 26px 76px rgba(0, 0, 0, 0.3);
@@ -773,6 +899,11 @@
     transform: none;
   }
 
+  .studio-crystal-field {
+    width: 330px;
+    height: 330px;
+  }
+
   .studio-device {
     width: 300px;
     height: 300px;
@@ -785,6 +916,21 @@
 
   .studio-device-face strong {
     font-size: 34px;
+  }
+
+  .studio-field-ring.one {
+    width: 310px;
+    height: 310px;
+  }
+
+  .studio-field-ring.two {
+    width: 240px;
+    height: 240px;
+  }
+
+  .studio-field-ring.three {
+    width: 170px;
+    height: 170px;
   }
 
   .studio-option-deck {
