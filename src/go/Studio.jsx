@@ -2,83 +2,106 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Studio.css'
 
+const STARS = [
+  { top: '12%', left: '10%' },
+  { top: '16%', left: '28%' },
+  { top: '14%', left: '48%' },
+  { top: '18%', left: '72%' },
+  { top: '24%', left: '84%' },
+  { top: '32%', left: '18%' },
+  { top: '36%', left: '38%' },
+  { top: '30%', left: '62%' },
+  { top: '41%', left: '78%' },
+  { top: '52%', left: '14%' },
+  { top: '58%', left: '28%' },
+  { top: '55%', left: '70%' },
+  { top: '66%', left: '18%' },
+  { top: '72%', left: '42%' },
+  { top: '69%', left: '82%' },
+  { top: '83%', left: '20%' },
+  { top: '86%', left: '58%' },
+  { top: '80%', left: '88%' },
+]
+
+const SHOOTING_STARS = [
+  { top: '18%', left: '78%', delay: '0s', duration: '6.5s' },
+  { top: '28%', left: '64%', delay: '2.4s', duration: '7.5s' },
+  { top: '12%', left: '58%', delay: '4.8s', duration: '6.8s' },
+  { top: '34%', left: '86%', delay: '7.2s', duration: '8s' },
+  { top: '22%', left: '72%', delay: '9.4s', duration: '7.2s' },
+]
+
 const STUDIO_MODULES = [
   {
-    id: 'live-games',
+    id: 'live',
     eyebrow: 'Live Games',
     title: 'Host a Game',
-    desc: 'Start hosting',
-    longDesc: 'Launch the official Pulse GO live room flow for teams.',
+    desc: 'Launch the official Pulse GO live room flow for teams.',
     icon: '🎮',
-    action: 'Open',
+    action: 'Start hosting',
   },
   {
-    id: 'builder',
+    id: 'create',
     eyebrow: 'Builder',
     title: 'Create Your Game',
-    desc: 'Coming soon',
-    longDesc: 'Build custom game flows, topics, and future training experiences.',
+    desc: 'Build custom questions, timers, answers, and future game styles.',
     icon: '🧩',
-    action: 'Soon',
+    action: 'Coming soon',
   },
   {
-    id: 'audio-audits',
+    id: 'audio',
     eyebrow: 'Audio Audit',
     title: 'Call-based Training',
-    desc: 'Coming soon',
-    longDesc: 'Upload a real call, add questions, and turn QA into a game.',
+    desc: 'Upload a real call, add questions, and turn QA into a game.',
     icon: '🎧',
-    action: 'Soon',
+    action: 'Coming soon',
   },
   {
-    id: 'question-bank',
+    id: 'bank',
     eyebrow: 'Question Bank',
     title: 'Official Questions',
-    desc: 'Coming soon',
-    longDesc: 'Manage official questions by language, topic, mode, and difficulty.',
+    desc: 'Browse questions by language, mode, topic, and difficulty.',
     icon: '🧠',
-    action: 'Soon',
+    action: 'Coming soon',
   },
   {
     id: 'reports',
     eyebrow: 'Reports',
     title: 'Final Results',
-    desc: 'Open reports',
-    longDesc: 'Open a KK room report and review performance.',
+    desc: 'Open a KK room report and review final performance.',
     icon: '📊',
-    action: 'Open',
+    action: 'Open reports',
   },
 ]
 
-const STARS = [
-  { top: '9%', left: '12%' },
-  { top: '14%', left: '34%' },
-  { top: '18%', left: '58%' },
-  { top: '11%', left: '81%' },
-  { top: '27%', left: '10%' },
-  { top: '33%', left: '28%' },
-  { top: '29%', left: '49%' },
-  { top: '35%', left: '72%' },
-  { top: '43%', left: '16%' },
-  { top: '48%', left: '36%' },
-  { top: '45%', left: '61%' },
-  { top: '52%', left: '83%' },
-  { top: '62%', left: '11%' },
-  { top: '68%', left: '32%' },
-  { top: '64%', left: '53%' },
-  { top: '70%', left: '77%' },
-  { top: '83%', left: '15%' },
-  { top: '79%', left: '39%' },
-  { top: '85%', left: '59%' },
-  { top: '82%', left: '87%' },
+const STUDIO_TEAMS = [
+  { id: 'philippines', name: 'Philippines', flag: '🇵🇭' },
+  { id: 'venezuela', name: 'Venezuela', flag: '🇻🇪' },
+  { id: 'colombia', name: 'Colombia', flag: '🇨🇴' },
+  { id: 'mexico', name: 'Mexico BJ', flag: '🇲🇽' },
+  { id: 'central', name: 'Central America', flag: '🇭🇳' },
+  { id: 'asia', name: 'Asia', flag: '🇵🇭' },
 ]
 
-const SHOOTING_STARS = [
-  { top: '22%', left: '75%', delay: '0s', duration: '7.2s' },
-  { top: '31%', left: '61%', delay: '2.5s', duration: '7.4s' },
-  { top: '41%', left: '71%', delay: '5s', duration: '7.1s' },
-  { top: '54%', left: '46%', delay: '7.4s', duration: '7.8s' },
-]
+const SHARDS = Array.from({ length: 52 }, (_, index) => {
+  const angle = (index / 52) * Math.PI * 2
+  const ring = index % 4
+  const distance = 135 + ring * 58
+  const verticalPull = 0.72 + (index % 5) * 0.05
+  const spin = index % 2 === 0 ? 1 : -1
+
+  return {
+    id: index,
+    x: `${Math.cos(angle) * distance}px`,
+    y: `${Math.sin(angle) * distance * verticalPull}px`,
+    z: `${80 + (index % 8) * 34}px`,
+    r: `${index * 29 * spin}deg`,
+    s: `${0.72 + (index % 6) * 0.1}`,
+    w: `${18 + (index % 7) * 7}px`,
+    h: `${22 + (index % 8) * 8}px`,
+    d: `${index * 0.012}s`,
+  }
+})
 
 function cleanRoomCode(value) {
   return String(value || '')
@@ -91,20 +114,19 @@ function cleanRoomCode(value) {
 export default function Studio() {
   const navigate = useNavigate()
   const [reportCode, setReportCode] = useState('')
-  const [activeCard, setActiveCard] = useState('audio-audits')
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [isPressed, setIsPressed] = useState(false)
+  const [hostZoom, setHostZoom] = useState(false)
 
+  const activeModule = STUDIO_MODULES[activeIndex] || STUDIO_MODULES[0]
   const cleanCode = useMemo(() => cleanRoomCode(reportCode), [reportCode])
 
-  const activeModule =
-    STUDIO_MODULES.find((item) => item.id === activeCard) || STUDIO_MODULES[0]
-
-  const openHostGame = () => {
-    navigate('/go/quiz?mode=host')
+  const beginHostFlow = () => {
+    setHostZoom(true)
   }
 
-  const openCreateGame = () => {
-    // por ahora no hace nada real
-    // luego aquí lo conectamos con el builder/studio flow
+  const chooseTeam = (teamId) => {
+    navigate(`/go/quiz?mode=host&team=${teamId}`)
   }
 
   const openReport = () => {
@@ -112,17 +134,25 @@ export default function Studio() {
     navigate(`/go/results/KK${cleanCode}`)
   }
 
-  const handleCardClick = (moduleId) => {
-    setActiveCard(moduleId)
+  const handleModuleClick = (item, index) => {
+    setActiveIndex(index)
 
-    if (moduleId === 'live-games') return
-    if (moduleId === 'reports') return
+    if (item.id === 'live') {
+      beginHostFlow()
+      return
+    }
+
+    if (item.id === 'reports') {
+      document.getElementById('studio-reports')?.scrollIntoView({ behavior: 'smooth' })
+    }
   }
 
   return (
-    <div className="studio-page">
+    <div className={`studio-page ${isPressed ? 'is-pressed' : ''} ${hostZoom ? 'host-zoom' : ''}`}>
       <div className="studio-bg" />
+      <div className="studio-aurora" />
       <div className="studio-grid" />
+      <div className="studio-soft-glow" />
 
       <div className="studio-stars" aria-hidden="true">
         {STARS.map((star, index) => (
@@ -132,7 +162,7 @@ export default function Studio() {
             style={{
               top: star.top,
               left: star.left,
-              animationDelay: `${index * 0.22}s`,
+              animationDelay: `${index * 0.35}s`,
             }}
           />
         ))}
@@ -164,95 +194,143 @@ export default function Studio() {
         </div>
       </nav>
 
-      <main className="studio-main">
-        <section className="studio-hero">
-          <div className="studio-copy">
-            <h1 className="studio-title">
-              <span className="studio-title-main">PULSE</span>
-              <span className="studio-title-badge">STUDIO</span>
-            </h1>
-
-            <p className="studio-subtitle">
-              Create live games, build future audio audits, review reports, and manage
-              training content from one interactive workspace.
-            </p>
-
-            <div className="studio-actions">
-              <button className="studio-primary" onClick={openHostGame}>
-                Host a Game →
-              </button>
-
-              <button className="studio-secondary" onClick={openCreateGame}>
-                Create Your Game
-              </button>
-            </div>
-
-            <article className="studio-feature-card">
-              <span>{activeModule.eyebrow}</span>
-              <h2>{activeModule.title}</h2>
-              <p>{activeModule.longDesc}</p>
-            </article>
+      <main className="studio-hero">
+        <section className="studio-copy">
+          <div className="studio-kicker">
+            <span />
+            Host tools for QA, supervisors, and leaders
           </div>
 
-          <div className="studio-visual">
-            <div className="studio-glass-aura" />
-            <div className="studio-glass-wrap">
-              <div className="studio-glass-shadow" />
-              <div className="studio-glass layer-back" />
-              <div className="studio-glass layer-middle" />
-              <div className="studio-glass layer-front">
-                <small>PULSE</small>
+          <h1 className="studio-title">
+            <span className="studio-title-main">PULSE</span>
+            <span className="studio-title-badge">Studio</span>
+          </h1>
+
+          <p>
+            Create live games, build future audio audits, review reports, and manage training content from one interactive workspace.
+          </p>
+
+          <div className="studio-actions">
+            <button className="studio-primary" onClick={beginHostFlow}>
+              Host a Game →
+            </button>
+
+            <button className="studio-secondary" onClick={() => setActiveIndex(1)}>
+              Create Your Game
+            </button>
+          </div>
+
+          <div className="studio-active-preview">
+            <span>{activeModule.eyebrow}</span>
+            <strong>{activeModule.title}</strong>
+            <p>{activeModule.desc}</p>
+          </div>
+        </section>
+
+        <section className="studio-stage" aria-label="Pulse Studio glass interaction">
+          <div
+            className="studio-crystal-scene"
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture?.(event.pointerId)
+              setIsPressed(true)
+            }}
+            onPointerUp={() => setIsPressed(false)}
+            onPointerCancel={() => setIsPressed(false)}
+            onPointerLeave={() => setIsPressed(false)}
+          >
+            <div className="studio-crystal-glow" />
+            <div className="studio-orbit-ring one" />
+            <div className="studio-orbit-ring two" />
+
+            <div className="studio-glass-orb">
+              <div className="studio-glass-core">
+                <span>PULSE</span>
                 <strong>STUDIO</strong>
               </div>
+
+              {SHARDS.map((shard) => (
+                <i
+                  key={shard.id}
+                  className="studio-shard"
+                  style={{
+                    '--sx': shard.x,
+                    '--sy': shard.y,
+                    '--sz': shard.z,
+                    '--sr': shard.r,
+                    '--ss': shard.s,
+                    '--sw': shard.w,
+                    '--sh': shard.h,
+                    '--sd': shard.d,
+                  }}
+                />
+              ))}
             </div>
-          </div>
-        </section>
 
-        <section className="studio-modules">
-          {STUDIO_MODULES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`studio-module ${activeCard === item.id ? 'active' : ''}`}
-              onClick={() => handleCardClick(item.id)}
-            >
-              <div className="studio-module-icon">{item.icon}</div>
+            {hostZoom && (
+              <div className="studio-team-panel">
+                <button className="studio-back" onClick={() => setHostZoom(false)}>
+                  ← Back
+                </button>
 
-              <div className="studio-module-copy">
-                <span>{item.eyebrow}</span>
-                <h3>{item.title}</h3>
-                <p>{item.desc}</p>
+                <span className="studio-panel-kicker">Create Live Game</span>
+                <h2>Choose Team</h2>
+                <p>Select which team will play this live game.</p>
+
+                <div className="studio-team-grid">
+                  {STUDIO_TEAMS.map((team) => (
+                    <button key={team.id} onClick={() => chooseTeam(team.id)}>
+                      <span>{team.flag}</span>
+                      <strong>{team.name}</strong>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </button>
-          ))}
-        </section>
-
-        <section id="studio-reports" className="studio-report-panel">
-          <div className="studio-report-copy">
-            <span>Reports</span>
-            <h2>Open a final report by room code.</h2>
-            <p>Type a KK code and jump directly to the results page.</p>
-          </div>
-
-          <div className="studio-report-box">
-            <div className="studio-report-input">
-              <span>KK</span>
-
-              <input
-                value={reportCode}
-                onChange={(event) => setReportCode(cleanRoomCode(event.target.value))}
-                onKeyDown={(event) => event.key === 'Enter' && openReport()}
-                placeholder="1234"
-                autoComplete="off"
-              />
-            </div>
-
-            <button onClick={openReport} disabled={cleanCode.length < 4}>
-              View Report →
-            </button>
+            )}
           </div>
         </section>
       </main>
+
+      <section className="studio-option-deck">
+        {STUDIO_MODULES.map((item, index) => (
+          <button
+            key={item.id}
+            className={`studio-option-card ${activeIndex === index ? 'active' : ''}`}
+            onClick={() => handleModuleClick(item, index)}
+          >
+            <span className="studio-option-icon">{item.icon}</span>
+
+            <span className="studio-option-copy">
+              <small>{item.eyebrow}</small>
+              <strong>{item.title}</strong>
+              <em>{item.action}</em>
+            </span>
+          </button>
+        ))}
+      </section>
+
+      <section id="studio-reports" className="studio-report-panel">
+        <div>
+          <span>Reports</span>
+          <h2>Open a final report by room code.</h2>
+          <p>Type a KK code and jump directly to the results page.</p>
+        </div>
+
+        <div className="studio-report-box">
+          <span>KK</span>
+
+          <input
+            value={reportCode}
+            onChange={(event) => setReportCode(cleanRoomCode(event.target.value))}
+            onKeyDown={(event) => event.key === 'Enter' && openReport()}
+            placeholder="1234"
+            autoComplete="off"
+          />
+
+          <button onClick={openReport} disabled={cleanCode.length < 4}>
+            View Report →
+          </button>
+        </div>
+      </section>
     </div>
   )
 }
