@@ -2,6 +2,49 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Studio.css'
 
+const STUDIO_MODULES = [
+  {
+    id: 'live-games',
+    eyebrow: 'Live Games',
+    title: 'Host a Game',
+    desc: 'Start hosting',
+    icon: '🎮',
+    action: 'Open',
+  },
+  {
+    id: 'builder',
+    eyebrow: 'Builder',
+    title: 'Create Your Game',
+    desc: 'Coming soon',
+    icon: '🧩',
+    action: 'Soon',
+  },
+  {
+    id: 'audio-audits',
+    eyebrow: 'Audio Audit',
+    title: 'Call-based Training',
+    desc: 'Coming soon',
+    icon: '🎧',
+    action: 'Soon',
+  },
+  {
+    id: 'question-bank',
+    eyebrow: 'Question Bank',
+    title: 'Official Questions',
+    desc: 'Coming soon',
+    icon: '🧠',
+    action: 'Soon',
+  },
+  {
+    id: 'reports',
+    eyebrow: 'Reports',
+    title: 'Final Results',
+    desc: 'Open reports',
+    icon: '📊',
+    action: 'Open',
+  },
+]
+
 const STARS = [
   { top: '10%', left: '10%' },
   { top: '12%', left: '30%' },
@@ -34,58 +77,6 @@ const SHOOTING_STARS = [
   { top: '38%', left: '84%', delay: '6.8s', duration: '7.8s' },
 ]
 
-const STUDIO_OPTIONS = [
-  {
-    id: 'builder',
-    eyebrow: 'Builder',
-    title: 'Create Your Game',
-    desc: 'Build future custom games, questions, timers, and answer flows.',
-    icon: '🧩',
-    action: 'Soon',
-  },
-  {
-    id: 'audio',
-    eyebrow: 'Audio Audit',
-    title: 'Call Training',
-    desc: 'Turn real calls into training scenarios with audio-based questions.',
-    icon: '🎧',
-    action: 'Soon',
-  },
-  {
-    id: 'question-bank',
-    eyebrow: 'Question Bank',
-    title: 'Official Questions',
-    desc: 'Manage questions by mode, topic, language, and difficulty.',
-    icon: '🧠',
-    action: 'Soon',
-  },
-  {
-    id: 'reports',
-    eyebrow: 'Reports',
-    title: 'Final Results',
-    desc: 'Search any KK room and open the final results report.',
-    icon: '📊',
-    action: 'Open',
-  },
-  {
-    id: 'proposals',
-    eyebrow: 'Proposals',
-    title: 'Ideas & Submissions',
-    desc: 'Let supervisors and QA suggest new questions safely.',
-    icon: '📝',
-    action: 'Planned',
-  },
-]
-
-const STUDIO_TEAMS = [
-  { id: 'philippines', name: 'Philippines', flag: '🇵🇭' },
-  { id: 'venezuela', name: 'Venezuela', flag: '🇻🇪' },
-  { id: 'colombia', name: 'Colombia', flag: '🇨🇴' },
-  { id: 'mexico', name: 'Mexico BJ', flag: '🇲🇽' },
-  { id: 'central', name: 'Central America', flag: '🇭🇳' },
-  { id: 'asia', name: 'Asia', flag: '🇵🇭' },
-]
-
 function cleanRoomCode(value) {
   return String(value || '')
     .toUpperCase()
@@ -96,42 +87,37 @@ function cleanRoomCode(value) {
 
 export default function Studio() {
   const navigate = useNavigate()
-
   const [reportCode, setReportCode] = useState('')
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [isPressed, setIsPressed] = useState(false)
-  const [hostZoom, setHostZoom] = useState(false)
+  const [activeCard, setActiveCard] = useState('reports')
 
   const cleanCode = useMemo(() => cleanRoomCode(reportCode), [reportCode])
+
+  const openHostGame = () => {
+    navigate('/go/quiz?mode=host')
+  }
 
   const openReport = () => {
     if (cleanCode.length < 4) return
     navigate(`/go/results/KK${cleanCode}`)
   }
 
-  const openHostFlow = () => {
-    setHostZoom(true)
-  }
+  const handleCardClick = (moduleId) => {
+    setActiveCard(moduleId)
 
-  const chooseTeam = (teamId) => {
-    navigate(`/go/quiz?mode=host&team=${teamId}`)
-  }
+    if (moduleId === 'live-games') {
+      openHostGame()
+      return
+    }
 
-  const handleOptionClick = (item, index) => {
-    setActiveIndex(index)
-
-    if (item.id === 'reports') {
+    if (moduleId === 'reports') {
       document.getElementById('studio-reports')?.scrollIntoView({ behavior: 'smooth' })
     }
   }
 
   return (
-    <div className={`studio-page ${isPressed ? 'is-pressed' : ''} ${hostZoom ? 'host-zoom' : ''}`}>
+    <div className="studio-page">
       <div className="studio-bg" />
-      <div className="studio-aurora" />
       <div className="studio-grid" />
-      <div className="studio-soft-glow" />
-
       <div className="studio-stars" aria-hidden="true">
         {STARS.map((star, index) => (
           <span
@@ -173,7 +159,7 @@ export default function Studio() {
       </nav>
 
       <main className="studio-main">
-        <section className="studio-header">
+        <section className="studio-hero">
           <div className="studio-kicker">
             <span />
             Host tools for QA, supervisors, and leaders
@@ -188,22 +174,10 @@ export default function Studio() {
             Create live games, build future audio audits, review reports, and manage training content
             from one interactive workspace.
           </p>
-        </section>
 
-        <section className="studio-stage">
-          <div
-            className="studio-glass-scene"
-            onPointerDown={(event) => {
-              event.currentTarget.setPointerCapture?.(event.pointerId)
-              setIsPressed(true)
-            }}
-            onPointerUp={() => setIsPressed(false)}
-            onPointerCancel={() => setIsPressed(false)}
-            onPointerLeave={() => setIsPressed(false)}
-          >
-            <div className="studio-stage-glow" />
-
-            <div className="studio-glass-stack">
+          <div className="studio-crystal-wrap">
+            <div className="studio-crystal-glow" />
+            <div className="studio-glass-stack" aria-hidden="true">
               <div className="studio-glass-base" />
               <div className="studio-glass-layer studio-layer-3" />
               <div className="studio-glass-layer studio-layer-2" />
@@ -212,57 +186,34 @@ export default function Studio() {
                 <strong>STUDIO</strong>
               </div>
             </div>
+          </div>
 
-            {hostZoom && (
-              <div className="studio-team-panel">
-                <button className="studio-back" onClick={() => setHostZoom(false)}>
-                  ← Back
-                </button>
+          <div className="studio-actions">
+            <button className="studio-primary" onClick={openHostGame}>
+              Host a Game →
+            </button>
 
-                <span className="studio-panel-kicker">Create Live Game</span>
-                <h2>Choose Team</h2>
-                <p>Select which team will play this live game.</p>
-
-                <div className="studio-team-grid">
-                  {STUDIO_TEAMS.map((team) => (
-                    <button key={team.id} onClick={() => chooseTeam(team.id)}>
-                      <span>{team.flag}</span>
-                      <strong>{team.name}</strong>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <button className="studio-secondary" type="button">
+              Create Your Game
+            </button>
           </div>
         </section>
 
-        <section className="studio-primary-actions">
-          <button className="studio-primary" onClick={openHostFlow}>
-            Host a Game →
-          </button>
-
-          <button
-            className="studio-secondary"
-            onClick={() => setActiveIndex(0)}
-          >
-            Create Your Game
-          </button>
-        </section>
-
-        <section className="studio-option-deck">
-          {STUDIO_OPTIONS.map((item, index) => (
+        <section className="studio-modules">
+          {STUDIO_MODULES.map((item) => (
             <button
               key={item.id}
-              className={`studio-option-card ${activeIndex === index ? 'active' : ''}`}
-              onClick={() => handleOptionClick(item, index)}
+              className={`studio-module ${activeCard === item.id ? 'active' : ''}`}
+              onClick={() => handleCardClick(item.id)}
+              type="button"
             >
-              <span className="studio-option-icon">{item.icon}</span>
+              <div className="studio-module-icon">{item.icon}</div>
 
-              <span className="studio-option-copy">
-                <small>{item.eyebrow}</small>
-                <strong>{item.title}</strong>
-                <em>{item.action}</em>
-              </span>
+              <div className="studio-module-copy">
+                <span>{item.eyebrow}</span>
+                <h2>{item.title}</h2>
+                <p>{item.desc}</p>
+              </div>
             </button>
           ))}
         </section>
@@ -275,15 +226,17 @@ export default function Studio() {
           </div>
 
           <div className="studio-report-box">
-            <span>KK</span>
+            <div className="studio-report-input">
+              <span>KK</span>
 
-            <input
-              value={reportCode}
-              onChange={(event) => setReportCode(cleanRoomCode(event.target.value))}
-              onKeyDown={(event) => event.key === 'Enter' && openReport()}
-              placeholder="1234"
-              autoComplete="off"
-            />
+              <input
+                value={reportCode}
+                onChange={(event) => setReportCode(cleanRoomCode(event.target.value))}
+                onKeyDown={(event) => event.key === 'Enter' && openReport()}
+                placeholder="1234"
+                autoComplete="off"
+              />
+            </div>
 
             <button onClick={openReport} disabled={cleanCode.length < 4}>
               View Report →
