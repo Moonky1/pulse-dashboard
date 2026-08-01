@@ -443,234 +443,238 @@ const topic = normalizeTopic(urlParams.get('topic') || 'all')
 const lang = normalizeLang(urlParams.get('lang') || 'mixed')
 const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
 const difficulty = normalizeDifficultyParam(urlParams.get('difficulty') || 'all')
+
+
 const selectedTeam = String(urlParams.get('team') || '').toLowerCase().trim()
 const selectedTeamInfo = APP_CONFIG.teams.find((item) => item.id === selectedTeam) || null
-const roomMetadata = {
+
+const roomMetadata = useMemo(() => ({
   team: selectedTeam || 'all',
   game,
   qstyle: questionStyle,
   difficulty,
   results_url: `${window.location.origin}/go/results/${code}`,
-}
+}), [selectedTeam, game, questionStyle, difficulty, code])
+
 const questionStyleLabel = questionStyle === 'mixed' ? 'Mixed Questions' : 'Multiple Choice'
 const difficultyLabel = getDifficultyLabel(difficulty)
 
-  const [room, setRoom] = useState(null)
-  const [players, setPlayers] = useState([])
-  const [answers, setAnswers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [fatalError, setFatalError] = useState('')
+const [room, setRoom] = useState(null)
+const [players, setPlayers] = useState([])
+const [answers, setAnswers] = useState([])
+const [loading, setLoading] = useState(true)
+const [fatalError, setFatalError] = useState('')
 
-  const [joined, setJoined] = useState(isHost)
-  const [playerId, setPlayerId] = useState('')
-  const [myName, setMyName] = useState('')
-  const [myAvatar, setMyAvatar] = useState('🦊')
+const [joined, setJoined] = useState(isHost)
+const [playerId, setPlayerId] = useState('')
+const [myName, setMyName] = useState('')
+const [myAvatar, setMyAvatar] = useState('🦊')
 
-  const [joinName, setJoinName] = useState('')
-  const [joinAvatar, setJoinAvatar] = useState('🦊')
-  const [joinError, setJoinError] = useState('')
-  const [joinBusy, setJoinBusy] = useState(false)
-  const [welcomePlayer, setWelcomePlayer] = useState(null)
+const [joinName, setJoinName] = useState('')
+const [joinAvatar, setJoinAvatar] = useState('🦊')
+const [joinError, setJoinError] = useState('')
+const [joinBusy, setJoinBusy] = useState(false)
+const [welcomePlayer, setWelcomePlayer] = useState(null)
 
-  const [picked, setPicked] = useState(null)
-  const [timeLeft, setTimeLeft] = useState(Q_TIME)
-  const [resultCount, setResultCount] = useState(RESULT_SEC)
-  const [busy, setBusy] = useState(false)
-  const [kickBusy, setKickBusy] = useState('')
-  const [cancelBusy, setCancelBusy] = useState(false)
-  const [lobbyMusicOn, setLobbyMusicOn] = useState(false)
-  const [coHostCopied, setCoHostCopied] = useState(false)
-  const [resultsCopied, setResultsCopied] = useState(false)
+const [picked, setPicked] = useState(null)
+const [timeLeft, setTimeLeft] = useState(Q_TIME)
+const [resultCount, setResultCount] = useState(RESULT_SEC)
+const [busy, setBusy] = useState(false)
+const [kickBusy, setKickBusy] = useState('')
+const [cancelBusy, setCancelBusy] = useState(false)
+const [lobbyMusicOn, setLobbyMusicOn] = useState(false)
+const [coHostCopied, setCoHostCopied] = useState(false)
+const [resultsCopied, setResultsCopied] = useState(false)
 
-  const roomRef = useRef(null)
-  const busyRef = useRef(false)
-  const resultAutoRef = useRef(false)
-  const actionLockRef = useRef(false)
-  const timerRef = useRef(null)
-  const resultTimerRef = useRef(null)
-  const lastTickRef = useRef(null)
-  const previousStateRef = useRef('')
-  const previousPlayerCountRef = useRef(0)
-  const finishSoundPlayedRef = useRef(false)
+const roomRef = useRef(null)
+const busyRef = useRef(false)
+const resultAutoRef = useRef(false)
+const actionLockRef = useRef(false)
+const timerRef = useRef(null)
+const resultTimerRef = useRef(null)
+const lastTickRef = useRef(null)
+const previousStateRef = useRef('')
+const previousPlayerCountRef = useRef(0)
+const finishSoundPlayedRef = useRef(false)
 
-  useEffect(() => {
-    roomRef.current = room
-  }, [room])
+useEffect(() => {
+  roomRef.current = room
+}, [room])
 
-  useEffect(() => {
-    busyRef.current = busy
-  }, [busy])
+useEffect(() => {
+  busyRef.current = busy
+}, [busy])
 
-  const activePlayers = useMemo(() => players.filter((p) => !p.is_kicked), [players])
-  const totalPlayers = activePlayers.length
-  const answeredPlayers = activePlayers.filter((p) => p.answered).length
+const activePlayers = useMemo(() => players.filter((p) => !p.is_kicked), [players])
+const totalPlayers = activePlayers.length
+const answeredPlayers = activePlayers.filter((p) => p.answered).length
 
-  const currentQuestionId = room?.question_ids?.[room?.current_q || 0]
-  const rawQuestion = currentQuestionId ? getQ(currentQuestionId) : null
-  const currentQ = buildDisplayQuestion(rawQuestion, code, room?.current_q || 0)
+const currentQuestionId = room?.question_ids?.[room?.current_q || 0]
+const rawQuestion = currentQuestionId ? getQ(currentQuestionId) : null
+const currentQ = buildDisplayQuestion(rawQuestion, code, room?.current_q || 0)
 
-  const currentPlayer = useMemo(
-    () => players.find((p) => p.id === playerId) || null,
-    [players, playerId]
-  )
+const currentPlayer = useMemo(
+  () => players.find((p) => p.id === playerId) || null,
+  [players, playerId]
+)
 
-  const choiceBreakdown = useMemo(() => {
-    if (!currentQ?.options?.length) return []
+const choiceBreakdown = useMemo(() => {
+  if (!currentQ?.options?.length) return []
 
-    return currentQ.options.map((option, index) => {
-      const chosenPlayers = activePlayers.filter(
-        (player) => player.answered && Number(player.last_answer) === index
-      )
+  return currentQ.options.map((option, index) => {
+    const chosenPlayers = activePlayers.filter(
+      (player) => player.answered && Number(player.last_answer) === index
+    )
 
-      return {
-        index,
-        option,
-        count: chosenPlayers.length,
-        pct: totalPlayers > 0 ? (chosenPlayers.length / totalPlayers) * 100 : 0,
-        players: chosenPlayers,
-      }
-    })
-  }, [currentQ, activePlayers, totalPlayers])
+    return {
+      index,
+      option,
+      count: chosenPlayers.length,
+      pct: totalPlayers > 0 ? (chosenPlayers.length / totalPlayers) * 100 : 0,
+      players: chosenPlayers,
+    }
+  })
+}, [currentQ, activePlayers, totalPlayers])
 
-  const gameQuestions = useMemo(() => {
-    const ids = Array.isArray(room?.question_ids) ? room.question_ids : []
+const gameQuestions = useMemo(() => {
+  const ids = Array.isArray(room?.question_ids) ? room.question_ids : []
 
-    return ids
-      .map((questionId, index) => buildDisplayQuestion(getQ(questionId), code, index))
-      .filter(Boolean)
-  }, [room?.question_ids, code])
+  return ids
+    .map((questionId, index) => buildDisplayQuestion(getQ(questionId), code, index))
+    .filter(Boolean)
+}, [room?.question_ids, code])
 
-  const gameQuestionCount = gameQuestions.length || QUESTION_COUNT
+const gameQuestionCount = gameQuestions.length || QUESTION_COUNT
 
-  const playerStats = useMemo(() => {
-    const stats = activePlayers.map((player) => {
-      const playerAnswers = answers.filter((answer) => answer.player_id === player.id)
-      const answerByQuestion = new Map(
-        playerAnswers.map((answer) => [Number(answer.question_index), answer])
-      )
-      const correctCount = playerAnswers.filter((answer) => answer.correct === true).length
-      const answeredCount = playerAnswers.length
-      const accuracy = gameQuestionCount > 0
-        ? Math.round((correctCount / gameQuestionCount) * 100)
-        : 0
+const playerStats = useMemo(() => {
+  const stats = activePlayers.map((player) => {
+    const playerAnswers = answers.filter((answer) => answer.player_id === player.id)
+    const answerByQuestion = new Map(
+      playerAnswers.map((answer) => [Number(answer.question_index), answer])
+    )
+    const correctCount = playerAnswers.filter((answer) => answer.correct === true).length
+    const answeredCount = playerAnswers.length
+    const accuracy = gameQuestionCount > 0
+      ? Math.round((correctCount / gameQuestionCount) * 100)
+      : 0
 
-      const questionResults = gameQuestions.map((question, questionIndex) => {
-        const answerRow = answerByQuestion.get(questionIndex) || null
-        const selectedIndex = answerRow ? Number(answerRow.answer) : null
-        const selectedOption = Number.isInteger(selectedIndex) ? question.options[selectedIndex] : null
-        const correctOption = question.options[question.correct] || 'N/A'
-        const noAnswer = !answerRow
-
-        return {
-          questionIndex,
-          questionId: question.id,
-          question: question.question,
-          selectedIndex,
-          selectedLetter: Number.isInteger(selectedIndex) ? getOptionLetter(selectedIndex) : null,
-          selectedOption: selectedOption || 'No answer',
-          correctIndex: question.correct,
-          correctLetter: getOptionLetter(question.correct),
-          correctOption,
-          correct: Boolean(answerRow?.correct),
-          noAnswer,
-          points: Number(answerRow?.points || 0),
-          timeLeft: Number(answerRow?.time_left || 0),
-        }
-      })
+    const questionResults = gameQuestions.map((question, questionIndex) => {
+      const answerRow = answerByQuestion.get(questionIndex) || null
+      const selectedIndex = answerRow ? Number(answerRow.answer) : null
+      const selectedOption = Number.isInteger(selectedIndex) ? question.options[selectedIndex] : null
+      const correctOption = question.options[question.correct] || 'N/A'
+      const noAnswer = !answerRow
 
       return {
-        ...player,
-        correctCount,
-        answeredCount,
-        missedCount: Math.max(0, gameQuestionCount - correctCount),
-        accuracy,
-        score: Number(player.score || 0),
-        questionResults,
+        questionIndex,
+        questionId: question.id,
+        question: question.question,
+        selectedIndex,
+        selectedLetter: Number.isInteger(selectedIndex) ? getOptionLetter(selectedIndex) : null,
+        selectedOption: selectedOption || 'No answer',
+        correctIndex: question.correct,
+        correctLetter: getOptionLetter(question.correct),
+        correctOption,
+        correct: Boolean(answerRow?.correct),
+        noAnswer,
+        points: Number(answerRow?.points || 0),
+        timeLeft: Number(answerRow?.time_left || 0),
       }
     })
 
-    return stats
-      .sort((a, b) => {
-        if (b.correctCount !== a.correctCount) return b.correctCount - a.correctCount
-        if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy
-        if (b.answeredCount !== a.answeredCount) return b.answeredCount - a.answeredCount
-        if (b.score !== a.score) return b.score - a.score
+    return {
+      ...player,
+      correctCount,
+      answeredCount,
+      missedCount: Math.max(0, gameQuestionCount - correctCount),
+      accuracy,
+      score: Number(player.score || 0),
+      questionResults,
+    }
+  })
 
-        return new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
-      })
-      .map((player, index) => ({
-        ...player,
-        rank: index + 1,
-      }))
-  }, [activePlayers, answers, gameQuestionCount, gameQuestions])
+  return stats
+    .sort((a, b) => {
+      if (b.correctCount !== a.correctCount) return b.correctCount - a.correctCount
+      if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy
+      if (b.answeredCount !== a.answeredCount) return b.answeredCount - a.answeredCount
+      if (b.score !== a.score) return b.score - a.score
 
-  const questionReport = useMemo(() => {
-    const playerById = new Map(activePlayers.map((player) => [player.id, player]))
+      return new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
+    })
+    .map((player, index) => ({
+      ...player,
+      rank: index + 1,
+    }))
+}, [activePlayers, answers, gameQuestionCount, gameQuestions])
 
-    return gameQuestions.map((question, questionIndex) => {
-      const questionAnswers = answers.filter(
-        (answer) => Number(answer.question_index) === questionIndex
+const questionReport = useMemo(() => {
+  const playerById = new Map(activePlayers.map((player) => [player.id, player]))
+
+  return gameQuestions.map((question, questionIndex) => {
+    const questionAnswers = answers.filter(
+      (answer) => Number(answer.question_index) === questionIndex
+    )
+
+    const answeredIds = new Set(questionAnswers.map((answer) => answer.player_id))
+
+    const options = question.options.map((option, optionIndex) => {
+      const optionAnswers = questionAnswers.filter(
+        (answer) => Number(answer.answer) === optionIndex
       )
 
-      const answeredIds = new Set(questionAnswers.map((answer) => answer.player_id))
-
-      const options = question.options.map((option, optionIndex) => {
-        const optionAnswers = questionAnswers.filter(
-          (answer) => Number(answer.answer) === optionIndex
-        )
-
-        const optionPlayers = optionAnswers
-          .map((answer) => playerById.get(answer.player_id))
-          .filter(Boolean)
-          .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
-
-        return {
-          index: optionIndex,
-          option,
-          count: optionPlayers.length,
-          pct: totalPlayers > 0 ? (optionPlayers.length / totalPlayers) * 100 : 0,
-          players: optionPlayers,
-        }
-      })
-
-      const noAnswerPlayers = activePlayers
-        .filter((player) => !answeredIds.has(player.id))
+      const optionPlayers = optionAnswers
+        .map((answer) => playerById.get(answer.player_id))
+        .filter(Boolean)
         .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
 
       return {
-        index: questionIndex,
-        question,
-        options,
-        noAnswerPlayers,
+        index: optionIndex,
+        option,
+        count: optionPlayers.length,
+        pct: totalPlayers > 0 ? (optionPlayers.length / totalPlayers) * 100 : 0,
+        players: optionPlayers,
       }
     })
-  }, [gameQuestions, answers, activePlayers, totalPlayers])
 
-  const fetchPlayers = useCallback(async () => {
-    if (!code) return
+    const noAnswerPlayers = activePlayers
+      .filter((player) => !answeredIds.has(player.id))
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
 
-    const { data, error } = await supabase
-      .from('pulse_go_players')
-      .select('*')
-      .eq('room_code', code)
-      .order('joined_at', { ascending: true })
+    return {
+      index: questionIndex,
+      question,
+      options,
+      noAnswerPlayers,
+    }
+  })
+}, [gameQuestions, answers, activePlayers, totalPlayers])
 
-    if (!error) setPlayers(data || [])
-  }, [code])
+const fetchPlayers = useCallback(async () => {
+  if (!code) return
 
-  const fetchAnswers = useCallback(async () => {
-    if (!code) return
+  const { data, error } = await supabase
+    .from('pulse_go_players')
+    .select('*')
+    .eq('room_code', code)
+    .order('joined_at', { ascending: true })
 
-    const { data, error } = await supabase
-      .from('pulse_go_answers')
-      .select('*')
-      .eq('room_code', code)
-      .order('question_index', { ascending: true })
+  if (!error) setPlayers(data || [])
+}, [code])
 
-    if (!error) setAnswers(data || [])
-  }, [code])
+const fetchAnswers = useCallback(async () => {
+  if (!code) return
 
-  const syncRoomMetadata = useCallback(async (loadedRoom) => {
+  const { data, error } = await supabase
+    .from('pulse_go_answers')
+    .select('*')
+    .eq('room_code', code)
+    .order('question_index', { ascending: true })
+
+  if (!error) setAnswers(data || [])
+}, [code])
+
+const syncRoomMetadata = useCallback(async (loadedRoom) => {
   if (!isHost || !loadedRoom?.code) return loadedRoom
 
   const nextMetadata = {
@@ -705,23 +709,31 @@ const difficultyLabel = getDifficultyLabel(difficulty)
     return data
   }
 
+  setRoom(loadedRoom)
   return loadedRoom
-}, [isHost, roomMetadata.team, roomMetadata.game, roomMetadata.qstyle, roomMetadata.difficulty, roomMetadata.results_url])
+}, [isHost, roomMetadata])
 
-  const createHostRoom = useCallback(async () => {
-  const questionIds = buildQuestionIds(game, topic, lang, questionStyle, difficulty, `${code}:${Date.now()}`)
+const createHostRoom = useCallback(async () => {
+  const questionIds = buildQuestionIds(
+    roomMetadata.game,
+    topic,
+    lang,
+    roomMetadata.qstyle,
+    roomMetadata.difficulty,
+    `${code}:${Date.now()}`
+  )
 
-const roomPayload = {
-  code,
-  state: 'lobby',
-  ...roomMetadata,
-  topic,
-  lang,
-  question_ids: questionIds,
-  current_q: 0,
-  question_started_at: null,
-  updated_at: new Date().toISOString(),
-}
+  const roomPayload = {
+    code,
+    state: 'lobby',
+    ...roomMetadata,
+    topic,
+    lang,
+    question_ids: questionIds,
+    current_q: 0,
+    question_started_at: null,
+    updated_at: new Date().toISOString(),
+  }
 
   const { data, error } = await supabase
     .from('pulse_go_rooms')
@@ -741,9 +753,9 @@ const roomPayload = {
         .eq('code', code)
         .maybeSingle()
 
-if (!existingError && existingRoom) {
-  return syncRoomMetadata(existingRoom)
-}
+      if (!existingError && existingRoom) {
+        return syncRoomMetadata(existingRoom)
+      }
     }
 
     setFatalError(error.message || 'Could not create room.')
@@ -752,34 +764,38 @@ if (!existingError && existingRoom) {
 
   setRoom(data)
   return data
-}, [code, game, topic, lang, questionStyle, difficulty, selectedTeam])
+}, [code, topic, lang, roomMetadata, syncRoomMetadata])
 
-  const fetchRoom = useCallback(async () => {
-    if (!code) return null
+const fetchRoom = useCallback(async () => {
+  if (!code) return null
 
-    const { data, error } = await supabase
-      .from('pulse_go_rooms')
-      .select('*')
-      .eq('code', code)
-      .maybeSingle()
+  const { data, error } = await supabase
+    .from('pulse_go_rooms')
+    .select('*')
+    .eq('code', code)
+    .maybeSingle()
 
-    if (error) {
-      setFatalError(error.message || 'Could not load room.')
-      return null
-    }
+  if (error) {
+    setFatalError(error.message || 'Could not load room.')
+    return null
+  }
 
-    if (!data && isHost) {
-      return createHostRoom()
-    }
+  if (!data && isHost) {
+    return createHostRoom()
+  }
 
-    if (!data && !isHost) {
-      setRoom(null)
-      return null
-    }
+  if (!data && !isHost) {
+    setRoom(null)
+    return null
+  }
 
-    setRoom(data)
-    return data
-  }, [code, isHost, createHostRoom])
+  if (isHost) {
+    return syncRoomMetadata(data)
+  }
+
+  setRoom(data)
+  return data
+}, [code, isHost, createHostRoom, syncRoomMetadata])
 
   const refreshAll = useCallback(async () => {
     const loadedRoom = await fetchRoom()
