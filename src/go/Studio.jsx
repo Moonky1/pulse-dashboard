@@ -6,50 +6,50 @@ const STUDIO_MODULES = [
   {
     id: 'live-games',
     eyebrow: 'Live Games',
-    title: 'Host team games from the official Pulse GO bank.',
-    desc: 'Create a room, choose the team, language, game mode, and difficulty, then launch a live competition for agents.',
+    title: 'Host team games',
+    desc: 'Create a room, choose the team, language, game mode, and difficulty.',
     icon: '🎮',
     status: 'Ready',
   },
   {
     id: 'audio-audits',
     eyebrow: 'Audio Audits',
-    title: 'Turn real calls into training games.',
-    desc: 'Upload a call, add questions, select correct answers, and train agents using real QA scenarios.',
+    title: 'Train from real calls',
+    desc: 'Upload calls and create questions based on real QA scenarios.',
     icon: '🎧',
     status: 'Next',
   },
   {
     id: 'question-bank',
     eyebrow: 'Question Bank',
-    title: 'Manage questions by mode, topic, language, and difficulty.',
-    desc: 'Browse official questions, prepare new scenarios, and keep Pulse GO training organized.',
+    title: 'Manage official questions',
+    desc: 'Organize questions by mode, topic, language, and difficulty.',
     icon: '🧠',
     status: 'Soon',
   },
   {
     id: 'reports',
     eyebrow: 'Reports',
-    title: 'Search any KK code and review final performance.',
-    desc: 'Open result reports, compare scores, review missed questions, and identify coaching opportunities.',
+    title: 'Review final results',
+    desc: 'Search any KK code and open the final performance report.',
     icon: '📊',
     status: 'Ready',
   },
   {
     id: 'proposals',
     eyebrow: 'Proposals',
-    title: 'Let leaders submit questions without touching the official bank.',
-    desc: 'Supervisors and QA can propose new questions, then admins approve them before they become official.',
+    title: 'Submit new ideas',
+    desc: 'Let leaders suggest questions without touching the official bank.',
     icon: '📝',
     status: 'Planned',
   },
 ]
 
 const ORBITS = [
-  { label: 'Games', angle: 8, delay: '0s' },
-  { label: 'Audio', angle: -12, delay: '0.5s' },
-  { label: 'Reports', angle: 16, delay: '1s' },
-  { label: 'QA', angle: -6, delay: '1.4s' },
+  { label: 'Games', delay: '0s' },
+  { label: 'Audio', delay: '0.5s' },
+  { label: 'Reports', delay: '1s' },
+  { label: 'QA', delay: '1.4s' },
 ]
 
 function cleanRoomCode(value) {
@@ -79,65 +79,64 @@ export default function Studio() {
     <div className="studio-page">
       <div className="studio-bg" />
       <div className="studio-grid" />
-      <div className="studio-noise" />
-      <div className="studio-glow one" />
-      <div className="studio-glow two" />
+      <div className="studio-stars" />
 
-      <header className="studio-topbar">
-        <button className="studio-brand" onClick={() => navigate('/studio')}>
-          <span>BoostGO</span>
-          <b>Studio</b>
-        </button>
-
-        <div className="studio-top-actions">
+      <nav className="studio-nav">
+        <div className="studio-nav-pill">
+          <button onClick={() => navigate('/')}>Home</button>
           <button onClick={() => navigate('/go')}>Pulse GO</button>
+          <button className="active" onClick={() => navigate('/studio')}>
+            Studio
+          </button>
           <button onClick={() => navigate('/academy')}>Academy</button>
-          <button className="primary" onClick={openLiveGame}>Create Game</button>
         </div>
-      </header>
+      </nav>
 
       <main className="studio-hero">
         <section className="studio-copy">
           <div className="studio-kicker">
-            <span className="studio-dot" />
+            <span />
             Host tools for QA, supervisors, and leaders
           </div>
 
-          <h1>
-            Build smarter training inside
-            <span> BoostGO Studio.</span>
+          <h1 className="studio-title">
+            <span className="studio-title-main">PULSE</span>
+            <span className="studio-title-badge">Studio</span>
           </h1>
 
           <p>
-            Create live games, prepare audio audits, review reports, and organize question proposals from one cinematic workspace.
+            Create live games, prepare audio audits, review reports, and organize training content from one powerful workspace.
           </p>
 
-          <div className="studio-hero-actions">
-            <button className="studio-cta" onClick={openLiveGame}>
+          <div className="studio-actions">
+            <button className="studio-primary" onClick={openLiveGame}>
               Create Live Game →
             </button>
 
             <button
-              className="studio-ghost"
-              onClick={() => document.getElementById('studio-reports')?.scrollIntoView({ behavior: 'smooth' })}
+              className="studio-secondary"
+              onClick={() =>
+                document
+                  .getElementById('studio-reports')
+                  ?.scrollIntoView({ behavior: 'smooth' })
+              }
             >
               Open Reports
             </button>
           </div>
         </section>
 
-        <section className="studio-orbit" aria-label="BoostGO Studio modules preview">
+        <section className="studio-orbit">
           <div className="studio-core">
-            <span>BOOST</span>
-            <b>GO</b>
-            <small>STUDIO</small>
+            <strong>GO</strong>
+            <span>STUDIO</span>
           </div>
 
           {ORBITS.map((item, index) => (
             <div
               key={item.label}
               className={`studio-orbit-card card-${index + 1}`}
-              style={{ '--angle': `${item.angle}deg`, '--delay': item.delay }}
+              style={{ '--delay': item.delay }}
             >
               {item.label}
             </div>
@@ -145,27 +144,27 @@ export default function Studio() {
         </section>
       </main>
 
-      <section className="studio-modules" aria-label="Studio modules">
-        {STUDIO_MODULES.map((item, index) => (
-          <article key={item.id} className="studio-module" style={{ '--i': index }}>
+      <section className="studio-modules">
+        {STUDIO_MODULES.map((item) => (
+          <article key={item.id} className="studio-module">
             <div className="studio-module-icon">{item.icon}</div>
 
             <div>
-              <span className="studio-module-eyebrow">{item.eyebrow}</span>
+              <span>{item.eyebrow}</span>
               <h2>{item.title}</h2>
               <p>{item.desc}</p>
             </div>
 
-            <span className={`studio-status ${item.status.toLowerCase()}`}>
+            <b className={`studio-status ${item.status.toLowerCase()}`}>
               {item.status}
-            </span>
+            </b>
           </article>
         ))}
       </section>
 
       <section id="studio-reports" className="studio-report-panel">
         <div>
-          <span className="studio-module-eyebrow">Reports</span>
+          <span>Reports</span>
           <h2>Open a final report by room code.</h2>
           <p>Type a KK code and jump directly to the results page.</p>
         </div>
