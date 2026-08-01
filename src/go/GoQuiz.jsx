@@ -412,7 +412,7 @@ if (trainingMode === 'host') {
         </main>
       )}
 
-      {trainingMode && lang && !game && (
+      {trainingMode && (trainingMode !== 'host' || team) && lang && !game && (
         <main className="gq-wrap">
           <section className="gq-hero">
             <h1>Choose Game</h1>
@@ -443,7 +443,7 @@ if (trainingMode === 'host') {
       )}
 
 
-            {trainingMode && lang && game && activeGame?.supportsDifficulty && topic && !difficulty && (
+            {trainingMode && (trainingMode !== 'host' || team) && lang && game && activeGame?.supportsDifficulty && topic && !difficulty && (
         <main className="gq-wrap">
           <section className="gq-hero">
             <h1>Choose Difficulty</h1>
@@ -476,7 +476,7 @@ if (trainingMode === 'host') {
         </main>
       )}
 
-      {trainingMode && lang && game && activeGame?.needsTopic && !topic && (
+      {trainingMode && (trainingMode !== 'host' || team) && lang && game && activeGame?.needsTopic && !topic && (
         <main className="gq-wrap">
           <section className="gq-hero">
             <h1>Choose a Topic</h1>
@@ -505,7 +505,7 @@ if (trainingMode === 'host') {
         </main>
       )}
 
-      {trainingMode && lang && game && activeGame?.supportsQuestionStyle && topic && !qstyle && (
+      {trainingMode && (trainingMode !== 'host' || team) && lang && game && activeGame?.supportsQuestionStyle && topic && !qstyle && (
         <main className="gq-wrap">
           <section className="gq-hero">
             <h1>Question Style</h1>

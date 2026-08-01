@@ -445,6 +445,13 @@ const questionStyle = normalizeQuestionStyle(urlParams.get('qstyle') || 'mc')
 const difficulty = normalizeDifficultyParam(urlParams.get('difficulty') || 'all')
 const selectedTeam = String(urlParams.get('team') || '').toLowerCase().trim()
 const selectedTeamInfo = APP_CONFIG.teams.find((item) => item.id === selectedTeam) || null
+const roomMetadata = {
+  team: selectedTeam || 'all',
+  game,
+  qstyle: questionStyle,
+  difficulty,
+  results_url: `${window.location.origin}/go/results/${code}`,
+}
 const questionStyleLabel = questionStyle === 'mixed' ? 'Mixed Questions' : 'Multiple Choice'
 const difficultyLabel = getDifficultyLabel(difficulty)
 
@@ -663,19 +670,53 @@ const difficultyLabel = getDifficultyLabel(difficulty)
     if (!error) setAnswers(data || [])
   }, [code])
 
+  const syncRoomMetadata = useCallback(async (loadedRoom) => {
+  if (!isHost || !loadedRoom?.code) return loadedRoom
+
+  const nextMetadata = {
+    team: loadedRoom.team || roomMetadata.team,
+    game: loadedRoom.game || roomMetadata.game,
+    qstyle: loadedRoom.qstyle || roomMetadata.qstyle,
+    difficulty: loadedRoom.difficulty || roomMetadata.difficulty,
+    results_url: loadedRoom.results_url || roomMetadata.results_url,
+  }
+
+  const needsUpdate =
+    !loadedRoom.team ||
+    !loadedRoom.game ||
+    !loadedRoom.qstyle ||
+    !loadedRoom.difficulty ||
+    !loadedRoom.results_url
+
+  if (!needsUpdate) return loadedRoom
+
+  const { data, error } = await supabase
+    .from('pulse_go_rooms')
+    .update({
+      ...nextMetadata,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('code', loadedRoom.code)
+    .select('*')
+    .single()
+
+  if (!error && data) {
+    setRoom(data)
+    return data
+  }
+
+  return loadedRoom
+}, [isHost, roomMetadata.team, roomMetadata.game, roomMetadata.qstyle, roomMetadata.difficulty, roomMetadata.results_url])
+
   const createHostRoom = useCallback(async () => {
   const questionIds = buildQuestionIds(game, topic, lang, questionStyle, difficulty, `${code}:${Date.now()}`)
 
 const roomPayload = {
   code,
   state: 'lobby',
-  team: selectedTeam || null,
-  game,
+  ...roomMetadata,
   topic,
   lang,
-  qstyle: questionStyle,
-  difficulty,
-  results_url: `${window.location.origin}/go/results/${code}`,
   question_ids: questionIds,
   current_q: 0,
   question_started_at: null,
@@ -701,38 +742,7 @@ const roomPayload = {
         .maybeSingle()
 
 if (!existingError && existingRoom) {
-  const needsMetadataUpdate =
-    !existingRoom.team ||
-    !existingRoom.game ||
-    !existingRoom.qstyle ||
-    !existingRoom.difficulty ||
-    !existingRoom.results_url
-
-  if (needsMetadataUpdate) {
-    const { data: updatedRoom } = await supabase
-      .from('pulse_go_rooms')
-      .update({
-        team: existingRoom.team || selectedTeam || null,
-        game: existingRoom.game || game,
-        qstyle: existingRoom.qstyle || questionStyle,
-        difficulty: existingRoom.difficulty || difficulty,
-        results_url:
-          existingRoom.results_url ||
-          `${window.location.origin}/go/results/${code}`,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('code', code)
-      .select('*')
-      .single()
-
-    if (updatedRoom) {
-      setRoom(updatedRoom)
-      return updatedRoom
-    }
-  }
-
-  setRoom(existingRoom)
-  return existingRoom
+  return syncRoomMetadata(existingRoom)
 }
     }
 
