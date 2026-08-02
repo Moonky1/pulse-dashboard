@@ -216,10 +216,11 @@
 }
 
 .studio-title {
-  display: grid;
-  justify-items: start;
+  display: inline-grid;
+  justify-items: center;
   gap: 12px;
-  margin: 28px 0 24px;
+  margin: 0 0 24px;
+  width: max-content;
 }
 
 .studio-title-main {
@@ -230,6 +231,7 @@
   letter-spacing: -0.1em;
   line-height: 0.78;
   text-shadow: 0 26px 80px rgba(0, 0, 0, 0.45);
+  text-align: center;
 }
 
 .studio-title-badge {
@@ -247,6 +249,7 @@
   letter-spacing: -0.08em;
   text-transform: uppercase;
   box-shadow: 0 22px 60px rgba(158, 214, 255, 0.22);
+  justify-self: center;
 }
 
 .studio-copy > p {
@@ -353,7 +356,7 @@
   inset: 20px;
   border-radius: 999px;
   background:
-    radial-gradient(circle at 44% 42%, rgba(255, 255, 255, 0.32), transparent 18%),
+    radial-gradient(circle at 44% 42%, rgba(255, 255, 255, 0.18), transparent 18%),
     radial-gradient(circle at 52% 58%, rgba(126, 249, 212, 0.16), transparent 44%),
     radial-gradient(circle at center, rgba(158, 214, 255, 0.16), transparent 68%);
   filter: blur(48px);
@@ -408,8 +411,8 @@
 
 .studio-device-shell::before {
   background:
-    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.42), transparent 16%),
-    linear-gradient(135deg, rgba(255,255,255,0.25), transparent 35%),
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.22), transparent 16%),
+    linear-gradient(135deg, rgba(255,255,255,0.18), transparent 35%),
     linear-gradient(145deg, rgba(216,232,255,0.2), rgba(8,13,24,0.96));
   border: 1px solid rgba(255, 255, 255, 0.13);
   box-shadow:
@@ -428,18 +431,19 @@
 
 .studio-device-face {
   position: absolute;
-  inset: 28px;
+  inset: 22px;
   z-index: 3;
   display: grid;
   place-items: center;
   border-radius: 28px;
   background:
-    radial-gradient(circle at 26% 18%, rgba(255, 255, 255, 0.28), transparent 20%),
-    radial-gradient(circle at 50% 30%, rgba(216, 232, 255, 0.2), transparent 44%),
+    radial-gradient(circle at 26% 18%, rgba(255, 255, 255, 0.18), transparent 20%),
+    radial-gradient(circle at 50% 30%, rgba(216, 232, 255, 0.16), transparent 44%),
     rgba(255,255,255,0.035);
   transform: translateZ(44px);
   border: 1px solid rgba(255,255,255,0.08);
   animation: studioGlassFaceCycle 14s ease-in-out infinite alternate;
+  overflow: hidden;
 }
 
 @keyframes studioGlassPanelCycle {
@@ -489,13 +493,29 @@
 .studio-device-face::before {
   content: '';
   position: absolute;
-  inset: 10px auto auto 14px;
-  width: 112px;
-  height: 34px;
+  inset: 12px auto auto 14px;
+  width: 132px;
+  height: 38px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0));
+  background: linear-gradient(90deg, rgba(255,255,255,0.25), rgba(255,255,255,0));
   transform: rotate(-18deg);
-  opacity: 0.54;
+  opacity: 0.56;
+  mix-blend-mode: screen;
+  animation: studioGlassFaceCycle 14s ease-in-out infinite alternate;
+}
+
+.studio-device-face::after {
+  content: '';
+  position: absolute;
+  right: 28px;
+  top: 34px;
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 45%, transparent 70%);
+  filter: blur(2px);
+  opacity: 0.42;
+  mix-blend-mode: screen;
   animation: studioGlassFaceCycle 14s ease-in-out infinite alternate;
 }
 
@@ -770,6 +790,10 @@
   .studio-device-shell {
     width: 220px;
     height: 220px;
+  }
+
+  .studio-device-face {
+    inset: 18px;
   }
 
   .studio-device-face strong {
