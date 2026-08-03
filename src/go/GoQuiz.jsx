@@ -309,7 +309,7 @@ if (trainingMode === 'host') {
       className="active"
       onClick={() => navigate('/go')}
     >
-      Pulse GO
+      GO
     </button>
 
     <button onClick={() => navigate('/studio')}>

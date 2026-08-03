@@ -260,7 +260,7 @@ export default function Landing() {
       className="home-nav-link"
       onClick={() => navigate('/go')}
     >
-      Pulse GO
+      GO
     </button>
 
     <button

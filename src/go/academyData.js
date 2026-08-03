@@ -8,7 +8,7 @@ export const LANG_OPTIONS = [
 export const ACADEMY_COPY = {
   en: {
     navHome: 'Home',
-    navGo: 'Pulse GO',
+    navGo: 'GO',
     navAcademy: 'Academy',
     eyebrow: 'Pulse knowledge base',
     title: 'Pulse Academy',
@@ -34,7 +34,7 @@ export const ACADEMY_COPY = {
   },
   es: {
     navHome: 'Inicio',
-    navGo: 'Pulse GO',
+    navGo: 'GO',
     navAcademy: 'Academy',
     eyebrow: 'Base de conocimiento Pulse',
     title: 'Pulse Academy',

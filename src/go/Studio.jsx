@@ -114,7 +114,7 @@ export default function Studio() {
       <nav className="studio-nav">
         <div className="studio-nav-pill">
           <button onClick={() => navigate('/')}>Home</button>
-          <button onClick={() => navigate('/go')}>Pulse GO</button>
+          <button onClick={() => navigate('/go')}>GO</button>
           <button className="active" onClick={() => navigate('/studio')}>Studio</button>
           <button onClick={() => navigate('/academy')}>Academy</button>
         </div>

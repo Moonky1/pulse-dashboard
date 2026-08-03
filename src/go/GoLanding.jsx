@@ -221,7 +221,7 @@ const pageRef = useRef(null)
       className="pgl-nav-link pgl-nav-link-active"
       onClick={() => navigate('/go')}
     >
-      Pulse GO
+      GO
     </button>
 
     <button
