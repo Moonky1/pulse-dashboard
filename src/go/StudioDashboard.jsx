@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Studio.css'
 import './StudioDashboard.css'
+import StudioGameBuilder from './StudioGameBuilder'
 
 const STUDIO_NAV_ITEMS = [
   {
@@ -488,57 +489,14 @@ export default function StudioDashboard() {
   )
 
   const renderBuilderOverview = () => (
-    <section className="studio-builder-overview">
-      <div className="studio-builder-heading">
-        <span className="studio-section-eyebrow">
-          Game Builder
-        </span>
-
-        <h1>Create Your Game</h1>
-
-        <p>
-          The builder will guide creators from the first
-          question to a live Pulse GO lobby.
-        </p>
-      </div>
-
-      <AuthorIdentity
-        user={user}
-        role={role}
-        team={team}
-        compact
-      />
-
-      <div className="studio-builder-steps">
-        {BUILDER_STEPS.map((step) => (
-          <article key={step.number}>
-            <span>{step.number}</span>
-
-            <div>
-              <strong>{step.title}</strong>
-              <p>{step.description}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      <div className="studio-builder-next">
-        <div>
-          <span>Next development phase</span>
-          <strong>
-            Game details and draft saving
-          </strong>
-        </div>
-
-        <button
-          type="button"
-          disabled
-        >
-          Builder coming next
-        </button>
-      </div>
-    </section>
-  )
+  <StudioGameBuilder
+    user={user}
+    role={role}
+    teamLabel={team}
+    steps={BUILDER_STEPS}
+    onExit={() => setActiveView('overview')}
+  />
+)
 
   const renderEmptyView = () => {
     const view = STUDIO_NAV_ITEMS.find(
