@@ -754,3 +754,170 @@
     min-height: 210px;
   }
 }
+
+/* =========================================================
+   PULSE GO — UNIFIED CHOICE CARDS
+   Desktop layout for Training, Language, Game and Team.
+   ========================================================= */
+
+.gq-choice-visual {
+  width: 82px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.gq-game-image {
+  display: block;
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.24));
+}
+
+.gq-choice-footer-placeholder {
+  display: block;
+  width: 1px;
+  height: 18px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (min-width: 901px) {
+  /*
+   * Training Mode, Choose Language and Choose Game
+   * share the same four-row layout:
+   *
+   * title
+   * image / emoji
+   * description
+   * action / reserved space
+   */
+
+  .gq-choice-card {
+    display: grid;
+    grid-template-rows: 44px 54px 38px 18px;
+    align-items: center;
+    justify-items: center;
+    align-content: center;
+
+    width: 100%;
+    height: 212px;
+    min-height: 212px;
+    max-height: 212px;
+
+    gap: 8px;
+    padding: 16px 22px;
+
+    text-align: center;
+  }
+
+  .gq-choice-card h2 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    min-height: 44px;
+
+    margin: 0 !important;
+
+    color: #f8f9fd;
+    text-align: center;
+    font-size: 21px;
+    line-height: 1.05;
+  }
+
+  .gq-choice-card p {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+
+    width: 100%;
+    max-width: 94%;
+    min-height: 38px;
+
+    margin: 0 auto !important;
+
+    text-align: center;
+    line-height: 1.35;
+  }
+
+  .gq-choice-card b {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 18px;
+    margin: 0 !important;
+
+    text-align: center;
+  }
+
+  .gq-choice-card .gq-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    font-size: 24px;
+  }
+
+  .gq-language-card h2 {
+    margin: 0 !important;
+  }
+
+  .gq-language-flag {
+    width: 76px;
+    height: 50px;
+  }
+
+  .gq-language-mixed-icon {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  /*
+   * Team cards contain only:
+   * flag + team name.
+   */
+
+  .gq-team-grid {
+    gap: 14px;
+  }
+
+  .gq-team-card {
+    display: grid;
+    grid-template-rows: 50px 32px;
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+
+    height: 148px;
+    min-height: 148px;
+    max-height: 148px;
+
+    gap: 12px;
+    padding: 18px 22px;
+
+    text-align: center;
+  }
+
+  .gq-team-card h2 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    min-height: 32px;
+
+    margin: 0 !important;
+
+    text-align: center;
+  }
+
+  .gq-team-flag {
+    width: 64px;
+    height: 44px;
+  }
+}

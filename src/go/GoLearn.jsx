@@ -344,7 +344,7 @@ export default function GoLearn() {
                 <section className="ac-start-card">
                   <div>
                     <span className="ac-kicker">{copy.startHere}</span>
-                    <h2>{lang === 'es' ? 'Todo el training en un solo lugar' : 'Everything training in one place'}</h2>
+                    <h2>{lang === 'es' ? 'Todo el training en un solo lugar' : 'All the training in one place'}</h2>
                     <p>{copy.startDesc}</p>
                   </div>
 
