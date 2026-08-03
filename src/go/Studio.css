@@ -210,6 +210,16 @@
   box-shadow: 0 10px 30px rgba(158, 214, 255, 0.2);
 }
 
+.studio-brand-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  width: min(1220px, calc(100% - 44px));
+  margin: 0 auto;
+  padding: 160px 0 20px;
+}
+
 .studio-hero {
   position: relative;
   z-index: 10;
@@ -219,7 +229,7 @@
   align-items: center;
   width: min(1220px, calc(100% - 44px));
   margin: 0 auto;
-  padding: 142px 0 22px;
+  padding: 20px 0 22px;
 }
 
 .studio-copy {
@@ -793,8 +803,14 @@
     width: min(360px, calc(100% - 28px));
   }
 
+   .studio-brand-header {
+    width: min(360px, calc(100% - 28px));
+    padding-top: 120px;
+    padding-bottom: 18px;
+  }
+
   .studio-hero {
-    padding-top: 130px;
+    padding-top: 18px;
   }
 
   .studio-title-main {

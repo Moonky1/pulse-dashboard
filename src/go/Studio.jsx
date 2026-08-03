@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PulseBrandTitle from '../components/PulseBrandTitle'
 import './Studio.css'
 
 const STUDIO_MODULES = [
@@ -119,12 +120,12 @@ export default function Studio() {
         </div>
       </nav>
 
+      <section className="studio-brand-header">
+  <PulseBrandTitle suffix="STUDIO" />
+</section>
+
       <main className="studio-hero">
         <section className="studio-copy">
-          <h1 className="studio-title">
-            <span className="studio-title-main">PULSE</span>
-            <span className="studio-title-badge">STUDIO</span>
-          </h1>
 
           <p>
             Create live games, build future audio audits, review reports, and

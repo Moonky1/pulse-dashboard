@@ -1427,7 +1427,9 @@
 
 /* Same visual nav as Pulse GO, but sticky so Academy content does not hide under it */
 .ac-topnav {
-  position: sticky;
+  position: fixed;
+  left: 0;
+  right: 0;
   top: 0;
   z-index: 30;
   display: flex;
@@ -1498,7 +1500,7 @@
   z-index: 10;
   width: min(1120px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 54px 0 110px;
+  padding: 160px 0 110px;
 }
 
 .ac-home .ac-wiki-grid {
@@ -1576,7 +1578,7 @@
 
   .ac-home {
     width: min(330px, calc(100% - 32px));
-    padding: 36px 0 90px;
+    padding: 120px 0 90px;
   }
 
   .ac-hero {

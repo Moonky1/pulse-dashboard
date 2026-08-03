@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PulseBrandTitle from '../components/PulseBrandTitle'
 import SignIn from './SignIn'
 import Register from './Register'
 import './Landing.css'
@@ -282,9 +283,7 @@ export default function Landing() {
 
       <main className="home-content">
         <section className="home-hero">
-          <h1 className="home-title" draggable="false">
-            PULSE
-          </h1>
+        <PulseBrandTitle />
 
           <p className="home-subtitle">Performance intelligence for leaders.</p>
 

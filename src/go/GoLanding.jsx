@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PulseBrandTitle from '../components/PulseBrandTitle'
 import './GoLanding.css'
 
 const STARS = [
@@ -240,10 +241,7 @@ const pageRef = useRef(null)
 </nav>
 
       <main className="pgl-content">
-        <h1 className="pgl-title" draggable="false">
-          <span className="pgl-title-main">PULSE</span>
-          <span className="pgl-title-go">GO</span>
-        </h1>
+      <PulseBrandTitle suffix="GO" />
 
 <div className="pgl-actions">
   <button className="pgl-action-btn" onClick={handlePractice}>

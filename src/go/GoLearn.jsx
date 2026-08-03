@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PulseBrandTitle from '../components/PulseBrandTitle'
 import PulseGoBackground from './PulseGoBackground'
 import {
   scripts,
@@ -272,10 +273,10 @@ export default function GoLearn() {
       </header>
 
       <main className="ac-home">
-        <section className="ac-hero">
-          <h1>{copy.title}</h1>
-          <p>{copy.subtitle}</p>
-        </section>
+<section className="ac-hero">
+  <PulseBrandTitle suffix="ACADEMY" />
+  <p>{copy.subtitle}</p>
+</section>
 
         <section className="ac-wiki-grid">
           <aside className="ac-sidebar">
