@@ -69,7 +69,7 @@ const GAME_MODES = [
   },
   {
     id: 'objection-battle',
-    image: '/emojis/objection.png',
+    image: '/emojis/objection.webp',
     title: 'Objection Battle',
     desc: 'Pick the strongest rebuttal under pressure.',
     topic: 'objections',

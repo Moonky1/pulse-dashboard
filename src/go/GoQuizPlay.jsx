@@ -23,7 +23,7 @@ const GAME_LABELS = {
     title: 'Valid or Invalid XFER',
   },
   'objection-battle': {
-    image: '/emojis/objection.png',
+    image: '/emojis/objection.webp',
     title: 'Objection Battle',
   },
   'disposition-trainer': {
