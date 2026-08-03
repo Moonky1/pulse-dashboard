@@ -11,6 +11,8 @@ export function mapStudioGame(row) {
   return {
     id: row.id,
 
+    gameMode: row.game_mode || 'classic',
+
     title: row.title || 'Untitled Game',
     description: row.description || '',
 
@@ -55,6 +57,14 @@ export function mapStudioGame(row) {
 
     showExplanations:
       row.show_explanations !== false,
+
+    livesEnabled: Boolean(
+      row.lives_enabled
+    ),
+
+    livesCount: Number(
+      row.lives_count || 3
+    ),
 
     playCount: Number(
       row.play_count || 0
@@ -150,6 +160,9 @@ export async function saveStudioGameDraft({
       'save_pulse_studio_game_draft',
       {
         p_id: gameId || null,
+
+        p_game_mode:
+          form.gameMode || 'classic',
 
         p_title: form.title.trim(),
 
@@ -251,6 +264,16 @@ export async function saveStudioGameSettings({
         p_show_explanations:
           Boolean(
             settings.showExplanations
+          ),
+
+        p_lives_enabled:
+          Boolean(
+            settings.livesEnabled
+          ),
+
+        p_lives_count:
+          Number(
+            settings.livesCount || 3
           ),
       }
     )

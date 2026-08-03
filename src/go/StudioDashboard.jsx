@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import './Studio.css'
 import './StudioDashboard.css'
 import StudioGameBuilder from './StudioGameBuilder'
+import StudioGameModeSelector from './StudioGameModeSelector'
 import StudioMyGames from './StudioMyGames'
 
 const STUDIO_NAV_ITEMS = [
@@ -43,13 +44,6 @@ const TEAM_LABELS = {
   asia: 'Asia',
 }
 
-const ROLE_LABELS = {
-  global: 'Global',
-  supervisor: 'Supervisor',
-  qa: 'QA',
-  leader: 'Team Leader',
-}
-
 const ALLOWED_STUDIO_ROLES = [
   'global',
   'supervisor',
@@ -61,27 +55,32 @@ const BUILDER_STEPS = [
   {
     number: '01',
     title: 'Game Details',
-    description: 'Title, description, language, team and visibility.',
+    description:
+      'Title, description, language, team and visibility.',
   },
   {
     number: '02',
     title: 'Game Settings',
-    description: 'Question timer, scoring and game behavior.',
+    description:
+      'Question timer, scoring and game behavior.',
   },
   {
     number: '03',
     title: 'Questions',
-    description: 'Create questions, answers, explanations and audio.',
+    description:
+      'Create questions, answers, explanations and media.',
   },
   {
     number: '04',
     title: 'Preview',
-    description: 'Play through the game before publishing it.',
+    description:
+      'Play through the game before publishing it.',
   },
   {
     number: '05',
     title: 'Publish & Host',
-    description: 'Publish the game and generate a live KK room.',
+    description:
+      'Publish the game and generate a live KK room.',
   },
 ]
 
@@ -248,10 +247,13 @@ export default function StudioDashboard() {
   const navigate = useNavigate()
 
   const [activeView, setActiveView] =
-  useState('overview')
+    useState('overview')
 
-const [editingGame, setEditingGame] =
-  useState(null)
+  const [editingGame, setEditingGame] =
+    useState(null)
+
+  const [selectedGameMode, setSelectedGameMode] =
+    useState(null)
 
   const user = useMemo(() => readStoredUser(), [])
 
@@ -261,7 +263,9 @@ const [editingGame, setEditingGame] =
   )
 
   const team =
-    TEAM_LABELS[String(user?.team || '').toLowerCase()] ||
+    TEAM_LABELS[
+      String(user?.team || '').toLowerCase()
+    ] ||
     user?.team ||
     'Global'
 
@@ -273,15 +277,17 @@ const [editingGame, setEditingGame] =
       .trim()
       .split(/\s+/)[0] || 'Creator'
 
-    const openNewGame = () => {
-  setEditingGame(null)
-  setActiveView('create')
-}
+  const openNewGame = () => {
+    setEditingGame(null)
+    setSelectedGameMode(null)
+    setActiveView('create')
+  }
 
-const openExistingGame = (game) => {
-  setEditingGame(game)
-  setActiveView('create')
-}
+  const openExistingGame = (game) => {
+    setEditingGame(game)
+    setSelectedGameMode(game?.gameMode || 'classic')
+    setActiveView('create')
+  }
 
   useEffect(() => {
     if (user) return
@@ -444,7 +450,7 @@ const openExistingGame = (game) => {
             title="No drafts yet"
             description="Start your first custom game and it will be saved here while you build it."
             actionLabel="Create Your Game"
-            onAction={() => setActiveView('create')}
+            onAction={openNewGame}
           />
         </article>
 
@@ -484,12 +490,14 @@ const openExistingGame = (game) => {
             Kampaign Kings Library
           </span>
 
-          <h2>Games created by your leadership team.</h2>
+          <h2>
+            Games created by your leadership team.
+          </h2>
 
           <p>
             Browse games published by Team Leaders, QA,
-            Supervisors and Global creators. Every game will
-            show its author, team and verified role.
+            Supervisors and Global creators. Every game
+            will show its author, team and verified role.
           </p>
         </div>
 
@@ -503,36 +511,66 @@ const openExistingGame = (game) => {
     </>
   )
 
-const renderBuilderOverview = () => (
-  <StudioGameBuilder
-    key={editingGame?.id || 'new-studio-game'}
-    user={user}
-    role={role}
-    teamLabel={team}
-    steps={BUILDER_STEPS}
-    initialGame={editingGame}
-    onSaved={(savedGame) => {
-      setEditingGame(savedGame)
-    }}
-    onExit={() => {
-      const returnView = editingGame
-        ? 'my-games'
-        : 'overview'
+  const renderBuilderOverview = () => {
+    if (!editingGame && !selectedGameMode) {
+      return (
+        <StudioGameModeSelector
+          onSelect={(gameModeId) => {
+            setSelectedGameMode(gameModeId)
+          }}
+          onExit={() => {
+            setActiveView('overview')
+          }}
+        />
+      )
+    }
 
-      setEditingGame(null)
-      setActiveView(returnView)
-    }}
-  />
-)
+    const initialBuilderGame =
+      editingGame || {
+        gameMode: selectedGameMode || 'classic',
+        livesEnabled: false,
+        livesCount: 3,
+      }
 
-const renderMyGames = () => (
-  <StudioMyGames
-    user={user}
-    role={role}
-    onCreate={openNewGame}
-    onContinue={openExistingGame}
-  />
-)
+    return (
+      <StudioGameBuilder
+        key={
+          editingGame?.id ||
+          `new-${selectedGameMode || 'classic'}`
+        }
+        user={user}
+        role={role}
+        teamLabel={team}
+        steps={BUILDER_STEPS}
+        initialGame={initialBuilderGame}
+        onSaved={(savedGame) => {
+          setEditingGame(savedGame)
+          setSelectedGameMode(
+            savedGame?.gameMode || 'classic'
+          )
+        }}
+        onExit={() => {
+          if (!editingGame?.id) {
+            setSelectedGameMode(null)
+            return
+          }
+
+          setEditingGame(null)
+          setSelectedGameMode(null)
+          setActiveView('my-games')
+        }}
+      />
+    )
+  }
+
+  const renderMyGames = () => (
+    <StudioMyGames
+      user={user}
+      role={role}
+      onCreate={openNewGame}
+      onContinue={openExistingGame}
+    />
+  )
 
   const renderEmptyView = () => {
     const view = STUDIO_NAV_ITEMS.find(
@@ -540,8 +578,6 @@ const renderMyGames = () => (
     )
 
     const descriptions = {
-      'my-games':
-        'Your drafts and published games will be managed from this section.',
       library:
         'Games published by Kampaign Kings creators will appear here.',
       reports:
@@ -603,14 +639,15 @@ const renderMyGames = () => (
                   activeView === item.id ? 'active' : ''
                 }
                 onClick={() => {
-  if (item.id === 'create') {
-    openNewGame()
-    return
-  }
+                  if (item.id === 'create') {
+                    openNewGame()
+                    return
+                  }
 
-  setEditingGame(null)
-  setActiveView(item.id)
-}}
+                  setEditingGame(null)
+                  setSelectedGameMode(null)
+                  setActiveView(item.id)
+                }}
               >
                 <span>{item.icon}</span>
                 {item.label}
@@ -647,16 +684,16 @@ const renderMyGames = () => (
             {activeView === 'overview' &&
               renderOverview()}
 
-{activeView === 'my-games' &&
-  renderMyGames()}
+            {activeView === 'my-games' &&
+              renderMyGames()}
 
-{activeView === 'create' &&
-  renderBuilderOverview()}
+            {activeView === 'create' &&
+              renderBuilderOverview()}
 
-{activeView !== 'overview' &&
-  activeView !== 'my-games' &&
-  activeView !== 'create' &&
-  renderEmptyView()}
+            {activeView !== 'overview' &&
+              activeView !== 'my-games' &&
+              activeView !== 'create' &&
+              renderEmptyView()}
           </div>
         </main>
       </div>

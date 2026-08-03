@@ -141,7 +141,9 @@ export default function StudioGameBuilder({
   })
 
   const [form, setForm] = useState(() => ({
+    gameMode: initialGame?.gameMode || 'classic',
     title: initialGame?.title || '',
+
     description: initialGame?.description || '',
     language: initialGame?.language || 'en',
     team: initialGame?.team || initialTeam,
@@ -159,8 +161,17 @@ export default function StudioGameBuilder({
     randomizeQuestions: Boolean(
       initialGame?.randomizeQuestions
     ),
-    randomizeAnswers: Boolean(initialGame?.randomizeAnswers),
-    showExplanations: initialGame?.showExplanations !== false,
+    randomizeAnswers: Boolean(
+      initialGame?.randomizeAnswers
+    ),
+    showExplanations:
+      initialGame?.showExplanations !== false,
+    livesEnabled: Boolean(
+      initialGame?.livesEnabled
+    ),
+    livesCount: Number(
+      initialGame?.livesCount || 3
+    ),
   }))
 
   const [gameId, setGameId] = useState(initialGame?.id || null)
@@ -228,6 +239,7 @@ export default function StudioGameBuilder({
   }) => ({
     ...initialGame,
     id: savedGameId,
+    gameMode: form.gameMode,
     title: form.title.trim(),
     description: form.description.trim(),
     language: form.language,
@@ -241,6 +253,8 @@ export default function StudioGameBuilder({
     randomizeQuestions: settings.randomizeQuestions,
     randomizeAnswers: settings.randomizeAnswers,
     showExplanations: settings.showExplanations,
+    livesEnabled: settings.livesEnabled,
+    livesCount: settings.livesCount,
     playCount: initialGame?.playCount || 0,
     ownerName: user?.name || 'Pulse Creator',
     ownerRole: role?.id || user?.role,
@@ -809,6 +823,77 @@ export default function StudioGameBuilder({
           </div>
         </section>
 
+                <section className="studio-builder-form-section">
+          <div className="studio-builder-form-heading">
+            <span>04</span>
+
+            <div>
+              <h2>Classic Quiz Rules</h2>
+              <p>
+                Classic always uses exactly 10 questions.
+                Lives Mode is an optional extra rule.
+              </p>
+            </div>
+          </div>
+
+          <div className="studio-builder-settings-list">
+            <div className="studio-builder-setting-row active">
+              <div>
+                <strong>10 Questions</strong>
+                <small>
+                  Fixed to match the original Pulse GO
+                  Classic Quiz.
+                </small>
+              </div>
+
+              <div className="studio-builder-setting-control">
+                <span>Fixed</span>
+              </div>
+            </div>
+
+            <ToggleSetting
+              active={settings.livesEnabled}
+              title="Lives Mode"
+              description="A wrong answer removes one life. The game can end before Question 10 when no lives remain."
+              label={`${settings.livesCount} ${
+                settings.livesCount === 1
+                  ? 'Life'
+                  : 'Lives'
+              }`}
+              onToggle={() =>
+                updateSetting(
+                  'livesEnabled',
+                  !settings.livesEnabled
+                )
+              }
+            />
+          </div>
+
+          {settings.livesEnabled && (
+            <div className="studio-builder-number-grid studio-builder-points-grid">
+              {[1, 2, 3, 4, 5].map((lives) => (
+                <button
+                  key={lives}
+                  type="button"
+                  className={
+                    settings.livesCount === lives
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    updateSetting('livesCount', lives)
+                  }
+                >
+                  <strong>{lives}</strong>
+                  <small>
+                    {lives === 1 ? 'life' : 'lives'}
+                  </small>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
         {error && (
           <div className="studio-builder-message studio-builder-message--error">
             <span>!</span>
@@ -889,6 +974,15 @@ export default function StudioGameBuilder({
 
             <div className="studio-settings-preview-behavior">
               <div>
+                              <div>
+                <span>Game mode</span>
+                <strong>Classic Quiz</strong>
+              </div>
+
+              <div>
+                <span>Questions</span>
+                <strong>10 · Fixed</strong>
+              </div>
                 <span>Random questions</span>
                 <strong>
                   {settings.randomizeQuestions ? 'Enabled' : 'Disabled'}
@@ -904,6 +998,18 @@ export default function StudioGameBuilder({
 
               <div>
                 <span>Answer explanations</span>
+                              <div>
+                <span>Lives Mode</span>
+                <strong>
+                  {settings.livesEnabled
+                    ? `${settings.livesCount} ${
+                        settings.livesCount === 1
+                          ? 'Life'
+                          : 'Lives'
+                      }`
+                    : 'Disabled'}
+                </strong>
+              </div>
                 <strong>
                   {settings.showExplanations ? 'Enabled' : 'Disabled'}
                 </strong>
