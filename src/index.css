@@ -20,52 +20,125 @@ a      { text-decoration: none; color: inherit; }
 
 /* =========================================================
    PULSE — OFFICIAL DESKTOP TOP NAV
-   Same exact navbar on Home, GO, Studio, Academy and GO flow.
+   Locked size and position across every public Pulse route.
    Mobile/tablet will be handled separately.
    ========================================================= */
 
+/*
+ * Reserve the scrollbar area permanently.
+ * This prevents centered content from moving horizontally
+ * when changing between short and long pages.
+ */
+html {
+  scrollbar-gutter: stable;
+}
+
 @media (min-width: 901px) {
+  /*
+   * Keep every navigation wrapper using the complete viewport.
+   * The internal pill will always be centered inside this area.
+   */
+  .home-nav,
+  .pgl-nav,
+  .studio-nav,
+  .ac-topnav,
+  .gq-shell-nav {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+  }
+
+  /*
+   * Official pill dimensions:
+   *
+   * 4 buttons × 110px = 440px
+   * 3 gaps × 6px      = 18px
+   * horizontal padding = 12px
+   * borders            = 2px
+   * total              = 472px
+   */
   .home-nav-pill,
   .pgl-nav-pill,
   .studio-nav-pill,
   .ac-nav-pill,
   .gq-main-pill {
     display: inline-flex !important;
+    flex: 0 0 472px !important;
     align-items: center !important;
     justify-content: center !important;
+
+    width: 472px !important;
+    min-width: 472px !important;
+    max-width: 472px !important;
+
+    height: 58px !important;
+    min-height: 58px !important;
+    max-height: 58px !important;
+
     gap: 6px !important;
-    min-height: 0 !important;
     padding: 6px !important;
+    box-sizing: border-box !important;
+
     border-radius: 999px !important;
-    background: rgba(10, 14, 24, 0.58) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
+
+    background: rgba(10, 14, 24, 0.58) !important;
+
     box-shadow: 0 12px 38px rgba(0, 0, 0, 0.24) !important;
+
     backdrop-filter: blur(14px) !important;
     -webkit-backdrop-filter: blur(14px) !important;
+
+    transform: none !important;
+    scale: 1 !important;
   }
 
+  /*
+   * Every option has exactly the same dimensions.
+   * Text length cannot resize any individual button.
+   */
   .home-nav-link,
   .pgl-nav-link,
   .studio-nav-pill button,
   .ac-nav-pill button,
   .gq-main-pill button {
     flex: 0 0 110px !important;
+
     width: 110px !important;
     min-width: 110px !important;
+    max-width: 110px !important;
+
     height: 44px !important;
     min-height: 44px !important;
+    max-height: 44px !important;
+
+    margin: 0 !important;
     padding: 0 !important;
+    box-sizing: border-box !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
     border: 0 !important;
     border-radius: 999px !important;
+
     background: transparent !important;
     color: rgba(244, 247, 252, 0.72) !important;
+
     font-family: 'Sora', sans-serif !important;
     font-size: 14px !important;
     font-weight: 800 !important;
     line-height: 1 !important;
+
     text-align: center !important;
     white-space: nowrap !important;
+
     cursor: pointer !important;
+
+    transform: none !important;
+    scale: 1 !important;
+
     transition:
       color 0.18s ease,
       background 0.18s ease,
@@ -79,6 +152,7 @@ a      { text-decoration: none; color: inherit; }
   .gq-main-pill button:hover {
     color: #ffffff !important;
     background: rgba(255, 255, 255, 0.055) !important;
+    transform: none !important;
   }
 
   .home-nav-link-active,
@@ -87,12 +161,17 @@ a      { text-decoration: none; color: inherit; }
   .ac-nav-pill button.active,
   .gq-main-pill button.active {
     color: #07101d !important;
+
     background: linear-gradient(
       135deg,
       #f6f6f2 0%,
       #e1e5ef 50%,
       #b9d6ff 100%
     ) !important;
+
     box-shadow: 0 10px 30px rgba(158, 214, 255, 0.12) !important;
+
+    transform: none !important;
+    scale: 1 !important;
   }
 }
