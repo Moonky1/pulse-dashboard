@@ -727,3 +727,16 @@
     opacity: 0.42 !important;
   }
 }
+.gqp-feedback-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gqp-feedback-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}

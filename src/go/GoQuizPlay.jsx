@@ -19,7 +19,7 @@ const GAME_LABELS = {
     title: 'Classic Quiz',
   },
   'valid-invalid': {
-    image: '/emojis/valid.webp',
+    image: '/emojis/correct.webp',
     title: 'Valid or Invalid XFER',
   },
   'objection-battle': {
@@ -621,9 +621,22 @@ const tryAgain = () => {
 
         {answered && (
           <div className={`gqp-explanation ${selectedIndex === currentQuestion.correctIndex ? 'ok' : 'no'}`}>
-            <strong>
-              {selectedIndex === currentQuestion.correctIndex ? '✅ Correct' : '❌ Review this'}
-            </strong>
+<strong className="gqp-feedback-title">
+  {selectedIndex === currentQuestion.correctIndex ? (
+    <>
+      <img
+        className="gqp-feedback-icon"
+        src="/emojis/correct.webp"
+        alt=""
+        aria-hidden="true"
+      />
+
+      <span>Correct</span>
+    </>
+  ) : (
+    <span>❌ Review this</span>
+  )}
+</strong>
             <p>{currentQuestion.explanation}</p>
           </div>
         )}

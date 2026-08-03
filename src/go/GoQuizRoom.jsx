@@ -1881,11 +1881,26 @@ if (!joined) {
       <div className="grm grm-answer">
         {cancelButton}
 
-        {!isHost && (
-          <div className={`grm-result-banner ${isCorrect ? 'ok' : 'no'}`}>
-            {isCorrect ? '✅ Correct!' : picked === null ? "⏱️ Time's up!" : '❌ Wrong'}
-          </div>
-        )}
+{!isHost && (
+  <div className={`grm-result-banner ${isCorrect ? 'ok' : 'no'}`}>
+    {isCorrect ? (
+      <>
+        <img
+          className="grm-result-feedback-icon"
+          src="/emojis/correct.webp"
+          alt=""
+          aria-hidden="true"
+        />
+
+        <span>Correct!</span>
+      </>
+    ) : picked === null ? (
+      <span>⏱️ Time&apos;s up!</span>
+    ) : (
+      <span>❌ Wrong</span>
+    )}
+  </div>
+)}
 
         {isHost && <h2 className="grm-answer-h">📊 Results</h2>}
 
@@ -2044,9 +2059,20 @@ const lowPerformers = [...playerStats]
                   {player.correctCount}/{gameQuestionCount}
                 </span>
 
-                <span className="grm-pod-score">
-                  {(player.score || 0).toLocaleString()} pts · {player.accuracy}%
-                </span>
+<span className="grm-pod-score">
+  <span className="grm-points-value">
+    {(player.score || 0).toLocaleString()} pts
+
+    <img
+      className="grm-points-icon"
+      src="/emojis/points.webp"
+      alt=""
+      aria-hidden="true"
+    />
+  </span>
+
+  <span>· {player.accuracy}%</span>
+</span>
               </div>
             ) : (
               <div key={index} />
@@ -2086,7 +2112,16 @@ const lowPerformers = [...playerStats]
                       <small>{player.correctCount}/{gameQuestionCount} correct · {player.accuracy}%</small>
                     </span>
 
-                    <span className="grm-top-score">{(player.score || 0).toLocaleString()}</span>
+                    <span className="grm-top-score grm-points-value">
+  {(player.score || 0).toLocaleString()} pts
+
+  <img
+    className="grm-points-icon"
+    src="/emojis/points.webp"
+    alt=""
+    aria-hidden="true"
+  />
+</span>
                   </div>
                 )
               })}
@@ -2191,7 +2226,16 @@ const lowPerformers = [...playerStats]
         {!isHost && currentPlayerStats && (
           <p className="grm-my-result">
             Your score: <strong>{currentPlayerStats.correctCount}/{gameQuestionCount}</strong>
-            &nbsp;·&nbsp; <strong>{(currentPlayerStats.score || 0).toLocaleString()} pts</strong>
+            &nbsp;·&nbsp; <strong className="grm-points-value">
+  {(currentPlayerStats.score || 0).toLocaleString()} pts
+
+  <img
+    className="grm-points-icon"
+    src="/emojis/points.webp"
+    alt=""
+    aria-hidden="true"
+  />
+</strong>
             &nbsp;·&nbsp; Rank #{currentPlayerStats.rank} of {totalPlayers}
           </p>
         )}
@@ -2233,7 +2277,16 @@ const lowPerformers = [...playerStats]
                         </small>
                       </span>
 
-                      <span className="grm-participant-score">{player.score.toLocaleString()} pts</span>
+                      <span className="grm-participant-score grm-points-value">
+  {player.score.toLocaleString()} pts
+
+  <img
+    className="grm-points-icon"
+    src="/emojis/points.webp"
+    alt=""
+    aria-hidden="true"
+  />
+</span>
                     </summary>
 
                     <div className="grm-agent-answer-sheet">

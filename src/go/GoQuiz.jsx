@@ -6,13 +6,13 @@ const LANG_OPTIONS = [
   {
     id: 'en',
     flag: 'us',
-    title: 'English Questions',
+    title: 'English',
     desc: 'Questions and answers displayed in English.',
   },
   {
     id: 'es',
     flag: 'mx',
-    title: 'Spanish Questions',
+    title: 'Spanish',
     desc: 'Preguntas y respuestas mostradas en español.',
   },
   {
@@ -60,7 +60,7 @@ const GAME_MODES = [
   },
   {
     id: 'valid-invalid',
-    image: '/emojis/valid.webp',
+    image: '/emojis/correct.webp',
     title: 'Valid or Invalid XFER',
     desc: 'Decide if the transfer should count or not.',
     topic: 'dosdonts',
