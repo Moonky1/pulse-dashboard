@@ -29,6 +29,5 @@ The platform, design, training content, operational data, and internal workflows
 
 <div align="center">
 
-### Built by Simon for Kampaign Kings ⚡
 
 </div>
