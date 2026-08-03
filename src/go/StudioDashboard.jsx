@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import './Studio.css'
 import './StudioDashboard.css'
 import StudioGameBuilder from './StudioGameBuilder'
+import StudioMyGames from './StudioMyGames'
 
 const STUDIO_NAV_ITEMS = [
   {
@@ -246,7 +247,11 @@ function StudioEmptyState({
 export default function StudioDashboard() {
   const navigate = useNavigate()
 
-  const [activeView, setActiveView] = useState('overview')
+  const [activeView, setActiveView] =
+  useState('overview')
+
+const [editingGame, setEditingGame] =
+  useState(null)
 
   const user = useMemo(() => readStoredUser(), [])
 
@@ -267,6 +272,16 @@ export default function StudioDashboard() {
     String(user?.name || 'Creator')
       .trim()
       .split(/\s+/)[0] || 'Creator'
+
+    const openNewGame = () => {
+  setEditingGame(null)
+  setActiveView('create')
+}
+
+const openExistingGame = (game) => {
+  setEditingGame(game)
+  setActiveView('create')
+}
 
   useEffect(() => {
     if (user) return
@@ -351,7 +366,7 @@ export default function StudioDashboard() {
         <button
           className="studio-create-game-button"
           type="button"
-          onClick={() => setActiveView('create')}
+          onClick={openNewGame}
         >
           <span>+</span>
           Create New Game
@@ -488,13 +503,34 @@ export default function StudioDashboard() {
     </>
   )
 
-  const renderBuilderOverview = () => (
+const renderBuilderOverview = () => (
   <StudioGameBuilder
+    key={editingGame?.id || 'new-studio-game'}
     user={user}
     role={role}
     teamLabel={team}
     steps={BUILDER_STEPS}
-    onExit={() => setActiveView('overview')}
+    initialGame={editingGame}
+    onSaved={(savedGame) => {
+      setEditingGame(savedGame)
+    }}
+    onExit={() => {
+      const returnView = editingGame
+        ? 'my-games'
+        : 'overview'
+
+      setEditingGame(null)
+      setActiveView(returnView)
+    }}
+  />
+)
+
+const renderMyGames = () => (
+  <StudioMyGames
+    user={user}
+    role={role}
+    onCreate={openNewGame}
+    onContinue={openExistingGame}
   />
 )
 
@@ -566,7 +602,15 @@ export default function StudioDashboard() {
                 className={
                   activeView === item.id ? 'active' : ''
                 }
-                onClick={() => setActiveView(item.id)}
+                onClick={() => {
+  if (item.id === 'create') {
+    openNewGame()
+    return
+  }
+
+  setEditingGame(null)
+  setActiveView(item.id)
+}}
               >
                 <span>{item.icon}</span>
                 {item.label}
@@ -603,12 +647,16 @@ export default function StudioDashboard() {
             {activeView === 'overview' &&
               renderOverview()}
 
-            {activeView === 'create' &&
-              renderBuilderOverview()}
+{activeView === 'my-games' &&
+  renderMyGames()}
 
-            {activeView !== 'overview' &&
-              activeView !== 'create' &&
-              renderEmptyView()}
+{activeView === 'create' &&
+  renderBuilderOverview()}
+
+{activeView !== 'overview' &&
+  activeView !== 'my-games' &&
+  activeView !== 'create' &&
+  renderEmptyView()}
           </div>
         </main>
       </div>

@@ -7,9 +7,54 @@ function normalizeOwnerPart(value) {
     .replace(/\s+/g, '-')
 }
 
+function mapStudioGame(row) {
+  return {
+    id: row.id,
+
+    title: row.title || 'Untitled Game',
+    description: row.description || '',
+
+    language: row.language || 'en',
+    team: row.team || 'global',
+    visibility: row.visibility || 'private',
+    status: row.status || 'draft',
+
+    coverEmoji: row.cover_emoji || '🎮',
+
+    ownerKey: row.owner_key || '',
+    ownerName: row.owner_name || 'Pulse Creator',
+    ownerRole: row.owner_role || 'leader',
+    ownerTeam: row.owner_team || row.team || 'global',
+
+    currentStep: Number(row.current_step || 1),
+    defaultTimer: Number(row.default_timer || 30),
+    pointsPerQuestion: Number(
+      row.points_per_question || 1000
+    ),
+
+    randomizeQuestions: Boolean(
+      row.randomize_questions
+    ),
+
+    randomizeAnswers: Boolean(
+      row.randomize_answers
+    ),
+
+    showExplanations:
+      row.show_explanations !== false,
+
+    playCount: Number(row.play_count || 0),
+
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null,
+    publishedAt: row.published_at || null,
+  }
+}
+
 export function getStudioOwnerKey(user, role) {
   const name = normalizeOwnerPart(user?.name)
   const team = normalizeOwnerPart(user?.team)
+
   const roleId = normalizeOwnerPart(
     role?.id || user?.role
   )
@@ -17,6 +62,42 @@ export function getStudioOwnerKey(user, role) {
   return [name, team, roleId]
     .filter(Boolean)
     .join('::')
+}
+
+export async function getStudioMyGames({
+  user,
+  role,
+}) {
+  const ownerKey = getStudioOwnerKey(user, role)
+
+  if (!ownerKey) {
+    throw new Error(
+      'Could not identify the Studio creator.'
+    )
+  }
+
+  const { data, error } = await supabase.rpc(
+    'get_pulse_studio_my_games',
+    {
+      p_owner_key: ownerKey,
+    }
+  )
+
+  if (error) {
+    console.error(
+      'Could not load Studio games:',
+      error
+    )
+
+    throw new Error(
+      error.message ||
+        'Could not load your Studio games.'
+    )
+  }
+
+  return Array.isArray(data)
+    ? data.map(mapStudioGame)
+    : []
 }
 
 export async function saveStudioGameDraft({
@@ -44,9 +125,12 @@ export async function saveStudioGameDraft({
       p_visibility: form.visibility,
       p_cover_emoji: form.coverEmoji,
       p_owner_key: ownerKey,
-      p_owner_name: user?.name || 'Pulse Creator',
-      p_owner_role: role?.id || user?.role,
-      p_owner_team: user?.team || 'global',
+      p_owner_name:
+        user?.name || 'Pulse Creator',
+      p_owner_role:
+        role?.id || user?.role,
+      p_owner_team:
+        user?.team || 'global',
     }
   )
 

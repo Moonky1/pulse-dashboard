@@ -120,6 +120,8 @@ export default function StudioGameBuilder({
   role,
   teamLabel,
   steps,
+  initialGame = null,
+  onSaved,
   onExit,
 }) {
   const initialTeam = useMemo(() => {
@@ -134,23 +136,42 @@ export default function StudioGameBuilder({
     return exists ? savedTeam : 'global'
   }, [user])
 
-  const [form, setForm] = useState(() => ({
-    title: '',
-    description: '',
-    language: 'en',
-    team: initialTeam,
-    visibility:
-      role?.id === 'global'
-        ? 'global'
-        : 'team',
-    coverEmoji: '🎮',
-  }))
+const [form, setForm] = useState(() => ({
+  title: initialGame?.title || '',
 
-  const [gameId, setGameId] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [dirty, setDirty] = useState(false)
-  const [error, setError] = useState('')
-  const [savedAt, setSavedAt] = useState(null)
+  description:
+    initialGame?.description || '',
+
+  language:
+    initialGame?.language || 'en',
+
+  team:
+    initialGame?.team || initialTeam,
+
+  visibility:
+    initialGame?.visibility ||
+    (role?.id === 'global'
+      ? 'global'
+      : 'team'),
+
+  coverEmoji:
+    initialGame?.coverEmoji || '🎮',
+}))
+
+const [gameId, setGameId] = useState(
+  initialGame?.id || null
+)
+
+const [saving, setSaving] = useState(false)
+const [dirty, setDirty] = useState(false)
+const [error, setError] = useState('')
+
+const [savedAt, setSavedAt] = useState(
+  () =>
+    initialGame?.updatedAt
+      ? new Date(initialGame.updatedAt)
+      : null
+)
 
   const selectedLanguage =
     LANGUAGE_OPTIONS.find(
@@ -211,9 +232,47 @@ export default function StudioGameBuilder({
           form,
         })
 
-      setGameId(savedGameId)
-      setSavedAt(new Date())
-      setDirty(false)
+const savedDate = new Date()
+
+const savedGame = {
+  ...initialGame,
+
+  id: savedGameId,
+
+  title: form.title.trim(),
+  description: form.description.trim(),
+
+  language: form.language,
+  team: form.team,
+  visibility: form.visibility,
+  coverEmoji: form.coverEmoji,
+
+  status:
+    initialGame?.status || 'draft',
+
+  currentStep:
+    initialGame?.currentStep || 1,
+
+  playCount:
+    initialGame?.playCount || 0,
+
+  ownerName:
+    user?.name || 'Pulse Creator',
+
+  ownerRole:
+    role?.id || user?.role,
+
+  ownerTeam:
+    user?.team || 'global',
+
+  updatedAt: savedDate.toISOString(),
+}
+
+setGameId(savedGameId)
+setSavedAt(savedDate)
+setDirty(false)
+
+onSaved?.(savedGame)
     } catch (saveError) {
       console.error(saveError)
 
