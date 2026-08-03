@@ -266,6 +266,17 @@ export default function Dashboard() {
               </>
             ) : null}
 
+            <div className="pulse-sunrise-hero" aria-hidden="true">
+  <div className="pulse-sunrise-line" />
+  <div className="pulse-sunrise-glow" />
+  <div className="pulse-sunrise-arc pulse-sunrise-arc-back" />
+  <div className="pulse-sunrise-arc pulse-sunrise-arc-mid" />
+  <div className="pulse-sunrise-arc pulse-sunrise-arc-front" />
+  <div className="pulse-sunrise-core" />
+  <div className="pulse-sunrise-flare pulse-sunrise-flare-left" />
+  <div className="pulse-sunrise-flare pulse-sunrise-flare-right" />
+</div>
+
             {loading ? (
               <div className="pulse-loading">Loading team data...</div>
             ) : error ? (
