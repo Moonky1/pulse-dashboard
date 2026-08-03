@@ -68,6 +68,67 @@ const GO_RESULT_ASSETS = {
   reviewCritical: '/emojis/zero3.webp',
 }
 
+const FINAL_GAME_META = {
+  classic: {
+    title: 'Classic Quiz',
+    image: '/emojis/classic.webp',
+  },
+  'valid-invalid': {
+    title: 'Valid or Invalid XFER',
+    image: '/emojis/correct.webp',
+  },
+  'objection-battle': {
+    title: 'Objection Battle',
+    image: '/emojis/objection.webp',
+  },
+  'disposition-trainer': {
+    title: 'Dispose It',
+    image: '/emojis/disposeit.webp',
+  },
+  eligible: {
+    title: 'Eligible or Not Eligible',
+    image: '/emojis/vehiclee.png',
+  },
+  certification: {
+    title: 'Certification Mode',
+    image: '/emojis/certification.webp',
+  },
+}
+
+const FINAL_LANGUAGE_META = {
+  en: {
+    title: 'English',
+    flag: 'us',
+  },
+  es: {
+    title: 'Spanish',
+    flag: 'mx',
+  },
+  mixed: {
+    title: 'Mixed',
+    icon: '🔀',
+  },
+}
+
+const FINAL_DIFFICULTY_META = {
+  easy: {
+    title: 'Easy',
+    image: '/emojis/easy.webp',
+  },
+  medium: {
+    title: 'Medium',
+    image: '/emojis/medium.webp',
+  },
+  advanced: {
+    title: 'Advanced',
+    image: '/emojis/advanced.webp',
+  },
+  all: {
+    title: 'All Levels',
+    image: null,
+  },
+}
+
 function getRankVisual(rank) {
   if (rank === 1) return GO_RESULT_ASSETS.first
   if (rank === 2) return GO_RESULT_ASSETS.second
@@ -2012,6 +2073,53 @@ if (!joined) {
     const currentPlayerStats = playerStats.find((player) => player.id === currentPlayer?.id) || null
     const topPerformers = playerStats.slice(0, Math.min(10, playerStats.length))
 
+    const finalGameId = String(room?.game || game || 'classic')
+  .trim()
+  .toLowerCase()
+
+const finalLanguageId = String(room?.lang || lang || 'mixed')
+  .trim()
+  .toLowerCase()
+
+const finalDifficultyId = String(
+  room?.difficulty || difficulty || 'all'
+)
+  .trim()
+  .toLowerCase()
+
+const storedTeamId = String(room?.team || '')
+  .trim()
+  .toLowerCase()
+
+const finalTeamId =
+  storedTeamId && storedTeamId !== 'all'
+    ? storedTeamId
+    : selectedTeam
+
+const finalTeamMeta =
+  APP_CONFIG.teams.find((item) => item.id === finalTeamId) ||
+  selectedTeamInfo ||
+  null
+
+const finalTeamFlagCode = finalTeamMeta
+  ? finalTeamMeta.id === 'asia'
+    ? 'ph'
+    : finalTeamMeta.id === 'central'
+      ? 'gt'
+      : finalTeamMeta.code
+  : ''
+
+const finalGameMeta =
+  FINAL_GAME_META[finalGameId] || FINAL_GAME_META.classic
+
+const finalLanguageMeta =
+  FINAL_LANGUAGE_META[finalLanguageId] ||
+  FINAL_LANGUAGE_META.mixed
+
+const finalDifficultyMeta =
+  FINAL_DIFFICULTY_META[finalDifficultyId] ||
+  FINAL_DIFFICULTY_META.all
+
 const lowPerformers = [...playerStats]
   .filter((player) => {
     if (player.answeredCount <= 0) return false
@@ -2046,12 +2154,68 @@ const lowPerformers = [...playerStats]
           <h1 className="grm-finished-h">Final Results</h1>
         </div>
 
-        <p className="grm-muted">
-          {code} · {totalPlayers} player{totalPlayers !== 1 ? 's' : ''} · {gameQuestionCount}/
-          {gameQuestionCount} questions
-        </p>
+<p className="grm-muted">
+  {code} · {totalPlayers} player{totalPlayers !== 1 ? 's' : ''} ·{' '}
+  {gameQuestionCount}/{gameQuestionCount} questions
+</p>
 
-        <div className="grm-podium">
+<div className="grm-results-meta">
+  {finalTeamMeta && (
+    <span className="grm-results-meta-chip">
+      <img
+        className="grm-results-meta-flag"
+        src={`https://flagcdn.com/w80/${finalTeamFlagCode}.png`}
+        alt={finalTeamMeta.name}
+      />
+
+      <span>Team: {finalTeamMeta.name}</span>
+    </span>
+  )}
+
+  <span className="grm-results-meta-chip">
+    {finalLanguageMeta.flag ? (
+      <img
+        className="grm-results-meta-flag"
+        src={`https://flagcdn.com/w80/${finalLanguageMeta.flag}.png`}
+        alt={finalLanguageMeta.title}
+      />
+    ) : (
+      <span className="grm-results-meta-emoji">
+        {finalLanguageMeta.icon}
+      </span>
+    )}
+
+    <span>Language: {finalLanguageMeta.title}</span>
+  </span>
+
+  <span className="grm-results-meta-chip">
+    <img
+      className="grm-results-meta-icon"
+      src={finalGameMeta.image}
+      alt=""
+      aria-hidden="true"
+    />
+
+    <span>Game: {finalGameMeta.title}</span>
+  </span>
+
+  {finalGameId === 'classic' && (
+    <span className="grm-results-meta-chip">
+      {finalDifficultyMeta.image && (
+        <img
+          className="grm-results-meta-icon"
+          src={finalDifficultyMeta.image}
+          alt=""
+          aria-hidden="true"
+        />
+      )}
+
+      <span>Difficulty: {finalDifficultyMeta.title}</span>
+    </span>
+  )}
+</div>
+
+<div className="grm-podium">
           {podiumPlayers.map((player, index) => {
             const podiumClass = ['second', 'first', 'third'][index]
             const visual = player ? getRankVisual(player.rank) : null

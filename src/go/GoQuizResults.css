@@ -133,3 +133,28 @@
     width: 100%;
   }
 }
+/* =========================================================
+   RESULTS PAGE — TRUE CENTER ALIGNMENT
+   Removes inherited host-room side padding.
+   ========================================================= */
+
+.grm.grm-finished.grm-results-page {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.grm-results-page .grm-finished-title,
+.grm-results-page > .grm-muted,
+.grm-results-page .grm-results-meta {
+  width: min(1180px, calc(100% - 32px)) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center !important;
+}
+
+.grm-results-page .grm-results-meta {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
+import { APP_CONFIG } from '../config'
 import { getQuestionById as getQuizQuestionById } from './quizPools'
 import './GoQuizRoom.css'
 import './GoQuizResults.css'
@@ -457,6 +458,21 @@ const resultDifficultyMeta =
   RESULT_DIFFICULTY_META[resultDifficultyId] ||
   RESULT_DIFFICULTY_META.all
 
+const resultTeamId = String(room?.team || '')
+  .trim()
+  .toLowerCase()
+
+const resultTeamMeta =
+  APP_CONFIG.teams.find((item) => item.id === resultTeamId) || null
+
+const resultTeamFlagCode = resultTeamMeta
+  ? resultTeamMeta.id === 'asia'
+    ? 'ph'
+    : resultTeamMeta.id === 'central'
+      ? 'gt'
+      : resultTeamMeta.code
+  : ''
+
   const copyResultsLink = async () => {
     const resultsLink = `${window.location.origin}/go/results/${code}`
 
@@ -536,7 +552,19 @@ const resultDifficultyMeta =
         {gameQuestionCount}/{gameQuestionCount} questions
       </p>
 
-      <div className="grm-results-meta">
+<div className="grm-results-meta">
+  {resultTeamMeta && (
+    <span className="grm-results-meta-chip">
+      <img
+        className="grm-results-meta-flag"
+        src={`https://flagcdn.com/w80/${resultTeamFlagCode}.png`}
+        alt={resultTeamMeta.name}
+      />
+
+      <span>Team: {resultTeamMeta.name}</span>
+    </span>
+  )}
+
   <span className="grm-results-meta-chip">
     {resultLanguageMeta.flag ? (
       <img

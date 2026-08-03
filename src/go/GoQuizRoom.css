@@ -3358,3 +3358,66 @@
   margin: 0 !important;
   padding: 0 !important;
 }
+
+/* =========================================================
+   FINAL RESULTS METADATA
+   Shared visual layout for host results information.
+   ========================================================= */
+
+.grm-finished .grm-results-meta {
+  width: min(980px, 100%);
+  margin: 14px auto 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  text-align: center;
+}
+
+.grm-results-meta-chip {
+  min-height: 38px;
+  padding: 0 14px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border-radius: 999px;
+  border: 1px solid rgba(185, 214, 255, 0.14);
+  background: rgba(8, 18, 35, 0.7);
+
+  color: #dbeafe;
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.grm-results-meta-flag {
+  display: block;
+  width: 28px;
+  height: 19px;
+  object-fit: cover;
+
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.grm-results-meta-icon {
+  display: block;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+
+  object-fit: contain;
+  flex: 0 0 22px;
+}
+
+.grm-results-meta-emoji {
+  font-size: 17px;
+  line-height: 1;
+}
