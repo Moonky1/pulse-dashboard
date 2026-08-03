@@ -67,12 +67,19 @@ export default function Register({ embedded = false, onClose, onSwitchMode }) {
     if (embedded) return
 
     const existing = localStorage.getItem('pulse_user')
-    if (existing) {
-      window.location.href = '/dashboard'
-    }
+if (existing) {
+  const returnPath =
+    localStorage.getItem('pulse_return_after_auth')
+
+  localStorage.removeItem('pulse_return_after_auth')
+
+  window.location.href =
+    returnPath || '/dashboard'
+}
   }, [embedded])
 
   const close = () => {
+    localStorage.removeItem('pulse_return_after_auth')
     if (embedded) {
       onClose?.()
       return
@@ -90,9 +97,15 @@ export default function Register({ embedded = false, onClose, onSwitchMode }) {
     navigate('/signin')
   }
 
-  const goDashboard = () => {
-    window.location.href = '/dashboard'
-  }
+ const goDashboard = () => {
+  const returnPath =
+    localStorage.getItem('pulse_return_after_auth')
+
+  localStorage.removeItem('pulse_return_after_auth')
+
+  window.location.href =
+    returnPath || '/dashboard'
+}
 
   const next = async () => {
     setError('')

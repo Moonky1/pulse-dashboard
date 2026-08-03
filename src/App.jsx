@@ -16,6 +16,8 @@ import GoQuizPlay from './go/GoQuizPlay'
 import GoQuizRoom from './go/GoQuizRoom'
 import GoQuizResults from './go/GoQuizResults'
 import Studio from './go/Studio'
+import StudioDashboard from './go/StudioDashboard'
+
 
 const PrivateRoute = ({ children }) => {
   const user = localStorage.getItem('pulse_user')
@@ -74,6 +76,10 @@ export default function App() {
 
         {/* BoostGO Studio */}
         <Route path="/studio" element={<Studio />} />
+<Route
+  path="/studio/dashboard"
+  element={<StudioDashboard />}
+/>
 
         {/* Old unused route */}
         <Route path="/go/present" element={<Navigate to="/go" replace />} />

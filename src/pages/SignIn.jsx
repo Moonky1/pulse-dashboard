@@ -6,6 +6,7 @@ const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
 
 const TEAM_MAP = {
+  Global: 'global',
   Philippines: 'philippines',
   Venezuela: 'venezuela',
   Colombia: 'colombia',
@@ -16,6 +17,7 @@ const TEAM_MAP = {
 }
 
 const ROLE_MAP = {
+  Global: 'global',
   Supervisor: 'supervisor',
   QA: 'qa',
   'Team Leader': 'leader',
@@ -58,6 +60,7 @@ export default function SignIn({ embedded = false, onClose, onSwitchMode }) {
   const [welcomeName, setWelcomeName] = useState('')
 
   const close = () => {
+    localStorage.removeItem('pulse_return_after_auth')
     if (embedded) {
       onClose?.()
       return
@@ -76,8 +79,14 @@ export default function SignIn({ embedded = false, onClose, onSwitchMode }) {
   }
 
   const goDashboard = () => {
-    window.location.href = '/dashboard'
-  }
+  const returnPath =
+    localStorage.getItem('pulse_return_after_auth')
+
+  localStorage.removeItem('pulse_return_after_auth')
+
+  window.location.href =
+    returnPath || '/dashboard'
+}
 
   const handleSignIn = async () => {
     if (!name.trim()) {

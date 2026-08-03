@@ -70,6 +70,30 @@ export default function Studio() {
     navigate('/go/quiz?mode=host')
   }
 
+  const openBuilder = () => {
+  let storedUser = null
+
+  try {
+    storedUser = JSON.parse(
+      localStorage.getItem('pulse_user')
+    )
+  } catch (error) {
+    console.error('Could not read Pulse user:', error)
+  }
+
+  if (!storedUser) {
+    localStorage.setItem(
+      'pulse_return_after_auth',
+      '/studio/dashboard'
+    )
+
+    navigate('/signin')
+    return
+  }
+
+  navigate('/studio/dashboard')
+}
+
   const openReport = () => {
     if (cleanCode.length < 4) return
     navigate(`/go/results/KK${cleanCode}`)
@@ -80,6 +104,11 @@ export default function Studio() {
       openLiveGame()
       return
     }
+
+    if (activeModule.action === 'builder') {
+  openBuilder()
+  return
+}
 
     if (activeModule.action === 'reports') {
       document.getElementById('studio-reports')?.scrollIntoView({ behavior: 'smooth' })
@@ -137,12 +166,12 @@ export default function Studio() {
               Host a Game →
             </button>
 
-            <button
-              className="studio-secondary"
-              onClick={() => setActiveModule(STUDIO_MODULES[1])}
-            >
-              Create Your Game
-            </button>
+<button
+  className="studio-secondary"
+  onClick={openBuilder}
+>
+  Create Your Game
+</button>
           </div>
 
           <div className="studio-active-preview">
@@ -170,7 +199,14 @@ export default function Studio() {
           <button
             key={item.id}
             className={`studio-option-card ${activeModule.id === item.id ? 'active' : ''}`}
-            onClick={() => setActiveModule(item)}
+            onClick={() => {
+  if (item.action === 'builder') {
+    openBuilder()
+    return
+  }
+
+  setActiveModule(item)
+}}
             type="button"
           >
             <div className="studio-option-icon">{item.icon}</div>
