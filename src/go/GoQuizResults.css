@@ -40,11 +40,82 @@
 
 .grm-results-meta {
   width: min(1180px, calc(100vw - 32px));
-  margin: 8px auto 24px;
-  color: #8fb3e6;
+  margin: 12px auto 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  color: #dbeafe;
   text-align: center;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 850;
+}
+
+.grm-results-meta-chip {
+  min-height: 38px;
+  padding: 0 14px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border-radius: 999px;
+  border: 1px solid rgba(185, 214, 255, 0.14);
+  background: rgba(8, 18, 35, 0.7);
+
+  color: #dbeafe;
+  white-space: nowrap;
+}
+
+.grm-results-meta-flag {
+  display: block;
+  width: 28px;
+  height: 19px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.grm-results-meta-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex: 0 0 22px;
+}
+
+.grm-results-meta-emoji {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.grm-results-points {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  white-space: nowrap;
+}
+
+.grm-results-points-icon {
+  display: block;
+  width: 21px;
+  min-width: 21px;
+  height: 21px;
+  object-fit: contain;
+  flex: 0 0 21px;
+}
+
+.grm-pod-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
 }
 
 .grm-results-actions {

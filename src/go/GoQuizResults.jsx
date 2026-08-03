@@ -39,6 +39,67 @@ const GO_RESULT_ASSETS = {
   reviewCritical: '/emojis/zero3.webp',
 }
 
+const RESULT_GAME_META = {
+  classic: {
+    title: 'Classic Quiz',
+    image: '/emojis/classic.webp',
+  },
+  'valid-invalid': {
+    title: 'Valid or Invalid XFER',
+    image: '/emojis/correct.webp',
+  },
+  'objection-battle': {
+    title: 'Objection Battle',
+    image: '/emojis/objection.webp',
+  },
+  'disposition-trainer': {
+    title: 'Dispose It',
+    image: '/emojis/disposeit.webp',
+  },
+  eligible: {
+    title: 'Eligible or Not Eligible',
+    image: '/emojis/vehiclee.png',
+  },
+  certification: {
+    title: 'Certification Mode',
+    image: '/emojis/certification.webp',
+  },
+}
+
+const RESULT_LANGUAGE_META = {
+  en: {
+    title: 'English',
+    flag: 'us',
+  },
+  es: {
+    title: 'Spanish',
+    flag: 'mx',
+  },
+  mixed: {
+    title: 'Mixed',
+    icon: '🔀',
+  },
+}
+
+const RESULT_DIFFICULTY_META = {
+  easy: {
+    title: 'Easy',
+    image: '/emojis/easy.webp',
+  },
+  medium: {
+    title: 'Medium',
+    image: '/emojis/medium.webp',
+  },
+  advanced: {
+    title: 'Advanced',
+    image: '/emojis/advanced.webp',
+  },
+  all: {
+    title: 'All Levels',
+    image: null,
+  },
+}
+
 function getOptionLetter(index) {
   return LTRS[index] || String(index + 1)
 }
@@ -146,20 +207,6 @@ function buildDisplayQuestion(rawQuestion, roomCode, currentIndex) {
     options: shuffledOptions.map((option) => option.text),
     correct,
   }
-}
-
-function formatGameName(room) {
-  const game = String(room?.game || room?.mode || '').trim()
-  const topic = String(room?.topic || 'all').trim()
-  const lang = String(room?.lang || 'mixed').trim()
-
-  return [
-    game ? `Game: ${game}` : null,
-    topic ? `Topic: ${topic}` : null,
-    lang ? `Lang: ${lang}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ')
 }
 
 export default function GoQuizResults() {
@@ -388,6 +435,28 @@ export default function GoQuizResults() {
 
   const podiumPlayers = [playerStats[1], playerStats[0], playerStats[2]]
 
+  const resultGameId = String(room?.game || 'classic')
+  .trim()
+  .toLowerCase()
+
+const resultLanguageId = String(room?.lang || 'mixed')
+  .trim()
+  .toLowerCase()
+
+const resultDifficultyId = String(room?.difficulty || 'all')
+  .trim()
+  .toLowerCase()
+
+const resultGameMeta =
+  RESULT_GAME_META[resultGameId] || RESULT_GAME_META.classic
+
+const resultLanguageMeta =
+  RESULT_LANGUAGE_META[resultLanguageId] || RESULT_LANGUAGE_META.mixed
+
+const resultDifficultyMeta =
+  RESULT_DIFFICULTY_META[resultDifficultyId] ||
+  RESULT_DIFFICULTY_META.all
+
   const copyResultsLink = async () => {
     const resultsLink = `${window.location.origin}/go/results/${code}`
 
@@ -467,7 +536,49 @@ export default function GoQuizResults() {
         {gameQuestionCount}/{gameQuestionCount} questions
       </p>
 
-      {formatGameName(room) && <p className="grm-results-meta">{formatGameName(room)}</p>}
+      <div className="grm-results-meta">
+  <span className="grm-results-meta-chip">
+    {resultLanguageMeta.flag ? (
+      <img
+        className="grm-results-meta-flag"
+        src={`https://flagcdn.com/w80/${resultLanguageMeta.flag}.png`}
+        alt={resultLanguageMeta.title}
+      />
+    ) : (
+      <span className="grm-results-meta-emoji">
+        {resultLanguageMeta.icon}
+      </span>
+    )}
+
+    <span>Language: {resultLanguageMeta.title}</span>
+  </span>
+
+  <span className="grm-results-meta-chip">
+    <img
+      className="grm-results-meta-icon"
+      src={resultGameMeta.image}
+      alt=""
+      aria-hidden="true"
+    />
+
+    <span>Game: {resultGameMeta.title}</span>
+  </span>
+
+  {resultGameId === 'classic' && (
+    <span className="grm-results-meta-chip">
+      {resultDifficultyMeta.image && (
+        <img
+          className="grm-results-meta-icon"
+          src={resultDifficultyMeta.image}
+          alt=""
+          aria-hidden="true"
+        />
+      )}
+
+      <span>Difficulty: {resultDifficultyMeta.title}</span>
+    </span>
+  )}
+</div>
 
       <div className="grm-podium">
         {podiumPlayers.map((player, index) => {
@@ -490,9 +601,20 @@ export default function GoQuizResults() {
                 {player.correctCount}/{gameQuestionCount}
               </span>
 
-              <span className="grm-pod-score">
-                {(player.score || 0).toLocaleString()} pts · {player.accuracy}%
-              </span>
+<span className="grm-pod-score">
+  <span className="grm-results-points">
+    {(player.score || 0).toLocaleString()} pts
+
+    <img
+      className="grm-results-points-icon"
+      src="/emojis/points.webp"
+      alt=""
+      aria-hidden="true"
+    />
+  </span>
+
+  <span>· {player.accuracy}%</span>
+</span>
             </div>
           ) : (
             <div key={index} />
@@ -530,9 +652,16 @@ export default function GoQuizResults() {
                     </small>
                   </span>
 
-                  <span className="grm-top-score">
-                    {(player.score || 0).toLocaleString()}
-                  </span>
+<span className="grm-top-score grm-results-points">
+  {(player.score || 0).toLocaleString()} pts
+
+  <img
+    className="grm-results-points-icon"
+    src="/emojis/points.webp"
+    alt=""
+    aria-hidden="true"
+  />
+</span>
                 </div>
               )
             })}
@@ -620,9 +749,16 @@ export default function GoQuizResults() {
                       </small>
                     </span>
 
-                    <span className="grm-participant-score">
-                      {player.score.toLocaleString()} pts
-                    </span>
+<span className="grm-participant-score grm-results-points">
+  {player.score.toLocaleString()} pts
+
+  <img
+    className="grm-results-points-icon"
+    src="/emojis/points.webp"
+    alt=""
+    aria-hidden="true"
+  />
+</span>
                   </summary>
 
                   <div className="grm-agent-answer-sheet">

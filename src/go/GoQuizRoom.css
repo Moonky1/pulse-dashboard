@@ -3329,3 +3329,32 @@
   margin: 0 !important;
   padding: 0 !important;
 }
+
+/* Correct / Incorrect feedback alignment */
+
+.grm-result-banner {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 9px !important;
+}
+
+.grm-result-banner span {
+  display: inline-block;
+  line-height: 1;
+}
+
+.grm-result-feedback-icon {
+  display: block !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  flex: 0 0 24px !important;
+  object-fit: contain !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}

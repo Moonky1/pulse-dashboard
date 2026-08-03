@@ -624,25 +624,25 @@ const tryAgain = () => {
 <strong className="gqp-feedback-title">
   {selectedIndex === currentQuestion.correctIndex ? (
     <>
+      <span>Correct</span>
+
       <img
         className="gqp-feedback-icon"
         src="/emojis/correct.webp"
         alt=""
         aria-hidden="true"
       />
-
-      <span>Correct</span>
     </>
-) : (
+  ) : (
     <>
+      <span>Incorrect</span>
+
       <img
         className="gqp-feedback-icon"
         src="/emojis/incorrect.webp"
         alt=""
         aria-hidden="true"
       />
-
-      <span>Review this</span>
     </>
   )}
 </strong>

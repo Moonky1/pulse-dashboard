@@ -1658,10 +1658,14 @@ if (!joined) {
     <span className="grm-lobby-sep">·</span>
 
     <span className="grm-lobby-team">
-      <img
-        src={`https://flagcdn.com/w40/${selectedTeamInfo.code}.png`}
-        alt={selectedTeamInfo.name}
-      />
+<img
+  src={`https://flagcdn.com/w40/${
+    selectedTeamInfo.id === 'asia'
+      ? 'ph'
+      : selectedTeamInfo.code
+  }.png`}
+  alt={selectedTeamInfo.name}
+/>
       {selectedTeamInfo.name}
     </span>
   </>
@@ -1885,29 +1889,29 @@ if (!joined) {
   <div className={`grm-result-banner ${isCorrect ? 'ok' : 'no'}`}>
     {isCorrect ? (
       <>
+        <span>Correct</span>
+
         <img
           className="grm-result-feedback-icon"
           src="/emojis/correct.webp"
           alt=""
           aria-hidden="true"
         />
-
-        <span>Correct!</span>
       </>
     ) : picked === null ? (
       <span>⏱️ Time&apos;s up!</span>
-) : (
-  <>
-    <img
-      className="grm-result-feedback-icon"
-      src="/emojis/incorrect.webp"
-      alt=""
-      aria-hidden="true"
-    />
+    ) : (
+      <>
+        <span>Incorrect</span>
 
-    <span>Wrong</span>
-  </>
-)}
+        <img
+          className="grm-result-feedback-icon"
+          src="/emojis/incorrect.webp"
+          alt=""
+          aria-hidden="true"
+        />
+      </>
+    )}
   </div>
 )}
 
