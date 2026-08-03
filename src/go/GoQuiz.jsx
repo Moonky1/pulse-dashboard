@@ -27,21 +27,21 @@ const DIFFICULTY_OPTIONS = [
   {
     id: 'easy',
     badge: 'EASY',
-    icon: '🟢',
+    image: '/emojis/easy.webp',
     title: 'Easy',
     desc: 'Basic questions for new agents: dispositions, consent, simple eligibility, and safe wording.',
   },
   {
     id: 'medium',
     badge: 'MEDIUM',
-    icon: '🟡',
+    image: '/emojis/medium.webp',
     title: 'Medium',
     desc: 'Scenario-based questions with more QA judgment and call flow decisions.',
   },
   {
     id: 'advanced',
     badge: 'ADVANCED',
-    icon: '🔴',
+    image: '/emojis/advanced.webp',
     title: 'Advanced',
     desc: 'Harder QA scenarios with tricky consent, handoff, eligibility, and compliance details.',
   },
@@ -104,6 +104,9 @@ const GAME_MODES = [
     supportsQuestionStyle: false,
   },
 ]
+
+const getGameMeta = (gameId) =>
+  GAME_MODES.find((item) => item.id === gameId) || GAME_MODES[0]
 
 const TOPICS = [
   {
@@ -331,12 +334,11 @@ if (trainingMode === 'host') {
 
 <section className="gq-card-grid two gq-training-grid">
   <button
-    className="gq-card gq-choice-card gq-training-card"
+    className="gq-card gq-unified-card gq-training-card"
     onClick={() => goToMode('host')}
   >
-    <h2>Host a Game</h2>
-
-    <div className="gq-choice-visual">
+    <div className="gq-card-head">
+      <h2>Host a Game</h2>
       <span className="gq-card-icon">🎮</span>
     </div>
 
@@ -348,12 +350,11 @@ if (trainingMode === 'host') {
   </button>
 
   <button
-    className="gq-card gq-choice-card gq-training-card"
+    className="gq-card gq-unified-card gq-training-card"
     onClick={() => goToMode('solo')}
   >
-    <h2>Practice</h2>
-
-    <div className="gq-choice-visual">
+    <div className="gq-card-head">
+      <h2>Practice</h2>
       <span className="gq-card-icon">👤</span>
     </div>
 
@@ -421,12 +422,12 @@ if (trainingMode === 'host') {
   {LANG_OPTIONS.map((item) => (
     <button
       key={item.id}
-      className="gq-card gq-choice-card gq-language-card"
+      className="gq-card gq-unified-card gq-language-card"
       onClick={() => goToLanguage(item.id)}
     >
-      <h2>{item.title}</h2>
+      <div className="gq-card-head">
+        <h2>{item.title}</h2>
 
-      <div className="gq-choice-visual">
         {item.flag ? (
           <img
             className="gq-language-flag"
@@ -446,10 +447,7 @@ if (trainingMode === 'host') {
 
       <p>{item.desc}</p>
 
-      <span
-        className="gq-choice-footer-placeholder"
-        aria-hidden="true"
-      />
+      <span className="gq-card-foot-placeholder" aria-hidden="true" />
     </button>
   ))}
 </section>
@@ -473,12 +471,12 @@ if (trainingMode === 'host') {
   {GAME_MODES.map((item) => (
     <button
       key={item.id}
-      className="gq-card gq-choice-card gq-game-card"
+      className="gq-card gq-unified-card gq-game-card"
       onClick={() => goToGame(item)}
     >
-      <h2>{item.title}</h2>
+      <div className="gq-card-head">
+        <h2>{item.title}</h2>
 
-      <div className="gq-choice-visual">
         <img
           className="gq-game-image"
           src={item.image}
@@ -518,23 +516,29 @@ if (trainingMode === 'host') {
             <p>Select the Classic Quiz level for this game.</p>
           </section>
 
-          <section className="gq-card-grid three">
-            {DIFFICULTY_OPTIONS.map((item) => (
-<button
-  key={item.id}
-  className="gq-card gq-difficulty-card"
-  onClick={() => goToDifficulty(item.id)}
->
-  <div className="gq-difficulty-top">
-    <span className="gq-card-badge">{item.badge}</span>
-    <span className="gq-card-icon">{item.icon}</span>
-  </div>
+<section className="gq-card-grid three gq-difficulty-grid">
+  {DIFFICULTY_OPTIONS.map((item) => (
+    <button
+      key={item.id}
+      className="gq-card gq-unified-card gq-difficulty-card"
+      onClick={() => goToDifficulty(item.id)}
+    >
+      <div className="gq-card-head">
+        <h2>{item.badge}</h2>
 
-  <p>{item.desc}</p>
-  <b>Start →</b>
-</button>
-            ))}
-          </section>
+        <img
+          className="gq-difficulty-image"
+          src={item.image}
+          alt=""
+          aria-hidden="true"
+        />
+      </div>
+
+      <p>{item.desc}</p>
+      <b>Start →</b>
+    </button>
+  ))}
+</section>
 
           <div className="gq-bottom-actions">
             <button onClick={() => navigate(`/go/quiz?mode=${trainingMode}${getTeamQuery()}&lang=${lang}`)}>

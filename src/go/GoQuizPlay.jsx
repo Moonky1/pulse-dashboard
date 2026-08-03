@@ -15,27 +15,27 @@ const OPTION_META = [
 
 const GAME_LABELS = {
   classic: {
-    icon: '🧠',
+    image: '/emojis/classic.webp',
     title: 'Classic Quiz',
   },
   'valid-invalid': {
-    icon: '✅',
+    image: '/emojis/valid.webp',
     title: 'Valid or Invalid XFER',
   },
   'objection-battle': {
-    icon: '🛡️',
+    image: '/emojis/objection.png',
     title: 'Objection Battle',
   },
   'disposition-trainer': {
-    icon: '🧾',
+    image: '/emojis/disposeit.webp',
     title: 'Dispose It',
   },
   eligible: {
-    icon: '🚗',
+    image: '/emojis/vehiclee.png',
     title: 'Eligible or Not Eligible',
   },
   certification: {
-    icon: '🏅',
+    image: '/emojis/certification.webp',
     title: 'Certification Mode',
   },
 }
@@ -444,9 +444,18 @@ const tryAgain = () => {
             <b>GO</b>
           </button>
 
-          <div className="gqp-nav-center">
-            <span>{gameLabel.icon} {gameLabel.title}</span>
-          </div>
+<div className="gqp-nav-center">
+  <span className="gqp-game-mode-chip">
+    <img
+      className="gqp-game-mode-icon"
+      src={gameLabel.image}
+      alt=""
+      aria-hidden="true"
+    />
+
+    {gameLabel.title}
+  </span>
+</div>
 
           <button className="gqp-exit-btn" onClick={() => navigate('/go')}>
             Home
@@ -455,8 +464,18 @@ const tryAgain = () => {
 
         <main className="gqp-results-card">
 <span className="gqp-results-mode">
-  {gameLabel.icon} {gameLabel.title}
-  {game === 'classic' ? ` • ${difficultyLabel}` : ''}
+  <img
+    className="gqp-game-mode-icon"
+    src={gameLabel.image}
+    alt=""
+    aria-hidden="true"
+  />
+
+  <span>{gameLabel.title}</span>
+
+  {game === 'classic' && (
+    <span>• {difficultyLabel}</span>
+  )}
 </span>
 
           <h1 style={{ color: grade.color }}>{percent}%</h1>
@@ -521,10 +540,28 @@ const tryAgain = () => {
         </button>
 
 <div className="gqp-nav-center">
-  <span>{gameLabel.icon} {gameLabel.title}</span>
-  {game === 'classic' && <span>{difficultyLabel}</span>}
-  <span>{currentIndex + 1} / {total}</span>
-  <span style={{ color: timerColor }}>{timeLeft}s</span>
+  <span className="gqp-game-mode-chip">
+    <img
+      className="gqp-game-mode-icon"
+      src={gameLabel.image}
+      alt=""
+      aria-hidden="true"
+    />
+
+    {gameLabel.title}
+  </span>
+
+  {game === 'classic' && (
+    <span>{difficultyLabel}</span>
+  )}
+
+  <span>
+    {currentIndex + 1} / {total}
+  </span>
+
+  <span style={{ color: timerColor }}>
+    {timeLeft}s
+  </span>
 </div>
 
         <button className="gqp-exit-btn" onClick={() => navigate('/go/quiz?mode=solo')}>

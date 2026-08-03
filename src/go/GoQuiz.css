@@ -921,3 +921,172 @@
     height: 44px;
   }
 }
+/* =========================================================
+   PULSE GO — UNIFIED CARD SYSTEM
+   ========================================================= */
+
+.gq-card-head {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.gq-card-head h2 {
+  margin: 0 !important;
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.gq-card-foot-placeholder {
+  display: block;
+  width: 1px;
+  height: 18px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.gq-game-image,
+.gq-difficulty-image {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.24));
+}
+
+.gq-language-flag {
+  width: 56px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  flex: 0 0 auto;
+}
+
+@media (min-width: 901px) {
+  .gq-unified-card {
+    display: grid;
+    grid-template-rows: 52px 56px 18px;
+    align-content: center;
+    align-items: center;
+
+    height: 190px;
+    min-height: 190px;
+    max-height: 190px;
+
+    padding: 18px 22px;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .gq-unified-card p {
+    margin: 0 !important;
+    max-width: 100%;
+    min-height: 56px;
+    line-height: 1.35;
+    text-align: center;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .gq-unified-card b {
+    margin: 0 !important;
+    min-height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gq-unified-card .gq-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    font-size: 22px;
+    flex: 0 0 auto;
+  }
+
+  .gq-training-grid,
+  .gq-language-grid,
+  .gq-game-grid,
+  .gq-difficulty-grid {
+    gap: 14px;
+  }
+
+  .gq-language-card {
+    height: 176px;
+    min-height: 176px;
+    max-height: 176px;
+  }
+
+  .gq-language-card p {
+    min-height: 44px;
+  }
+
+  .gq-game-card,
+  .gq-training-card,
+  .gq-difficulty-card {
+    height: 190px;
+    min-height: 190px;
+    max-height: 190px;
+  }
+
+  .gq-team-grid {
+    gap: 14px;
+  }
+
+  .gq-team-card {
+    display: grid;
+    grid-template-rows: 50px 32px;
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+
+    height: 148px;
+    min-height: 148px;
+    max-height: 148px;
+
+    gap: 12px;
+    padding: 18px 22px;
+    text-align: center;
+  }
+
+  .gq-team-card h2 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 32px;
+    margin: 0 !important;
+    text-align: center;
+  }
+
+  .gq-team-flag {
+    width: 64px;
+    height: 44px;
+  }
+}
+/* Game mode image shown in the top gameplay bar */
+
+.gqp-game-mode-chip {
+  gap: 8px;
+}
+
+.gqp-game-mode-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  pointer-events: none;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.24));
+}
+
+.gqp-results-mode {
+  gap: 8px;
+}
