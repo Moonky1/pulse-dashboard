@@ -575,3 +575,182 @@
     height: 38px;
   }
 }
+
+/* =========================================================
+   PULSE GO DESKTOP POLISH
+   Navbar compartido visualmente + selector más compacto.
+   Mobile/tablet se ajustarán en una fase separada.
+   ========================================================= */
+
+/* Language selector */
+
+.gq-language-grid {
+  max-width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.gq-language-card {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.gq-language-card h2 {
+  margin: 4px 0 0;
+  text-align: center;
+}
+
+.gq-language-card p {
+  max-width: 90%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.gq-language-flag {
+  display: block;
+  width: 76px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(158, 214, 255, 0.06);
+}
+
+.gq-language-mixed-icon {
+  width: 76px;
+  height: 50px;
+  border-radius: 11px;
+  font-size: 27px;
+}
+
+/* Desktop only */
+
+@media (min-width: 901px) {
+  /*
+   * Exact navbar sizing used by the main Pulse pages.
+   * Removes the oversized GoQuiz-specific button widths.
+   */
+
+  .gq-shell-nav {
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px 0;
+  }
+
+  .gq-main-pill {
+    min-height: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 999px;
+    background: rgba(10, 14, 24, 0.58);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 38px rgba(0, 0, 0, 0.24);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .gq-main-pill button {
+    min-width: 0;
+    min-height: 0;
+    padding: 13px 28px;
+    border-radius: 999px;
+    color: rgba(244, 247, 252, 0.72);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .gq-main-pill button:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.055);
+  }
+
+  .gq-main-pill button.active {
+    color: #07101d;
+    background: linear-gradient(
+      135deg,
+      #f6f6f2 0%,
+      #e1e5ef 50%,
+      #b9d6ff 100%
+    );
+    box-shadow: 0 10px 30px rgba(158, 214, 255, 0.12);
+  }
+
+  /*
+   * Compact vertical rhythm for Training Mode, Team,
+   * Language, Game, Difficulty and Question Style.
+   */
+
+  .gq-wrap {
+    width: min(1040px, calc(100% - 40px));
+    padding: 30px 0 58px;
+  }
+
+  .gq-hero {
+    margin-bottom: 27px;
+  }
+
+  .gq-hero p {
+    margin-top: 14px;
+  }
+
+  .gq-card-grid {
+    gap: 14px;
+  }
+
+  .gq-card {
+    min-height: 170px;
+    padding: 22px 24px;
+    gap: 10px;
+    border-radius: 24px;
+  }
+
+  .gq-card-grid.two {
+    max-width: 760px;
+  }
+
+  .gq-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    font-size: 22px;
+  }
+
+  .gq-card h2 {
+    font-size: 21px;
+  }
+
+  .gq-card p {
+    line-height: 1.4;
+  }
+
+  .gq-bottom-actions {
+    margin-top: 22px;
+  }
+
+  .gq-language-card {
+    min-height: 190px;
+    padding: 24px 22px;
+  }
+
+  .gq-difficulty-card {
+    min-height: 192px;
+    padding: 24px;
+  }
+
+  .gq-team-card {
+    min-height: 190px;
+  }
+
+  .gq-style-card {
+    min-height: 210px;
+  }
+}

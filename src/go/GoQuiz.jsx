@@ -5,21 +5,18 @@ import './GoQuiz.css'
 const LANG_OPTIONS = [
   {
     id: 'en',
-    badge: 'US',
-    icon: '🇺🇸',
+    flag: 'us',
     title: 'English Questions',
     desc: 'Questions and answers displayed in English.',
   },
   {
     id: 'es',
-    badge: 'ES',
-    icon: '🇪🇸',
+    flag: 'mx',
     title: 'Spanish Questions',
     desc: 'Preguntas y respuestas mostradas en español.',
   },
   {
     id: 'mixed',
-    badge: 'MX',
     icon: '🔀',
     title: 'Mixed',
     desc: 'A mix of English and Spanish questions.',
@@ -302,19 +299,28 @@ if (trainingMode === 'host') {
         <span />
       </div>
 
-      <header className="gq-shell-nav">
-        <button className="gq-back-btn" onClick={() => navigate('/go')}>
-          ← Home
-        </button>
+<header className="gq-shell-nav">
+  <nav className="gq-main-pill">
+    <button onClick={goHome}>
+      Home
+    </button>
 
-        <nav className="gq-main-pill">
-          <button onClick={goHome}>Home</button>
-          <button className="active" onClick={() => navigate('/go')}>Pulse GO</button>
-          <button onClick={() => navigate('/academy')}>Academy</button>
-        </nav>
+    <button
+      className="active"
+      onClick={() => navigate('/go')}
+    >
+      Pulse GO
+    </button>
 
-        <div />
-      </header>
+    <button onClick={() => navigate('/studio')}>
+      Studio
+    </button>
+
+    <button onClick={() => navigate('/academy')}>
+      Academy
+    </button>
+  </nav>
+</header>
 
       {!trainingMode && (
         <main className="gq-wrap">
@@ -389,20 +395,34 @@ if (trainingMode === 'host') {
 </p>
           </section>
 
-          <section className="gq-card-grid three">
-            {LANG_OPTIONS.map((item) => (
-              <button
-                key={item.id}
-                className="gq-card"
-                onClick={() => goToLanguage(item.id)}
-              >
-                <span className="gq-card-badge">{item.badge}</span>
-                <span className="gq-card-icon">{item.icon}</span>
-                <h2>{item.title}</h2>
-                <p>{item.desc}</p>
-              </button>
-            ))}
-          </section>
+<section className="gq-card-grid three gq-language-grid">
+  {LANG_OPTIONS.map((item) => (
+    <button
+      key={item.id}
+      className="gq-card gq-language-card"
+      onClick={() => goToLanguage(item.id)}
+    >
+      {item.flag ? (
+        <img
+          className="gq-language-flag"
+          src={`https://flagcdn.com/w160/${item.flag}.png`}
+          alt={
+            item.id === 'en'
+              ? 'United States flag'
+              : 'Mexico flag'
+          }
+        />
+      ) : (
+        <span className="gq-card-icon gq-language-mixed-icon">
+          {item.icon}
+        </span>
+      )}
+
+      <h2>{item.title}</h2>
+      <p>{item.desc}</p>
+    </button>
+  ))}
+</section>
 
           <div className="gq-bottom-actions">
             <button onClick={() => navigate(trainingMode === 'host' ? '/go/quiz?mode=host' : '/go/quiz')}>
