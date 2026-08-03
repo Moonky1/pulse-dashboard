@@ -2,10 +2,7 @@
 
 # ⚡ PULSE
 
-### Performance, training, and knowledge for Kampaign Kings.
-
-[![Website](https://img.shields.io/badge/Live-pulse--kk.com-B9D6FF?style=for-the-badge&logo=vercel&logoColor=07101D)](https://pulse-kk.com)
-![Status](https://img.shields.io/badge/Status-Active-22C55E?style=for-the-badge)
+### The performance and training platform built for Kampaign Kings.
 
 **Dashboard · GO · Studio · Academy**
 
@@ -13,79 +10,25 @@
 
 ---
 
-## About Pulse
+## What is Pulse?
 
-Pulse is an internal platform created for **Kampaign Kings**.
+Pulse is an internal platform that brings Kampaign Kings performance, training, knowledge, and leadership tools together in one place.
 
-It connects performance tracking, interactive training, operational knowledge, and supervisor tools through four unified experiences:
-
-- **Pulse Dashboard** — performance insights, rankings, profiles, and team analytics.
-- **Pulse GO** — practice games, live rooms, scoring, and final results.
-- **Pulse Studio** — tools for hosting games and managing training experiences.
-- **Pulse Academy** — official scripts, processes, QA guidance, and training content.
+- **Pulse Dashboard** — performance, rankings, agents, teams, and analytics.
+- **Pulse GO** — interactive practice, live games, scoring, and final results.
+- **Pulse Studio** — tools for hosts, supervisors, trainers, and QA.
+- **Pulse Academy** — official training, scripts, processes, and operational knowledge.
 
 ---
 
-## Platform architecture
+## Ownership
 
-```mermaid
-flowchart TD
-    HOME["⚡ PULSE"]
+Pulse was created and developed by **Simon** for **Kampaign Kings**.
 
-    HOME --> DASHBOARD["Dashboard"]
-    HOME --> GO["GO"]
-    HOME --> STUDIO["Studio"]
-    HOME --> ACADEMY["Academy"]
-
-    DASHBOARD --> PERFORMANCE["Performance Intelligence"]
-
-    STUDIO --> HOST["Host Live Games"]
-    HOST --> ROOMS["KK Rooms"]
-    ROOMS --> RESULTS["Final Results"]
-
-    GO --> PRACTICE["Practice"]
-    GO --> JOIN["Join Room"]
-    PRACTICE --> TRAINING["Interactive Training"]
-    JOIN --> ROOMS
-
-    ACADEMY --> KNOWLEDGE["Official Knowledge Base"]
-    KNOWLEDGE --> TRAINING
-```
-
----
-
-## Technology
-
-- React
-- Vite
-- JavaScript
-- React Router
-- Supabase
-- Vercel
-
----
-
-## Local development
-
-```bash
-git clone https://github.com/Moonky1/pulse-dashboard.git
-cd pulse-dashboard
-npm install
-npm run dev
-```
-
-Production build:
-
-```bash
-npm run build
-```
-
----
+The platform, design, training content, operational data, and internal workflows are intended for authorized Kampaign Kings use only.
 
 <div align="center">
 
-### Built for Kampaign Kings
-
-[Open Pulse](https://pulse-kk.com)
+### Built by Simon for Kampaign Kings ⚡
 
 </div>
