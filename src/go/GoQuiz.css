@@ -944,3 +944,21 @@
     height: 44px !important;
   }
 }
+/* Valid or Invalid: correct + incorrect icons */
+
+.gq-game-icons {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.gq-game-icons.dual {
+  gap: 2px;
+}
+
+.gq-game-icons.dual .gq-game-image {
+  width: 30px !important;
+  height: 30px !important;
+}

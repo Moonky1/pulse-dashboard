@@ -58,15 +58,16 @@ const GAME_MODES = [
     supportsDifficulty: true,
     supportsQuestionStyle: false,
   },
-  {
-    id: 'valid-invalid',
-    image: '/emojis/correct.webp',
-    title: 'Valid or Invalid XFER',
-    desc: 'Decide if the transfer should count or not.',
-    topic: 'dosdonts',
-    needsTopic: false,
-    supportsQuestionStyle: false,
-  },
+{
+  id: 'valid-invalid',
+  image: '/emojis/correct.webp',
+  secondaryImage: '/emojis/incorrect.webp',
+  title: 'Valid or Invalid XFER',
+  desc: 'Decide if the transfer should count or not.',
+  topic: 'dosdonts',
+  needsTopic: false,
+  supportsQuestionStyle: false,
+},
   {
     id: 'objection-battle',
     image: '/emojis/objection.webp',
@@ -477,12 +478,27 @@ if (trainingMode === 'host') {
       <div className="gq-card-head">
         <h2>{item.title}</h2>
 
-        <img
-          className="gq-game-image"
-          src={item.image}
-          alt=""
-          aria-hidden="true"
-        />
+<div
+  className={`gq-game-icons ${
+    item.secondaryImage ? 'dual' : ''
+  }`}
+>
+  <img
+    className="gq-game-image"
+    src={item.image}
+    alt=""
+    aria-hidden="true"
+  />
+
+  {item.secondaryImage && (
+    <img
+      className="gq-game-image"
+      src={item.secondaryImage}
+      alt=""
+      aria-hidden="true"
+    />
+  )}
+</div>
       </div>
 
       <p>{item.desc}</p>

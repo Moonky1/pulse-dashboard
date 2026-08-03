@@ -740,3 +740,33 @@
   object-fit: contain;
   flex: 0 0 auto;
 }
+/* =========================================================
+   PLAY MODE ICON SIZE
+   Keeps every selected game icon small in gameplay/results.
+   ========================================================= */
+
+.gqp-game-mode-chip,
+.gqp-results-mode {
+  gap: 8px !important;
+}
+
+.gqp-game-mode-icon {
+  display: block !important;
+
+  width: 22px !important;
+  min-width: 22px !important;
+  max-width: 22px !important;
+
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+
+  flex: 0 0 22px !important;
+  object-fit: contain !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  pointer-events: none;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.24));
+}

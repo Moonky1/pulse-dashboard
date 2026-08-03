@@ -633,8 +633,17 @@ const tryAgain = () => {
 
       <span>Correct</span>
     </>
-  ) : (
-    <span>❌ Review this</span>
+) : (
+    <>
+      <img
+        className="gqp-feedback-icon"
+        src="/emojis/incorrect.webp"
+        alt=""
+        aria-hidden="true"
+      />
+
+      <span>Review this</span>
+    </>
   )}
 </strong>
             <p>{currentQuestion.explanation}</p>

@@ -1896,9 +1896,18 @@ if (!joined) {
       </>
     ) : picked === null ? (
       <span>⏱️ Time&apos;s up!</span>
-    ) : (
-      <span>❌ Wrong</span>
-    )}
+) : (
+  <>
+    <img
+      className="grm-result-feedback-icon"
+      src="/emojis/incorrect.webp"
+      alt=""
+      aria-hidden="true"
+    />
+
+    <span>Wrong</span>
+  </>
+)}
   </div>
 )}
 

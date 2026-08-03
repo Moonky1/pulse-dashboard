@@ -3303,3 +3303,29 @@
   gap: 7px;
   flex-wrap: wrap;
 }
+/* Custom correct / incorrect result icons */
+
+.grm-result-banner {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 9px !important;
+}
+
+.grm-result-feedback-icon {
+  display: block !important;
+
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+
+  flex: 0 0 24px !important;
+  object-fit: contain !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+}
