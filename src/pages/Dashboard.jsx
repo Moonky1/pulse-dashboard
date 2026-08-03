@@ -192,24 +192,55 @@ export default function Dashboard() {
           />
 
           <main className="lov-content">
-            {activeView !== 'rankings' && activeView !== 'analytics' ? (
-              <section className="lov-hero" style={{ padding: '22px 28px' }}>
-                <div className="lov-hero-left">
-                  {activeView === 'teams' ? null : (
-                    <div className="lov-hero-badge">
-                      {selectedDate === todayKey()
-                        ? '● Today — live data'
-                        : `Saved snapshot · ${formatDateLabel(selectedDate)}`}
-                    </div>
-                  )}
+{activeView !== 'rankings' && activeView !== 'analytics' ? (
+  <section
+    className={`lov-hero ${
+      activeView === 'overview' ? 'lov-hero-overview' : ''
+    }`}
+    style={{ padding: '22px 28px' }}
+  >
+    <div className="lov-hero-left">
+      {activeView === 'teams' ? null : (
+        <div className="lov-hero-badge">
+          {selectedDate === todayKey()
+            ? '● Today — live data'
+            : `Saved snapshot · ${formatDateLabel(selectedDate)}`}
+        </div>
+      )}
 
-                  <h1 className="lov-hero-title" style={{ fontSize: 34, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {activeView === 'teams' ? <span style={{ fontSize: 30, lineHeight: 1 }}>👥</span> : null}
-                    {activeView === 'teams' ? 'Teams' : 'Overview'}
-                  </h1>
-                </div>
-              </section>
-            ) : null}
+      <h1
+        className="lov-hero-title"
+        style={{
+          fontSize: 34,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        {activeView === 'teams' ? (
+          <span style={{ fontSize: 30, lineHeight: 1 }}>
+            👥
+          </span>
+        ) : null}
+
+        {activeView === 'teams' ? 'Teams' : 'Overview'}
+      </h1>
+    </div>
+
+    {activeView === 'overview' ? (
+      <div className="pulse-white-portal" aria-hidden="true">
+        <span className="pulse-white-portal-glow" />
+
+        <span className="pulse-white-portal-arc pulse-white-portal-arc-outer" />
+        <span className="pulse-white-portal-arc pulse-white-portal-arc-middle" />
+        <span className="pulse-white-portal-arc pulse-white-portal-arc-inner" />
+
+        <span className="pulse-white-portal-core" />
+        <span className="pulse-white-portal-horizon" />
+      </div>
+    ) : null}
+  </section>
+) : null}
 
             {activeView !== 'rankings' && activeView !== 'analytics' && activeView !== 'teams' ? (
               <section className="lov-kpi-grid lov-kpi-grid-main">

@@ -40,9 +40,22 @@
 .pgl-bg {
   z-index: 0;
   background:
-    radial-gradient(circle at 50% 22%, rgba(158, 214, 255, 0.07), transparent 22%),
-    radial-gradient(circle at 18% 72%, rgba(169, 194, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 72%, rgba(110, 162, 255, 0.04), transparent 26%),
+    radial-gradient(
+      ellipse 78% 58% at 50% 18%,
+      rgba(158, 214, 255, 0.055) 0%,
+      rgba(158, 214, 255, 0.026) 42%,
+      transparent 78%
+    ),
+    radial-gradient(
+      ellipse 52% 58% at 14% 78%,
+      rgba(169, 194, 255, 0.026) 0%,
+      transparent 76%
+    ),
+    radial-gradient(
+      ellipse 52% 58% at 86% 78%,
+      rgba(110, 162, 255, 0.026) 0%,
+      transparent 76%
+    ),
     linear-gradient(180deg, #040812 0%, #07101e 52%, #040812 100%);
 }
 
@@ -59,11 +72,34 @@
 
 .pgl-soft-glow {
   z-index: 2;
+  inset: -18%;
   background:
-    radial-gradient(ellipse at 50% 58%, rgba(158, 214, 255, 0.08), transparent 34%),
-    radial-gradient(ellipse at 50% 78%, rgba(255, 255, 255, 0.02), transparent 36%);
-  opacity: 0.9;
-  animation: pglGlowDrift 9s ease-in-out infinite alternate;
+    radial-gradient(
+      ellipse 72% 60% at 50% 48%,
+      rgba(158, 214, 255, 0.06) 0%,
+      rgba(158, 214, 255, 0.026) 44%,
+      transparent 80%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 50% 86%,
+      rgba(255, 255, 255, 0.016) 0%,
+      transparent 82%
+    );
+  filter: blur(44px);
+  opacity: 0.64;
+  animation: pglSoftGlowFloat 12s ease-in-out infinite alternate;
+}
+
+@keyframes pglSoftGlowFloat {
+  from {
+    transform: translate3d(-1.5%, 0, 0) scale(1);
+    opacity: 0.56;
+  }
+
+  to {
+    transform: translate3d(1.5%, -1%, 0) scale(1.03);
+    opacity: 0.72;
+  }
 }
 
 @keyframes pglGlowDrift {

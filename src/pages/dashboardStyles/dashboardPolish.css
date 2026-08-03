@@ -868,3 +868,293 @@
           flex-direction: column;
         }
       }
+
+      /* =========================================================
+   PULSE OVERVIEW — WHITE HORIZON PORTAL
+   Inspired by the layered luminous arch reference.
+   ========================================================= */
+
+.lov-hero.lov-hero-overview {
+  position: relative;
+  min-height: 184px;
+  overflow: hidden;
+  isolation: isolate;
+
+  border-color: rgba(255, 255, 255, 0.12) !important;
+
+  background:
+    radial-gradient(
+      ellipse 56% 96% at 84% 118%,
+      rgba(255, 255, 255, 0.13) 0%,
+      rgba(216, 232, 255, 0.045) 42%,
+      transparent 74%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04),
+      rgba(12, 11, 10, 0.72)
+    ) !important;
+}
+
+.lov-hero-overview .lov-hero-left {
+  position: relative;
+  z-index: 3;
+  max-width: 54%;
+}
+
+.pulse-white-portal {
+  position: absolute;
+  z-index: 2;
+  right: clamp(26px, 5vw, 76px);
+  bottom: -2px;
+
+  width: clamp(360px, 40vw, 560px);
+  height: 166px;
+
+  overflow: hidden;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.pulse-white-portal-glow {
+  position: absolute;
+  inset: 12px -12px -46px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(255, 255, 255, 0.34) 0%,
+      rgba(216, 232, 255, 0.16) 28%,
+      rgba(185, 214, 255, 0.055) 48%,
+      transparent 72%
+    );
+
+  filter: blur(22px);
+  animation: pulsePortalGlow 4.8s ease-in-out infinite;
+}
+
+.pulse-white-portal-arc,
+.pulse-white-portal-core {
+  position: absolute;
+  left: 50%;
+  bottom: 17px;
+
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+
+  border-style: solid;
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+
+  box-sizing: border-box;
+}
+
+.pulse-white-portal-arc-outer {
+  width: 410px;
+  height: 132px;
+
+  border-width: 3px;
+  border-color: rgba(255, 255, 255, 0.22);
+
+  filter: blur(8px);
+
+  box-shadow:
+    0 -8px 30px rgba(255, 255, 255, 0.18),
+    0 -2px 52px rgba(185, 214, 255, 0.16);
+
+  animation: pulsePortalOuter 5.4s ease-in-out infinite;
+}
+
+.pulse-white-portal-arc-middle {
+  width: 324px;
+  height: 108px;
+
+  border-width: 4px;
+  border-color: rgba(255, 255, 255, 0.46);
+
+  filter: blur(4px);
+
+  box-shadow:
+    0 -6px 24px rgba(255, 255, 255, 0.28),
+    0 -2px 44px rgba(216, 232, 255, 0.22);
+
+  animation: pulsePortalMiddle 4.6s ease-in-out infinite;
+}
+
+.pulse-white-portal-arc-inner {
+  width: 248px;
+  height: 88px;
+
+  border-width: 5px;
+  border-color: rgba(255, 255, 255, 0.76);
+
+  filter: blur(1.4px);
+
+  box-shadow:
+    0 -4px 20px rgba(255, 255, 255, 0.46),
+    0 0 38px rgba(216, 232, 255, 0.34);
+
+  animation: pulsePortalInner 4s ease-in-out infinite;
+}
+
+.pulse-white-portal-core {
+  width: 166px;
+  height: 72px;
+
+  border-width: 4px;
+  border-color: rgba(255, 255, 255, 0.96);
+
+  background:
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(255, 255, 255, 0.16),
+      transparent 66%
+    );
+
+  box-shadow:
+    0 -4px 18px rgba(255, 255, 255, 0.64),
+    0 0 32px rgba(255, 255, 255, 0.44),
+    0 0 62px rgba(185, 214, 255, 0.3);
+
+  animation: pulsePortalCore 3.6s ease-in-out infinite;
+}
+
+.pulse-white-portal-horizon {
+  position: absolute;
+  left: 50%;
+  bottom: 15px;
+
+  width: 100%;
+  height: 3px;
+
+  transform: translateX(-50%);
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.18) 14%,
+      rgba(255, 255, 255, 0.78) 38%,
+      #ffffff 50%,
+      rgba(255, 255, 255, 0.78) 62%,
+      rgba(255, 255, 255, 0.18) 86%,
+      transparent 100%
+    );
+
+  background-size: 180% 100%;
+
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.85),
+    0 0 28px rgba(216, 232, 255, 0.56),
+    0 0 52px rgba(185, 214, 255, 0.32);
+
+  animation: pulsePortalHorizon 4.2s linear infinite;
+}
+
+@keyframes pulsePortalGlow {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scaleX(0.96) scaleY(0.94);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scaleX(1.04) scaleY(1.03);
+  }
+}
+
+@keyframes pulsePortalOuter {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: translateX(-50%) scaleX(0.95) scaleY(0.94);
+  }
+
+  50% {
+    opacity: 0.82;
+    transform: translateX(-50%) scaleX(1.04) scaleY(1.03);
+  }
+}
+
+@keyframes pulsePortalMiddle {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: translateX(-50%) scaleX(0.97) scaleY(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1.035) scaleY(1.025);
+  }
+}
+
+@keyframes pulsePortalInner {
+  0%,
+  100% {
+    opacity: 0.76;
+    transform: translateX(-50%) scale(0.98);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.035);
+  }
+}
+
+@keyframes pulsePortalCore {
+  0%,
+  100% {
+    opacity: 0.82;
+    transform: translateX(-50%) scale(0.98);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.045);
+  }
+}
+
+@keyframes pulsePortalHorizon {
+  from {
+    background-position: 180% 0;
+  }
+
+  to {
+    background-position: -80% 0;
+  }
+}
+
+@media (max-width: 1120px) {
+  .pulse-white-portal {
+    right: -36px;
+    width: 430px;
+    opacity: 0.76;
+  }
+
+  .lov-hero-overview .lov-hero-left {
+    max-width: 62%;
+  }
+}
+
+@media (max-width: 820px) {
+  .pulse-white-portal {
+    display: none;
+  }
+
+  .lov-hero-overview .lov-hero-left {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-white-portal-glow,
+  .pulse-white-portal-arc,
+  .pulse-white-portal-core,
+  .pulse-white-portal-horizon {
+    animation: none !important;
+  }
+}

@@ -46,9 +46,22 @@
 .home-bg {
   z-index: 0;
   background:
-    radial-gradient(circle at 50% 22%, rgba(158, 214, 255, 0.07), transparent 22%),
-    radial-gradient(circle at 18% 72%, rgba(169, 194, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 72%, rgba(110, 162, 255, 0.04), transparent 26%),
+    radial-gradient(
+      ellipse 78% 58% at 50% 18%,
+      rgba(158, 214, 255, 0.055) 0%,
+      rgba(158, 214, 255, 0.026) 42%,
+      transparent 78%
+    ),
+    radial-gradient(
+      ellipse 52% 58% at 14% 78%,
+      rgba(169, 194, 255, 0.026) 0%,
+      transparent 76%
+    ),
+    radial-gradient(
+      ellipse 52% 58% at 86% 78%,
+      rgba(110, 162, 255, 0.026) 0%,
+      transparent 76%
+    ),
     linear-gradient(180deg, #040812 0%, #07101e 52%, #040812 100%);
 }
 
@@ -65,11 +78,34 @@
 
 .home-soft-glow {
   z-index: 2;
+  inset: -18%;
   background:
-    radial-gradient(ellipse at 50% 38%, rgba(158, 214, 255, 0.1), transparent 36%),
-    radial-gradient(ellipse at 50% 74%, rgba(255, 255, 255, 0.025), transparent 42%);
-  opacity: 0.9;
-  animation: homeGlowDrift 9s ease-in-out infinite alternate;
+    radial-gradient(
+      ellipse 72% 58% at 50% 34%,
+      rgba(158, 214, 255, 0.065) 0%,
+      rgba(158, 214, 255, 0.028) 42%,
+      transparent 80%
+    ),
+    radial-gradient(
+      ellipse 60% 38% at 50% 82%,
+      rgba(255, 255, 255, 0.018) 0%,
+      transparent 82%
+    );
+  filter: blur(42px);
+  opacity: 0.66;
+  animation: homeSoftGlowFloat 12s ease-in-out infinite alternate;
+}
+
+@keyframes homeSoftGlowFloat {
+  from {
+    transform: translate3d(-1.5%, 0, 0) scale(1);
+    opacity: 0.58;
+  }
+
+  to {
+    transform: translate3d(1.5%, -1%, 0) scale(1.03);
+    opacity: 0.74;
+  }
 }
 
 .home-cursor-glow {
