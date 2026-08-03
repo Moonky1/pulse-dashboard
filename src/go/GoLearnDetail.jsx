@@ -240,13 +240,26 @@ function DetailShell({ lang, setLang, section, children, toc }) {
       </div>
 
       <header className="ac-topnav">
-        <nav className="ac-nav-pill">
-          <button onClick={goHome}>{copy.navHome}</button>
-          <button onClick={() => navigate('/go')}>{copy.navGo}</button>
-          <button className="active" onClick={() => navigate('/academy')}>
-            {copy.navAcademy}
-          </button>
-        </nav>
+<nav className="ac-nav-pill">
+  <button onClick={goHome}>
+    {copy.navHome}
+  </button>
+
+  <button onClick={() => navigate('/go')}>
+    {copy.navGo}
+  </button>
+
+  <button onClick={() => navigate('/studio')}>
+    Studio
+  </button>
+
+  <button
+    className="active"
+    onClick={() => navigate('/academy')}
+  >
+    {copy.navAcademy}
+  </button>
+</nav>
 
         <div className="ac-lang-switch">
           {LANG_OPTIONS.map((option) => (

@@ -244,33 +244,41 @@ export default function Landing() {
         ))}
       </div>
 
-      <nav className="home-nav">
-        <div className="home-nav-pill">
-          <button
-            type="button"
-            className="home-nav-link home-nav-link-active"
-            onClick={() => navigate('/')}
-          >
-            Home
-          </button>
+<nav className="home-nav">
+  <div className="home-nav-pill">
+    <button
+      type="button"
+      className="home-nav-link home-nav-link-active"
+      onClick={() => navigate('/')}
+    >
+      Home
+    </button>
 
-          <button
-            type="button"
-            className="home-nav-link"
-            onClick={() => navigate('/go')}
-          >
-            Pulse GO
-          </button>
+    <button
+      type="button"
+      className="home-nav-link"
+      onClick={() => navigate('/go')}
+    >
+      Pulse GO
+    </button>
 
-          <button
-            type="button"
-            className="home-nav-link"
-            onClick={() => navigate('/academy')}
-          >
-            Academy
-          </button>
-        </div>
-      </nav>
+    <button
+      type="button"
+      className="home-nav-link"
+      onClick={() => navigate('/studio')}
+    >
+      Studio
+    </button>
+
+    <button
+      type="button"
+      className="home-nav-link"
+      onClick={() => navigate('/academy')}
+    >
+      Academy
+    </button>
+  </div>
+</nav>
 
       <main className="home-content">
         <section className="home-hero">

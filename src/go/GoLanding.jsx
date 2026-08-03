@@ -210,21 +210,34 @@ const pageRef = useRef(null)
         ))}
       </div>
 
-      <nav className="pgl-nav">
-        <div className="pgl-nav-pill">
-         <button className="pgl-nav-link" onClick={goHome}>
-          Home
-         </button>
+<nav className="pgl-nav">
+  <div className="pgl-nav-pill">
+    <button className="pgl-nav-link" onClick={goHome}>
+      Home
+    </button>
 
-          <button className="pgl-nav-link pgl-nav-link-active" onClick={() => navigate('/go')}>
-            Pulse GO
-          </button>
+    <button
+      className="pgl-nav-link pgl-nav-link-active"
+      onClick={() => navigate('/go')}
+    >
+      Pulse GO
+    </button>
 
-          <button className="pgl-nav-link" onClick={() => navigate('/academy')}>
-            Academy
-          </button>
-        </div>
-      </nav>
+    <button
+      className="pgl-nav-link"
+      onClick={() => navigate('/studio')}
+    >
+      Studio
+    </button>
+
+    <button
+      className="pgl-nav-link"
+      onClick={() => navigate('/academy')}
+    >
+      Academy
+    </button>
+  </div>
+</nav>
 
       <main className="pgl-content">
         <h1 className="pgl-title" draggable="false">
