@@ -1,0 +1,90 @@
+.studio-room-title-chip {
+  max-width: min(440px, 55vw);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #cfe3ff;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-room-title-chip::before {
+  content: '✦';
+  color: #8b5cf6;
+}
+
+.studio-room-media {
+  width: min(760px, calc(100% - 32px));
+  margin: 18px auto;
+  box-sizing: border-box;
+}
+
+.studio-room-media--image {
+  min-height: 190px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(185, 214, 255, 0.18);
+  border-radius: 18px;
+  background: rgba(3, 9, 19, 0.7);
+}
+
+.studio-room-media--image img {
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+}
+
+.studio-room-media--audio {
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid rgba(185, 214, 255, 0.18);
+  border-radius: 18px;
+  background: rgba(3, 9, 19, 0.7);
+}
+
+.studio-room-media--audio > span {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(158, 214, 255, 0.08);
+  font-size: 25px;
+}
+
+.studio-room-media--audio > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.studio-room-media--audio strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #ffffff;
+  font-family: 'Sora', sans-serif;
+  font-size: 10px;
+}
+
+.studio-room-media--audio audio {
+  width: 100%;
+}
+
+.studio-room-live-note {
+  width: min(760px, calc(100% - 32px));
+  margin: 14px auto;
+  padding: 11px 13px;
+  box-sizing: border-box;
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  border-radius: 12px;
+  color: rgba(218, 207, 247, 0.72);
+  background: rgba(139, 92, 246, 0.06);
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: center;
+}

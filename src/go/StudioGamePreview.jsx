@@ -4,7 +4,6 @@ import {
   useRef,
   useState,
 } from 'react'
-
 import './StudioGamePreview.css'
 
 const OPTION_META = [
@@ -27,32 +26,26 @@ const OPTION_META = [
 ]
 
 function seededShuffle(items, seed) {
-  const next = [
-    ...items,
-  ]
+  const next = [...items]
 
   let state =
     Number(seed || 1) + 1
 
   for (
-    let index =
-      next.length - 1;
+    let index = next.length - 1;
     index > 0;
     index -= 1
   ) {
     state =
-      (
-        state * 9301 +
-        49297
-      ) % 233280
+      (state * 9301 + 49297) %
+      233280
 
     const random =
       state / 233280
 
     const swapIndex =
       Math.floor(
-        random *
-          (index + 1)
+        random * (index + 1)
       )
 
     const current =
@@ -76,7 +69,8 @@ function PreviewMedia({
     question.mediaPreviewUrl
 
   if (
-    question.questionType === 'image' &&
+    question.questionType ===
+      'image' &&
     source
   ) {
     return (
@@ -90,7 +84,8 @@ function PreviewMedia({
   }
 
   if (
-    question.questionType === 'audio' &&
+    question.questionType ===
+      'audio' &&
     source
   ) {
     return (
@@ -121,6 +116,7 @@ export default function StudioGamePreview({
   questions,
   onBack,
   onMarkPreview,
+  onContinuePublish,
 }) {
   const [started, setStarted] =
     useState(false)
@@ -128,15 +124,11 @@ export default function StudioGamePreview({
   const [finished, setFinished] =
     useState(false)
 
-  const [
-    currentIndex,
-    setCurrentIndex,
-  ] = useState(0)
+  const [currentIndex, setCurrentIndex] =
+    useState(0)
 
-  const [
-    selectedIndex,
-    setSelectedIndex,
-  ] = useState(null)
+  const [selectedIndex, setSelectedIndex] =
+    useState(null)
 
   const [answered, setAnswered] =
     useState(false)
@@ -147,60 +139,40 @@ export default function StudioGamePreview({
   const [timeLeft, setTimeLeft] =
     useState(
       Number(
-        settings.defaultTimer ||
-          30
+        settings.defaultTimer || 30
       )
     )
 
   const [score, setScore] =
     useState(0)
 
-  const [
-    correctCount,
-    setCorrectCount,
-  ] = useState(0)
+  const [correctCount, setCorrectCount] =
+    useState(0)
 
   const [lives, setLives] =
     useState(
       Number(
-        settings.livesCount ||
-          3
+        settings.livesCount || 3
       )
     )
 
-  const [
-    previewSeed,
-    setPreviewSeed,
-  ] = useState(1)
+  const [previewSeed, setPreviewSeed] =
+    useState(1)
 
-  const markedRef =
-    useRef(false)
-
-  const answerRef =
-    useRef(null)
+  const markedRef = useRef(false)
+  const answerRef = useRef(null)
 
   useEffect(() => {
-    if (markedRef.current) {
-      return
-    }
+    if (markedRef.current) return
 
-    markedRef.current =
-      true
-
+    markedRef.current = true
     onMarkPreview?.()
-  }, [
-    onMarkPreview,
-  ])
+  }, [onMarkPreview])
 
-  const orderedQuestions =
-    useMemo(() => {
-      const sorted = [
-        ...questions,
-      ].sort(
-        (
-          first,
-          second
-        ) =>
+  const orderedQuestions = useMemo(
+    () => {
+      const sorted = [...questions].sort(
+        (first, second) =>
           first.position -
           second.position
       )
@@ -211,29 +183,24 @@ export default function StudioGamePreview({
             previewSeed * 37
           )
         : sorted
-    }, [
+    },
+    [
       previewSeed,
       questions,
       settings.randomizeQuestions,
-    ])
+    ]
+  )
 
   const currentQuestion =
-    orderedQuestions[
-      currentIndex
-    ]
+    orderedQuestions[currentIndex]
 
-  const optionEntries =
-    useMemo(() => {
-      if (!currentQuestion) {
-        return []
-      }
+  const optionEntries = useMemo(
+    () => {
+      if (!currentQuestion) return []
 
       const entries =
         currentQuestion.options.map(
-          (
-            text,
-            originalIndex
-          ) => ({
+          (text, originalIndex) => ({
             text,
             originalIndex,
           })
@@ -246,35 +213,39 @@ export default function StudioGamePreview({
               currentQuestion.position
           )
         : entries
-    }, [
+    },
+    [
       currentQuestion,
       previewSeed,
       settings.randomizeAnswers,
-    ])
+    ]
+  )
 
   const total =
     orderedQuestions.length
 
-  const timer = Number(
-    currentQuestion?.timerOverride ||
-      settings.defaultTimer ||
-      30
-  )
+  const timer =
+    Number(
+      currentQuestion?.timerOverride ||
+        settings.defaultTimer ||
+        30
+    )
 
-  const points = Number(
-    currentQuestion?.pointsOverride ||
-      settings.pointsPerQuestion ||
-      1000
-  )
+  const points =
+    Number(
+      currentQuestion?.pointsOverride ||
+        settings.pointsPerQuestion ||
+        1000
+    )
 
-  const correctIndex = Number(
-    currentQuestion?.correctIndex
-  )
+  const correctIndex =
+    Number(
+      currentQuestion?.correctIndex
+    )
 
   const isCorrect =
     answered &&
-    selectedIndex ===
-      correctIndex
+    selectedIndex === correctIndex
 
   const isOutOfLives =
     settings.livesEnabled &&
@@ -299,13 +270,8 @@ export default function StudioGamePreview({
       originalIndex
     )
 
-    setTimedOut(
-      timeout
-    )
-
-    setAnswered(
-      true
-    )
+    setTimedOut(timeout)
+    setAnswered(true)
 
     if (correct) {
       setCorrectCount(
@@ -343,48 +309,41 @@ export default function StudioGamePreview({
       return
     }
 
-    setTimeLeft(
-      timer
-    )
+    setTimeLeft(timer)
 
     const deadline =
       Date.now() +
       timer * 1000
 
     const interval =
-      window.setInterval(
-        () => {
-          const remaining =
-            Math.max(
-              0,
-
-              Math.ceil(
-                (
-                  deadline -
-                  Date.now()
-                ) / 1000
-              )
+      window.setInterval(() => {
+        const remaining =
+          Math.max(
+            0,
+            Math.ceil(
+              (deadline -
+                Date.now()) /
+                1000
             )
-
-          setTimeLeft(
-            remaining
           )
 
-          if (
-            remaining <= 0
-          ) {
-            window.clearInterval(
-              interval
-            )
+        setTimeLeft(
+          remaining
+        )
 
-            answerRef.current?.(
-              null,
-              true
-            )
-          }
-        },
-        150
-      )
+        if (
+          remaining <= 0
+        ) {
+          window.clearInterval(
+            interval
+          )
+
+          answerRef.current?.(
+            null,
+            true
+          )
+        }
+      }, 150)
 
     return () => {
       window.clearInterval(
@@ -407,17 +366,14 @@ export default function StudioGamePreview({
     setSelectedIndex(null)
     setAnswered(false)
     setTimedOut(false)
-
     setTimeLeft(
       Number(
         settings.defaultTimer ||
           30
       )
     )
-
     setScore(0)
     setCorrectCount(0)
-
     setLives(
       Number(
         settings.livesCount ||
@@ -443,8 +399,7 @@ export default function StudioGamePreview({
 
     if (
       noLivesAfterAnswer ||
-      currentIndex + 1 >=
-        total
+      currentIndex + 1 >= total
     ) {
       setFinished(true)
       return
@@ -455,31 +410,20 @@ export default function StudioGamePreview({
         current + 1
     )
 
-    setSelectedIndex(
-      null
-    )
-
-    setAnswered(
-      false
-    )
-
-    setTimedOut(
-      false
-    )
+    setSelectedIndex(null)
+    setAnswered(false)
+    setTimedOut(false)
   }
 
   const timerPercent =
     timer > 0
       ? Math.max(
           0,
-
           Math.min(
             100,
-
-            (
-              timeLeft /
-              timer
-            ) * 100
+            (timeLeft /
+              timer) *
+              100
           )
         )
       : 0
@@ -504,7 +448,9 @@ export default function StudioGamePreview({
         </h2>
 
         <p>
-          Play the complete Classic Quiz before publishing it. Preview results are not saved.
+          Play the complete Classic Quiz
+          before publishing it. Preview
+          results are not saved.
         </p>
 
         <div className="studio-preview-start-metrics">
@@ -512,7 +458,6 @@ export default function StudioGamePreview({
             <span>
               Questions
             </span>
-
             <strong>
               {total}
             </strong>
@@ -522,7 +467,6 @@ export default function StudioGamePreview({
             <span>
               Timer
             </span>
-
             <strong>
               {
                 settings.defaultTimer
@@ -535,7 +479,6 @@ export default function StudioGamePreview({
             <span>
               Points
             </span>
-
             <strong>
               {
                 settings.pointsPerQuestion
@@ -547,7 +490,6 @@ export default function StudioGamePreview({
             <span>
               Lives
             </span>
-
             <strong>
               {settings.livesEnabled
                 ? settings.livesCount
@@ -583,43 +525,33 @@ export default function StudioGamePreview({
     const percent =
       total > 0
         ? Math.round(
-            (
-              correctCount /
-              total
-            ) * 100
+            (correctCount /
+              total) *
+              100
           )
         : 0
 
     const result =
       percent >= 80
         ? {
-            emoji:
-              '🏆',
-
+            emoji: '🏆',
             title:
               'Ready to publish',
-
             description:
               'The game played correctly and the question flow is ready.',
           }
         : percent >= 60
           ? {
-              emoji:
-                '👍',
-
+              emoji: '👍',
               title:
                 'Preview complete',
-
               description:
                 'Review any questions that felt unclear before publishing.',
             }
           : {
-              emoji:
-                '🛠️',
-
+              emoji: '🛠️',
               title:
                 'Review recommended',
-
               description:
                 'Return to Questions and improve the answer clarity or difficulty.',
             }
@@ -690,12 +622,22 @@ export default function StudioGamePreview({
 
           <button
             type="button"
-            className="studio-builder-footer-primary"
+            className="studio-builder-footer-secondary"
             onClick={
               restartPreview
             }
           >
             Play Again
+          </button>
+
+          <button
+            type="button"
+            className="studio-builder-footer-primary"
+            onClick={
+              onContinuePublish
+            }
+          >
+            Continue to Publish →
           </button>
         </div>
 
@@ -703,7 +645,7 @@ export default function StudioGamePreview({
           <span>05</span>
 
           <p>
-            Publish & Host remains locked until we build the final publishing and live-room flow.
+            Preview is complete. Continue to publish this version and create a live Pulse GO room.
           </p>
         </div>
       </section>
@@ -736,30 +678,30 @@ export default function StudioGamePreview({
         </div>
 
         <div className="studio-preview-player-lives">
-          {settings.livesEnabled ? (
-            Array.from(
-              {
-                length:
-                  settings.livesCount,
-              },
-              (_, index) => (
-                <span
-                  key={index}
-                  className={
-                    index < lives
-                      ? 'active'
-                      : ''
-                  }
-                >
-                  ♥
-                </span>
+          {settings.livesEnabled
+            ? Array.from(
+                {
+                  length:
+                    settings.livesCount,
+                },
+                (_, index) => (
+                  <span
+                    key={index}
+                    className={
+                      index < lives
+                        ? 'active'
+                        : ''
+                    }
+                  >
+                    ♥
+                  </span>
+                )
               )
-            )
-          ) : (
-            <span className="studio-preview-classic-label">
-              Classic
-            </span>
-          )}
+            : (
+              <span className="studio-preview-classic-label">
+                Classic
+              </span>
+            )}
         </div>
       </header>
 
@@ -846,15 +788,24 @@ export default function StudioGamePreview({
                 )
               }
 
+              if (
+                selected &&
+                !answered
+              ) {
+                classNames.push(
+                  'selected'
+                )
+              }
+
               return (
                 <button
                   key={
                     option.originalIndex
                   }
                   type="button"
-                  className={
-                    classNames.join(' ')
-                  }
+                  className={classNames.join(
+                    ' '
+                  )}
                   disabled={answered}
                   onClick={() =>
                     handleAnswer(

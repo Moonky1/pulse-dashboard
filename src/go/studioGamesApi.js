@@ -684,3 +684,167 @@ export async function removeStudioQuestionMedia(
     )
   }
 }
+
+export async function publishStudioGame({
+  gameId,
+  user,
+  role,
+}) {
+  const ownerKey =
+    getStudioOwnerKey(
+      user,
+      role
+    )
+
+  if (
+    !gameId ||
+    !ownerKey
+  ) {
+    throw new Error(
+      'Could not identify the Studio game.'
+    )
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    'publish_pulse_studio_game',
+    {
+      p_game_id:
+        gameId,
+
+      p_owner_key:
+        ownerKey,
+    }
+  )
+
+  if (error) {
+    console.error(
+      'Could not publish Studio game:',
+      error
+    )
+
+    throw new Error(
+      error.message ||
+        'Could not publish this game.'
+    )
+  }
+
+  return data
+}
+
+export async function unpublishStudioGame({
+  gameId,
+  user,
+  role,
+}) {
+  const ownerKey =
+    getStudioOwnerKey(
+      user,
+      role
+    )
+
+  if (
+    !gameId ||
+    !ownerKey
+  ) {
+    throw new Error(
+      'Could not identify the Studio game.'
+    )
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    'unpublish_pulse_studio_game',
+    {
+      p_game_id:
+        gameId,
+
+      p_owner_key:
+        ownerKey,
+    }
+  )
+
+  if (error) {
+    console.error(
+      'Could not unpublish Studio game:',
+      error
+    )
+
+    throw new Error(
+      error.message ||
+        'Could not return this game to draft.'
+    )
+  }
+
+  return data
+}
+
+export async function createStudioHostRoom({
+  gameId,
+  user,
+  role,
+}) {
+  const ownerKey =
+    getStudioOwnerKey(
+      user,
+      role
+    )
+
+  if (
+    !gameId ||
+    !ownerKey
+  ) {
+    throw new Error(
+      'Could not identify the Studio game.'
+    )
+  }
+
+  const resultsOrigin =
+    window.location.hostname ===
+      'localhost' ||
+    window.location.hostname ===
+      '127.0.0.1'
+      ? 'https://pulse-kk.com'
+      : window.location.origin
+
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    'create_pulse_studio_host_room',
+    {
+      p_game_id:
+        gameId,
+
+      p_owner_key:
+        ownerKey,
+
+      p_results_origin:
+        resultsOrigin,
+    }
+  )
+
+  if (error) {
+    console.error(
+      'Could not create Studio room:',
+      error
+    )
+
+    throw new Error(
+      error.message ||
+        'Could not create the live room.'
+    )
+  }
+
+  if (!data?.code) {
+    throw new Error(
+      'The room was created without a valid code.'
+    )
+  }
+
+  return data
+}

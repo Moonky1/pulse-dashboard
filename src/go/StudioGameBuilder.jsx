@@ -17,6 +17,7 @@ import {
 } from './studioQuestionUtils'
 import StudioQuestionsEditor from './StudioQuestionsEditor'
 import StudioGamePreview from './StudioGamePreview'
+import StudioPublishHost from './StudioPublishHost'
 import './StudioGameBuilder.css'
 
 const LANGUAGE_OPTIONS = [
@@ -145,6 +146,11 @@ const STEP_CONTENT = {
     description:
       'Play through the complete game before publishing it.',
   },
+  5: {
+    title: 'Publish & Host',
+    description:
+      'Publish this version and create a real Pulse GO multiplayer room.',
+  },
 }
 
 function getInitials(name) {
@@ -240,7 +246,7 @@ export default function StudioGameBuilder({
   }, [user])
 
   const initialStep = Math.min(
-    4,
+    5,
     Math.max(
       1,
       Number(
@@ -1023,6 +1029,16 @@ export default function StudioGameBuilder({
       )
     }
 
+    if (
+      stepNumber === 5
+    ) {
+      return (
+        Boolean(gameId) &&
+        furthestStep >= 4 &&
+        questionValidation.valid
+      )
+    }
+
     return false
   }
 
@@ -1177,6 +1193,12 @@ export default function StudioGameBuilder({
       return 'Save 10 questions'
     }
 
+    if (
+      stepNumber === 5
+    ) {
+      return 'Complete Preview'
+    }
+
     return 'Coming next'
   }
 
@@ -1225,7 +1247,9 @@ export default function StudioGameBuilder({
           ? 'Save Settings'
           : activeStep === 3
             ? 'Save Questions'
-            : 'Preview Mode'
+            : activeStep === 4
+              ? 'Preview Mode'
+              : 'Publish Center'
 
   const renderDetailsStep =
     () => (
@@ -2313,10 +2337,59 @@ export default function StudioGameBuilder({
             onBack={() =>
               setActiveStep(3)
             }
+            onContinuePublish={() =>
+              setActiveStep(5)
+            }
           />
         </>
       )
     }
+
+  const renderPublishStep =
+    () => (
+      <StudioPublishHost
+        game={
+          createSavedGame({
+            currentStep:
+              Math.max(
+                furthestStep,
+                4
+              ),
+          })
+        }
+        settings={settings}
+        questions={questions}
+        user={user}
+        role={role}
+        teamLabel={teamLabel}
+        onBack={() =>
+          setActiveStep(4)
+        }
+        onPublished={(updatedGame) => {
+          const nextStep =
+            updatedGame?.status ===
+            'published'
+              ? 5
+              : 4
+
+          setFurthestStep(
+            nextStep
+          )
+
+          setSavedAt(
+            updatedGame?.updatedAt
+              ? new Date(
+                  updatedGame.updatedAt
+                )
+              : new Date()
+          )
+
+          onSaved?.(
+            updatedGame
+          )
+        }}
+      />
+    )
 
   const activeContent =
     STEP_CONTENT[activeStep] ||
@@ -2455,6 +2528,9 @@ export default function StudioGameBuilder({
 
       {activeStep === 4 &&
         renderPreviewStep()}
+
+      {activeStep === 5 &&
+        renderPublishStep()}
     </section>
   )
 }

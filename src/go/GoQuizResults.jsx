@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
 import { APP_CONFIG } from '../config'
-import { getQuestionById as getQuizQuestionById } from './quizPools'
+import {
+  getRoomGameTitle,
+  getRoomQuestionById,
+  isStudioRoom,
+  shouldShuffleRoomAnswers,
+} from './studioRoomSupport'
 import './GoQuizRoom.css'
 import './GoQuizResults.css'
 
@@ -184,28 +189,60 @@ function deterministicShuffle(array, seedText) {
   return copy
 }
 
-function buildDisplayQuestion(rawQuestion, roomCode, currentIndex) {
-  if (!rawQuestion) return null
+function buildDisplayQuestion(
+  rawQuestion,
+  roomCode,
+  currentIndex,
+  shuffleAnswers = true
+) {
+  if (!rawQuestion) {
+    return null
+  }
 
-  const options = Array.isArray(rawQuestion.options) ? rawQuestion.options : []
+  const options =
+    Array.isArray(
+      rawQuestion.options
+    )
+      ? rawQuestion.options
+      : []
 
-  const mappedOptions = options.map((text, originalIndex) => ({
-    text,
-    originalIndex,
-  }))
+  const mappedOptions =
+    options.map(
+      (
+        text,
+        originalIndex
+      ) => ({
+        text,
+        originalIndex,
+      })
+    )
 
-  const shuffledOptions = deterministicShuffle(
-    mappedOptions,
-    `${roomCode}:${rawQuestion.id}:${currentIndex}`
-  )
+  const orderedOptions =
+    shuffleAnswers
+      ? deterministicShuffle(
+          mappedOptions,
+          `${roomCode}:${rawQuestion.id}:${currentIndex}`
+        )
+      : mappedOptions
 
-  const correct = shuffledOptions.findIndex(
-    (option) => option.originalIndex === rawQuestion.correct
-  )
+  const correct =
+    orderedOptions.findIndex(
+      (option) =>
+        option.originalIndex ===
+        Number(
+          rawQuestion.correct
+        )
+    )
 
   return {
     ...rawQuestion,
-    options: shuffledOptions.map((option) => option.text),
+
+    options:
+      orderedOptions.map(
+        (option) =>
+          option.text
+      ),
+
     correct,
   }
 }
@@ -222,6 +259,18 @@ export default function GoQuizResults() {
   const [loading, setLoading] = useState(true)
   const [fatalError, setFatalError] = useState('')
   const [copied, setCopied] = useState(false)
+  const studioRoom =
+  isStudioRoom(room)
+
+const shuffleRoomAnswers =
+  shouldShuffleRoomAnswers(
+    room
+  )
+
+const studioGameTitle =
+  getRoomGameTitle(
+    room
+  )
 
   useEffect(() => {
     let alive = true
@@ -290,15 +339,37 @@ export default function GoQuizResults() {
     [players]
   )
 
-  const gameQuestions = useMemo(() => {
-    const ids = Array.isArray(room?.question_ids) ? room.question_ids : []
+const gameQuestions =
+  useMemo(() => {
+    const ids =
+      Array.isArray(
+        room?.question_ids
+      )
+        ? room.question_ids
+        : []
 
     return ids
-      .map((questionId, index) =>
-        buildDisplayQuestion(getQuizQuestionById(questionId), code, index)
+      .map(
+        (
+          questionId,
+          index
+        ) =>
+          buildDisplayQuestion(
+            getRoomQuestionById(
+              room,
+              questionId
+            ),
+            code,
+            index,
+            shuffleRoomAnswers
+          )
       )
       .filter(Boolean)
-  }, [room?.question_ids, code])
+  }, [
+    room,
+    code,
+    shuffleRoomAnswers,
+  ])
 
   const gameQuestionCount = gameQuestions.length || QUESTION_COUNT
 
@@ -449,7 +520,19 @@ const resultDifficultyId = String(room?.difficulty || 'all')
   .toLowerCase()
 
 const resultGameMeta =
-  RESULT_GAME_META[resultGameId] || RESULT_GAME_META.classic
+  studioRoom
+    ? {
+        title:
+          studioGameTitle ||
+          'Studio Classic Quiz',
+
+        image:
+          '/emojis/classic.webp',
+      }
+    : RESULT_GAME_META[
+        resultGameId
+      ] ||
+      RESULT_GAME_META.classic
 
 const resultLanguageMeta =
   RESULT_LANGUAGE_META[resultLanguageId] || RESULT_LANGUAGE_META.mixed

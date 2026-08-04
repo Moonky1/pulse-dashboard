@@ -4,10 +4,20 @@ import { supabase } from '../utils/supabase'
 import { APP_CONFIG } from '../config'
 import {
   buildQuestionIds as buildQuizQuestionIds,
-  getQuestionById as getQuizQuestionById,
   normalizeGame as normalizeGameParam,
   normalizeDifficulty as normalizeDifficultyParam,
 } from './quizPools'
+
+import {
+  getRoomGameTitle,
+  getRoomQuestionById,
+  getRoomQuestionPoints,
+  getRoomQuestionSeconds,
+  getStudioRoomSettings,
+  isStudioRoom,
+  shouldShuffleRoomAnswers,
+  StudioRoomQuestionMedia,
+} from './studioRoomSupport'
 import './GoQuizRoom.css'
 import '../pages/Register.css'
 
@@ -302,8 +312,14 @@ function deterministicShuffle(array, seedText) {
   return copy
 }
 
-function getQ(id) {
-  return getQuizQuestionById(id)
+function getQ(
+  id,
+  room
+) {
+  return getRoomQuestionById(
+    room,
+    id
+  )
 }
 
 function buildQuestionIds(game, topic, lang, questionStyle, difficulty, seed) {
@@ -318,41 +334,106 @@ function buildQuestionIds(game, topic, lang, questionStyle, difficulty, seed) {
   })
 }
 
-function buildDisplayQuestion(rawQuestion, roomCode, currentIndex) {
-  if (!rawQuestion) return null
+function buildDisplayQuestion(
+  rawQuestion,
+  roomCode,
+  currentIndex,
+  shuffleAnswers = true
+) {
+  if (!rawQuestion) {
+    return null
+  }
 
-  const options = Array.isArray(rawQuestion.options) ? rawQuestion.options : []
+  const options =
+    Array.isArray(
+      rawQuestion.options
+    )
+      ? rawQuestion.options
+      : []
 
-  const mappedOptions = options.map((text, originalIndex) => ({
-    text,
-    originalIndex,
-  }))
+  const mappedOptions =
+    options.map(
+      (
+        text,
+        originalIndex
+      ) => ({
+        text,
+        originalIndex,
+      })
+    )
 
-  const shuffledOptions = deterministicShuffle(
-    mappedOptions,
-    `${roomCode}:${rawQuestion.id}:${currentIndex}`
-  )
+  const orderedOptions =
+    shuffleAnswers
+      ? deterministicShuffle(
+          mappedOptions,
+          `${roomCode}:${rawQuestion.id}:${currentIndex}`
+        )
+      : mappedOptions
 
-  const correct = shuffledOptions.findIndex(
-    (option) => option.originalIndex === rawQuestion.correct
-  )
+  const correct =
+    orderedOptions.findIndex(
+      (option) =>
+        option.originalIndex ===
+        Number(
+          rawQuestion.correct
+        )
+    )
 
   return {
     ...rawQuestion,
-    questionKind: getQuestionKind(rawQuestion),
-    options: shuffledOptions.map((option) => option.text),
+
+    questionKind:
+      getQuestionKind(
+        rawQuestion
+      ),
+
+    options:
+      orderedOptions.map(
+        (option) =>
+          option.text
+      ),
+
     correct,
   }
 }
 
-function calcTimeLeft(startedAt) {
-  if (!startedAt) return Q_TIME
+function calcTimeLeft(
+  startedAt,
+  durationSeconds = Q_TIME
+) {
+  const duration =
+    Number(
+      durationSeconds ||
+        Q_TIME
+    )
 
-  const startedMs = new Date(startedAt).getTime()
+  if (!startedAt) {
+    return duration
+  }
 
-  if (!Number.isFinite(startedMs)) return Q_TIME
+  const startedMs =
+    new Date(
+      startedAt
+    ).getTime()
 
-  return Math.max(0, Q_TIME - (Date.now() - startedMs) / 1000)
+  if (
+    !Number.isFinite(
+      startedMs
+    )
+  ) {
+    return duration
+  }
+
+  return Math.max(
+    0,
+
+    duration -
+      (
+        Date.now() -
+        startedMs
+      ) /
+        1000
+  )
 }
 
 function GameWelcome({ name, avatar }) {
@@ -551,6 +632,23 @@ const [cancelBusy, setCancelBusy] = useState(false)
 const [lobbyMusicOn, setLobbyMusicOn] = useState(false)
 const [coHostCopied, setCoHostCopied] = useState(false)
 const [resultsCopied, setResultsCopied] = useState(false)
+const studioRoom =
+  isStudioRoom(room)
+
+const studioSettings =
+  getStudioRoomSettings(
+    room
+  )
+
+const shuffleRoomAnswers =
+  shouldShuffleRoomAnswers(
+    room
+  )
+
+const studioGameTitle =
+  getRoomGameTitle(
+    room
+  )
 
 const roomRef = useRef(null)
 const busyRef = useRef(false)
@@ -575,9 +673,40 @@ const activePlayers = useMemo(() => players.filter((p) => !p.is_kicked), [player
 const totalPlayers = activePlayers.length
 const answeredPlayers = activePlayers.filter((p) => p.answered).length
 
-const currentQuestionId = room?.question_ids?.[room?.current_q || 0]
-const rawQuestion = currentQuestionId ? getQ(currentQuestionId) : null
-const currentQ = buildDisplayQuestion(rawQuestion, code, room?.current_q || 0)
+const currentQuestionId =
+  room?.question_ids?.[
+    room?.current_q || 0
+  ]
+
+const rawQuestion =
+  currentQuestionId
+    ? getQ(
+        currentQuestionId,
+        room
+      )
+    : null
+
+const currentQ =
+  buildDisplayQuestion(
+    rawQuestion,
+    code,
+    room?.current_q || 0,
+    shuffleRoomAnswers
+  )
+
+const currentQuestionSeconds =
+  getRoomQuestionSeconds(
+    room,
+    currentQ,
+    Q_TIME
+  )
+
+const currentQuestionBasePoints =
+  getRoomQuestionPoints(
+    room,
+    currentQ,
+    1000
+  )
 
 const currentPlayer = useMemo(
   () => players.find((p) => p.id === playerId) || null,
@@ -602,13 +731,37 @@ const choiceBreakdown = useMemo(() => {
   })
 }, [currentQ, activePlayers, totalPlayers])
 
-const gameQuestions = useMemo(() => {
-  const ids = Array.isArray(room?.question_ids) ? room.question_ids : []
+const gameQuestions =
+  useMemo(() => {
+    const ids =
+      Array.isArray(
+        room?.question_ids
+      )
+        ? room.question_ids
+        : []
 
-  return ids
-    .map((questionId, index) => buildDisplayQuestion(getQ(questionId), code, index))
-    .filter(Boolean)
-}, [room?.question_ids, code])
+    return ids
+      .map(
+        (
+          questionId,
+          index
+        ) =>
+          buildDisplayQuestion(
+            getQ(
+              questionId,
+              room
+            ),
+            code,
+            index,
+            shuffleRoomAnswers
+          )
+      )
+      .filter(Boolean)
+  }, [
+    room,
+    code,
+    shuffleRoomAnswers,
+  ])
 
 const gameQuestionCount = gameQuestions.length || QUESTION_COUNT
 
@@ -1107,7 +1260,11 @@ const nextQuestion = useCallback(async (force = false) => {
     if (!room || room.state !== 'question') return
 
     timerRef.current = setInterval(() => {
-      const left = calcTimeLeft(room.question_started_at)
+      const left =
+  calcTimeLeft(
+    room.question_started_at,
+    currentQuestionSeconds
+  )
       const display = Math.ceil(left)
 
       setTimeLeft(left)
@@ -1269,8 +1426,24 @@ const hostStart = async () => {
 
   let questionIds = room?.question_ids || []
 
-  if (!Array.isArray(questionIds) || questionIds.length < QUESTION_COUNT) {
-    questionIds = buildQuestionIds(
+if (
+  !Array.isArray(
+    questionIds
+  ) ||
+  questionIds.length <
+    QUESTION_COUNT
+) {
+  if (studioRoom) {
+    setFatalError(
+      'This Studio room is missing its saved questions.'
+    )
+
+    setBusy(false)
+    return
+  }
+
+  questionIds =
+    buildQuestionIds(
       roomMetadata.game,
       topic,
       lang,
@@ -1278,7 +1451,7 @@ const hostStart = async () => {
       roomMetadata.difficulty,
       `${code}:${Date.now()}`
     )
-  }
+}
 
   await supabase.from('pulse_go_answers').delete().eq('room_code', code)
   setAnswers([])
@@ -1386,9 +1559,23 @@ const hostStart = async () => {
 
     setPicked(answerIndex)
 
-    const left = Math.max(0, Math.ceil(calcTimeLeft(room.question_started_at)))
+    const left =
+  Math.max(
+    0,
+
+    Math.ceil(
+      calcTimeLeft(
+        room.question_started_at,
+        currentQuestionSeconds
+      )
+    )
+  )
     const correct = answerIndex === currentQ.correct
-    const points = correct ? 1000 + left * 50 : 0
+    const points =
+  correct
+    ? currentQuestionBasePoints +
+      left * 50
+    : 0
 
     const { error: answerError } = await supabase
       .from('pulse_go_answers')
@@ -1441,14 +1628,35 @@ const resetRoomToLobby = async () => {
 
   setBusy(true)
 
-  const questionIds = buildQuestionIds(
-    roomMetadata.game,
-    topic,
-    lang,
-    roomMetadata.qstyle,
-    roomMetadata.difficulty,
-    `${code}:${Date.now()}`
+if (
+  studioRoom &&
+  (
+    !Array.isArray(
+      room?.question_ids
+    ) ||
+    room.question_ids.length <
+      QUESTION_COUNT
   )
+) {
+  setFatalError(
+    'This Studio room is missing its saved questions.'
+  )
+
+  setBusy(false)
+  return
+}
+
+const questionIds =
+  studioRoom
+    ? room.question_ids
+    : buildQuestionIds(
+        roomMetadata.game,
+        topic,
+        lang,
+        roomMetadata.qstyle,
+        roomMetadata.difficulty,
+        `${code}:${Date.now()}`
+      )
 
   await supabase.from('pulse_go_answers').delete().eq('room_code', code)
   setAnswers([])
@@ -1485,7 +1693,20 @@ const resetRoomToLobby = async () => {
 
   const timeDisplay = Math.ceil(timeLeft)
   const timeColor = timeDisplay <= 5 ? '#ef4444' : timeDisplay <= 10 ? '#f59e0b' : '#b9d6ff'
-  const timePct = Math.max(0, Math.min(100, (timeLeft / Q_TIME) * 100))
+  const timePct =
+  Math.max(
+    0,
+
+    Math.min(
+      100,
+
+      (
+        timeLeft /
+        currentQuestionSeconds
+      ) *
+        100
+    )
+  )
   const state = room?.state || 'lobby'
   const isCorrect = !isHost && picked === currentQ?.correct
   const showCancelButton = isHost && room && !['cancelled', 'finished'].includes(state)
@@ -1737,6 +1958,17 @@ if (!joined) {
 <span className={`grm-lobby-style ${questionStyle}`}>
   {questionStyleLabel}
 </span>
+{studioGameTitle && (
+  <>
+    <span className="grm-lobby-sep">
+      ·
+    </span>
+
+    <span className="studio-room-title-chip">
+      {studioGameTitle}
+    </span>
+  </>
+)}
         </div>
 
         <div className="grm-lobby-body">
@@ -1843,6 +2075,9 @@ if (!joined) {
         </div>
 
         <div className="grm-qtext">{currentQ?.question || 'Loading question...'}</div>
+        <StudioRoomQuestionMedia
+  question={currentQ}
+/>
 
         {!isHost && (
           <div className={`grm-opts ${currentQ?.options?.length === 2 ? 'two-choice' : ''}`}>
@@ -2027,7 +2262,15 @@ if (!joined) {
           ))}
         </div>
 
-        {currentQ?.explanation && <div className="grm-exp">💡 {currentQ.explanation}</div>}
+        {(
+  !studioRoom ||
+  studioSettings.showExplanations
+) &&
+  currentQ?.explanation && (
+    <div className="grm-exp">
+      💡 {currentQ.explanation}
+    </div>
+  )}
 
 <div className="grm-mini-lb">
   <div className="grm-mini-lb-hd">
@@ -2110,7 +2353,19 @@ const finalTeamFlagCode = finalTeamMeta
   : ''
 
 const finalGameMeta =
-  FINAL_GAME_META[finalGameId] || FINAL_GAME_META.classic
+  studioRoom
+    ? {
+        title:
+          studioGameTitle ||
+          'Studio Classic Quiz',
+
+        image:
+          '/emojis/classic.webp',
+      }
+    : FINAL_GAME_META[
+        finalGameId
+      ] ||
+      FINAL_GAME_META.classic
 
 const finalLanguageMeta =
   FINAL_LANGUAGE_META[finalLanguageId] ||
