@@ -232,10 +232,7 @@ function MaintenanceNotice() {
         >
           Pulse is currently unavailable
           while we work on important
-          improvements. Access to Pulse GO,
-          Academy, Studio and all other
-          sections has been temporarily
-          disabled until further notice.
+          improvements. 
         </p>
 
         <p
