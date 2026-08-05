@@ -25,7 +25,7 @@ import GoQuizResults from './go/GoQuizResults'
 import Studio from './go/Studio'
 import StudioDashboard from './go/StudioDashboard'
 
-const MAINTENANCE_MODE = true
+const MAINTENANCE_MODE = false
 
 const PUBLIC_PULSE_HOSTS = [
   'pulse-kk.com',
