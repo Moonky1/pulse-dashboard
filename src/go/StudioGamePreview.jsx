@@ -447,11 +447,10 @@ export default function StudioGamePreview({
             'Untitled Game'}
         </h2>
 
-        <p>
-          Play the complete Classic Quiz
-          before publishing it. Preview
-          results are not saved.
-        </p>
+<p>
+  Test the complete Classic Quiz before publishing, or continue directly
+  when you are confident the questions are ready. Preview results are not saved.
+</p>
 
         <div className="studio-preview-start-metrics">
           <article>
@@ -498,25 +497,31 @@ export default function StudioGamePreview({
           </article>
         </div>
 
-        <div className="studio-preview-start-actions">
-          <button
-            type="button"
-            className="studio-builder-footer-secondary"
-            onClick={onBack}
-          >
-            Back to Questions
-          </button>
+<div className="studio-preview-start-actions">
+  <button
+    type="button"
+    className="studio-builder-footer-secondary"
+    onClick={onBack}
+  >
+    Back to Questions
+  </button>
 
-          <button
-            type="button"
-            className="studio-builder-footer-primary"
-            onClick={
-              startPreview
-            }
-          >
-            Start Preview
-          </button>
-        </div>
+  <button
+    type="button"
+    className="studio-builder-footer-secondary"
+    onClick={startPreview}
+  >
+    Start Preview
+  </button>
+
+  <button
+    type="button"
+    className="studio-builder-footer-primary"
+    onClick={onContinuePublish}
+  >
+    Skip Preview & Continue →
+  </button>
+</div>
       </section>
     )
   }
