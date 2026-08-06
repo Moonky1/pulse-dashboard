@@ -1,0 +1,42 @@
+.studio-workspace-page .studio-bg,
+.studio-workspace-page .studio-grid,
+.studio-workspace-page .studio-soft-glow {
+  position: absolute;
+}
+
+.studio-workspace-page .studio-grid {
+  opacity: 0.15;
+}
+
+.studio-workspace-page .studio-soft-glow {
+  opacity: 0.58;
+}
+
+.studio-workspace-page .studio-workspace-sidebar,
+.studio-workspace-page .studio-workspace-topbar,
+.studio-workspace-page .studio-creator-profile {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.studio-workspace-page .studio-dashboard-panels,
+.studio-workspace-page .studio-library-intro {
+  content-visibility: auto;
+  contain-intrinsic-size: 420px;
+}
+
+.studio-workspace-page .studio-dashboard-panel,
+.studio-workspace-page .studio-my-game-card {
+  transform: translateZ(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-workspace-page *,
+  .studio-workspace-page *::before,
+  .studio-workspace-page *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
