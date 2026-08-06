@@ -5,6 +5,8 @@ import './StudioDashboard.css'
 import StudioGameBuilder from './StudioGameBuilder'
 import StudioGameModeSelector from './StudioGameModeSelector'
 import StudioMyGames from './StudioMyGames'
+import { getStudioOverview } from './studioLibraryApi'
+import './StudioOverview.css'
 
 const STUDIO_NAV_ITEMS = [
   {
@@ -83,6 +85,108 @@ const BUILDER_STEPS = [
       'Publish the game and generate a live KK room.',
   },
 ]
+
+const EMPTY_OVERVIEW = {
+  myGames: 0,
+  published: 0,
+  drafts: 0,
+  archived: 0,
+  totalPlays: 0,
+  averageScore: null,
+  starsReceived: 0,
+  recentDrafts: [],
+  latestGames: [],
+}
+
+const LANGUAGE_LABELS = {
+  en: 'English',
+  es: 'Spanish',
+  mixed: 'Mixed',
+}
+
+function formatOverviewDate(value) {
+  if (!value) return 'Recently updated'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Recently updated'
+  }
+
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
+}
+
+function formatOverviewNumber(value) {
+  return Number(value || 0).toLocaleString('en-US')
+}
+
+function OverviewGameList({
+  games,
+  emptyIcon,
+  emptyTitle,
+  emptyDescription,
+  onOpen,
+  onCreate,
+}) {
+  if (!games.length) {
+    return (
+      <StudioEmptyState
+        icon={emptyIcon}
+        title={emptyTitle}
+        description={emptyDescription}
+        actionLabel={onCreate ? 'Create Your Game' : undefined}
+        onAction={onCreate}
+      />
+    )
+  }
+
+  return (
+    <div className="studio-overview-game-list">
+      {games.map((game) => (
+        <button
+          key={game.id}
+          type="button"
+          className="studio-overview-game-row"
+          onClick={() => onOpen(game)}
+        >
+          <span className="studio-overview-game-icon">
+            {game.coverEmoji || '🎮'}
+          </span>
+
+          <span className="studio-overview-game-copy">
+            <strong>{game.title}</strong>
+
+            <small>
+              {LANGUAGE_LABELS[game.language] || 'English'}
+              {' · '}
+              {game.status === 'published'
+                ? `${formatOverviewNumber(game.playCount)} plays`
+                : `Step ${Math.min(5, Math.max(1, Number(game.currentStep || 1)))} of 5`}
+            </small>
+          </span>
+
+          <span className="studio-overview-game-side">
+            <b
+              className={`studio-overview-status studio-overview-status--${game.status}`}
+            >
+              {game.status}
+            </b>
+
+            <small>
+              {formatOverviewDate(game.updatedAt || game.publishedAt)}
+            </small>
+          </span>
+
+          <span className="studio-overview-game-arrow">→</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 
 function readStoredUser() {
   try {
@@ -255,6 +359,19 @@ export default function StudioDashboard() {
   const [selectedGameMode, setSelectedGameMode] =
     useState(null)
 
+
+  const [overview, setOverview] =
+    useState(EMPTY_OVERVIEW)
+
+  const [overviewLoading, setOverviewLoading] =
+    useState(true)
+
+  const [overviewError, setOverviewError] =
+    useState('')
+
+  const [overviewRefreshKey, setOverviewRefreshKey] =
+    useState(0)
+
   const user = useMemo(() => readStoredUser(), [])
 
   const role = useMemo(
@@ -301,6 +418,66 @@ export default function StudioDashboard() {
       replace: true,
     })
   }, [user, navigate])
+
+
+  useEffect(() => {
+    if (
+      !user ||
+      !hasStudioAccess ||
+      activeView !== 'overview'
+    ) {
+      return undefined
+    }
+
+    let cancelled = false
+
+    setOverviewLoading(true)
+    setOverviewError('')
+
+    getStudioOverview({
+      user,
+      role,
+    })
+      .then((data) => {
+        if (cancelled) return
+
+        setOverview({
+          ...EMPTY_OVERVIEW,
+          ...data,
+        })
+      })
+      .catch((loadError) => {
+        if (cancelled) return
+
+        console.error(loadError)
+
+        setOverviewError(
+          loadError?.message ||
+            'Could not load the Studio overview.'
+        )
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setOverviewLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    activeView,
+    hasStudioAccess,
+    overviewRefreshKey,
+    role,
+    user,
+  ])
+
+  const refreshOverview = () => {
+    setOverviewRefreshKey(
+      (current) => current + 1
+    )
+  }
 
   if (!user) {
     return (
@@ -379,6 +556,26 @@ export default function StudioDashboard() {
         </button>
       </section>
 
+      {overviewError && (
+        <div className="studio-overview-alert">
+          <div>
+            <span>!</span>
+
+            <div>
+              <strong>Could not refresh Overview</strong>
+              <small>{overviewError}</small>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={refreshOverview}
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
       <section className="studio-creator-profile">
         <div>
           <span className="studio-section-eyebrow">
@@ -393,36 +590,114 @@ export default function StudioDashboard() {
           </p>
         </div>
 
-        <AuthorIdentity
-          user={user}
-          role={role}
-          team={team}
-        />
+        <div className="studio-overview-profile-side">
+          <AuthorIdentity
+            user={user}
+            role={role}
+            team={team}
+          />
+
+          <div className="studio-overview-star-total">
+            <span>★</span>
+
+            <div>
+              <strong>
+                {overviewLoading
+                  ? '…'
+                  : formatOverviewNumber(
+                      overview.starsReceived
+                    )}
+              </strong>
+
+              <small>Stars received</small>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="studio-dashboard-stats">
+      <section className="studio-dashboard-stats studio-dashboard-stats--dynamic">
         <article>
           <span>My Games</span>
-          <strong>0</strong>
-          <small>No games created yet</small>
+
+          <strong>
+            {overviewLoading
+              ? '…'
+              : formatOverviewNumber(
+                  overview.myGames
+                )}
+          </strong>
+
+          <small>
+            {overviewLoading
+              ? 'Loading your library'
+              : `${overview.drafts} draft${overview.drafts === 1 ? '' : 's'}`}
+          </small>
         </article>
 
         <article>
           <span>Published</span>
-          <strong>0</strong>
-          <small>Nothing published yet</small>
+
+          <strong>
+            {overviewLoading
+              ? '…'
+              : formatOverviewNumber(
+                  overview.published
+                )}
+          </strong>
+
+          <small>
+            {overview.published > 0
+              ? 'Available from Studio'
+              : 'Nothing published yet'}
+          </small>
         </article>
 
         <article>
           <span>Total Plays</span>
-          <strong>0</strong>
-          <small>Live game sessions</small>
+
+          <strong>
+            {overviewLoading
+              ? '…'
+              : formatOverviewNumber(
+                  overview.totalPlays
+                )}
+          </strong>
+
+          <small>Live Studio rooms created</small>
         </article>
 
         <article>
           <span>Average Score</span>
-          <strong>—</strong>
-          <small>Waiting for results</small>
+
+          <strong>
+            {overviewLoading
+              ? '…'
+              : overview.averageScore === null
+                ? '—'
+                : formatOverviewNumber(
+                    overview.averageScore
+                  )}
+          </strong>
+
+          <small>
+            {overview.averageScore === null
+              ? 'Waiting for completed games'
+              : 'Across finished Studio sessions'}
+          </small>
+        </article>
+
+        <article className="studio-overview-stat-star">
+          <span>Stars Received</span>
+
+          <strong>
+            {overviewLoading
+              ? '…'
+              : formatOverviewNumber(
+                  overview.starsReceived
+                )}
+          </strong>
+
+          <small>Community recognition</small>
         </article>
       </section>
 
@@ -445,13 +720,21 @@ export default function StudioDashboard() {
             </button>
           </div>
 
-          <StudioEmptyState
-            icon="✦"
-            title="No drafts yet"
-            description="Start your first custom game and it will be saved here while you build it."
-            actionLabel="Create Your Game"
-            onAction={openNewGame}
-          />
+          {overviewLoading ? (
+            <div className="studio-overview-panel-loading">
+              <i />
+              <span>Loading drafts...</span>
+            </div>
+          ) : (
+            <OverviewGameList
+              games={overview.recentDrafts}
+              emptyIcon="✦"
+              emptyTitle="No drafts yet"
+              emptyDescription="Start your first custom game and it will be saved here while you build it."
+              onOpen={openExistingGame}
+              onCreate={openNewGame}
+            />
+          )}
         </article>
 
         <article className="studio-dashboard-panel">
@@ -472,11 +755,20 @@ export default function StudioDashboard() {
             </button>
           </div>
 
-          <StudioEmptyState
-            icon="◇"
-            title="The library is ready"
-            description="Published games from authorized creators will appear here."
-          />
+          {overviewLoading ? (
+            <div className="studio-overview-panel-loading">
+              <i />
+              <span>Loading activity...</span>
+            </div>
+          ) : (
+            <OverviewGameList
+              games={overview.latestGames}
+              emptyIcon="◇"
+              emptyTitle="No recent games"
+              emptyDescription="Your latest saved and published games will appear here."
+              onOpen={openExistingGame}
+            />
+          )}
         </article>
       </section>
 
@@ -548,6 +840,7 @@ export default function StudioDashboard() {
           setSelectedGameMode(
             savedGame?.gameMode || 'classic'
           )
+          refreshOverview()
         }}
         onExit={() => {
           if (!editingGame?.id) {
@@ -646,6 +939,11 @@ export default function StudioDashboard() {
 
                   setEditingGame(null)
                   setSelectedGameMode(null)
+
+                  if (item.id === 'overview') {
+                    refreshOverview()
+                  }
+
                   setActiveView(item.id)
                 }}
               >
