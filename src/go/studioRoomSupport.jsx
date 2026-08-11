@@ -1,6 +1,7 @@
 import {
   getQuestionById as getQuizQuestionById,
 } from './quizPools'
+
 import './StudioRoomSupport.css'
 
 export function isStudioRoom(room) {
@@ -63,67 +64,180 @@ export function getStudioRoomGame(
   )
 }
 
+function normalizeStudioQuestion(
+  question
+) {
+  if (
+    !question ||
+    typeof question !== 'object'
+  ) {
+    return null
+  }
+
+  return {
+    ...question,
+
+    id:
+      String(
+        question.id || ''
+      ),
+
+    question:
+      question.question ||
+      question.prompt ||
+      '',
+
+    options:
+      Array.isArray(
+        question.options
+      )
+        ? question.options
+        : [],
+
+    correct:
+      Number(
+        question.correct ?? 0
+      ),
+
+    explanation:
+      question.explanation || '',
+
+    question_type:
+      question.question_type ||
+      'text',
+
+    media_url:
+      question.media_url || '',
+
+    timer_override:
+      question.timer_override ??
+      null,
+
+    points_override:
+      question.points_override ??
+      null,
+  }
+}
+
+export function getStudioRoomQuestions(
+  room
+) {
+  if (!isStudioRoom(room)) {
+    return []
+  }
+
+  const questions =
+    room?.studio_game_snapshot
+      ?.questions
+
+  if (!Array.isArray(questions)) {
+    return []
+  }
+
+  return questions
+    .map(
+      normalizeStudioQuestion
+    )
+    .filter(Boolean)
+}
+
+export function getStudioRoomOrderedQuestions(
+  room
+) {
+  const questions =
+    getStudioRoomQuestions(room)
+
+  if (!questions.length) {
+    return []
+  }
+
+  const ids =
+    Array.isArray(
+      room?.question_ids
+    )
+      ? room.question_ids
+      : []
+
+  if (!ids.length) {
+    return questions
+  }
+
+  const byId =
+    new Map(
+      questions.map(
+        (question) => [
+          String(question.id),
+          question,
+        ]
+      )
+    )
+
+  const ordered =
+    ids
+      .map(
+        (questionId) =>
+          byId.get(
+            String(questionId)
+          ) || null
+      )
+      .filter(Boolean)
+
+  if (
+    ordered.length ===
+    questions.length
+  ) {
+    return ordered
+  }
+
+  return questions
+}
+
+export function getStudioRoomQuestionAt(
+  room,
+  index
+) {
+  const questions =
+    getStudioRoomOrderedQuestions(
+      room
+    )
+
+  return (
+    questions[
+      Number(index || 0)
+    ] || null
+  )
+}
+
+export function getStudioRoomQuestionIds(
+  room
+) {
+  return getStudioRoomOrderedQuestions(
+    room
+  )
+    .map(
+      (question) =>
+        String(
+          question.id || ''
+        ).trim()
+    )
+    .filter(Boolean)
+}
+
 export function getRoomQuestionById(
   room,
   questionId
 ) {
   if (isStudioRoom(room)) {
     const questions =
-      room.studio_game_snapshot
-        ?.questions
+      getStudioRoomQuestions(room)
 
-    const found =
-      Array.isArray(questions)
-        ? questions.find(
-            (question) =>
-              String(question.id) ===
-              String(questionId)
-          )
-        : null
-
-    if (found) {
-      return {
-        ...found,
-
-        id:
-          String(found.id),
-
-        question:
-          found.question ||
-          found.prompt ||
-          '',
-
-        options:
-          Array.isArray(
-            found.options
-          )
-            ? found.options
-            : [],
-
-        correct:
-          Number(
-            found.correct ?? 0
-          ),
-
-        explanation:
-          found.explanation || '',
-
-        question_type:
-          found.question_type ||
-          'text',
-
-        media_url:
-          found.media_url || '',
-
-        timer_override:
-          found.timer_override ??
-          null,
-
-        points_override:
-          found.points_override ??
-          null,
-      }
-    }
+    return (
+      questions.find(
+        (question) =>
+          String(question.id) ===
+          String(questionId)
+      ) || null
+    )
   }
 
   return getQuizQuestionById(

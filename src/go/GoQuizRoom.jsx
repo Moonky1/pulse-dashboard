@@ -13,6 +13,7 @@ import {
   getRoomQuestionById,
   getRoomQuestionPoints,
   getRoomQuestionSeconds,
+  getStudioRoomQuestionIds,
   getStudioRoomSettings,
   isStudioRoom,
   shouldShuffleRoomAnswers,
@@ -1424,7 +1425,12 @@ const hostStart = async () => {
   finishSoundPlayedRef.current = false
   actionLockRef.current = false
 
-  let questionIds = room?.question_ids || []
+let questionIds =
+  studioRoom
+    ? getStudioRoomQuestionIds(
+        room
+      )
+    : room?.question_ids || []
 
 if (
   !Array.isArray(

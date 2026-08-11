@@ -1,9 +1,10 @@
-﻿import { lazy, useEffect, useMemo, useState } from 'react'
+import { lazy, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Studio.css'
 import './StudioDashboard.css'
 import { getStudioOverview } from './studioLibraryApi'
 import './StudioOverview.css'
+import StudioGameLibrary from './StudioGameLibrary'
 import './StudioPerformance.css'
 
 const StudioGameBuilder = lazy(() =>
@@ -22,17 +23,17 @@ const STUDIO_NAV_ITEMS = [
   {
     id: 'overview',
     label: 'Overview',
-    icon: 'âŒ‚',
+    icon: '⌂',
   },
   {
     id: 'my-games',
     label: 'My Games',
-    icon: 'â—«',
+    icon: '◫',
   },
   {
     id: 'library',
     label: 'Game Library',
-    icon: 'â—‡',
+    icon: '◇',
   },
   {
     id: 'create',
@@ -42,7 +43,7 @@ const STUDIO_NAV_ITEMS = [
   {
     id: 'reports',
     label: 'Reports',
-    icon: 'â†—',
+    icon: '↗',
   },
 ]
 
@@ -163,7 +164,7 @@ function OverviewGameList({
           onClick={() => onOpen(game)}
         >
           <span className="studio-overview-game-icon">
-            {game.coverEmoji || 'ðŸŽ®'}
+            {game.coverEmoji || '🎮'}
           </span>
 
           <span className="studio-overview-game-copy">
@@ -171,7 +172,7 @@ function OverviewGameList({
 
             <small>
               {LANGUAGE_LABELS[game.language] || 'English'}
-              {' Â· '}
+              {' · '}
               {game.status === 'published'
                 ? `${formatOverviewNumber(game.playCount)} plays`
                 : `Step ${Math.min(5, Math.max(1, Number(game.currentStep || 1)))} of 5`}
@@ -190,7 +191,7 @@ function OverviewGameList({
             </small>
           </span>
 
-          <span className="studio-overview-game-arrow">â†’</span>
+          <span className="studio-overview-game-arrow">→</span>
         </button>
       ))}
     </div>
@@ -512,7 +513,7 @@ export default function StudioDashboard() {
 
         <section className="studio-access-denied">
           <div className="studio-access-denied-icon">
-            âœ¦
+            ✦
           </div>
 
           <span>Pulse Studio</span>
@@ -608,12 +609,12 @@ export default function StudioDashboard() {
           />
 
           <div className="studio-overview-star-total">
-            <span>â˜…</span>
+            <span>★</span>
 
             <div>
               <strong>
                 {overviewLoading
-                  ? 'â€¦'
+                  ? '…'
                   : formatOverviewNumber(
                       overview.starsReceived
                     )}
@@ -631,7 +632,7 @@ export default function StudioDashboard() {
 
           <strong>
             {overviewLoading
-              ? 'â€¦'
+              ? '…'
               : formatOverviewNumber(
                   overview.myGames
                 )}
@@ -649,7 +650,7 @@ export default function StudioDashboard() {
 
           <strong>
             {overviewLoading
-              ? 'â€¦'
+              ? '…'
               : formatOverviewNumber(
                   overview.published
                 )}
@@ -667,7 +668,7 @@ export default function StudioDashboard() {
 
           <strong>
             {overviewLoading
-              ? 'â€¦'
+              ? '…'
               : formatOverviewNumber(
                   overview.totalPlays
                 )}
@@ -681,9 +682,9 @@ export default function StudioDashboard() {
 
           <strong>
             {overviewLoading
-              ? 'â€¦'
+              ? '…'
               : overview.averageScore === null
-                ? 'â€”'
+                ? '—'
                 : formatOverviewNumber(
                     overview.averageScore
                   )}
@@ -701,7 +702,7 @@ export default function StudioDashboard() {
 
           <strong>
             {overviewLoading
-              ? 'â€¦'
+              ? '…'
               : formatOverviewNumber(
                   overview.starsReceived
                 )}
@@ -738,7 +739,7 @@ export default function StudioDashboard() {
           ) : (
             <OverviewGameList
               games={overview.recentDrafts}
-              emptyIcon="âœ¦"
+              emptyIcon="✦"
               emptyTitle="No drafts yet"
               emptyDescription="Start your first custom game and it will be saved here while you build it."
               onOpen={openExistingGame}
@@ -773,7 +774,7 @@ export default function StudioDashboard() {
           ) : (
             <OverviewGameList
               games={overview.latestGames}
-              emptyIcon="â—‡"
+              emptyIcon="◇"
               emptyTitle="No recent games"
               emptyDescription="Your latest saved and published games will appear here."
               onOpen={openExistingGame}
@@ -784,7 +785,7 @@ export default function StudioDashboard() {
 
       <section className="studio-library-intro">
         <div className="studio-library-intro-icon">
-          â—ˆ
+          ◈
         </div>
 
         <div>
@@ -807,7 +808,7 @@ export default function StudioDashboard() {
           type="button"
           onClick={() => setActiveView('library')}
         >
-          Explore Library â†’
+          Explore Library →
         </button>
       </section>
     </>
@@ -875,6 +876,14 @@ export default function StudioDashboard() {
     />
   )
 
+  const renderLibrary = () => (
+  <StudioGameLibrary
+    user={user}
+    role={role}
+    onStarChanged={refreshOverview}
+  />
+)
+
   const renderEmptyView = () => {
     const view = STUDIO_NAV_ITEMS.find(
       (item) => item.id === activeView
@@ -889,7 +898,7 @@ export default function StudioDashboard() {
 
     return (
       <section className="studio-dashboard-view-empty">
-        <div>{view?.icon || 'âœ¦'}</div>
+        <div>{view?.icon || '✦'}</div>
 
         <span className="studio-section-eyebrow">
           Pulse Studio
@@ -974,7 +983,7 @@ setActiveView(item.id)
               type="button"
               onClick={() => navigate('/studio')}
             >
-              â† Studio Home
+              ← Studio Home
             </button>
 
             <div className="studio-workspace-topbar-user">
@@ -990,13 +999,17 @@ setActiveView(item.id)
             {activeView === 'my-games' &&
               renderMyGames()}
 
-            {activeView === 'create' &&
-              renderBuilderOverview()}
+{activeView === 'create' &&
+  renderBuilderOverview()}
 
-            {activeView !== 'overview' &&
-              activeView !== 'my-games' &&
-              activeView !== 'create' &&
-              renderEmptyView()}
+{activeView === 'library' &&
+  renderLibrary()}
+
+{activeView !== 'overview' &&
+  activeView !== 'my-games' &&
+  activeView !== 'create' &&
+  activeView !== 'library' &&
+  renderEmptyView()}
           </div>
         </main>
       </div>
