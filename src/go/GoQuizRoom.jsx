@@ -13,6 +13,8 @@ import {
   getRoomQuestionById,
   getRoomQuestionPoints,
   getRoomQuestionSeconds,
+  getStudioRoomOrderedQuestions,
+  getStudioRoomQuestionAt,
   getStudioRoomQuestionIds,
   getStudioRoomSettings,
   isStudioRoom,
@@ -680,12 +682,17 @@ const currentQuestionId =
   ]
 
 const rawQuestion =
-  currentQuestionId
-    ? getQ(
-        currentQuestionId,
-        room
+  studioRoom
+    ? getStudioRoomQuestionAt(
+        room,
+        room?.current_q || 0
       )
-    : null
+    : currentQuestionId
+      ? getQ(
+          currentQuestionId,
+          room
+        )
+      : null
 
 const currentQ =
   buildDisplayQuestion(
@@ -734,6 +741,25 @@ const choiceBreakdown = useMemo(() => {
 
 const gameQuestions =
   useMemo(() => {
+    if (studioRoom) {
+      return getStudioRoomOrderedQuestions(
+        room
+      )
+        .map(
+          (
+            question,
+            index
+          ) =>
+            buildDisplayQuestion(
+              question,
+              code,
+              index,
+              shuffleRoomAnswers
+            )
+        )
+        .filter(Boolean)
+    }
+
     const ids =
       Array.isArray(
         room?.question_ids
@@ -762,6 +788,7 @@ const gameQuestions =
     room,
     code,
     shuffleRoomAnswers,
+    studioRoom,
   ])
 
 const gameQuestionCount = gameQuestions.length || QUESTION_COUNT

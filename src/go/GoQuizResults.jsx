@@ -5,7 +5,9 @@ import { APP_CONFIG } from '../config'
 import {
   getRoomGameTitle,
   getRoomQuestionById,
+  getStudioRoomOrderedQuestions,
   isStudioRoom,
+  StudioRoomQuestionMedia,
   shouldShuffleRoomAnswers,
 } from './studioRoomSupport'
 import './GoQuizRoom.css'
@@ -341,6 +343,25 @@ const studioGameTitle =
 
 const gameQuestions =
   useMemo(() => {
+    if (studioRoom) {
+      return getStudioRoomOrderedQuestions(
+        room
+      )
+        .map(
+          (
+            question,
+            index
+          ) =>
+            buildDisplayQuestion(
+              question,
+              code,
+              index,
+              shuffleRoomAnswers
+            )
+        )
+        .filter(Boolean)
+    }
+
     const ids =
       Array.isArray(
         room?.question_ids
@@ -369,6 +390,7 @@ const gameQuestions =
     room,
     code,
     shuffleRoomAnswers,
+    studioRoom,
   ])
 
   const gameQuestionCount = gameQuestions.length || QUESTION_COUNT
@@ -953,9 +975,15 @@ const resultTeamFlagCode = resultTeamMeta
                   Correct: {getOptionLetter(item.question.correct)} ·{' '}
                   {item.options[item.question.correct]?.option || 'N/A'}
                 </em>
-              </summary>
+</summary>
 
-              <div className="grm-report-options">
+<div className="grm-report-media">
+  <StudioRoomQuestionMedia
+    question={item.question}
+  />
+</div>
+
+<div className="grm-report-options">
                 {item.options.map((choice) => {
                   const meta = OPTS[choice.index] || OPTS[0]
                   const isAnswer = choice.index === item.question.correct
