@@ -506,6 +506,28 @@
   color: #d8e8ff;
 }
 
+.auth-path-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.auth-path-switch button {
+  padding: 10px;
+  border: 1px solid rgba(216, 232, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(7, 11, 19, 0.7);
+  color: #8f9aad;
+  cursor: pointer;
+}
+
+.auth-path-switch button.active {
+  border-color: rgba(185, 214, 255, 0.7);
+  background: rgba(158, 214, 255, 0.1);
+  color: #f6f8ff;
+}
+
 /* Welcome transition after login/register */
 .auth-welcome-overlay {
   position: fixed;

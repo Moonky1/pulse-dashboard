@@ -1,27 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth/AuthProvider.jsx'
+import {
+  isExpectedCorporateEmail,
+  normalizeCorporateEmail,
+  ROLE_MAP,
+  safeReturnPath,
+  TEAM_MAP,
+} from '../auth/compatibilityProfile.js'
+import { supabase } from '../utils/supabase.js'
+import { authenticateLinkedStaff, loadLinkedStaffProfile } from '../auth/staffAuthFlow.js'
 import './Register.css'
 
 const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbyapspKt5ImZnXuGneBlVSftTjYfRzXLEPeSTCWMnhmY_mcx9i1Cl0y4oQv5Q9KmtRE/exec'
-
-const TEAM_MAP = {
-  Global: 'global',
-  Philippines: 'philippines',
-  Venezuela: 'venezuela',
-  Colombia: 'colombia',
-  'Mexico Baja': 'mexico',
-  'Mexico BJ': 'mexico',
-  'Central America': 'central',
-  Asia: 'asia',
-}
-
-const ROLE_MAP = {
-  Global: 'global',
-  Supervisor: 'supervisor',
-  QA: 'qa',
-  'Team Leader': 'leader',
-}
 
 async function callScript(params) {
   const url = `${SCRIPT_URL}?${new URLSearchParams(params).toString()}&t=${Date.now()}`
@@ -53,7 +45,11 @@ function AuthWelcome({ mode, name }) {
 
 export default function SignIn({ embedded = false, onClose, onSwitchMode }) {
   const navigate = useNavigate()
+  const { loading: authLoading, isAuthenticated } = useAuth()
 
+  const [loginMode, setLoginMode] = useState('auth')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -79,16 +75,71 @@ export default function SignIn({ embedded = false, onClose, onSwitchMode }) {
   }
 
   const goDashboard = () => {
-  const returnPath =
-    localStorage.getItem('pulse_return_after_auth')
+    const returnPath = safeReturnPath(localStorage.getItem('pulse_return_after_auth'))
+    localStorage.removeItem('pulse_return_after_auth')
+    window.location.href = returnPath
+  }
 
-  localStorage.removeItem('pulse_return_after_auth')
+  const hydrateLinkedProfile = async () => {
+    const compatibilityProfile = await loadLinkedStaffProfile(supabase)
+    localStorage.setItem('pulse_user', JSON.stringify(compatibilityProfile))
+    localStorage.setItem('pulse_intro', JSON.stringify({
+      mode: 'signin', name: compatibilityProfile.name, at: Date.now(),
+    }))
+    setWelcomeName(compatibilityProfile.name)
+    window.setTimeout(goDashboard, 2450)
+  }
 
-  window.location.href =
-    returnPath || '/dashboard'
-}
+  const handleExistingSession = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      await hydrateLinkedProfile()
+    } catch {
+      localStorage.removeItem('pulse_user')
+      await supabase.auth.signOut()
+      setError('This Auth account is not linked to an active Pulse staff profile.')
+      setLoading(false)
+    }
+  }
 
-  const handleSignIn = async () => {
+  const handleAuthSignIn = async () => {
+    const normalizedEmail = normalizeCorporateEmail(email)
+    if (!isExpectedCorporateEmail(normalizedEmail)) {
+      setError('Enter your Kampaign Kings corporate email.')
+      return
+    }
+    if (!password) {
+      setError('Enter your password.')
+      return
+    }
+    setLoading(true)
+    setError('')
+    const result = await authenticateLinkedStaff(supabase, normalizedEmail, password)
+    setPassword('')
+    if (!result.ok) {
+      localStorage.removeItem('pulse_user')
+      setError(result.code === 'INVALID_CREDENTIALS'
+        ? 'Invalid email or password.'
+        : 'Your Auth account is not linked to an active Pulse staff profile.')
+      setLoading(false)
+      return
+    }
+    try {
+      const compatibilityProfile = result.profile
+      localStorage.setItem('pulse_user', JSON.stringify(compatibilityProfile))
+      localStorage.setItem('pulse_intro', JSON.stringify({
+        mode: 'signin', name: compatibilityProfile.name, at: Date.now(),
+      }))
+      setWelcomeName(compatibilityProfile.name)
+      window.setTimeout(goDashboard, 2450)
+    } catch {
+      setError('Invalid email or password.')
+      setLoading(false)
+    }
+  }
+
+  const handleLegacySignIn = async () => {
     if (!name.trim()) {
       setError('Enter your name')
       return
@@ -184,25 +235,20 @@ export default function SignIn({ embedded = false, onClose, onSwitchMode }) {
 
         <div className="reg-body">
           <h2>Welcome back</h2>
-          <p>Use the same name you registered with to continue.</p>
+          <p>{isAuthenticated ? 'A verified Supabase session is active. Continue to restore your Pulse profile.' : loginMode === 'auth' ? 'Sign in with your corporate account.' : 'Temporary access for staff not migrated yet.'}</p>
+          {!isAuthenticated && <div className="auth-path-switch">
+            <button type="button" className={loginMode === 'auth' ? 'active' : ''} onClick={() => { setLoginMode('auth'); setError('') }}>Corporate email</button>
+            <button type="button" className={loginMode === 'legacy' ? 'active' : ''} onClick={() => { setLoginMode('legacy'); setError('') }}>Legacy name</button>
+          </div>}
 
-          <input
-            className="reg-input"
-            placeholder="Your name"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value)
-              setError('')
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSignIn()
-            }}
-            autoFocus
-          />
-
-          <div className="sheet-note">
-            Your name must match exactly as you registered it.
-          </div>
+          {!isAuthenticated && (loginMode === 'auth' ? <>
+            <input className="reg-input" type="email" autoComplete="email" placeholder="name@kampaignkings.com" value={email} onChange={(e) => { setEmail(e.target.value); setError('') }} autoFocus />
+            <input className="reg-input" style={{ marginTop: 10 }} type="password" autoComplete="current-password" placeholder="Password" value={password} onChange={(e) => { setPassword(e.target.value); setError('') }} onKeyDown={(e) => { if (e.key === 'Enter') handleAuthSignIn() }} />
+            <div className="sheet-note">Access is granted only through your verified Pulse staff mapping.</div>
+          </> : <>
+            <input className="reg-input" placeholder="Your name" value={name} onChange={(e) => { setName(e.target.value); setError('') }} onKeyDown={(e) => { if (e.key === 'Enter') handleLegacySignIn() }} autoFocus />
+            <div className="sheet-note">Legacy access remains available while staff migration continues.</div>
+          </>)}
         </div>
 
         {error && <div className="reg-error">{error}</div>}
@@ -211,10 +257,10 @@ export default function SignIn({ embedded = false, onClose, onSwitchMode }) {
           <button
             type="button"
             className="btn-next"
-            onClick={handleSignIn}
-            disabled={loading || Boolean(welcomeName)}
+            onClick={isAuthenticated ? handleExistingSession : loginMode === 'auth' ? handleAuthSignIn : handleLegacySignIn}
+            disabled={loading || authLoading || Boolean(welcomeName)}
           >
-            {loading ? 'Checking...' : 'Enter Pulse →'}
+            {loading || authLoading ? 'Checking...' : isAuthenticated ? 'Continue with verified session →' : loginMode === 'auth' ? 'Sign in securely →' : 'Enter with legacy access →'}
           </button>
         </div>
 

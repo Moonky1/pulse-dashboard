@@ -2,12 +2,9 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../auth/AuthProvider.jsx'
+import { createCompatibilityProfile } from '../auth/compatibilityProfile.js'
 import { supabase } from '../utils/supabase.js'
 import './Register.css'
-
-const TEAM_MAP = { Global: 'global', Philippines: 'philippines', Venezuela: 'venezuela', Colombia: 'colombia', 'Mexico Baja': 'mexico', 'Mexico BJ': 'mexico', 'Central America': 'central', Asia: 'asia' }
-const ROLE_MAP = { Global: 'global', Supervisor: 'supervisor', QA: 'qa', 'Team Leader': 'leader' }
-const mapLegacyValue = (value, map) => Object.entries(map).find(([label]) => label.toLowerCase() === String(value || '').toLowerCase())?.[1] || null
 
 export default function AuthCallback() {
   const navigate = useNavigate()
@@ -21,16 +18,7 @@ export default function AuthCallback() {
   const linkProfile = async () => {
     const { data, error: linkError } = await supabase.functions.invoke('pulse-link-current-user', { body: {} })
     if (linkError || !data?.ok || !data.profile) throw new Error('PROFILE_LINK_FAILED')
-    const profile = data.profile
-    localStorage.setItem('pulse_user', JSON.stringify({
-      legacyUserId: profile.legacy_user_id,
-      name: profile.name,
-      team: mapLegacyValue(profile.team, TEAM_MAP),
-      role: mapLegacyValue(profile.role, ROLE_MAP),
-      agentExt: profile.agentExt || null,
-      rowIndex: profile.rowIndex || null,
-      bookId: profile.bookId || null,
-    }))
+    localStorage.setItem('pulse_user', JSON.stringify(createCompatibilityProfile(data.profile)))
     navigate('/dashboard', { replace: true })
   }
 
