@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import Landing from './pages/Landing'
 import Register from './pages/Register'
 import SignIn from './pages/SignIn'
+import AuthCallback from './pages/AuthCallback'
 import Dashboard from './pages/Dashboard'
 import Admin from './pages/Admin'
 import Profile from './pages/Profile'
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/register" element={<Register />} />
         <Route path="/signin" element={<SignIn />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         <Route
           path="/dashboard"

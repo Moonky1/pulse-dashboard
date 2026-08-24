@@ -1,0 +1,7 @@
+[functions.pulse-invite-approved-user]
+verify_jwt = false
+entrypoint = "./functions/pulse-invite-approved-user/index.js"
+
+[functions.pulse-link-current-user]
+verify_jwt = false
+entrypoint = "./functions/pulse-link-current-user/index.js"

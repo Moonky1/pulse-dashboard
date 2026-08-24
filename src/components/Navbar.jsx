@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth/AuthProvider.jsx'
 import { APP_CONFIG } from '../config'
 import './navbar.css'
 
 export default function Navbar({ lastUpdate }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { signOut } = useAuth()
   const profileRef = useRef(null)
 
   const user = JSON.parse(localStorage.getItem('pulse_user') || 'null')
@@ -51,9 +53,12 @@ export default function Navbar({ lastUpdate }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const logout = () => {
-    localStorage.removeItem('pulse_user')
-    window.location.href = '/'
+  const logout = async () => {
+    try {
+      await signOut()
+    } finally {
+      window.location.href = '/'
+    }
   }
 
   return (

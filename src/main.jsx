@@ -4,11 +4,14 @@ import {
 
 import './index.css'
 import App from './App.jsx'
+import { AuthProvider } from './auth/AuthProvider.jsx'
 
 createRoot(
   document.getElementById(
     'root'
   )
 ).render(
-  <App />
+  <AuthProvider>
+    <App />
+  </AuthProvider>
 )

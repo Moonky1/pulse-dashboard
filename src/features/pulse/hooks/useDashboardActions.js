@@ -2,6 +2,7 @@ import {
   useCallback,
 } from 'react'
 
+import { useAuth } from '../../../auth/AuthProvider.jsx'
 import {
   playPulseSound,
   todayKey,
@@ -21,6 +22,8 @@ export function useDashboardActions({
   setTeamReveal,
   setUserMenuOpen,
 }) {
+  const { signOut } = useAuth()
+
   const handleSidebarNavigate = useCallback(item => {
     playPulseSound('click')
 
@@ -157,7 +160,7 @@ export function useDashboardActions({
     searchSuggestions,
   ])
 
-  const handleUserAction = useCallback(action => {
+  const handleUserAction = useCallback(async action => {
     setUserMenuOpen(false)
 
     if (action === 'profile') {
@@ -171,12 +174,16 @@ export function useDashboardActions({
     }
 
     if (action === 'logout') {
-      localStorage.removeItem('pulse_user')
-      navigate('/signin')
+      try {
+        await signOut()
+      } finally {
+        navigate('/signin')
+      }
     }
   }, [
     navigate,
     setUserMenuOpen,
+    signOut,
   ])
 
   const handleToggleSidebar = useCallback(() => {
