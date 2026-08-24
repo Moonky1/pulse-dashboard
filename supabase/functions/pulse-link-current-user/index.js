@@ -1,7 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { evaluateLink, performLink } from "./linking.js";
 
-const allowedOrigins = new Set(["https://pulse-kk.com"]);
+const allowedOrigins = new Set([
+  "https://pulse-kk.com",
+  "https://www.pulse-kk.com",
+]);
 const responseHeaders = (request) => ({
   "Access-Control-Allow-Origin": allowedOrigins.has(request.headers.get("origin")) ? request.headers.get("origin") : "https://pulse-kk.com",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
