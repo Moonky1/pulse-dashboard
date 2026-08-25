@@ -1,0 +1,129 @@
+-- ONE-TIME OPERATOR TEMPLATE. Never expose this through the browser or an API.
+-- Review again immediately before use and execute only after Foundation migrations.
+--
+-- Required psql variables:
+--   auth_user_id, full_name, department_code, department_name
+--
+-- Example invocation shape (values intentionally omitted):
+--   psql ... -v auth_user_id=... -v full_name=... \
+--     -v department_code=... -v department_name=... -f this-file
+
+\set ON_ERROR_STOP on
+
+begin;
+
+select set_config('pulse.bootstrap.auth_user_id', :'auth_user_id', true);
+select set_config('pulse.bootstrap.full_name', :'full_name', true);
+select set_config('pulse.bootstrap.department_code', :'department_code', true);
+select set_config('pulse.bootstrap.department_name', :'department_name', true);
+
+do $bootstrap$
+declare
+  selected_auth_user_id uuid := current_setting('pulse.bootstrap.auth_user_id')::uuid;
+  selected_full_name text := btrim(current_setting('pulse.bootstrap.full_name'));
+  selected_department_code text := lower(btrim(current_setting('pulse.bootstrap.department_code')));
+  selected_department_name text := btrim(current_setting('pulse.bootstrap.department_name'));
+  verified_email text;
+  selected_department_id uuid;
+  selected_role_id uuid;
+  created_user_id uuid;
+begin
+  if exists (select 1 from public.users) then
+    raise exception 'bootstrap requires an empty Pulse user table';
+  end if;
+
+  select lower(btrim(au.email))
+  into verified_email
+  from auth.users au
+  where au.id = selected_auth_user_id
+    and au.email_confirmed_at is not null
+    and au.deleted_at is null
+    and (au.banned_until is null or au.banned_until < now());
+
+  if verified_email is null then
+    raise exception 'Auth user is missing, unverified, deleted, or blocked';
+  end if;
+
+  if length(selected_full_name) < 2 then
+    raise exception 'full_name is invalid';
+  end if;
+
+  select d.id
+  into selected_department_id
+  from public.departments d
+  where d.code = selected_department_code
+    and d.is_active;
+
+  if selected_department_id is null then
+    insert into public.departments (code, name)
+    values (selected_department_code, selected_department_name)
+    returning id into selected_department_id;
+  end if;
+
+  select r.id
+  into selected_role_id
+  from public.roles r
+  join public.role_scopes rs
+    on rs.role_id = r.id
+   and rs.scope_type = 'global'
+  where r.key = 'super_admin'
+    and r.is_system
+    and r.is_active;
+
+  if selected_role_id is null then
+    raise exception 'seeded global Super Admin role is missing';
+  end if;
+
+  insert into public.users (
+    auth_user_id,
+    employee_id,
+    email,
+    full_name,
+    department_id
+  )
+  values (
+    selected_auth_user_id,
+    pulse_private.next_employee_id(),
+    verified_email,
+    selected_full_name,
+    selected_department_id
+  )
+  returning id into created_user_id;
+
+  insert into public.user_roles (
+    user_id,
+    role_id,
+    scope_type,
+    assigned_by_user_id
+  )
+  values (
+    created_user_id,
+    selected_role_id,
+    'global',
+    null
+  );
+
+  update public.users
+  set status = 'active'
+  where id = created_user_id;
+
+  insert into public.audit_events (
+    actor_user_id,
+    target_type,
+    target_id,
+    action,
+    source,
+    metadata
+  )
+  values (
+    null,
+    'user',
+    created_user_id,
+    'bootstrap.super_admin',
+    'operator',
+    jsonb_build_object('auth_user_id', selected_auth_user_id)
+  );
+end
+$bootstrap$;
+
+commit;
