@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:maintenance": "vite build --config vite.maintenance.config.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -1,9 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "buildCommand": "npx vite build --config vite.auth-preview.config.js",
-  "outputDirectory": "dist-auth-preview",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/auth-preview.html" }
-  ]
-}

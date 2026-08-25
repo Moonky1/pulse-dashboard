@@ -27,6 +27,18 @@ Pulse was created and developed by **Simon** for **Kampaign Kings**.
 
 The platform, design, training content, operational data, and internal workflows are intended for authorized Kampaign Kings use only.
 
+---
+
+## Build and rollback
+
+- `npm run build` creates the normal Pulse Auth application in `dist/`.
+- `npm run build:maintenance` creates the standalone static Maintenance site in `dist-maintenance/`.
+- A Maintenance deployment uses `vercel.maintenance.json`, for example:
+  `vercel deploy --prod --skip-domain -A vercel.maintenance.json`
+- Promote a verified Maintenance deployment only when rollback or planned maintenance is required.
+
+The immutable Maintenance rollback deployment from the first Auth cutover remains available independently in Vercel.
+
 <div align="center">
 
 

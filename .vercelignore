@@ -3,7 +3,7 @@
 .vercel
 AGENTS.md
 dist
-dist-auth-preview
+dist-maintenance
 dist-ui-preview
 node_modules
 logs

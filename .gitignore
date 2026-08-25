@@ -9,7 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
-dist-auth-preview
+dist-maintenance
 dist-ui-preview
 dist-ssr
 *.local
