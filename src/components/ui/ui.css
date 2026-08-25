@@ -1,0 +1,100 @@
+.pulse-button {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border: var(--pulse-border-width) solid transparent;
+  border-radius: var(--pulse-radius-md);
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--pulse-duration-fast) var(--pulse-ease-standard), background var(--pulse-duration-fast) var(--pulse-ease-standard), border-color var(--pulse-duration-fast) var(--pulse-ease-standard), box-shadow var(--pulse-duration-fast) var(--pulse-ease-standard), transform var(--pulse-duration-instant) var(--pulse-ease-standard);
+}
+
+.pulse-button--sm { min-height: var(--pulse-control-sm); padding: 0 var(--pulse-space-3); font-size: var(--pulse-text-small); }
+.pulse-button--md { min-height: var(--pulse-control-md); padding: 0 var(--pulse-space-4); font-size: var(--pulse-text-body); }
+.pulse-button--lg { min-height: var(--pulse-control-lg); padding: 0 var(--pulse-space-5); font-size: var(--pulse-text-body); }
+.pulse-button--icon { aspect-ratio: 1; padding: 0; }
+
+.pulse-button--primary {
+  color: #fff;
+  background: linear-gradient(135deg, #705cff, #5b73f5 58%, #4b8dff);
+  border-color: rgba(166, 151, 255, 0.42);
+  box-shadow: 0 8px 24px rgba(76, 71, 210, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.pulse-button--primary:hover { background: linear-gradient(135deg, #806dff, #677df8 58%, #5795ff); box-shadow: 0 10px 28px rgba(76, 71, 210, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+.pulse-button--secondary { color: var(--pulse-text-primary); background: var(--pulse-surface-2); border-color: var(--pulse-border-default); box-shadow: inset 0 1px 0 var(--pulse-highlight); }
+.pulse-button--secondary:hover { background: var(--pulse-surface-hover); border-color: var(--pulse-border-strong); }
+.pulse-button--ghost { color: var(--pulse-text-secondary); background: transparent; }
+.pulse-button--ghost:hover { color: var(--pulse-text-primary); background: rgba(255, 255, 255, 0.055); }
+.pulse-button--destructive { color: #ffdadd; background: var(--pulse-error-soft); border-color: rgba(240, 115, 125, 0.24); }
+.pulse-button--destructive:hover { background: rgba(240, 115, 125, 0.18); border-color: rgba(240, 115, 125, 0.38); }
+.pulse-button:active:not(:disabled) { transform: translateY(1px); }
+.pulse-button:disabled { color: var(--pulse-text-disabled); background: var(--pulse-surface-disabled); border-color: var(--pulse-border-subtle); box-shadow: none; cursor: not-allowed; opacity: 0.72; }
+.pulse-button__content { display: inline-flex; align-items: center; justify-content: center; gap: var(--pulse-space-2); }
+.pulse-button__content--loading { opacity: 0; }
+.pulse-button__spinner { position: absolute; width: 1rem; height: 1rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: pulse-spin 700ms linear infinite; }
+
+.pulse-field { display: grid; gap: var(--pulse-space-2); }
+.pulse-field__label { color: var(--pulse-text-secondary); font-size: var(--pulse-text-label); font-weight: 650; letter-spacing: 0.02em; }
+.pulse-field__control { position: relative; display: flex; align-items: center; }
+.pulse-field__leading { position: absolute; left: var(--pulse-space-3); z-index: 1; display: grid; place-items: center; color: var(--pulse-text-muted); pointer-events: none; }
+.pulse-field__leading + .pulse-input { padding-left: 2.5rem; }
+.pulse-input {
+  width: 100%;
+  min-height: var(--pulse-control-md);
+  padding: 0 var(--pulse-space-3);
+  border: 1px solid var(--pulse-border-default);
+  border-radius: var(--pulse-radius-md);
+  background: rgba(5, 8, 15, 0.72);
+  color: var(--pulse-text-primary);
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  transition: border-color var(--pulse-duration-fast) var(--pulse-ease-standard), background var(--pulse-duration-fast) var(--pulse-ease-standard), box-shadow var(--pulse-duration-fast) var(--pulse-ease-standard);
+}
+.pulse-input::placeholder { color: var(--pulse-text-muted); }
+.pulse-input:hover:not(:disabled) { border-color: var(--pulse-border-strong); background: rgba(8, 12, 21, 0.88); }
+.pulse-input:focus-visible { border-color: var(--pulse-focus); box-shadow: 0 0 0 3px rgba(124, 104, 255, 0.17); outline: none; }
+.pulse-input:disabled { color: var(--pulse-text-disabled); background: var(--pulse-surface-disabled); cursor: not-allowed; }
+.pulse-field__message { min-height: 1rem; margin: 0; color: var(--pulse-text-muted); font-size: var(--pulse-text-caption); line-height: 1.45; }
+.pulse-field--error .pulse-input { border-color: rgba(240, 115, 125, 0.65); box-shadow: 0 0 0 3px rgba(240, 115, 125, 0.1); }
+.pulse-field--error .pulse-field__message { color: var(--pulse-error); }
+.pulse-field--success .pulse-input { border-color: rgba(77, 202, 138, 0.56); }
+.pulse-field--success .pulse-field__message { color: var(--pulse-success); }
+
+.pulse-card { border: 1px solid var(--pulse-border-subtle); border-radius: var(--pulse-radius-lg); box-shadow: var(--pulse-shadow-1); }
+.pulse-card--level-1 { background: var(--pulse-surface-1); }
+.pulse-card--level-2 { background: linear-gradient(180deg, rgba(255,255,255,0.018), transparent 22%), var(--pulse-surface-2); }
+.pulse-card--level-3 { background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent 25%), var(--pulse-surface-3); box-shadow: var(--pulse-shadow-3); }
+.pulse-card--interactive { transition: transform var(--pulse-duration-normal) var(--pulse-ease-enter), border-color var(--pulse-duration-fast) var(--pulse-ease-standard), background var(--pulse-duration-fast) var(--pulse-ease-standard); }
+.pulse-card--interactive:hover { transform: translateY(-2px); border-color: var(--pulse-border-default); background-color: var(--pulse-surface-hover); }
+
+.pulse-badge { display: inline-flex; align-items: center; width: max-content; min-height: 1.5rem; gap: 0.4rem; padding: 0 var(--pulse-space-2); border: 1px solid var(--pulse-border-default); border-radius: var(--pulse-radius-round); background: rgba(255,255,255,0.035); color: var(--pulse-text-secondary); font-size: var(--pulse-text-caption); font-weight: 700; letter-spacing: 0.015em; }
+.pulse-badge__dot { width: 0.375rem; height: 0.375rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent); }
+.pulse-badge--success { color: var(--pulse-success); background: var(--pulse-success-soft); border-color: rgba(77,202,138,0.2); }
+.pulse-badge--warning { color: var(--pulse-warning); background: var(--pulse-warning-soft); border-color: rgba(231,183,90,0.2); }
+.pulse-badge--error { color: var(--pulse-error); background: var(--pulse-error-soft); border-color: rgba(240,115,125,0.2); }
+.pulse-badge--info { color: var(--pulse-info); background: var(--pulse-info-soft); border-color: rgba(102,167,255,0.2); }
+.pulse-badge--pending { color: var(--pulse-pending); background: var(--pulse-pending-soft); border-color: rgba(169,140,255,0.2); }
+
+.pulse-spinner { display: inline-block; border: 2px solid rgba(174,182,200,0.22); border-top-color: var(--pulse-accent-primary); border-radius: 50%; animation: pulse-spin 720ms linear infinite; }
+.pulse-spinner--sm { width: 1rem; height: 1rem; }
+.pulse-spinner--md { width: 1.5rem; height: 1.5rem; }
+.pulse-spinner--lg { width: 2.25rem; height: 2.25rem; border-width: 3px; }
+
+.pulse-orb { --orb-size: 2.5rem; position: relative; isolation: isolate; display: inline-grid; width: var(--orb-size); height: var(--orb-size); place-items: center; border-radius: 50%; filter: drop-shadow(0 12px 22px rgba(39, 57, 145, 0.22)); }
+.pulse-orb--sm { --orb-size: 1.75rem; }
+.pulse-orb--md { --orb-size: 2.5rem; }
+.pulse-orb--lg { --orb-size: 4rem; }
+.pulse-orb--xl { --orb-size: clamp(8rem, 18vw, 13rem); }
+.pulse-orb::before { content: ''; position: absolute; inset: -15%; z-index: -2; border-radius: inherit; background: radial-gradient(circle, rgba(112,92,255,0.16), rgba(75,141,255,0.055) 42%, transparent 69%); filter: blur(calc(var(--orb-size) * 0.16)); }
+.pulse-orb::after { content: ''; position: absolute; inset: 1%; z-index: -1; border-radius: inherit; background: conic-gradient(from 228deg, transparent 0 10%, rgba(90,174,255,.20) 18%, transparent 29% 47%, rgba(211,124,186,.16) 55%, transparent 67% 82%, rgba(126,111,255,.18) 92%, transparent); filter: blur(calc(var(--orb-size) * .045)); opacity: .78; }
+.pulse-orb__rim { position: absolute; inset: 3%; border-radius: inherit; background: conic-gradient(from 224deg, #274f9f 0%, #4c8fe5 12%, #8a72ef 27%, #b078d0 39%, #d08fae 46%, #896fdd 57%, #4a83dc 72%, #3958a8 88%, #274f9f 100%); -webkit-mask: radial-gradient(circle, transparent 54%, #000 56%, #000 68%, transparent 70%); mask: radial-gradient(circle, transparent 54%, #000 56%, #000 68%, transparent 70%); box-shadow: inset 0 0 calc(var(--orb-size) * .12) rgba(255,255,255,.22); }
+.pulse-orb__rim::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: conic-gradient(from 250deg, transparent 0 18%, rgba(238,246,255,.78) 22%, transparent 27% 51%, rgba(255,198,224,.34) 56%, transparent 62% 100%); -webkit-mask: radial-gradient(circle, transparent 59%, #000 61%, #000 65%, transparent 67%); mask: radial-gradient(circle, transparent 59%, #000 61%, #000 65%, transparent 67%); opacity: .7; }
+.pulse-orb__core { position: absolute; inset: 18%; border: 1px solid rgba(208,219,255,.16); border-radius: inherit; background: radial-gradient(circle at 31% 23%, rgba(205,220,255,.20), transparent 16%), radial-gradient(circle at 66% 72%, rgba(50,65,111,.22), transparent 48%), linear-gradient(145deg,#111827,#050811 74%); box-shadow: inset 0 1px 1px rgba(255,255,255,.11), inset -8px -12px 22px rgba(0,0,0,.55), 0 0 0 1px rgba(6,8,16,.72); }
+.pulse-orb__glint { position: absolute; width: 17%; height: 7%; left: 27%; top: 22%; border-radius: 50%; background: linear-gradient(90deg,rgba(238,244,255,.88),rgba(173,201,255,.34)); filter: blur(calc(var(--orb-size) * .015)); transform: rotate(-31deg); opacity: .82; }
+.pulse-orb--active .pulse-orb__rim { animation: pulse-spin 8s linear infinite; }
+.pulse-orb--active::before { animation: pulse-breathe 3.8s var(--pulse-ease-standard) infinite; }
