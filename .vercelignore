@@ -1,0 +1,10 @@
+.git
+.env*
+.vercel
+AGENTS.md
+dist
+dist-auth-preview
+dist-ui-preview
+node_modules
+logs
+*.log
