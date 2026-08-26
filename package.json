@@ -8,7 +8,9 @@
     "build": "vite build",
     "build:maintenance": "vite build --config vite.maintenance.config.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "operator": "node scripts/pulse-operator/cli.js",
+    "test:operator": "node --test scripts/pulse-operator/*.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
