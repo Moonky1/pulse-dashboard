@@ -2,7 +2,10 @@ import { Link, useParams } from 'react-router-dom'
 
 import { Badge } from '../../components/ui/Badge.jsx'
 import { Card } from '../../components/ui/Card.jsx'
+import { canManageUsers } from '../access.js'
+import { useAdminPermissions } from '../AdminAccessContext.js'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
+import { LifecycleActions } from '../components/LifecycleActions.jsx'
 import { LifecycleBadge } from '../components/LifecycleBadge.jsx'
 import { RoleScopeList } from '../components/RoleScopeList.jsx'
 import { directoryMaps, lifecycleMeta } from '../adminViewModel.js'
@@ -15,7 +18,8 @@ function Detail({ label, children }) {
 export function AdminUserDetailPage() {
   const { userId } = useParams()
   const { user, directory, loading, error, refresh } = useManagedUser(userId)
-  if (loading) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading user" body="Reading the canonical user record…" /></main>
+  const { permissionKeys } = useAdminPermissions()
+  if (loading && !user) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading user" body="Reading the canonical user record…" /></main>
   if (error || !user) return <main className="admin-content"><AdminStatePanel kind="error" title={error?.code === 'not_found' ? 'User not found' : 'User unavailable'} body={error?.message || 'The user record is unavailable.'} onRetry={error?.code === 'unavailable' ? refresh : undefined} /></main>
 
   const maps = directoryMaps(directory)
@@ -33,6 +37,7 @@ export function AdminUserDetailPage() {
         <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Access</p><h2>Roles and scope</h2><RoleScopeList roles={user.roles} directory={directory} /></Card>
         <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Account</p><h2>Authentication and lifecycle</h2><div className="admin-account-row"><LifecycleBadge status={user.status} /><Badge tone={user.authEmailConfirmed ? 'success' : 'warning'} dot>{user.authEmailConfirmed ? 'Auth email verified' : 'Auth email unverified'}</Badge></div><p>{lifecycle.description}</p><p className="admin-footnote">Creation, approval, status-change timestamps, and audit history are not exposed by the current protected read contract.</p></Card>
       </div>
+      <LifecycleActions user={user} allowed={canManageUsers(permissionKeys)} onChanged={refresh} />
     </main>
   )
 }

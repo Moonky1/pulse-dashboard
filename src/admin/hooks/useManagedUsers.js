@@ -18,6 +18,7 @@ function useAdminRequest(load, requestKey) {
     setState((current) => ({ ...current, loading: true, error: null }))
     const [resource, directory] = await Promise.all([load(), loadOrganizationDirectory(supabase)])
     applyResult(resource, directory)
+    return { data: resource.data, error: resource.error || directory.error }
   }, [applyResult, load])
   useEffect(() => {
     let current = true

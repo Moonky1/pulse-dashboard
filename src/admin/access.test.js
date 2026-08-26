@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { hasAdminUsersAccess, resolveAdminAccess } from './access.js'
+import { canManageUsers, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
 
 test('Admin is visible only with both required canonical permissions', () => {
   assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
@@ -19,4 +19,10 @@ test('direct route resolution fails closed during loading and errors', () => {
   assert.equal(resolveAdminAccess({ error: new Error('network') }), 'error')
   assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access'] }), 'denied')
   assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'users.view'] }), 'allowed')
+})
+
+test('lifecycle controls require read access plus users.manage', () => {
+  assert.equal(canManageUsers(['admin.access', 'users.view', 'users.manage']), true)
+  assert.equal(canManageUsers(['admin.access', 'users.view']), false)
+  assert.equal(canManageUsers(['users.manage']), false)
 })
