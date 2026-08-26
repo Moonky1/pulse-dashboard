@@ -1,4 +1,9 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "auth-9c-lifecycle-source-normalization": false
+    }
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
