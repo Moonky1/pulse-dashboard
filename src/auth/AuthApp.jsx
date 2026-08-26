@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AUTH_STATES, routeForAuthState } from './authState.js'
 import { useAuth } from './AuthProvider.jsx'
 const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').then((module) => ({ default: module.AccountStatePage })))
+const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => ({ default: module.AdminArea })))
 const AuthCallbackPage = lazy(() => import('./screens/AuthCallbackPage.jsx').then((module) => ({ default: module.AuthCallbackPage })))
 const ForgotPasswordPage = lazy(() => import('./screens/ForgotPasswordPage.jsx').then((module) => ({ default: module.ForgotPasswordPage })))
 const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx').then((module) => ({ default: module.PendingApprovalPage })))
@@ -38,6 +39,7 @@ export function AuthApp() {
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/pending-approval" element={<RouteGate allow={[AUTH_STATES.PENDING]}><PendingApprovalPage /></RouteGate>} />
         <Route path="/workspace" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><WorkspacePage /></RouteGate>} />
+        <Route path="/admin/*" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AdminArea /></RouteGate>} />
         <Route path="/account-blocked" element={<RouteGate allow={[AUTH_STATES.BLOCKED]}><AccountStatePage kind="blocked" /></RouteGate>} />
         <Route path="/account-inactive" element={<RouteGate allow={[AUTH_STATES.INACTIVE]}><AccountStatePage kind="inactive" /></RouteGate>} />
         <Route path="/account-error" element={<RouteGate allow={[AUTH_STATES.ERROR, AUTH_STATES.MISSING_PROFILE]}><AccountStatePage kind="error" /></RouteGate>} />
