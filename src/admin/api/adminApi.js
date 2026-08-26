@@ -4,6 +4,10 @@ function publicError(code, message) {
   return { code, message }
 }
 
+function messageIncludes(error, value) {
+  return String(error?.message ?? '').toLowerCase().includes(value.toLowerCase())
+}
+
 export function normalizeAdminError(error) {
   if (!error) return null
   if (['42501', '28000'].includes(error.code)) {
@@ -13,6 +17,47 @@ export function normalizeAdminError(error) {
     return publicError('invalid_request', 'The requested user or filter is not valid.')
   }
   return publicError('unavailable', 'Pulse could not load administration data. Try again shortly.')
+}
+
+export function normalizeLifecycleMutationError(error) {
+  if (!error) return null
+  if (messageIncludes(error, 'self-')) {
+    return publicError('self_operation', 'You cannot perform this lifecycle action on your own account.')
+  }
+  if (messageIncludes(error, 'last active super admin')) {
+    return publicError('protected_super_admin', 'The last active Super Admin is protected. Another active Super Admin is required first.')
+  }
+  if (messageIncludes(error, 'only a super admin')) {
+    return publicError('privileged_target', 'Only an active Super Admin may manage another Super Admin account.')
+  }
+  if (['42501', '28000'].includes(error.code)) {
+    return publicError('access_denied', 'You do not have permission to perform this lifecycle action.')
+  }
+  if (error.code === 'P0002') {
+    return publicError('not_found', 'This Pulse user could not be found.')
+  }
+  if (error.code === '22023') {
+    return publicError('invalid_reason', 'The audit note must be 500 characters or fewer.')
+  }
+  if (error.code === '55000') {
+    return publicError('invalid_transition', 'The account changed or is not eligible for this lifecycle action. Refresh and try again.')
+  }
+  if (messageIncludes(error, 'auth identity') || messageIncludes(error, 'email does not match')) {
+    return publicError('auth_identity_invalid', 'The account Auth identity is not eligible for reactivation. Review the verified email and Auth status.')
+  }
+  if (messageIncludes(error, 'employee id')) {
+    return publicError('profile_incomplete', 'The account profile is missing its employee ID and cannot be reactivated.')
+  }
+  if (messageIncludes(error, 'role assignment') || messageIncludes(error, 'active role')) {
+    return publicError('role_required', 'The account needs at least one valid active role assignment before reactivation.')
+  }
+  if (error.code === '23503' || messageIncludes(error, 'department') || messageIncludes(error, 'team')) {
+    return publicError('organization_invalid', 'The account department or team is missing, inactive, or no longer valid.')
+  }
+  if (error.code === '23514') {
+    return publicError('account_invalid', 'The account is not eligible for this lifecycle action. Review its Auth, profile, and role state.')
+  }
+  return publicError('unavailable', 'Pulse could not complete the lifecycle action. No client-side change was applied.')
 }
 
 function normalizeRole(role = {}) {
@@ -88,6 +133,49 @@ export async function getManagedUser(client, userId) {
   const row = data?.[0] ?? data ?? null
   if (!row || Array.isArray(row)) return { data: null, error: publicError('not_found', 'This Pulse user could not be found.') }
   return { data: normalizeManagedUser(row), error: null }
+}
+
+function normalizeLifecycleResult(row, targetUserId, expectedStatus) {
+  if (!row || row.id !== targetUserId || row.status !== expectedStatus) return null
+  return {
+    id: row.id,
+    status: row.status,
+    statusChangedAt: row.status_changed_at ?? null,
+    changed: Boolean(row.changed),
+  }
+}
+
+async function mutateManagedUser(client, rpcName, targetUserId, reason, expectedStatus) {
+  if (!UUID_PATTERN.test(targetUserId ?? '')) {
+    return { data: null, error: publicError('invalid_request', 'The requested user is not valid.') }
+  }
+  const normalizedReason = String(reason ?? '').trim()
+  if (normalizedReason.length > 500) {
+    return { data: null, error: publicError('invalid_reason', 'The audit note must be 500 characters or fewer.') }
+  }
+  const { data, error } = await client.rpc(rpcName, {
+    target_user_id: targetUserId,
+    reason: normalizedReason || null,
+  })
+  if (error) return { data: null, error: normalizeLifecycleMutationError(error) }
+  const row = Array.isArray(data) ? data[0] : data
+  const normalized = normalizeLifecycleResult(row, targetUserId, expectedStatus)
+  if (!normalized) {
+    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected lifecycle state. Refresh before trying again.') }
+  }
+  return { data: normalized, error: null }
+}
+
+export function blockManagedUser(client, targetUserId, reason = null) {
+  return mutateManagedUser(client, 'block_user', targetUserId, reason, 'blocked')
+}
+
+export function reactivateManagedUser(client, targetUserId, reason = null) {
+  return mutateManagedUser(client, 'reactivate_user', targetUserId, reason, 'active')
+}
+
+export function inactivateManagedUser(client, targetUserId, reason = null) {
+  return mutateManagedUser(client, 'inactivate_user', targetUserId, reason, 'inactive')
 }
 
 export async function loadOrganizationDirectory(client) {

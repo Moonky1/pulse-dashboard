@@ -3,9 +3,13 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Button } from '../../components/ui/Button.jsx'
 import { PulseOrb } from '../../components/ui/PulseOrb.jsx'
 import { useAuth } from '../../auth/AuthProvider.jsx'
+import { canManageUsers } from '../access.js'
+import { useAdminPermissions } from '../AdminAccessContext.js'
 
 export function AdminShell() {
   const { profile, signOut } = useAuth()
+  const { permissionKeys } = useAdminPermissions()
+  const lifecycleAdmin = canManageUsers(permissionKeys)
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -23,7 +27,7 @@ export function AdminShell() {
       </aside>
       <div className="admin-main">
         <header className="admin-topbar">
-          <div><span className="admin-topbar__eyebrow">Pulse control plane</span><strong>Read-only administration</strong></div>
+          <div><span className="admin-topbar__eyebrow">Pulse control plane</span><strong>{lifecycleAdmin ? 'Audited lifecycle administration' : 'Read-only administration'}</strong></div>
           <Button type="button" variant="ghost" onClick={signOut}>Sign out</Button>
         </header>
         <Outlet />
