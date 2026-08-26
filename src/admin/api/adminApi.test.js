@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { extractGlobalPermissionKeys, getManagedUser, listManagedUsers } from './adminApi.js'
+import { extractGlobalPermissionKeys, getManagedUser, listManagedUsers, loadOwnGlobalPermissionKeys } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const row = {
@@ -15,13 +15,22 @@ const row = {
   roles: null,
 }
 
-test('permission extraction includes active global grants only', () => {
+test('permission read follows canonical role scopes and includes active global grants only', async () => {
   const assignments = [
-    { scope_type: 'global', roles: { is_active: true, role_permissions: [{ permissions: { key: 'admin.access', is_active: true } }, { permissions: { key: 'users.view', is_active: true } }] } },
-    { scope_type: 'team', roles: { is_active: true, role_permissions: [{ permissions: { key: 'users.manage', is_active: true } }] } },
-    { scope_type: 'global', roles: { is_active: false, role_permissions: [{ permissions: { key: 'audit.view', is_active: true } }] } },
+    { scope_type: 'global', role_scopes: { roles: { is_active: true, role_permissions: [{ permissions: { key: 'admin.access', is_active: true } }, { permissions: { key: 'users.view', is_active: true } }] } } },
+    { scope_type: 'team', role_scopes: { roles: { is_active: true, role_permissions: [{ permissions: { key: 'users.manage', is_active: true } }] } } },
+    { scope_type: 'global', role_scopes: { roles: { is_active: false, role_permissions: [{ permissions: { key: 'audit.view', is_active: true } }] } } },
   ]
   assert.deepEqual(extractGlobalPermissionKeys(assignments).sort(), ['admin.access', 'users.view'])
+  let select = ''
+  const query = {
+    select(value) { select = value; return this },
+    eq() { return this },
+    then(resolve) { return Promise.resolve(resolve({ data: assignments, error: null })) },
+  }
+  const result = await loadOwnGlobalPermissionKeys({ from: () => query }, USER_ID)
+  assert.match(select, /role_scopes!inner\(roles!inner/)
+  assert.deepEqual(result.data.sort(), ['admin.access', 'users.view'])
 })
 
 test('users list normalizes successful results and null roles', async () => {

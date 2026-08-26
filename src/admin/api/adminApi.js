@@ -43,7 +43,8 @@ export function normalizeManagedUser(row = {}) {
 }
 
 function nestedPermissions(assignment) {
-  const roles = Array.isArray(assignment.roles) ? assignment.roles : [assignment.roles]
+  const scopes = Array.isArray(assignment.role_scopes) ? assignment.role_scopes : [assignment.role_scopes]
+  const roles = scopes.flatMap((scope) => Array.isArray(scope?.roles) ? scope.roles : [scope?.roles])
   return roles.flatMap((role) => {
     if (!role?.is_active) return []
     const grants = Array.isArray(role.role_permissions) ? role.role_permissions : []
@@ -65,7 +66,7 @@ export async function loadOwnGlobalPermissionKeys(client, userId) {
   if (!userId) return { data: [], error: publicError('access_denied', 'A trusted Pulse profile is required.') }
   const { data, error } = await client
     .from('user_roles')
-    .select('scope_type, roles!inner(is_active, role_permissions(permissions!inner(key,is_active)))')
+    .select('scope_type, role_scopes!inner(roles!inner(is_active, role_permissions(permissions!inner(key,is_active))))')
     .eq('user_id', userId)
     .eq('scope_type', 'global')
   if (error) return { data: [], error: normalizeAdminError(error) }
