@@ -66,7 +66,7 @@ export async function loadOwnGlobalPermissionKeys(client, userId) {
   if (!userId) return { data: [], error: publicError('access_denied', 'A trusted Pulse profile is required.') }
   const { data, error } = await client
     .from('user_roles')
-    .select('scope_type, role_scopes!inner(roles!inner(is_active, role_permissions(permissions!inner(key,is_active))))')
+    .select('scope_type, role_scopes!user_roles_role_scope_fk!inner(roles!role_scopes_role_fk!inner(is_active, role_permissions!role_permissions_role_fk(permissions!role_permissions_permission_fk!inner(key,is_active))))')
     .eq('user_id', userId)
     .eq('scope_type', 'global')
   if (error) return { data: [], error: normalizeAdminError(error) }

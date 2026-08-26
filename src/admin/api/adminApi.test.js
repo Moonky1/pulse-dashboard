@@ -29,7 +29,9 @@ test('permission read follows canonical role scopes and includes active global g
     then(resolve) { return Promise.resolve(resolve({ data: assignments, error: null })) },
   }
   const result = await loadOwnGlobalPermissionKeys({ from: () => query }, USER_ID)
-  assert.match(select, /role_scopes!inner\(roles!inner/)
+  assert.match(select, /role_scopes!user_roles_role_scope_fk!inner/)
+  assert.match(select, /roles!role_scopes_role_fk!inner/)
+  assert.match(select, /role_permissions!role_permissions_role_fk/)
   assert.deepEqual(result.data.sort(), ['admin.access', 'users.view'])
 })
 
