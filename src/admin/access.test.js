@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+
+import { hasAdminUsersAccess, resolveAdminAccess } from './access.js'
+
+test('Admin is visible only with both required canonical permissions', () => {
+  assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
+  assert.equal(hasAdminUsersAccess(['users.view', 'admin.access', 'audit.view']), true)
+})
+
+test('Admin is hidden when either permission is absent', () => {
+  assert.equal(hasAdminUsersAccess(['admin.access']), false)
+  assert.equal(hasAdminUsersAccess(['users.view']), false)
+  assert.equal(hasAdminUsersAccess([]), false)
+})
+
+test('direct route resolution fails closed during loading and errors', () => {
+  assert.equal(resolveAdminAccess({ loading: true, permissionKeys: ['admin.access', 'users.view'] }), 'loading')
+  assert.equal(resolveAdminAccess({ error: new Error('network') }), 'error')
+  assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access'] }), 'denied')
+  assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'users.view'] }), 'allowed')
+})
