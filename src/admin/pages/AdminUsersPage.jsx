@@ -26,7 +26,10 @@ export function AdminUsersPage() {
   const maps = useMemo(() => directoryMaps(directory), [directory])
   const roles = useMemo(() => roleOptions(users), [users])
   const filtered = useMemo(() => filterManagedUsers(users, filters), [users, filters])
-  const update = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }))
+  const update = (key) => (event) => {
+    const value = event.target.value
+    setFilters((current) => ({ ...current, [key]: value }))
+  }
 
   if (loading && !users.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading users" body="Reading the authorized Pulse workforce directory…" /></main>
   if (error && !users.length) return <main className="admin-content"><AdminStatePanel kind="error" title="Users unavailable" body={error.message} onRetry={refresh} /></main>
