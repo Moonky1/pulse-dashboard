@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { supabase } from '../../utils/supabase.js'
-import { getManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory } from '../api/adminApi.js'
+import { getManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadPendingApprovalOptions } from '../api/adminApi.js'
 
 const EMPTY_ROLE_OPTIONS = Object.freeze({ data: [], error: null })
 const EMPTY_DIRECTORY = Object.freeze({ data: { departments: [], teams: [] }, error: null })
@@ -54,4 +54,31 @@ export function useManagedUser(userId, { includeDirectory = true, includeRoleOpt
   const loadRoleOptions = useCallback(() => loadAssignableRoleOptions(supabase, userId), [userId])
   const state = useAdminRequest(load, userId, includeRoleOptions ? loadRoleOptions : null, includeDirectory)
   return { ...state, user: state.data }
+}
+
+export function usePendingApprovalOptions(userId, { enabled = true } = {}) {
+  const [state, setState] = useState({ requestKey: null, options: [], loading: enabled, error: null })
+  const requestKey = enabled ? userId : null
+  const load = useCallback(async () => {
+    if (!enabled) return { data: [], error: null }
+    return loadPendingApprovalOptions(supabase, userId)
+  }, [enabled, userId])
+  const refresh = useCallback(async () => {
+    if (!enabled) return { data: [], error: null }
+    setState((current) => ({ ...current, loading: true, error: null }))
+    const result = await load()
+    setState({ requestKey, options: result.data, loading: false, error: result.error })
+    return result
+  }, [enabled, load, requestKey])
+  useEffect(() => {
+    let current = true
+    void load().then((result) => {
+      if (current) setState({ requestKey, options: result.data, loading: false, error: result.error })
+    })
+    return () => { current = false }
+  }, [load, requestKey])
+  const currentState = state.requestKey === requestKey
+    ? state
+    : { requestKey, options: [], loading: enabled, error: null }
+  return { ...currentState, refresh }
 }
