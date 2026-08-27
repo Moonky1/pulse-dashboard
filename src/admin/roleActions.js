@@ -1,35 +1,45 @@
-import { roleScopeLabel } from './adminViewModel.js'
-
 export const ROLE_SCOPE_TYPES = Object.freeze(['global', 'department', 'team'])
 
-export function supportedScopesForRole(role) {
-  return (role?.scopes ?? []).filter((scope) => ROLE_SCOPE_TYPES.includes(scope))
+export function roleOptionKey(option) {
+  return [option?.roleId, option?.scopeType, option?.departmentId ?? 'global', option?.teamId ?? 'none'].join(':')
 }
 
-export function organizationForRoleScope(scopeType, user, directory) {
-  if (scopeType === 'global') return { label: 'Global · All Pulse', departmentId: null, teamId: null, valid: true }
-  if (!user?.departmentId) return { label: 'Target department is required', departmentId: null, teamId: null, valid: false }
-  if (scopeType === 'department') return {
-    label: `Department · ${directory?.departments?.find((department) => department.id === user.departmentId)?.name ?? 'Unknown department'}`,
-    departmentId: user.departmentId,
+export function assignableRoles(options = []) {
+  const roles = new Map()
+  options.forEach((option) => {
+    if (!option?.roleId || !ROLE_SCOPE_TYPES.includes(option.scopeType)) return
+    if (!roles.has(option.roleId)) roles.set(option.roleId, { id: option.roleId, key: option.roleKey, name: option.roleName })
+  })
+  return [...roles.values()]
+}
+
+export function roleOptionsForRole(options = [], roleId) {
+  return options.filter((option) => option.roleId === roleId && ROLE_SCOPE_TYPES.includes(option.scopeType))
+}
+
+export function organizationForRoleOption(option) {
+  if (option?.scopeType === 'global') return { label: 'Global · All Pulse', departmentId: null, teamId: null, valid: true }
+  if (option?.scopeType === 'department' && option.departmentId) return {
+    label: `Department · ${option.departmentName ?? 'Unknown department'}`,
+    departmentId: option.departmentId,
     teamId: null,
     valid: true,
   }
-  if (!user?.teamId) return { label: 'Target team is required', departmentId: user.departmentId, teamId: null, valid: false }
-  return {
-    label: roleScopeLabel({ scopeType: 'team', departmentId: user.departmentId, teamId: user.teamId }, directory),
-    departmentId: user.departmentId,
-    teamId: user.teamId,
+  if (option?.scopeType === 'team' && option.departmentId && option.teamId) return {
+    label: `Team · ${option.teamName ?? 'Unknown team'}`,
+    departmentId: option.departmentId,
+    teamId: option.teamId,
     valid: true,
   }
+  return { label: 'Unavailable organization scope', departmentId: null, teamId: null, valid: false }
 }
 
-export function roleAssignmentRequest(role, scopeType, user, directory) {
-  const organization = organizationForRoleScope(scopeType, user, directory)
-  if (!role?.id || !supportedScopesForRole(role).includes(scopeType) || !organization.valid) return null
+export function roleAssignmentRequest(option) {
+  const organization = organizationForRoleOption(option)
+  if (!option?.roleId || !ROLE_SCOPE_TYPES.includes(option.scopeType) || !organization.valid) return null
   return {
-    requestedRoleId: role.id,
-    requestedScopeType: scopeType,
+    requestedRoleId: option.roleId,
+    requestedScopeType: option.scopeType,
     requestedDepartmentId: organization.departmentId,
     requestedTeamId: organization.teamId,
     organization,
@@ -49,4 +59,11 @@ export function roleMutationSuccessMessage(action, result, roleName) {
 
 export function isSuperAdminRole(role, scopeType) {
   return role?.key === 'super_admin' && scopeType === 'global'
+}
+
+export function roleCatalogMessage({ loading, error, options = [] }) {
+  if (loading) return 'Loading assignable roles…'
+  if (error) return error.message || 'Assignable roles are temporarily unavailable.'
+  if (!options.length) return 'No role assignments are currently grantable for this user.'
+  return null
 }

@@ -1,4 +1,4 @@
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function publicError(code, message) {
   return { code, message }
@@ -278,28 +278,31 @@ export async function loadOrganizationDirectory(client) {
   return { data: { departments: departments.data ?? [], teams: teams.data ?? [] }, error: null }
 }
 
-function normalizeCatalogRole(role = {}, roleScopes = []) {
-  const scopes = roleScopes.filter((scope) => scope?.role_id === role.id)
+function normalizeAssignableRoleOption(row = {}) {
+  const scopeType = row.scope_type ?? ''
+  const departmentId = row.department_id ?? null
+  const teamId = row.team_id ?? null
+  if (!UUID_PATTERN.test(row.role_id ?? '') || !['global', 'department', 'team'].includes(scopeType)) return null
+  if (scopeType === 'global' && (departmentId || teamId)) return null
+  if (scopeType === 'department' && (!UUID_PATTERN.test(departmentId ?? '') || teamId)) return null
+  if (scopeType === 'team' && (!UUID_PATTERN.test(departmentId ?? '') || !UUID_PATTERN.test(teamId ?? ''))) return null
   return {
-    id: role.id ?? null,
-    key: role.key ?? '',
-    name: role.name ?? 'Unknown role',
-    description: role.description ?? '',
-    scopes: [...new Set(scopes.map((scope) => scope?.scope_type).filter((scope) => ['global', 'department', 'team'].includes(scope)))],
+    roleId: row.role_id,
+    roleKey: row.role_key ?? '',
+    roleName: row.role_name ?? 'Unknown role',
+    scopeType,
+    departmentId,
+    departmentName: row.department_name ?? null,
+    teamId,
+    teamName: row.team_name ?? null,
   }
 }
 
-export async function loadRoleCatalog(client) {
-  const [roles, roleScopes] = await Promise.all([
-    client.from('roles').select('id,key,name,description,is_active').eq('is_active', true).order('name'),
-    client.from('role_scopes').select('role_id,scope_type'),
-  ])
-  const error = roles.error || roleScopes.error
-  if (error) return { data: [], error: normalizeAdminError(error) }
-  return {
-    data: (roles.data ?? [])
-      .map((role) => normalizeCatalogRole(role, roleScopes.data ?? []))
-      .filter((role) => UUID_PATTERN.test(role.id) && role.scopes.length),
-    error: null,
+export async function loadAssignableRoleOptions(client, targetUserId) {
+  if (!UUID_PATTERN.test(targetUserId ?? '')) {
+    return { data: [], error: publicError('invalid_request', 'The requested user is not valid.') }
   }
+  const { data, error } = await client.rpc('list_assignable_role_options', { target_user_id: targetUserId })
+  if (error) return { data: [], error: normalizeAdminError(error) }
+  return { data: (data ?? []).map(normalizeAssignableRoleOption).filter(Boolean), error: null }
 }

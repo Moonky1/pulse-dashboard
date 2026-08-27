@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '../../components/ui/Button.jsx'
 import { roleScopeLabel } from '../adminViewModel.js'
-import { isSuperAdminRole, organizationForRoleScope, roleAssignmentRequest, supportedScopesForRole } from '../roleActions.js'
+import { assignableRoles, isSuperAdminRole, organizationForRoleOption, roleAssignmentRequest, roleOptionKey, roleOptionsForRole } from '../roleActions.js'
 
 function Target({ user }) {
   return <div className="admin-dialog__target"><strong>{user.fullName}</strong><span>{user.employeeId || 'Employee ID pending'} · Current state: {user.status}</span></div>
@@ -12,19 +12,20 @@ function ScopeField({ label, value }) {
   return <label className="admin-role-field"><span>{label}</span><div>{value}</div></label>
 }
 
-export function RoleActionDialog({ action, user, directory, roleCatalog, submitting, error, onCancel, onConfirm }) {
+export function RoleActionDialog({ action, user, directory, roleOptions, submitting, error, onCancel, onConfirm }) {
   const dialogRef = useRef(null)
   const roleSelectRef = useRef(null)
   const [roleId, setRoleId] = useState('')
-  const [selectedScopeType, setSelectedScopeType] = useState('')
-  const selectedRole = useMemo(() => roleCatalog.find((role) => role.id === (roleId || roleCatalog[0]?.id)) ?? null, [roleCatalog, roleId])
-  const scopes = supportedScopesForRole(selectedRole)
-  const scopeType = scopes.includes(selectedScopeType) ? selectedScopeType : (scopes[0] ?? '')
-  const organization = action?.type === 'assign' ? organizationForRoleScope(scopeType, user, directory) : null
-  const assignmentRequest = action?.type === 'assign' ? roleAssignmentRequest(selectedRole, scopeType, user, directory) : null
+  const [selectedOptionKey, setSelectedOptionKey] = useState('')
+  const roles = useMemo(() => assignableRoles(roleOptions), [roleOptions])
+  const selectedRole = useMemo(() => roles.find((role) => role.id === (roleId || roles[0]?.id)) ?? null, [roleId, roles])
+  const optionsForRole = useMemo(() => roleOptionsForRole(roleOptions, selectedRole?.id), [roleOptions, selectedRole])
+  const selectedOption = useMemo(() => optionsForRole.find((option) => roleOptionKey(option) === selectedOptionKey) ?? optionsForRole[0] ?? null, [optionsForRole, selectedOptionKey])
+  const organization = action?.type === 'assign' ? organizationForRoleOption(selectedOption) : null
+  const assignmentRequest = action?.type === 'assign' ? roleAssignmentRequest(selectedOption) : null
   const assignment = action?.assignment ?? null
   const privileged = action?.type === 'assign'
-    ? isSuperAdminRole(selectedRole, scopeType)
+    ? isSuperAdminRole(selectedRole, selectedOption?.scopeType)
     : isSuperAdminRole(assignment, assignment?.scopeType)
 
   useEffect(() => {
@@ -63,8 +64,8 @@ export function RoleActionDialog({ action, user, directory, roleCatalog, submitt
         <Target user={user} />
         {action.type === 'assign' ? (
           <div className="admin-role-form">
-            <label className="admin-role-field"><span>Role</span><select ref={roleSelectRef} value={selectedRole?.id ?? ''} disabled={submitting} onChange={(event) => { setRoleId(event.target.value); setSelectedScopeType('') }}>{roleCatalog.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label>
-            <label className="admin-role-field"><span>Scope</span><select value={scopeType} disabled={submitting || !selectedRole} onChange={(event) => setSelectedScopeType(event.target.value)}>{scopes.map((scope) => <option key={scope} value={scope}>{scope[0].toUpperCase() + scope.slice(1)}</option>)}</select></label>
+            <label className="admin-role-field"><span>Role</span><select ref={roleSelectRef} value={selectedRole?.id ?? ''} disabled={submitting} onChange={(event) => { setRoleId(event.target.value); setSelectedOptionKey('') }}>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label>
+            <label className="admin-role-field"><span>Scope</span><select value={selectedOption ? roleOptionKey(selectedOption) : ''} disabled={submitting || !selectedRole} onChange={(event) => setSelectedOptionKey(event.target.value)}>{optionsForRole.map((option) => <option key={roleOptionKey(option)} value={roleOptionKey(option)}>{option.scopeType[0].toUpperCase() + option.scopeType.slice(1)}</option>)}</select></label>
             <ScopeField label="Target organization" value={organization?.label ?? 'Select a supported scope'} />
           </div>
         ) : (

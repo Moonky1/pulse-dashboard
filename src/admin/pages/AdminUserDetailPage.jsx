@@ -18,7 +18,7 @@ function Detail({ label, children }) {
 
 export function AdminUserDetailPage() {
   const { userId } = useParams()
-  const { user, directory, roleCatalog, loading, error, refresh } = useManagedUser(userId)
+  const { user, directory, roleOptions, roleOptionsError, loading, error, refresh } = useManagedUser(userId)
   const { permissionKeys } = useAdminPermissions()
   if (loading && !user) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading user" body="Reading the canonical user record…" /></main>
   if (error || !user) return <main className="admin-content"><AdminStatePanel kind="error" title={error?.code === 'not_found' ? 'User not found' : 'User unavailable'} body={error?.message || 'The user record is unavailable.'} onRetry={error?.code === 'unavailable' ? refresh : undefined} /></main>
@@ -39,7 +39,7 @@ export function AdminUserDetailPage() {
         <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Account</p><h2>Authentication and lifecycle</h2><div className="admin-account-row"><LifecycleBadge status={user.status} /><Badge tone={user.authEmailConfirmed ? 'success' : 'warning'} dot>{user.authEmailConfirmed ? 'Auth email verified' : 'Auth email unverified'}</Badge></div><p>{lifecycle.description}</p><p className="admin-footnote">Creation, approval, status-change timestamps, and audit history are not exposed by the current protected read contract.</p></Card>
       </div>
       <LifecycleActions user={user} allowed={canManageUsers(permissionKeys)} onChanged={refresh} />
-      <RoleAdministration user={user} directory={directory} roleCatalog={roleCatalog} allowed={canAssignRoles(permissionKeys)} onChanged={refresh} />
+      <RoleAdministration user={user} directory={directory} roleOptions={roleOptions} roleOptionsError={roleOptionsError} loading={loading} allowed={canAssignRoles(permissionKeys)} onChanged={refresh} />
     </main>
   )
 }

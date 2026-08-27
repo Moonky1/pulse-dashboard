@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assignManagedUserRole, blockManagedUser, extractGlobalPermissionKeys, getManagedUser, inactivateManagedUser, listManagedUsers, loadOwnGlobalPermissionKeys, loadRoleCatalog, normalizeLifecycleMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole } from './adminApi.js'
+import { assignManagedUserRole, blockManagedUser, extractGlobalPermissionKeys, getManagedUser, inactivateManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOwnGlobalPermissionKeys, normalizeLifecycleMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-const ROLE_ID = '10000000-0000-4000-8000-000000000009'
+const ROLE_ID = '10000000-0000-0000-0000-000000000009'
 const ASSIGNMENT_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 const row = {
   id: USER_ID,
@@ -171,28 +171,30 @@ test('role errors are sanitized for grant, scope, organization, self, and last-r
   })
 })
 
-test('role catalog uses active RLS-readable roles and supported scopes only', async () => {
+test('assignable role catalog calls only the target-bound protected RPC', async () => {
   const calls = []
-  const result = await loadRoleCatalog({
-    from(table) {
-      calls.push(table)
-      const query = {
-        select() { return this },
-        eq() { return this },
-        order() {
-          return Promise.resolve(table === 'roles'
-            ? { data: [{ id: ROLE_ID, key: 'admin', name: 'Admin' }], error: null }
-            : { data: [{ role_id: ROLE_ID, scope_type: 'global' }, { role_id: ROLE_ID, scope_type: 'planet' }], error: null })
-        },
-        then(resolve) {
-          return Promise.resolve(resolve(table === 'roles'
-            ? { data: [{ id: ROLE_ID, key: 'admin', name: 'Admin' }], error: null }
-            : { data: [{ role_id: ROLE_ID, scope_type: 'global' }, { role_id: ROLE_ID, scope_type: 'planet' }], error: null }))
-        },
-      }
-      return query
-    },
-  })
-  assert.deepEqual(calls, ['roles', 'role_scopes'])
-  assert.deepEqual(result.data, [{ id: ROLE_ID, key: 'admin', name: 'Admin', description: '', scopes: ['global'] }])
+  const result = await loadAssignableRoleOptions({ rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'global', department_id: null, team_id: null }], error: null }
+  } }, USER_ID)
+  assert.deepEqual(calls, [{ name: 'list_assignable_role_options', args: { target_user_id: USER_ID } }])
+  assert.deepEqual(result.data, [{ roleId: ROLE_ID, roleKey: 'admin', roleName: 'Admin', scopeType: 'global', departmentId: null, departmentName: null, teamId: null, teamName: null }])
+})
+
+test('assignable role catalog preserves legitimate empty results and sanitizes failures', async () => {
+  assert.deepEqual(await loadAssignableRoleOptions({ rpc: async () => ({ data: [], error: null }) }, USER_ID), { data: [], error: null })
+  const failed = await loadAssignableRoleOptions({ rpc: async () => ({ data: null, error: { code: 'XX000', message: 'sensitive SQL' } }) }, USER_ID)
+  assert.equal(failed.error.code, 'unavailable')
+  assert.doesNotMatch(failed.error.message, /SQL/i)
+  assert.equal((await loadAssignableRoleOptions({ rpc: async () => { throw new Error('must not run') } }, 'bad-id')).error.code, 'invalid_request')
+})
+
+test('assignable role catalog drops malformed or arbitrary scope combinations', async () => {
+  const data = [
+    { role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'global', department_id: null, team_id: null },
+    { role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'global', department_id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', team_id: null },
+    { role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'planet', department_id: null, team_id: null },
+  ]
+  const result = await loadAssignableRoleOptions({ rpc: async () => ({ data, error: null }) }, USER_ID)
+  assert.equal(result.data.length, 1)
 })
