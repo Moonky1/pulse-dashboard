@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assignableRoles, isSuperAdminRole, organizationForRoleOption, roleAssignmentRequest, roleCatalogMessage, roleMutationSuccessMessage, roleOptionKey, roleOptionsForRole } from './roleActions.js'
+import { assignableRoles, isSuperAdminRole, organizationForRoleOption, roleAssignmentRequest, roleCatalogMessage, roleMutationSuccessMessage, roleOptionKey, roleOptionsForRole, shouldCancelRoleDialogOnKey } from './roleActions.js'
 
 const ROLE_ID = '10000000-0000-0000-0000-000000000004'
 const DEPARTMENT_ID = 'd0000000-0000-0000-0000-000000000001'
@@ -44,4 +44,10 @@ test('catalog UI distinguishes loading, legitimate empty, error, and ready state
   assert.match(roleCatalogMessage({ loading: false, options: [] }), /No role assignments/)
   assert.equal(roleCatalogMessage({ loading: false, error: { message: 'Catalog unavailable' }, options: [] }), 'Catalog unavailable')
   assert.equal(roleCatalogMessage({ loading: false, options: OPTIONS }), null)
+})
+
+test('Escape cancels a role dialog unless a confirmed request is in progress', () => {
+  assert.equal(shouldCancelRoleDialogOnKey('Escape'), true)
+  assert.equal(shouldCancelRoleDialogOnKey('Escape', true), false)
+  assert.equal(shouldCancelRoleDialogOnKey('Enter'), false)
 })

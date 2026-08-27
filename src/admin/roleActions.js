@@ -67,3 +67,7 @@ export function roleCatalogMessage({ loading, error, options = [] }) {
   if (!options.length) return 'No role assignments are currently grantable for this user.'
   return null
 }
+
+export function shouldCancelRoleDialogOnKey(key, submitting = false) {
+  return key === 'Escape' && !submitting
+}
