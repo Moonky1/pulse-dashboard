@@ -4,8 +4,9 @@ import { supabase } from '../../utils/supabase.js'
 import { getManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory } from '../api/adminApi.js'
 
 const EMPTY_ROLE_OPTIONS = Object.freeze({ data: [], error: null })
+const EMPTY_DIRECTORY = Object.freeze({ data: { departments: [], teams: [] }, error: null })
 
-function useAdminRequest(load, requestKey, loadRoleOptions = null) {
+function useAdminRequest(load, requestKey, loadRoleOptions = null, loadDirectory = true) {
   const [state, setState] = useState({ requestKey: null, data: null, directory: { departments: [], teams: [] }, roleOptions: [], roleOptionsError: null, loading: true, error: null })
   const applyResult = useCallback((resource, directory, roleOptions) => {
     setState({
@@ -20,9 +21,9 @@ function useAdminRequest(load, requestKey, loadRoleOptions = null) {
   }, [requestKey])
   const loadAll = useCallback(() => Promise.all([
     load(),
-    loadOrganizationDirectory(supabase),
+    loadDirectory ? loadOrganizationDirectory(supabase) : Promise.resolve(EMPTY_DIRECTORY),
     loadRoleOptions ? loadRoleOptions() : Promise.resolve(EMPTY_ROLE_OPTIONS),
-  ]), [load, loadRoleOptions])
+  ]), [load, loadDirectory, loadRoleOptions])
   const refresh = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: null }))
     const [resource, directory, roleOptions] = await loadAll()
@@ -42,15 +43,15 @@ function useAdminRequest(load, requestKey, loadRoleOptions = null) {
   return { ...currentState, refresh }
 }
 
-export function useManagedUsers() {
-  const load = useCallback(() => listManagedUsers(supabase), [])
-  const state = useAdminRequest(load, 'users')
+export function useManagedUsers({ status = null, includeDirectory = true } = {}) {
+  const load = useCallback(() => listManagedUsers(supabase, { status }), [status])
+  const state = useAdminRequest(load, `users:${status ?? 'all'}`, null, includeDirectory)
   return { ...state, users: state.data ?? [] }
 }
 
-export function useManagedUser(userId) {
+export function useManagedUser(userId, { includeDirectory = true, includeRoleOptions = true } = {}) {
   const load = useCallback(() => getManagedUser(supabase, userId), [userId])
   const loadRoleOptions = useCallback(() => loadAssignableRoleOptions(supabase, userId), [userId])
-  const state = useAdminRequest(load, userId, loadRoleOptions)
+  const state = useAdminRequest(load, userId, includeRoleOptions ? loadRoleOptions : null, includeDirectory)
   return { ...state, user: state.data }
 }

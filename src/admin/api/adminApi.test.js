@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assignManagedUserRole, blockManagedUser, extractGlobalPermissionKeys, getManagedUser, inactivateManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOwnGlobalPermissionKeys, normalizeLifecycleMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole } from './adminApi.js'
+import { assignManagedUserRole, blockManagedUser, blockPendingUser, extractGlobalPermissionKeys, getManagedUser, inactivateManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOwnGlobalPermissionKeys, normalizeLifecycleMutationError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -38,11 +38,13 @@ test('permission read follows canonical role scopes and includes active global g
 })
 
 test('users list normalizes successful results and null roles', async () => {
-  const client = { rpc: async () => ({ data: [row], error: null }) }
-  const result = await listManagedUsers(client)
+  const calls = []
+  const client = { rpc: async (name, args) => { calls.push({ name, args }); return { data: [row], error: null } } }
+  const result = await listManagedUsers(client, { status: 'pending_approval' })
   assert.equal(result.error, null)
   assert.equal(result.data[0].displayName, 'Example')
   assert.deepEqual(result.data[0].roles, [])
+  assert.deepEqual(calls, [{ name: 'list_managed_users', args: { requested_status: 'pending_approval' } }])
 })
 
 test('users list sanitizes backend errors', async () => {
@@ -112,6 +114,31 @@ test('lifecycle errors are sanitized into actionable public messages', () => {
     assert.equal(normalized.code, code)
     assert.doesNotMatch(normalized.message, /SQL|stack/i)
   })
+})
+
+test('pending block calls only the canonical onboarding RPC and validates its response', async () => {
+  const calls = []
+  const client = { rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ id: USER_ID, status: 'blocked', status_changed_at: '2026-08-26T00:00:00Z' }], error: null }
+  } }
+  const result = await blockPendingUser(client, USER_ID, ' duplicate registration ')
+  assert.equal(result.data.status, 'blocked')
+  assert.deepEqual(calls, [{ name: 'block_pending_user', args: { target_user_id: USER_ID, reason: 'duplicate registration' } }])
+})
+
+test('pending block rejects malformed, stale, and unauthorized requests safely', async () => {
+  let calls = 0
+  const client = { rpc: async () => { calls += 1; return { data: [{ id: USER_ID, status: 'active' }], error: null } } }
+  assert.equal((await blockPendingUser(client, 'bad-id')).error.code, 'invalid_request')
+  assert.equal((await blockPendingUser(client, USER_ID, 'x'.repeat(501))).error.code, 'invalid_reason')
+  assert.equal(calls, 0)
+  assert.equal((await blockPendingUser(client, USER_ID)).error.code, 'unexpected_result')
+  assert.equal(normalizePendingMutationError({ code: '55000', message: 'target must be pending approval' }).code, 'stale_pending_user')
+  assert.equal(normalizePendingMutationError({ code: '42501', message: 'global users.approve is required' }).code, 'access_denied')
+  const hidden = normalizePendingMutationError({ code: 'XX000', message: 'sensitive SQL stack' })
+  assert.equal(hidden.code, 'unavailable')
+  assert.doesNotMatch(hidden.message, /SQL|stack/i)
 })
 
 test('role assignment calls only the canonical RPC with a target-bound scope', async () => {

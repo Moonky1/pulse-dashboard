@@ -60,6 +60,26 @@ export function normalizeLifecycleMutationError(error) {
   return publicError('unavailable', 'Pulse could not complete the lifecycle action. No client-side change was applied.')
 }
 
+export function normalizePendingMutationError(error) {
+  if (!error) return null
+  if (messageIncludes(error, 'self-')) {
+    return publicError('self_operation', 'You cannot review your own pending account.')
+  }
+  if (['42501', '28000'].includes(error.code)) {
+    return publicError('access_denied', 'You do not have permission to review pending Pulse users.')
+  }
+  if (error.code === '22023') {
+    return publicError('invalid_reason', 'The audit note must be 500 characters or fewer.')
+  }
+  if (error.code === '55000') {
+    return publicError('stale_pending_user', 'This account is no longer pending approval. Refresh before taking another action.')
+  }
+  if (error.code === 'P0002') {
+    return publicError('not_found', 'This pending Pulse user could not be found.')
+  }
+  return publicError('unavailable', 'Pulse could not complete the pending-user action. No client-side change was applied.')
+}
+
 export function normalizeRoleMutationError(error) {
   if (!error) return null
   if (messageIncludes(error, 'self role changes')) {
@@ -211,6 +231,33 @@ export function reactivateManagedUser(client, targetUserId, reason = null) {
 
 export function inactivateManagedUser(client, targetUserId, reason = null) {
   return mutateManagedUser(client, 'inactivate_user', targetUserId, reason, 'inactive')
+}
+
+export async function blockPendingUser(client, targetUserId, reason = null) {
+  if (!UUID_PATTERN.test(targetUserId ?? '')) {
+    return { data: null, error: publicError('invalid_request', 'The requested user is not valid.') }
+  }
+  const normalizedReason = String(reason ?? '').trim()
+  if (normalizedReason.length > 500) {
+    return { data: null, error: publicError('invalid_reason', 'The audit note must be 500 characters or fewer.') }
+  }
+  const { data, error } = await client.rpc('block_pending_user', {
+    target_user_id: targetUserId,
+    reason: normalizedReason || null,
+  })
+  if (error) return { data: null, error: normalizePendingMutationError(error) }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row || row.id !== targetUserId || row.status !== 'blocked') {
+    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the pending account was blocked. Refresh before trying again.') }
+  }
+  return {
+    data: {
+      id: row.id,
+      status: row.status,
+      statusChangedAt: row.status_changed_at ?? null,
+    },
+    error: null,
+  }
 }
 
 function normalizeRoleMutationResult(row, expectedUserRoleId, resultKey) {

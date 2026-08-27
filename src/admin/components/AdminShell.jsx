@@ -18,6 +18,7 @@ export function AdminShell() {
         <nav aria-label="Administration">
           <NavLink to="/workspace">Workspace</NavLink>
           <NavLink to="/admin/users">Users</NavLink>
+          <NavLink to="/admin/pending">Pending approval</NavLink>
         </nav>
         <div className="admin-identity">
           <span>Signed in as</span>
