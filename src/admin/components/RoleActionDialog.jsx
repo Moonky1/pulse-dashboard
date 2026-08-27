@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '../../components/ui/Button.jsx'
 import { roleScopeLabel } from '../adminViewModel.js'
-import { assignableRoles, isSuperAdminRole, organizationForRoleOption, roleAssignmentRequest, roleOptionKey, roleOptionsForRole } from '../roleActions.js'
+import { assignableRoles, isSuperAdminRole, organizationForRoleOption, roleAssignmentRequest, roleOptionKey, roleOptionsForRole, shouldCancelRoleDialogOnKey } from '../roleActions.js'
 
 function Target({ user }) {
   return <div className="admin-dialog__target"><strong>{user.fullName}</strong><span>{user.employeeId || 'Employee ID pending'} · Current state: {user.status}</span></div>
@@ -56,6 +56,12 @@ export function RoleActionDialog({ action, user, directory, roleOptions, submitt
       aria-labelledby="role-dialog-title"
       aria-describedby="role-dialog-description"
       onCancel={(event) => { event.preventDefault(); cancel() }}
+      onKeyDown={(event) => {
+        if (shouldCancelRoleDialogOnKey(event.key, submitting)) {
+          event.preventDefault()
+          cancel()
+        }
+      }}
       onClick={(event) => { if (event.target === event.currentTarget) cancel() }}
     >
       <form className="admin-dialog__surface" method="dialog" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
