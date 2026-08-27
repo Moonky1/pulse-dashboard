@@ -1,6 +1,8 @@
 export const ADMIN_USERS_PERMISSIONS = Object.freeze(['admin.access', 'users.view'])
 export const ADMIN_USERS_MANAGE_PERMISSIONS = Object.freeze([...ADMIN_USERS_PERMISSIONS, 'users.manage'])
 export const ADMIN_ROLES_ASSIGN_PERMISSIONS = Object.freeze([...ADMIN_USERS_PERMISSIONS, 'roles.assign'])
+export const ADMIN_PENDING_BLOCK_PERMISSIONS = Object.freeze([...ADMIN_USERS_PERMISSIONS, 'users.approve'])
+export const ADMIN_PENDING_APPROVE_PERMISSIONS = Object.freeze([...ADMIN_PENDING_BLOCK_PERMISSIONS, 'roles.assign'])
 
 export function hasAdminUsersAccess(permissionKeys = []) {
   const keys = new Set(permissionKeys)
@@ -15,6 +17,16 @@ export function canManageUsers(permissionKeys = []) {
 export function canAssignRoles(permissionKeys = []) {
   const keys = new Set(permissionKeys)
   return ADMIN_ROLES_ASSIGN_PERMISSIONS.every((permission) => keys.has(permission))
+}
+
+export function canBlockPendingUsers(permissionKeys = []) {
+  const keys = new Set(permissionKeys)
+  return ADMIN_PENDING_BLOCK_PERMISSIONS.every((permission) => keys.has(permission))
+}
+
+export function canApprovePendingUsers(permissionKeys = []) {
+  const keys = new Set(permissionKeys)
+  return ADMIN_PENDING_APPROVE_PERMISSIONS.every((permission) => keys.has(permission))
 }
 
 export function resolveAdminAccess({ loading = false, error = null, permissionKeys = [] } = {}) {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assignManagedUserRole, blockManagedUser, extractGlobalPermissionKeys, getManagedUser, inactivateManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOwnGlobalPermissionKeys, normalizeLifecycleMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole } from './adminApi.js'
+import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, extractGlobalPermissionKeys, getManagedUser, inactivateManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeLifecycleMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -38,11 +38,13 @@ test('permission read follows canonical role scopes and includes active global g
 })
 
 test('users list normalizes successful results and null roles', async () => {
-  const client = { rpc: async () => ({ data: [row], error: null }) }
-  const result = await listManagedUsers(client)
+  const calls = []
+  const client = { rpc: async (name, args) => { calls.push({ name, args }); return { data: [row], error: null } } }
+  const result = await listManagedUsers(client, { status: 'pending_approval' })
   assert.equal(result.error, null)
   assert.equal(result.data[0].displayName, 'Example')
   assert.deepEqual(result.data[0].roles, [])
+  assert.deepEqual(calls, [{ name: 'list_managed_users', args: { requested_status: 'pending_approval' } }])
 })
 
 test('users list sanitizes backend errors', async () => {
@@ -109,6 +111,122 @@ test('lifecycle errors are sanitized into actionable public messages', () => {
   ]
   cases.forEach(([error, code]) => {
     const normalized = normalizeLifecycleMutationError(error)
+    assert.equal(normalized.code, code)
+    assert.doesNotMatch(normalized.message, /SQL|stack/i)
+  })
+})
+
+test('pending block calls only the canonical onboarding RPC and validates its response', async () => {
+  const calls = []
+  const client = { rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ id: USER_ID, status: 'blocked', status_changed_at: '2026-08-26T00:00:00Z' }], error: null }
+  } }
+  const result = await blockPendingUser(client, USER_ID, ' duplicate registration ')
+  assert.equal(result.data.status, 'blocked')
+  assert.deepEqual(calls, [{ name: 'block_pending_user', args: { target_user_id: USER_ID, reason: 'duplicate registration' } }])
+})
+
+test('pending block rejects malformed, stale, and unauthorized requests safely', async () => {
+  let calls = 0
+  const client = { rpc: async () => { calls += 1; return { data: [{ id: USER_ID, status: 'active' }], error: null } } }
+  assert.equal((await blockPendingUser(client, 'bad-id')).error.code, 'invalid_request')
+  assert.equal((await blockPendingUser(client, USER_ID, 'x'.repeat(501))).error.code, 'invalid_reason')
+  assert.equal(calls, 0)
+  assert.equal((await blockPendingUser(client, USER_ID)).error.code, 'unexpected_result')
+  assert.equal(normalizePendingMutationError({ code: '55000', message: 'target must be pending approval' }).code, 'stale_pending_user')
+  assert.equal(normalizePendingMutationError({ code: '42501', message: 'global users.approve is required' }).code, 'access_denied')
+  const hidden = normalizePendingMutationError({ code: 'XX000', message: 'sensitive SQL stack' })
+  assert.equal(hidden.code, 'unavailable')
+  assert.doesNotMatch(hidden.message, /SQL|stack/i)
+})
+
+test('pending approval catalog accepts only exact resolved combinations from its protected RPC', async () => {
+  const calls = []
+  const rawOption = {
+    department_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    department_code: 'support',
+    department_name: 'Support',
+    team_id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+    team_code: 'support_one',
+    team_name: 'Support One',
+    role_id: ROLE_ID,
+    role_key: 'admin',
+    role_name: 'Admin',
+    scope_type: 'global',
+  }
+  const result = await loadPendingApprovalOptions({ rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [rawOption, { ...rawOption, department_id: 'arbitrary' }, { ...rawOption, scope_type: 'planet' }], error: null }
+  } }, USER_ID)
+  assert.deepEqual(calls, [{ name: 'get_pending_approval_options', args: { target_user_id: USER_ID } }])
+  assert.equal(result.data.length, 1)
+  assert.deepEqual(result.data[0], {
+    departmentId: rawOption.department_id,
+    departmentCode: 'support',
+    departmentName: 'Support',
+    teamId: rawOption.team_id,
+    teamCode: 'support_one',
+    teamName: 'Support One',
+    roleId: ROLE_ID,
+    roleKey: 'admin',
+    roleName: 'Admin',
+    scopeType: 'global',
+  })
+})
+
+test('pending approval catalog preserves empty results and sanitizes load errors', async () => {
+  assert.deepEqual(await loadPendingApprovalOptions({ rpc: async () => ({ data: [], error: null }) }, USER_ID), { data: [], error: null })
+  assert.equal((await loadPendingApprovalOptions({ rpc: async () => { throw new Error('must not run') } }, 'bad-id')).error.code, 'invalid_request')
+  const failure = await loadPendingApprovalOptions({ rpc: async () => ({ data: null, error: { code: 'XX000', message: 'sensitive SQL' } }) }, USER_ID)
+  assert.equal(failure.error.code, 'unavailable')
+  assert.doesNotMatch(failure.error.message, /SQL/i)
+})
+
+test('pending approval calls only approve_pending_user with the selected protected option', async () => {
+  const calls = []
+  const option = {
+    departmentId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    departmentCode: 'support',
+    departmentName: 'Support',
+    teamId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+    teamCode: 'support_one',
+    teamName: 'Support One',
+    roleId: ROLE_ID,
+    roleKey: 'agent',
+    roleName: 'Agent',
+    scopeType: 'team',
+  }
+  const result = await approvePendingUser({ rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ id: USER_ID, employee_id: 'KK-001234', status: 'active', department_id: option.departmentId, team_id: option.teamId, approved_at: '2026-08-27T00:00:00Z' }], error: null }
+  } }, USER_ID, option)
+  assert.equal(result.data.status, 'active')
+  assert.deepEqual(calls, [{ name: 'approve_pending_user', args: {
+    target_user_id: USER_ID,
+    selected_department_id: option.departmentId,
+    selected_team_id: option.teamId,
+    requested_roles: [{ role_id: ROLE_ID, scope_type: 'team' }],
+  } }])
+})
+
+test('pending approval rejects arbitrary input and stale or unsafe server results', async () => {
+  let calls = 0
+  const client = { rpc: async () => { calls += 1; return { data: [{ id: USER_ID, status: 'pending_approval' }], error: null } } }
+  assert.equal((await approvePendingUser(client, 'bad-id', {})).error.code, 'invalid_request')
+  assert.equal((await approvePendingUser(client, USER_ID, { departmentId: 'arbitrary', roleId: ROLE_ID, scopeType: 'global' })).error.code, 'invalid_selection')
+  assert.equal(calls, 0)
+  assert.equal((await approvePendingUser(client, USER_ID, { departmentId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', roleId: ROLE_ID, scopeType: 'global' })).error.code, 'unexpected_result')
+  const cases = [
+    [{ code: '55000', message: 'target must be pending approval' }, 'stale_pending_user'],
+    [{ code: '42501', message: 'self-approval is not allowed' }, 'self_operation'],
+    [{ code: '23514', message: 'target Auth identity is invalid' }, 'auth_identity_invalid'],
+    [{ code: '23503', message: 'selected department inactive' }, 'catalog_invalid'],
+    [{ code: '23505', message: 'duplicate requested role assignments' }, 'invalid_selection'],
+    [{ code: 'XX000', message: 'sensitive SQL stack' }, 'unavailable'],
+  ]
+  cases.forEach(([error, code]) => {
+    const normalized = normalizePendingApprovalError(error)
     assert.equal(normalized.code, code)
     assert.doesNotMatch(normalized.message, /SQL|stack/i)
   })

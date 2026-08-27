@@ -60,6 +60,52 @@ export function normalizeLifecycleMutationError(error) {
   return publicError('unavailable', 'Pulse could not complete the lifecycle action. No client-side change was applied.')
 }
 
+export function normalizePendingMutationError(error) {
+  if (!error) return null
+  if (messageIncludes(error, 'self-')) {
+    return publicError('self_operation', 'You cannot review your own pending account.')
+  }
+  if (['42501', '28000'].includes(error.code)) {
+    return publicError('access_denied', 'You do not have permission to review pending Pulse users.')
+  }
+  if (error.code === '22023') {
+    return publicError('invalid_reason', 'The audit note must be 500 characters or fewer.')
+  }
+  if (error.code === '55000') {
+    return publicError('stale_pending_user', 'This account is no longer pending approval. Refresh before taking another action.')
+  }
+  if (error.code === 'P0002') {
+    return publicError('not_found', 'This pending Pulse user could not be found.')
+  }
+  return publicError('unavailable', 'Pulse could not complete the pending-user action. No client-side change was applied.')
+}
+
+export function normalizePendingApprovalError(error) {
+  if (!error) return null
+  if (messageIncludes(error, 'self-')) {
+    return publicError('self_operation', 'You cannot approve your own pending account.')
+  }
+  if (['42501', '28000'].includes(error.code)) {
+    return publicError('access_denied', 'You do not have permission to approve pending Pulse users.')
+  }
+  if (error.code === 'P0002') {
+    return publicError('not_found', 'This pending Pulse user could not be found.')
+  }
+  if (error.code === '55000') {
+    return publicError('stale_pending_user', 'This account is no longer pending approval. Refresh before taking another action.')
+  }
+  if (error.code === '23514' || messageIncludes(error, 'auth identity') || messageIncludes(error, 'email does not match')) {
+    return publicError('auth_identity_invalid', 'The pending account no longer has an eligible verified Auth identity.')
+  }
+  if (error.code === '23503') {
+    return publicError('catalog_invalid', 'The selected department, team, role, or scope is no longer available. Refresh the approval options.')
+  }
+  if (['22023', '22P02', '23505'].includes(error.code)) {
+    return publicError('invalid_selection', 'The selected approval combination is invalid or duplicated. Refresh the approval options.')
+  }
+  return publicError('unavailable', 'Pulse could not approve the pending account. No client-side change was applied.')
+}
+
 export function normalizeRoleMutationError(error) {
   if (!error) return null
   if (messageIncludes(error, 'self role changes')) {
@@ -211,6 +257,109 @@ export function reactivateManagedUser(client, targetUserId, reason = null) {
 
 export function inactivateManagedUser(client, targetUserId, reason = null) {
   return mutateManagedUser(client, 'inactivate_user', targetUserId, reason, 'inactive')
+}
+
+export async function blockPendingUser(client, targetUserId, reason = null) {
+  if (!UUID_PATTERN.test(targetUserId ?? '')) {
+    return { data: null, error: publicError('invalid_request', 'The requested user is not valid.') }
+  }
+  const normalizedReason = String(reason ?? '').trim()
+  if (normalizedReason.length > 500) {
+    return { data: null, error: publicError('invalid_reason', 'The audit note must be 500 characters or fewer.') }
+  }
+  const { data, error } = await client.rpc('block_pending_user', {
+    target_user_id: targetUserId,
+    reason: normalizedReason || null,
+  })
+  if (error) return { data: null, error: normalizePendingMutationError(error) }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row || row.id !== targetUserId || row.status !== 'blocked') {
+    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the pending account was blocked. Refresh before trying again.') }
+  }
+  return {
+    data: {
+      id: row.id,
+      status: row.status,
+      statusChangedAt: row.status_changed_at ?? null,
+    },
+    error: null,
+  }
+}
+
+function normalizePendingApprovalOption(row = {}) {
+  const scopeType = row.scope_type ?? ''
+  const departmentId = row.department_id ?? null
+  const teamId = row.team_id ?? null
+  if (!UUID_PATTERN.test(departmentId ?? '') || !UUID_PATTERN.test(row.role_id ?? '')) return null
+  if (!['global', 'department', 'team'].includes(scopeType)) return null
+  if (teamId !== null && !UUID_PATTERN.test(teamId)) return null
+  if (scopeType === 'team' && !teamId) return null
+  return {
+    departmentId,
+    departmentCode: row.department_code ?? '',
+    departmentName: row.department_name ?? 'Unknown department',
+    teamId,
+    teamCode: row.team_code ?? null,
+    teamName: row.team_name ?? null,
+    roleId: row.role_id,
+    roleKey: row.role_key ?? '',
+    roleName: row.role_name ?? 'Unknown role',
+    scopeType,
+  }
+}
+
+export async function loadPendingApprovalOptions(client, targetUserId) {
+  if (!UUID_PATTERN.test(targetUserId ?? '')) {
+    return { data: [], error: publicError('invalid_request', 'The requested pending user is not valid.') }
+  }
+  const { data, error } = await client.rpc('get_pending_approval_options', { target_user_id: targetUserId })
+  if (error) return { data: [], error: normalizePendingApprovalError(error) }
+  return { data: (data ?? []).map(normalizePendingApprovalOption).filter(Boolean), error: null }
+}
+
+export async function approvePendingUser(client, targetUserId, approvalOption = {}) {
+  if (!UUID_PATTERN.test(targetUserId ?? '')) {
+    return { data: null, error: publicError('invalid_request', 'The requested pending user is not valid.') }
+  }
+  const normalizedOption = normalizePendingApprovalOption({
+    department_id: approvalOption.departmentId,
+    department_code: approvalOption.departmentCode,
+    department_name: approvalOption.departmentName,
+    team_id: approvalOption.teamId ?? null,
+    team_code: approvalOption.teamCode,
+    team_name: approvalOption.teamName,
+    role_id: approvalOption.roleId,
+    role_key: approvalOption.roleKey,
+    role_name: approvalOption.roleName,
+    scope_type: approvalOption.scopeType,
+  })
+  if (!normalizedOption) {
+    return { data: null, error: publicError('invalid_selection', 'Select one exact server-provided approval option.') }
+  }
+  const { data, error } = await client.rpc('approve_pending_user', {
+    target_user_id: targetUserId,
+    selected_department_id: normalizedOption.departmentId,
+    selected_team_id: normalizedOption.teamId,
+    requested_roles: [{ role_id: normalizedOption.roleId, scope_type: normalizedOption.scopeType }],
+  })
+  if (error) return { data: null, error: normalizePendingApprovalError(error) }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row || row.id !== targetUserId || row.status !== 'active'
+      || row.department_id !== normalizedOption.departmentId
+      || (row.team_id ?? null) !== normalizedOption.teamId) {
+    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected approved profile. Refresh before trying again.') }
+  }
+  return {
+    data: {
+      id: row.id,
+      employeeId: row.employee_id ?? null,
+      status: row.status,
+      departmentId: row.department_id,
+      teamId: row.team_id ?? null,
+      approvedAt: row.approved_at ?? null,
+    },
+    error: null,
+  }
 }
 
 function normalizeRoleMutationResult(row, expectedUserRoleId, resultKey) {

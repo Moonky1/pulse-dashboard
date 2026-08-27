@@ -61,7 +61,7 @@ export function AdminUsersPage() {
                   <div><span className="admin-mobile-label">Lifecycle</span><LifecycleBadge status={user.status} /></div>
                   <div className="admin-cell-text"><span className="admin-mobile-label">Organization</span><strong>{maps.departments.get(user.departmentId) || 'Unassigned'}</strong><small>{maps.teams.get(user.teamId) || 'No team'}</small></div>
                   <div><span className="admin-mobile-label">Access</span><RoleScopeList roles={user.roles} directory={directory} compact /></div>
-                  <Link className="admin-detail-link" to={`/admin/users/${user.id}`} aria-label={`View ${user.fullName}`}>View</Link>
+                  <Link className="admin-detail-link" to={user.status === 'pending_approval' ? `/admin/pending/${user.id}` : `/admin/users/${user.id}`} aria-label={`View ${user.fullName}`}>View</Link>
                 </article>
               ))}
             </div>
