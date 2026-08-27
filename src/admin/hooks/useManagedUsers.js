@@ -1,35 +1,36 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { supabase } from '../../utils/supabase.js'
-import { getManagedUser, listManagedUsers, loadOrganizationDirectory } from '../api/adminApi.js'
+import { getManagedUser, listManagedUsers, loadOrganizationDirectory, loadRoleCatalog } from '../api/adminApi.js'
 
 function useAdminRequest(load, requestKey) {
-  const [state, setState] = useState({ requestKey: null, data: null, directory: { departments: [], teams: [] }, loading: true, error: null })
-  const applyResult = useCallback((resource, directory) => {
+  const [state, setState] = useState({ requestKey: null, data: null, directory: { departments: [], teams: [] }, roleCatalog: [], loading: true, error: null })
+  const applyResult = useCallback((resource, directory, roleCatalog) => {
     setState({
       requestKey,
       data: resource.data,
       directory: directory.data,
+      roleCatalog: roleCatalog.data,
       loading: false,
-      error: resource.error || directory.error,
+      error: resource.error || directory.error || roleCatalog.error,
     })
   }, [requestKey])
   const refresh = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: null }))
-    const [resource, directory] = await Promise.all([load(), loadOrganizationDirectory(supabase)])
-    applyResult(resource, directory)
-    return { data: resource.data, error: resource.error || directory.error }
+    const [resource, directory, roleCatalog] = await Promise.all([load(), loadOrganizationDirectory(supabase), loadRoleCatalog(supabase)])
+    applyResult(resource, directory, roleCatalog)
+    return { data: resource.data, error: resource.error || directory.error || roleCatalog.error }
   }, [applyResult, load])
   useEffect(() => {
     let current = true
-    void Promise.all([load(), loadOrganizationDirectory(supabase)]).then(([resource, directory]) => {
-      if (current) applyResult(resource, directory)
+    void Promise.all([load(), loadOrganizationDirectory(supabase), loadRoleCatalog(supabase)]).then(([resource, directory, roleCatalog]) => {
+      if (current) applyResult(resource, directory, roleCatalog)
     })
     return () => { current = false }
   }, [applyResult, load])
   const currentState = state.requestKey === requestKey
     ? state
-    : { requestKey, data: null, directory: { departments: [], teams: [] }, loading: true, error: null }
+    : { requestKey, data: null, directory: { departments: [], teams: [] }, roleCatalog: [], loading: true, error: null }
   return { ...currentState, refresh }
 }
 
