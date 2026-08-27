@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const migrationUrl = new URL('../../supabase/migrations/20260825000200_audited_user_lifecycle_operations.sql', import.meta.url)
+const organizationMigrationUrl = new URL('../../supabase/migrations/20260827000100_organization_administration.sql', import.meta.url)
 const cliUrl = new URL('./cli.js', import.meta.url)
 
 test('migration exposes only narrow lifecycle, role, and read RPCs', async () => {
@@ -30,4 +31,17 @@ test('CLI uses only publishable configuration and never contains elevated-key sh
   const forbidden = ['SERVICE', 'ROLE'].join('_') + '|DB' + '_URL|DATABASE' + '_URL|access[_-]?' + 'token'
   assert.doesNotMatch(source, new RegExp(forbidden, 'i'))
   assert.match(source, /persistSession:\s*false/)
+})
+
+test('organization migration exposes only narrow audited RPCs without hard deletion or dynamic SQL', async () => {
+  const sql = await readFile(organizationMigrationUrl, 'utf8')
+  for (const name of ['list_managed_departments','list_managed_teams','create_department','update_department','set_department_active','create_team','update_team','set_team_active']) {
+    assert.match(sql, new RegExp(`create function public\\.${name}\\(`))
+  }
+  for (const action of ['department.created','department.updated','department.deactivated','department.reactivated','team.created','team.updated','team.deactivated','team.reactivated']) {
+    assert.match(sql, new RegExp(action.replace('.', '\\.')))
+  }
+  assert.match(sql, /pg_advisory_xact_lock/)
+  assert.doesNotMatch(sql, /execute\s+format|\bdelete\s+from\s+public\.(departments|teams)|\btruncate\b/i)
+  assert.doesNotMatch(sql, /grant\s+(insert|update|delete|all).*authenticated/i)
 })

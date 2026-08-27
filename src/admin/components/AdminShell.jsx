@@ -3,13 +3,16 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Button } from '../../components/ui/Button.jsx'
 import { PulseOrb } from '../../components/ui/PulseOrb.jsx'
 import { useAuth } from '../../auth/AuthProvider.jsx'
-import { canManageUsers } from '../access.js'
+import { canManageDepartments, canManageTeams, canManageUsers, canViewDepartments, canViewTeams, hasAdminUsersAccess } from '../access.js'
 import { useAdminPermissions } from '../AdminAccessContext.js'
 
 export function AdminShell() {
   const { profile, signOut } = useAuth()
   const { permissionKeys } = useAdminPermissions()
   const lifecycleAdmin = canManageUsers(permissionKeys)
+  const usersAccess = hasAdminUsersAccess(permissionKeys)
+  const organizationAccess = canViewDepartments(permissionKeys) || canViewTeams(permissionKeys)
+  const organizationAdmin = canManageDepartments(permissionKeys) || canManageTeams(permissionKeys)
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -17,8 +20,9 @@ export function AdminShell() {
         <div className="admin-context"><span>Administration</span><strong>User governance</strong></div>
         <nav aria-label="Administration">
           <NavLink to="/workspace">Workspace</NavLink>
-          <NavLink to="/admin/users">Users</NavLink>
-          <NavLink to="/admin/pending">Pending approval</NavLink>
+          {usersAccess && <NavLink to="/admin/users">Users</NavLink>}
+          {usersAccess && <NavLink to="/admin/pending">Pending approval</NavLink>}
+          {organizationAccess && <NavLink to="/admin/organization">Organization</NavLink>}
         </nav>
         <div className="admin-identity">
           <span>Signed in as</span>
@@ -28,7 +32,7 @@ export function AdminShell() {
       </aside>
       <div className="admin-main">
         <header className="admin-topbar">
-          <div><span className="admin-topbar__eyebrow">Pulse control plane</span><strong>{lifecycleAdmin ? 'Audited lifecycle administration' : 'Read-only administration'}</strong></div>
+          <div><span className="admin-topbar__eyebrow">Pulse control plane</span><strong>{lifecycleAdmin || organizationAdmin ? 'Audited administration' : 'Read-only administration'}</strong></div>
           <Button type="button" variant="ghost" onClick={signOut}>Sign out</Button>
         </header>
         <Outlet />
