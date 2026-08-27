@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { canManageUsers, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
+import { canAssignRoles, canManageUsers, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
 
 test('Admin is visible only with both required canonical permissions', () => {
   assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
@@ -25,4 +25,10 @@ test('lifecycle controls require read access plus users.manage', () => {
   assert.equal(canManageUsers(['admin.access', 'users.view', 'users.manage']), true)
   assert.equal(canManageUsers(['admin.access', 'users.view']), false)
   assert.equal(canManageUsers(['users.manage']), false)
+})
+
+test('role controls require only the canonical roles.assign permission set', () => {
+  assert.equal(canAssignRoles(['admin.access', 'users.view', 'roles.assign']), true)
+  assert.equal(canAssignRoles(['admin.access', 'users.view']), false)
+  assert.equal(canAssignRoles(['roles.assign', 'super_admin']), false)
 })

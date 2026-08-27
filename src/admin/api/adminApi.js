@@ -1,4 +1,4 @@
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function publicError(code, message) {
   return { code, message }
@@ -58,6 +58,41 @@ export function normalizeLifecycleMutationError(error) {
     return publicError('account_invalid', 'The account is not eligible for this lifecycle action. Review its Auth, profile, and role state.')
   }
   return publicError('unavailable', 'Pulse could not complete the lifecycle action. No client-side change was applied.')
+}
+
+export function normalizeRoleMutationError(error) {
+  if (!error) return null
+  if (messageIncludes(error, 'self role changes')) {
+    return publicError('self_operation', 'You cannot change your own role assignments.')
+  }
+  if (messageIncludes(error, 'last active super admin')) {
+    return publicError('protected_super_admin', 'The last active Super Admin is protected. Another active Super Admin is required first.')
+  }
+  if (messageIncludes(error, 'only a super admin')) {
+    return publicError('privileged_role', 'Only an active Super Admin may change a Super Admin role assignment.')
+  }
+  if (messageIncludes(error, 'cannot grant') || messageIncludes(error, 'cannot remove')) {
+    return publicError('grant_not_allowed', 'Your current access cannot change that role and scope.')
+  }
+  if (['42501', '28000'].includes(error.code)) {
+    return publicError('access_denied', 'You do not have permission to manage role assignments.')
+  }
+  if (error.code === 'P0002') {
+    return publicError('not_found', 'This Pulse user could not be found.')
+  }
+  if (error.code === '22023' || error.code === '22P02') {
+    return publicError('invalid_request', 'The requested role assignment is not valid.')
+  }
+  if (error.code === '23503') {
+    return publicError('catalog_invalid', 'The requested role or organization catalog entry is inactive or unavailable.')
+  }
+  if (error.code === '23514') {
+    return publicError('organization_invalid', 'That role scope must match the target user’s current organization.')
+  }
+  if (error.code === '55000') {
+    return publicError('protected_assignment', 'This role assignment is protected or no longer eligible. Refresh and try again.')
+  }
+  return publicError('unavailable', 'Pulse could not complete the role change. No client-side change was applied.')
 }
 
 function normalizeRole(role = {}) {
@@ -178,6 +213,61 @@ export function inactivateManagedUser(client, targetUserId, reason = null) {
   return mutateManagedUser(client, 'inactivate_user', targetUserId, reason, 'inactive')
 }
 
+function normalizeRoleMutationResult(row, expectedUserRoleId, resultKey) {
+  if (!row || row.user_role_id !== expectedUserRoleId) return null
+  return { userRoleId: row.user_role_id, [resultKey]: Boolean(row[resultKey]) }
+}
+
+async function mutateRoleAssignment(client, rpcName, args, expectedUserRoleId, resultKey) {
+  const { data, error } = await client.rpc(rpcName, args)
+  if (error) return { data: null, error: normalizeRoleMutationError(error) }
+  const row = Array.isArray(data) ? data[0] : data
+  const normalized = normalizeRoleMutationResult(row, expectedUserRoleId, resultKey)
+  if (!normalized) return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected role assignment. Refresh before trying again.') }
+  return { data: normalized, error: null }
+}
+
+export async function assignManagedUserRole(client, {
+  targetUserId,
+  requestedRoleId,
+  requestedScopeType,
+  requestedDepartmentId = null,
+  requestedTeamId = null,
+} = {}) {
+  if (!UUID_PATTERN.test(targetUserId ?? '') || !UUID_PATTERN.test(requestedRoleId ?? '')) {
+    return { data: null, error: publicError('invalid_request', 'The requested user or role is not valid.') }
+  }
+  if (!['global', 'department', 'team'].includes(requestedScopeType)) {
+    return { data: null, error: publicError('invalid_request', 'The requested role scope is not valid.') }
+  }
+  if ((requestedDepartmentId && !UUID_PATTERN.test(requestedDepartmentId)) || (requestedTeamId && !UUID_PATTERN.test(requestedTeamId))) {
+    return { data: null, error: publicError('invalid_request', 'The requested organization scope is not valid.') }
+  }
+  const { data, error } = await client.rpc('assign_user_role', {
+    target_user_id: targetUserId,
+    requested_role_id: requestedRoleId,
+    requested_scope_type: requestedScopeType,
+    requested_department_id: requestedDepartmentId,
+    requested_team_id: requestedTeamId,
+  })
+  if (error) return { data: null, error: normalizeRoleMutationError(error) }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row || !UUID_PATTERN.test(row.user_role_id ?? '')) {
+    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected role assignment. Refresh before trying again.') }
+  }
+  return { data: { userRoleId: row.user_role_id, created: Boolean(row.created) }, error: null }
+}
+
+export function removeManagedUserRole(client, targetUserId, targetUserRoleId) {
+  if (!UUID_PATTERN.test(targetUserId ?? '') || !UUID_PATTERN.test(targetUserRoleId ?? '')) {
+    return Promise.resolve({ data: null, error: publicError('invalid_request', 'The requested user or role assignment is not valid.') })
+  }
+  return mutateRoleAssignment(client, 'remove_user_role', {
+    target_user_id: targetUserId,
+    target_user_role_id: targetUserRoleId,
+  }, targetUserRoleId, 'removed')
+}
+
 export async function loadOrganizationDirectory(client) {
   const [departments, teams] = await Promise.all([
     client.from('departments').select('id,name,code,is_active').order('name'),
@@ -186,4 +276,33 @@ export async function loadOrganizationDirectory(client) {
   const error = departments.error || teams.error
   if (error) return { data: { departments: [], teams: [] }, error: normalizeAdminError(error) }
   return { data: { departments: departments.data ?? [], teams: teams.data ?? [] }, error: null }
+}
+
+function normalizeAssignableRoleOption(row = {}) {
+  const scopeType = row.scope_type ?? ''
+  const departmentId = row.department_id ?? null
+  const teamId = row.team_id ?? null
+  if (!UUID_PATTERN.test(row.role_id ?? '') || !['global', 'department', 'team'].includes(scopeType)) return null
+  if (scopeType === 'global' && (departmentId || teamId)) return null
+  if (scopeType === 'department' && (!UUID_PATTERN.test(departmentId ?? '') || teamId)) return null
+  if (scopeType === 'team' && (!UUID_PATTERN.test(departmentId ?? '') || !UUID_PATTERN.test(teamId ?? ''))) return null
+  return {
+    roleId: row.role_id,
+    roleKey: row.role_key ?? '',
+    roleName: row.role_name ?? 'Unknown role',
+    scopeType,
+    departmentId,
+    departmentName: row.department_name ?? null,
+    teamId,
+    teamName: row.team_name ?? null,
+  }
+}
+
+export async function loadAssignableRoleOptions(client, targetUserId) {
+  if (!UUID_PATTERN.test(targetUserId ?? '')) {
+    return { data: [], error: publicError('invalid_request', 'The requested user is not valid.') }
+  }
+  const { data, error } = await client.rpc('list_assignable_role_options', { target_user_id: targetUserId })
+  if (error) return { data: [], error: normalizeAdminError(error) }
+  return { data: (data ?? []).map(normalizeAssignableRoleOption).filter(Boolean), error: null }
 }
