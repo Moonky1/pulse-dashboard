@@ -172,13 +172,27 @@ test('role errors are sanitized for grant, scope, organization, self, and last-r
 })
 
 test('role catalog uses active RLS-readable roles and supported scopes only', async () => {
-  let select = ''
-  const query = {
-    select(value) { select = value; return this },
-    eq() { return this },
-    order() { return Promise.resolve({ data: [{ id: ROLE_ID, key: 'admin', name: 'Admin', role_scopes: [{ scope_type: 'global' }, { scope_type: 'planet' }] }], error: null }) },
-  }
-  const result = await loadRoleCatalog({ from: () => query })
-  assert.match(select, /role_scopes\(scope_type\)/)
+  const calls = []
+  const result = await loadRoleCatalog({
+    from(table) {
+      calls.push(table)
+      const query = {
+        select() { return this },
+        eq() { return this },
+        order() {
+          return Promise.resolve(table === 'roles'
+            ? { data: [{ id: ROLE_ID, key: 'admin', name: 'Admin' }], error: null }
+            : { data: [{ role_id: ROLE_ID, scope_type: 'global' }, { role_id: ROLE_ID, scope_type: 'planet' }], error: null })
+        },
+        then(resolve) {
+          return Promise.resolve(resolve(table === 'roles'
+            ? { data: [{ id: ROLE_ID, key: 'admin', name: 'Admin' }], error: null }
+            : { data: [{ role_id: ROLE_ID, scope_type: 'global' }, { role_id: ROLE_ID, scope_type: 'planet' }], error: null }))
+        },
+      }
+      return query
+    },
+  })
+  assert.deepEqual(calls, ['roles', 'role_scopes'])
   assert.deepEqual(result.data, [{ id: ROLE_ID, key: 'admin', name: 'Admin', description: '', scopes: ['global'] }])
 })

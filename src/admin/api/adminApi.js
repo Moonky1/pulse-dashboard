@@ -278,8 +278,8 @@ export async function loadOrganizationDirectory(client) {
   return { data: { departments: departments.data ?? [], teams: teams.data ?? [] }, error: null }
 }
 
-function normalizeCatalogRole(role = {}) {
-  const scopes = Array.isArray(role.role_scopes) ? role.role_scopes : []
+function normalizeCatalogRole(role = {}, roleScopes = []) {
+  const scopes = roleScopes.filter((scope) => scope?.role_id === role.id)
   return {
     id: role.id ?? null,
     key: role.key ?? '',
@@ -290,11 +290,16 @@ function normalizeCatalogRole(role = {}) {
 }
 
 export async function loadRoleCatalog(client) {
-  const { data, error } = await client
-    .from('roles')
-    .select('id,key,name,description,is_active,role_scopes(scope_type)')
-    .eq('is_active', true)
-    .order('name')
+  const [roles, roleScopes] = await Promise.all([
+    client.from('roles').select('id,key,name,description,is_active').eq('is_active', true).order('name'),
+    client.from('role_scopes').select('role_id,scope_type'),
+  ])
+  const error = roles.error || roleScopes.error
   if (error) return { data: [], error: normalizeAdminError(error) }
-  return { data: (data ?? []).map(normalizeCatalogRole).filter((role) => UUID_PATTERN.test(role.id) && role.scopes.length), error: null }
+  return {
+    data: (roles.data ?? [])
+      .map((role) => normalizeCatalogRole(role, roleScopes.data ?? []))
+      .filter((role) => UUID_PATTERN.test(role.id) && role.scopes.length),
+    error: null,
+  }
 }
