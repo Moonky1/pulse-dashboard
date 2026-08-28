@@ -141,6 +141,38 @@ export function normalizeRoleMutationError(error) {
   return publicError('unavailable', 'Pulse could not complete the role change. No client-side change was applied.')
 }
 
+export function normalizeOrganizationMutationError(error) {
+  if (!error) return null
+  if (['42501', '28000'].includes(error.code)) {
+    return publicError('access_denied', 'You do not have permission to manage this organization catalog.')
+  }
+  if (error.code === 'P0002') {
+    return publicError('not_found', 'This organization record could not be found. Refresh before trying again.')
+  }
+  if (error.code === '23505') {
+    return publicError('duplicate', 'That code or name already exists in the selected organization scope.')
+  }
+  if (error.code === '23503') {
+    return publicError('parent_invalid', 'The selected parent department is unavailable.')
+  }
+  if (['22023', '22P02'].includes(error.code)) {
+    return publicError('invalid_request', 'Review the code, name, and description before trying again.')
+  }
+  if (error.code === '55000' && messageIncludes(error, 'changed since')) {
+    return publicError('stale_record', 'This record changed after it was loaded. Refresh before trying again.')
+  }
+  if (error.code === '55000' && messageIncludes(error, 'active parent')) {
+    return publicError('inactive_parent', 'A team can be created or reactivated only under an active department.')
+  }
+  if (error.code === '55000' && messageIncludes(error, 'depend')) {
+    return publicError('dependencies', 'Active or pending identities or scoped access still depend on this record. Resolve those dependencies first.')
+  }
+  if (error.code === '55000' && messageIncludes(error, 'active teams')) {
+    return publicError('dependencies', 'Deactivate every active team in this department before deactivating the department.')
+  }
+  return publicError('unavailable', 'Pulse could not complete the organization change. No client-side change was applied.')
+}
+
 function normalizeRole(role = {}) {
   return {
     userRoleId: role.user_role_id ?? null,
@@ -419,12 +451,160 @@ export function removeManagedUserRole(client, targetUserId, targetUserRoleId) {
 
 export async function loadOrganizationDirectory(client) {
   const [departments, teams] = await Promise.all([
-    client.from('departments').select('id,name,code,is_active').order('name'),
-    client.from('teams').select('id,name,code,department_id,is_active').order('name'),
+    listManagedDepartments(client),
+    listManagedTeams(client),
   ])
   const error = departments.error || teams.error
-  if (error) return { data: { departments: [], teams: [] }, error: normalizeAdminError(error) }
-  return { data: { departments: departments.data ?? [], teams: teams.data ?? [] }, error: null }
+  if (error) return { data: { departments: [], teams: [] }, error }
+  return { data: { departments: departments.data, teams: teams.data }, error: null }
+}
+
+function count(value) {
+  const parsed = Number(value ?? 0)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
+}
+
+function normalizeDepartment(row = {}) {
+  if (!UUID_PATTERN.test(row.id ?? '')) return null
+  return {
+    id: row.id,
+    code: row.code ?? '',
+    name: row.name ?? 'Unknown department',
+    description: row.description ?? '',
+    isActive: Boolean(row.is_active),
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+    teamCount: count(row.team_count),
+    activeTeamCount: count(row.active_team_count),
+    userCount: count(row.user_count),
+    activeUserCount: count(row.active_user_count),
+    pendingUserCount: count(row.pending_user_count),
+    activeRoleAssignmentCount: count(row.active_role_assignment_count),
+  }
+}
+
+function normalizeTeam(row = {}) {
+  if (!UUID_PATTERN.test(row.id ?? '') || !UUID_PATTERN.test(row.department_id ?? '')) return null
+  return {
+    id: row.id,
+    departmentId: row.department_id,
+    departmentCode: row.department_code ?? '',
+    departmentName: row.department_name ?? 'Unknown department',
+    departmentIsActive: Boolean(row.department_is_active),
+    code: row.code ?? '',
+    name: row.name ?? 'Unknown team',
+    description: row.description ?? '',
+    isActive: Boolean(row.is_active),
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+    userCount: count(row.user_count),
+    activeUserCount: count(row.active_user_count),
+    pendingUserCount: count(row.pending_user_count),
+    activeRoleAssignmentCount: count(row.active_role_assignment_count),
+  }
+}
+
+export async function listManagedDepartments(client) {
+  const { data, error } = await client.rpc('list_managed_departments')
+  if (error) return { data: [], error: normalizeAdminError(error) }
+  return { data: (data ?? []).map(normalizeDepartment).filter(Boolean), error: null }
+}
+
+export async function listManagedTeams(client) {
+  const { data, error } = await client.rpc('list_managed_teams')
+  if (error) return { data: [], error: normalizeAdminError(error) }
+  return { data: (data ?? []).map(normalizeTeam).filter(Boolean), error: null }
+}
+
+function validOrganizationInput({ code, name, description = '' } = {}) {
+  return /^[a-z][a-z0-9_]{1,31}$/.test(code ?? '')
+    && String(name ?? '').trim().length >= 2
+    && String(name ?? '').trim().length <= 120
+    && String(description ?? '').trim().length <= 500
+}
+
+function normalizeOrganizationMutationRow(row, entityType, resultKey) {
+  const normalized = entityType === 'team' ? normalizeTeam(row) : normalizeDepartment(row)
+  if (!normalized) return null
+  return { ...normalized, [resultKey]: Boolean(row[resultKey]) }
+}
+
+async function runOrganizationRpc(client, rpcName, args, entityType, resultKey) {
+  const { data, error } = await client.rpc(rpcName, args)
+  if (error) return { data: null, error: normalizeOrganizationMutationError(error) }
+  const row = Array.isArray(data) ? data[0] : data
+  const normalized = normalizeOrganizationMutationRow(row, entityType, resultKey)
+  if (!normalized) return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected organization record. Refresh before trying again.') }
+  return { data: normalized, error: null }
+}
+
+export function createManagedDepartment(client, values = {}) {
+  if (!validOrganizationInput(values)) return Promise.resolve({ data: null, error: publicError('invalid_request', 'Review the department code, name, and description.') })
+  return runOrganizationRpc(client, 'create_department', {
+    requested_code: values.code,
+    requested_name: values.name,
+    requested_description: values.description || null,
+  }, 'department', 'created')
+}
+
+export function updateManagedDepartment(client, department, values = {}) {
+  if (!UUID_PATTERN.test(department?.id ?? '') || !department?.updatedAt || !validOrganizationInput(values)) {
+    return Promise.resolve({ data: null, error: publicError('invalid_request', 'Review the department record before trying again.') })
+  }
+  return runOrganizationRpc(client, 'update_department', {
+    target_department_id: department.id,
+    expected_updated_at: department.updatedAt,
+    requested_code: values.code,
+    requested_name: values.name,
+    requested_description: values.description || null,
+  }, 'department', 'changed')
+}
+
+export function setManagedDepartmentActive(client, department, active) {
+  if (!UUID_PATTERN.test(department?.id ?? '') || !department?.updatedAt || typeof active !== 'boolean') {
+    return Promise.resolve({ data: null, error: publicError('invalid_request', 'The requested department state is invalid.') })
+  }
+  return runOrganizationRpc(client, 'set_department_active', {
+    target_department_id: department.id,
+    requested_active: active,
+    expected_updated_at: department.updatedAt,
+  }, 'department', 'changed')
+}
+
+export function createManagedTeam(client, departmentId, values = {}) {
+  if (!UUID_PATTERN.test(departmentId ?? '') || !validOrganizationInput(values)) {
+    return Promise.resolve({ data: null, error: publicError('invalid_request', 'Select an active department and review the team details.') })
+  }
+  return runOrganizationRpc(client, 'create_team', {
+    target_department_id: departmentId,
+    requested_code: values.code,
+    requested_name: values.name,
+    requested_description: values.description || null,
+  }, 'team', 'created')
+}
+
+export function updateManagedTeam(client, team, values = {}) {
+  if (!UUID_PATTERN.test(team?.id ?? '') || !team?.updatedAt || !validOrganizationInput(values)) {
+    return Promise.resolve({ data: null, error: publicError('invalid_request', 'Review the team record before trying again.') })
+  }
+  return runOrganizationRpc(client, 'update_team', {
+    target_team_id: team.id,
+    expected_updated_at: team.updatedAt,
+    requested_code: values.code,
+    requested_name: values.name,
+    requested_description: values.description || null,
+  }, 'team', 'changed')
+}
+
+export function setManagedTeamActive(client, team, active) {
+  if (!UUID_PATTERN.test(team?.id ?? '') || !team?.updatedAt || typeof active !== 'boolean') {
+    return Promise.resolve({ data: null, error: publicError('invalid_request', 'The requested team state is invalid.') })
+  }
+  return runOrganizationRpc(client, 'set_team_active', {
+    target_team_id: team.id,
+    requested_active: active,
+    expected_updated_at: team.updatedAt,
+  }, 'team', 'changed')
 }
 
 function normalizeAssignableRoleOption(row = {}) {

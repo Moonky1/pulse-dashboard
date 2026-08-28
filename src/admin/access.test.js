@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageUsers, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
+import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageDepartments, canManageTeams, canManageUsers, canViewDepartments, canViewTeams, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
 
 test('Admin is visible only with both required canonical permissions', () => {
   assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
@@ -39,4 +39,21 @@ test('pending review controls match the deployed RPC permission contracts', () =
   assert.equal(canApprovePendingUsers(['admin.access', 'users.view', 'users.approve', 'roles.assign']), true)
   assert.equal(canApprovePendingUsers(['admin.access', 'users.view', 'users.approve']), false)
   assert.equal(canApprovePendingUsers(['users.approve', 'roles.assign', 'super_admin']), false)
+})
+
+test('organization surfaces require admin access plus exact canonical view permission', () => {
+  assert.equal(canViewDepartments(['admin.access', 'departments.view']), true)
+  assert.equal(canViewDepartments(['departments.view']), false)
+  assert.equal(canViewTeams(['admin.access', 'teams.view']), true)
+  assert.equal(canViewTeams(['admin.access', 'departments.view']), false)
+  assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'departments.view'] }), 'allowed')
+  assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'teams.view'] }), 'allowed')
+})
+
+test('organization mutation controls require manage and supporting read permissions', () => {
+  assert.equal(canManageDepartments(['admin.access', 'departments.view', 'departments.manage']), true)
+  assert.equal(canManageDepartments(['admin.access', 'departments.manage']), false)
+  assert.equal(canManageTeams(['admin.access', 'teams.view', 'teams.manage', 'departments.view']), true)
+  assert.equal(canManageTeams(['admin.access', 'teams.view', 'teams.manage']), false)
+  assert.equal(canManageTeams(['super_admin', 'teams.manage', 'departments.view']), false)
 })

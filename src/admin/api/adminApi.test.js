@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, extractGlobalPermissionKeys, getManagedUser, inactivateManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeLifecycleMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole } from './adminApi.js'
+import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, inactivateManagedUser, listManagedDepartments, listManagedTeams, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -315,4 +315,123 @@ test('assignable role catalog drops malformed or arbitrary scope combinations', 
   ]
   const result = await loadAssignableRoleOptions({ rpc: async () => ({ data, error: null }) }, USER_ID)
   assert.equal(result.data.length, 1)
+})
+
+const DEPARTMENT_ID = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+const TEAM_ID = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+const UPDATED_AT = '2026-08-27T12:00:00Z'
+const departmentRow = {
+  id: DEPARTMENT_ID,
+  code: 'operations',
+  name: 'Operations',
+  description: 'Core operations',
+  is_active: true,
+  updated_at: UPDATED_AT,
+  team_count: 2,
+  active_team_count: 1,
+  user_count: 3,
+  active_user_count: 2,
+  pending_user_count: 1,
+  active_role_assignment_count: 2,
+}
+const teamRow = {
+  id: TEAM_ID,
+  department_id: DEPARTMENT_ID,
+  department_code: 'operations',
+  department_name: 'Operations',
+  department_is_active: true,
+  code: 'north',
+  name: 'North',
+  description: 'North team',
+  is_active: true,
+  updated_at: UPDATED_AT,
+  user_count: 2,
+  active_user_count: 1,
+  pending_user_count: 0,
+  active_role_assignment_count: 1,
+}
+
+test('organization catalogs use only protected RPCs and preserve parent/count data', async () => {
+  const calls = []
+  const client = { rpc: async (name) => {
+    calls.push(name)
+    return { data: name === 'list_managed_departments' ? [departmentRow] : [teamRow], error: null }
+  } }
+  const departments = await listManagedDepartments(client)
+  const teams = await listManagedTeams(client)
+  const directory = await loadOrganizationDirectory(client)
+  assert.equal(departments.data[0].activeUserCount, 2)
+  assert.equal(teams.data[0].departmentId, DEPARTMENT_ID)
+  assert.equal(directory.data.departments[0].id, DEPARTMENT_ID)
+  assert.deepEqual(calls, ['list_managed_departments', 'list_managed_teams', 'list_managed_departments', 'list_managed_teams'])
+})
+
+test('department create and update call exact audited RPC contracts', async () => {
+  const calls = []
+  const client = { rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ ...departmentRow, [name === 'create_department' ? 'created' : 'changed']: true }], error: null }
+  } }
+  assert.equal((await createManagedDepartment(client, { code: 'operations', name: 'Operations', description: 'Core operations' })).data.created, true)
+  assert.equal((await updateManagedDepartment(client, { id: DEPARTMENT_ID, updatedAt: UPDATED_AT }, { code: 'operations', name: 'Operations', description: 'Updated' })).data.changed, true)
+  assert.deepEqual(calls, [
+    { name: 'create_department', args: { requested_code: 'operations', requested_name: 'Operations', requested_description: 'Core operations' } },
+    { name: 'update_department', args: { target_department_id: DEPARTMENT_ID, expected_updated_at: UPDATED_AT, requested_code: 'operations', requested_name: 'Operations', requested_description: 'Updated' } },
+  ])
+})
+
+test('team create and update require exact IDs and never accept reparenting on update', async () => {
+  const calls = []
+  const client = { rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ ...teamRow, [name === 'create_team' ? 'created' : 'changed']: true }], error: null }
+  } }
+  assert.equal((await createManagedTeam(client, DEPARTMENT_ID, { code: 'north', name: 'North' })).data.created, true)
+  assert.equal((await updateManagedTeam(client, { id: TEAM_ID, updatedAt: UPDATED_AT, departmentId: DEPARTMENT_ID }, { code: 'north', name: 'North Team' })).data.changed, true)
+  assert.equal(Object.hasOwn(calls[1].args, 'target_department_id'), false)
+  assert.deepEqual(calls[0], { name: 'create_team', args: { target_department_id: DEPARTMENT_ID, requested_code: 'north', requested_name: 'North', requested_description: null } })
+})
+
+test('department and team lifecycle actions pass server timestamps and requested state', async () => {
+  const calls = []
+  const client = { rpc: async (name, args) => {
+    calls.push({ name, args })
+    const row = name === 'set_department_active'
+      ? { ...departmentRow, is_active: false, changed: true }
+      : { ...teamRow, is_active: false, changed: true }
+    return { data: [row], error: null }
+  } }
+  assert.equal((await setManagedDepartmentActive(client, { id: DEPARTMENT_ID, updatedAt: UPDATED_AT }, false)).data.isActive, false)
+  assert.equal((await setManagedTeamActive(client, { id: TEAM_ID, updatedAt: UPDATED_AT }, false)).data.isActive, false)
+  assert.deepEqual(calls, [
+    { name: 'set_department_active', args: { target_department_id: DEPARTMENT_ID, requested_active: false, expected_updated_at: UPDATED_AT } },
+    { name: 'set_team_active', args: { target_team_id: TEAM_ID, requested_active: false, expected_updated_at: UPDATED_AT } },
+  ])
+})
+
+test('organization API rejects malformed browser input before any RPC', async () => {
+  let calls = 0
+  const client = { rpc: async () => { calls += 1; return { data: [], error: null } } }
+  assert.equal((await createManagedDepartment(client, { code: 'Bad code', name: 'Valid' })).error.code, 'invalid_request')
+  assert.equal((await createManagedTeam(client, 'bad-id', { code: 'team', name: 'Team' })).error.code, 'invalid_request')
+  assert.equal((await updateManagedDepartment(client, { id: DEPARTMENT_ID }, { code: 'valid', name: 'Valid' })).error.code, 'invalid_request')
+  assert.equal((await setManagedTeamActive(client, { id: TEAM_ID }, true)).error.code, 'invalid_request')
+  assert.equal(calls, 0)
+})
+
+test('organization errors are sanitized for permissions, duplicates, dependencies, parents, and stale writes', () => {
+  const cases = [
+    [{ code: '42501', message: 'global teams.manage permission required' }, 'access_denied'],
+    [{ code: '23505', message: 'index teams_department_name_unique' }, 'duplicate'],
+    [{ code: '23503', message: 'department not found' }, 'parent_invalid'],
+    [{ code: '55000', message: 'department changed since it was loaded' }, 'stale_record'],
+    [{ code: '55000', message: 'team requires an active parent department' }, 'inactive_parent'],
+    [{ code: '55000', message: 'active scoped role assignments still depend on this team' }, 'dependencies'],
+    [{ code: 'XX000', message: 'sensitive SQL stack' }, 'unavailable'],
+  ]
+  cases.forEach(([error, code]) => {
+    const normalized = normalizeOrganizationMutationError(error)
+    assert.equal(normalized.code, code)
+    assert.doesNotMatch(normalized.message, /SQL|stack|index/i)
+  })
 })
