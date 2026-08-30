@@ -5,27 +5,34 @@ import { AdminAccessGate } from './components/AdminAccessGate.jsx'
 import { AdminShell } from './components/AdminShell.jsx'
 import { AdminStatePanel } from './components/AdminStatePanel.jsx'
 import { useAdminPermissions } from './AdminAccessContext.js'
-import { canViewDepartments, canViewTeams, hasAdminUsersAccess } from './access.js'
+import { canViewAudit, canViewDepartments, canViewTeams, hasAdminUsersAccess } from './access.js'
 import './styles/admin.css'
 
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage.jsx').then((module) => ({ default: module.AdminUsersPage })))
 const AdminUserDetailPage = lazy(() => import('./pages/AdminUserDetailPage.jsx').then((module) => ({ default: module.AdminUserDetailPage })))
 const AdminPendingUsersPage = lazy(() => import('./pages/AdminPendingUsersPage.jsx').then((module) => ({ default: module.AdminPendingUsersPage })))
 const AdminOrganizationPage = lazy(() => import('./pages/AdminOrganizationPage.jsx').then((module) => ({ default: module.AdminOrganizationPage })))
+const AdminAuditPage = lazy(() => import('./pages/AdminAuditPage.jsx').then((module) => ({ default: module.AdminAuditPage })))
 
 function AdminLanding() {
   const { permissionKeys } = useAdminPermissions()
-  return <Navigate to={hasAdminUsersAccess(permissionKeys) ? 'users' : 'organization'} replace />
+  const destination = hasAdminUsersAccess(permissionKeys) ? 'users' : canViewAudit(permissionKeys) ? 'audit' : 'organization'
+  return <Navigate to={destination} replace />
 }
 
 function UsersRoute({ children }) {
   const { permissionKeys } = useAdminPermissions()
-  return hasAdminUsersAccess(permissionKeys) ? children : <Navigate to="/admin/organization" replace />
+  return hasAdminUsersAccess(permissionKeys) ? children : <AdminLanding />
 }
 
 function OrganizationRoute({ children }) {
   const { permissionKeys } = useAdminPermissions()
-  return canViewDepartments(permissionKeys) || canViewTeams(permissionKeys) ? children : <Navigate to="/admin/users" replace />
+  return canViewDepartments(permissionKeys) || canViewTeams(permissionKeys) ? children : <AdminLanding />
+}
+
+function AuditRoute({ children }) {
+  const { permissionKeys } = useAdminPermissions()
+  return canViewAudit(permissionKeys) ? children : <AdminLanding />
 }
 
 export function AdminArea() {
@@ -40,6 +47,7 @@ export function AdminArea() {
             <Route path="pending/:userId" element={<UsersRoute><AdminUserDetailPage pendingOnly /></UsersRoute>} />
             <Route path="users/:userId" element={<UsersRoute><AdminUserDetailPage /></UsersRoute>} />
             <Route path="organization" element={<OrganizationRoute><AdminOrganizationPage /></OrganizationRoute>} />
+            <Route path="audit" element={<AuditRoute><AdminAuditPage /></AuditRoute>} />
             <Route path="*" element={<AdminLanding />} />
           </Route>
         </Routes>

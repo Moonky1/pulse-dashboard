@@ -7,6 +7,8 @@ export const ADMIN_DEPARTMENTS_VIEW_PERMISSIONS = Object.freeze(['admin.access',
 export const ADMIN_DEPARTMENTS_MANAGE_PERMISSIONS = Object.freeze([...ADMIN_DEPARTMENTS_VIEW_PERMISSIONS, 'departments.manage'])
 export const ADMIN_TEAMS_VIEW_PERMISSIONS = Object.freeze(['admin.access', 'teams.view'])
 export const ADMIN_TEAMS_MANAGE_PERMISSIONS = Object.freeze([...ADMIN_TEAMS_VIEW_PERMISSIONS, 'teams.manage', 'departments.view'])
+export const ADMIN_AUDIT_PERMISSIONS = Object.freeze(['admin.access', 'audit.view'])
+export const ADMIN_USER_HISTORY_PERMISSIONS = Object.freeze(['admin.access', 'users.view', 'audit.view'])
 
 function hasEvery(permissionKeys, required) {
   const keys = new Set(permissionKeys)
@@ -53,8 +55,17 @@ export function canManageTeams(permissionKeys = []) {
   return hasEvery(permissionKeys, ADMIN_TEAMS_MANAGE_PERMISSIONS)
 }
 
+export function canViewAudit(permissionKeys = []) {
+  return hasEvery(permissionKeys, ADMIN_AUDIT_PERMISSIONS)
+}
+
+export function canViewUserHistory(permissionKeys = []) {
+  return hasEvery(permissionKeys, ADMIN_USER_HISTORY_PERMISSIONS)
+}
+
 export function hasAnyAdminSurfaceAccess(permissionKeys = []) {
   return hasAdminUsersAccess(permissionKeys)
+    || canViewAudit(permissionKeys)
     || canViewDepartments(permissionKeys)
     || canViewTeams(permissionKeys)
 }

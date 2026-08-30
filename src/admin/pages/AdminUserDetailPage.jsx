@@ -2,7 +2,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 
 import { Badge } from '../../components/ui/Badge.jsx'
 import { Card } from '../../components/ui/Card.jsx'
-import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageUsers } from '../access.js'
+import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageUsers, canViewUserHistory } from '../access.js'
 import { useAdminPermissions } from '../AdminAccessContext.js'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
 import { LifecycleActions } from '../components/LifecycleActions.jsx'
@@ -10,6 +10,7 @@ import { LifecycleBadge } from '../components/LifecycleBadge.jsx'
 import { PendingApprovalActions } from '../components/PendingApprovalActions.jsx'
 import { RoleAdministration } from '../components/RoleAdministration.jsx'
 import { RoleScopeList } from '../components/RoleScopeList.jsx'
+import { UserAuditHistory } from '../components/UserAuditHistory.jsx'
 import { directoryMaps, lifecycleMeta } from '../adminViewModel.js'
 import { useManagedUser, usePendingApprovalOptions } from '../hooks/useManagedUsers.js'
 
@@ -42,8 +43,9 @@ export function AdminUserDetailPage({ pendingOnly = false }) {
         <Card level={2} className="admin-detail-card"><p className="admin-section-label">Identity</p><h2>Company profile</h2><dl><Detail label="Full name">{user.fullName}</Detail><Detail label="Display name">{user.displayName}</Detail><Detail label="Employee ID">{user.employeeId}</Detail><Detail label="Corporate email">{user.email}</Detail></dl></Card>
         <Card level={2} className="admin-detail-card"><p className="admin-section-label">Organization</p><h2>Placement</h2><dl><Detail label="Department">{maps.departments.get(user.departmentId)}</Detail><Detail label="Team">{maps.teams.get(user.teamId)}</Detail></dl></Card>
         <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Access</p><h2>Roles and scope</h2><RoleScopeList roles={user.roles} directory={directory} /></Card>
-        <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Account</p><h2>Authentication and lifecycle</h2><div className="admin-account-row"><LifecycleBadge status={user.status} /><Badge tone={user.authEmailConfirmed ? 'success' : 'warning'} dot>{user.authEmailConfirmed ? 'Auth email verified' : 'Auth email unverified'}</Badge></div><p>{lifecycle.description}</p><p className="admin-footnote">Creation, approval, status-change timestamps, and audit history are not exposed by the current protected read contract.</p></Card>
+        <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Account</p><h2>Authentication and lifecycle</h2><div className="admin-account-row"><LifecycleBadge status={user.status} /><Badge tone={user.authEmailConfirmed ? 'success' : 'warning'} dot>{user.authEmailConfirmed ? 'Auth email verified' : 'Auth email unverified'}</Badge></div><p>{lifecycle.description}</p><p className="admin-footnote">Sensitive timestamps and evidence remain available only through protected history contracts.</p></Card>
       </div>
+      {canViewUserHistory(permissionKeys) && <UserAuditHistory userId={user.id} />}
       {user.status === 'pending_approval'
         ? <PendingApprovalActions user={user} canBlock={canBlockPendingUsers(permissionKeys)} canApprove={canApprovePendingUsers(permissionKeys)} approvalOptions={pendingApprovalOptions.options} approvalOptionsLoading={pendingApprovalOptions.loading} approvalOptionsError={pendingApprovalOptions.error} onReloadApprovalOptions={pendingApprovalOptions.refresh} onChanged={refresh} />
         : <>

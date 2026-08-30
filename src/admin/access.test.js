@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageDepartments, canManageTeams, canManageUsers, canViewDepartments, canViewTeams, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
+import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewDepartments, canViewTeams, canViewUserHistory, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
 
 test('Admin is visible only with both required canonical permissions', () => {
   assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
@@ -56,4 +56,12 @@ test('organization mutation controls require manage and supporting read permissi
   assert.equal(canManageTeams(['admin.access', 'teams.view', 'teams.manage', 'departments.view']), true)
   assert.equal(canManageTeams(['admin.access', 'teams.view', 'teams.manage']), false)
   assert.equal(canManageTeams(['super_admin', 'teams.manage', 'departments.view']), false)
+})
+
+test('audit and user history require exact canonical permission combinations', () => {
+  assert.equal(canViewAudit(['admin.access', 'audit.view']), true)
+  assert.equal(canViewAudit(['audit.view']), false)
+  assert.equal(canViewUserHistory(['admin.access', 'users.view', 'audit.view']), true)
+  assert.equal(canViewUserHistory(['admin.access', 'audit.view']), false)
+  assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'audit.view'] }), 'allowed')
 })
