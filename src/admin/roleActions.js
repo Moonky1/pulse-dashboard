@@ -1,7 +1,7 @@
-export const ROLE_SCOPE_TYPES = Object.freeze(['global', 'department', 'team'])
+export const ROLE_SCOPE_TYPES = Object.freeze(['global', 'department', 'campaign', 'team'])
 
 export function roleOptionKey(option) {
-  return [option?.roleId, option?.scopeType, option?.departmentId ?? 'global', option?.teamId ?? 'none'].join(':')
+  return [option?.roleId, option?.scopeType, option?.departmentId ?? 'none', option?.campaignId ?? 'none', option?.teamId ?? 'none'].join(':')
 }
 
 export function assignableRoles(options = []) {
@@ -18,20 +18,29 @@ export function roleOptionsForRole(options = [], roleId) {
 }
 
 export function organizationForRoleOption(option) {
-  if (option?.scopeType === 'global') return { label: 'Global · All Pulse', departmentId: null, teamId: null, valid: true }
+  if (option?.scopeType === 'global') return { label: 'Global · All Pulse', departmentId: null, campaignId: null, teamId: null, valid: true }
   if (option?.scopeType === 'department' && option.departmentId) return {
     label: `Department · ${option.departmentName ?? 'Unknown department'}`,
     departmentId: option.departmentId,
+    campaignId: null,
     teamId: null,
     valid: true,
   }
-  if (option?.scopeType === 'team' && option.departmentId && option.teamId) return {
+  if (option?.scopeType === 'campaign' && option.campaignId) return {
+    label: `Campaign · ${option.campaignName ?? option.campaignCode ?? 'Unknown campaign'}`,
+    departmentId: null,
+    campaignId: option.campaignId,
+    teamId: null,
+    valid: true,
+  }
+  if (option?.scopeType === 'team' && option.teamId) return {
     label: `Team · ${option.teamName ?? 'Unknown team'}`,
-    departmentId: option.departmentId,
+    departmentId: null,
+    campaignId: null,
     teamId: option.teamId,
     valid: true,
   }
-  return { label: 'Unavailable organization scope', departmentId: null, teamId: null, valid: false }
+  return { label: 'Unavailable organization scope', departmentId: null, campaignId: null, teamId: null, valid: false }
 }
 
 export function roleAssignmentRequest(option) {
@@ -41,6 +50,7 @@ export function roleAssignmentRequest(option) {
     requestedRoleId: option.roleId,
     requestedScopeType: option.scopeType,
     requestedDepartmentId: organization.departmentId,
+    requestedCampaignId: organization.campaignId,
     requestedTeamId: organization.teamId,
     organization,
   }

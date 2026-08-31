@@ -19,6 +19,7 @@ export function directoryMaps(directory = {}) {
 export function roleScopeLabel(role, directory = {}) {
   const maps = directoryMaps(directory)
   if (role.scopeType === 'department') return `Department · ${maps.departments.get(role.departmentId) ?? 'Unknown department'}`
+  if (role.scopeType === 'campaign') return `Campaign · ${role.campaignName ?? role.campaignCode ?? 'Unknown campaign'}`
   if (role.scopeType === 'team') return `Team · ${maps.teams.get(role.teamId) ?? 'Unknown team'}`
   return 'Global · All Pulse'
 }

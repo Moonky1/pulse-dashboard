@@ -71,7 +71,7 @@ export function RoleActionDialog({ action, user, directory, roleOptions, submitt
         {action.type === 'assign' ? (
           <div className="admin-role-form">
             <label className="admin-role-field"><span>Role</span><select ref={roleSelectRef} value={selectedRole?.id ?? ''} disabled={submitting} onChange={(event) => { setRoleId(event.target.value); setSelectedOptionKey('') }}>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label>
-            <label className="admin-role-field"><span>Scope</span><select value={selectedOption ? roleOptionKey(selectedOption) : ''} disabled={submitting || !selectedRole} onChange={(event) => setSelectedOptionKey(event.target.value)}>{optionsForRole.map((option) => <option key={roleOptionKey(option)} value={roleOptionKey(option)}>{option.scopeType[0].toUpperCase() + option.scopeType.slice(1)}</option>)}</select></label>
+            <label className="admin-role-field"><span>Scope</span><select value={selectedOption ? roleOptionKey(selectedOption) : ''} disabled={submitting || !selectedRole} onChange={(event) => setSelectedOptionKey(event.target.value)}>{optionsForRole.map((option) => <option key={roleOptionKey(option)} value={roleOptionKey(option)}>{organizationForRoleOption(option).label}</option>)}</select></label>
             <ScopeField label="Target organization" value={organization?.label ?? 'Select a supported scope'} />
           </div>
         ) : (

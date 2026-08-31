@@ -3,7 +3,7 @@ import { AdminStatePanel } from './AdminStatePanel.jsx'
 import { auditActionLabel, auditSummary, formatAuditTime } from '../auditViewModel.js'
 
 function AuditEvent({ event }) {
-  const organization = event.scope?.teamName || event.scope?.departmentName
+  const organization = event.scope?.campaignName || event.scope?.teamName || event.scope?.departmentName
   return (
     <article className="admin-audit-event">
       <div className="admin-audit-event__marker" aria-hidden="true" />

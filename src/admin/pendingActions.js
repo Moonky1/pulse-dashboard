@@ -13,7 +13,7 @@ export const PENDING_APPROVAL_ACTION = Object.freeze({
 })
 
 export function pendingApprovalOptionKey(option = {}) {
-  return [option.departmentId, option.teamId ?? 'none', option.roleId, option.scopeType].join(':')
+  return [option.departmentId, option.teamId ?? 'none', option.roleId, option.scopeType, option.campaignId ?? 'none'].join(':')
 }
 
 export function resolvePendingApprovalSelection(options = [], selection = {}) {
