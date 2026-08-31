@@ -105,3 +105,16 @@
   45% { opacity: 1; transform: rotate(8deg); }
   70% { opacity: .88; transform: rotate(14deg); }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-orb--active .pulse-orb__rim {
+    animation-duration: 4s !important;
+    animation-iteration-count: infinite !important;
+    animation-timing-function: linear !important;
+  }
+  .pulse-orb--active .pulse-orb__rim::after {
+    animation-duration: 2.7s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .pulse-orb--active::before { animation: none !important; }
+}
