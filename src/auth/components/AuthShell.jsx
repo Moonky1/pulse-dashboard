@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
 
 import { PulseOrb } from '../../components/ui/PulseOrb.jsx'
+import { AUTH_ENTRY_PATH } from '../authRoutes.js'
 
 export function Brand({ compact = false }) {
   return (
-    <Link className={`auth-brand ${compact ? 'auth-brand--compact' : ''}`} to="/signin" aria-label="Pulse sign in">
+    <Link className={`auth-brand ${compact ? 'auth-brand--compact' : ''}`} to={AUTH_ENTRY_PATH} aria-label="Pulse access choices">
       <PulseOrb size={compact ? 'sm' : 'md'} active />
       <span>Pulse</span>
     </Link>

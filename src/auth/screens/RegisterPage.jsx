@@ -9,6 +9,7 @@ import { AuthShell } from '../components/AuthShell.jsx'
 import { PasswordInput } from '../components/PasswordInput.jsx'
 import { validateRegistration } from '../pulseAuthService.js'
 import { getAuthRedirect } from '../authRedirects.js'
+import { STAFF_SIGN_IN_PATH } from '../authRoutes.js'
 
 export function RegisterPage() {
   const { register } = useAuth()
@@ -38,7 +39,7 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthShell eyebrow="Request access" title="Create your Pulse account" description="Your access will be reviewed by an authorized company administrator." footer={<><span>Already registered?</span> <Link to="/signin">Sign in</Link></>}>
+    <AuthShell eyebrow="Staff access request" title="Create your Pulse account" description="Your access will be reviewed by an authorized company administrator." footer={<><span>Already registered?</span> <Link to={STAFF_SIGN_IN_PATH}>Sign in</Link></>}>
       <form className="auth-form" onSubmit={submit} noValidate>
         <Input id="register-name" label="Full name" autoComplete="name" value={form.fullName} onChange={update('fullName')} error={errors.fullName} required />
         <Input id="register-email" label="Email address" type="email" inputMode="email" autoComplete="email" value={form.email} onChange={update('email')} error={errors.email} required />

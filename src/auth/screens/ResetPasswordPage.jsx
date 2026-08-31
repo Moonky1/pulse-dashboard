@@ -9,6 +9,7 @@ import { AuthNotice } from '../components/AuthNotice.jsx'
 import { AuthShell } from '../components/AuthShell.jsx'
 import { PasswordInput } from '../components/PasswordInput.jsx'
 import { updateAccountPassword, validatePasswordUpdate } from '../pulseAuthService.js'
+import { STAFF_FORGOT_PASSWORD_PATH, STAFF_SIGN_IN_PATH } from '../authRoutes.js'
 
 export function ResetPasswordPage() {
   const { loading, isAuthenticated, recoveryMode, completeRecovery, signOut } = useAuth()
@@ -38,11 +39,11 @@ export function ResetPasswordPage() {
     }
     completeRecovery()
     await signOut()
-    navigate('/signin', { replace: true, state: { passwordUpdated: true } })
+    navigate(STAFF_SIGN_IN_PATH, { replace: true, state: { passwordUpdated: true } })
   }
 
   if (!isAuthenticated || !recoveryMode) {
-    return <AuthShell eyebrow="Recovery link" title="This recovery session is invalid or expired" description="Request a new recovery email to continue safely."><div className="auth-state-stack"><AuthNotice>Pulse could not verify an active recovery session.</AuthNotice><Link className="auth-inline-link" to="/forgot-password">Request a new recovery email</Link></div></AuthShell>
+    return <AuthShell eyebrow="Recovery link" title="This recovery session is invalid or expired" description="Request a new recovery email to continue safely."><div className="auth-state-stack"><AuthNotice>Pulse could not verify an active recovery session.</AuthNotice><Link className="auth-inline-link" to={STAFF_FORGOT_PASSWORD_PATH}>Request a new recovery email</Link></div></AuthShell>
   }
 
   return (

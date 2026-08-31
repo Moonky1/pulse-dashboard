@@ -2,9 +2,12 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import { AUTH_STATES, routeForAuthState } from './authState.js'
+import { AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH, STAFF_SIGN_IN_PATH } from './authRoutes.js'
 import { useAuth } from './AuthProvider.jsx'
 const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').then((module) => ({ default: module.AccountStatePage })))
+const AccessChooserPage = lazy(() => import('./screens/AccessChooserPage.jsx').then((module) => ({ default: module.AccessChooserPage })))
 const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => ({ default: module.AdminArea })))
+const AgentSignInPage = lazy(() => import('./screens/AgentSignInPage.jsx').then((module) => ({ default: module.AgentSignInPage })))
 const AuthCallbackPage = lazy(() => import('./screens/AuthCallbackPage.jsx').then((module) => ({ default: module.AuthCallbackPage })))
 const ForgotPasswordPage = lazy(() => import('./screens/ForgotPasswordPage.jsx').then((module) => ({ default: module.ForgotPasswordPage })))
 const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx').then((module) => ({ default: module.PendingApprovalPage })))
@@ -19,7 +22,7 @@ function RouteGate({ allow, children }) {
   const location = useLocation()
   if (authState === AUTH_STATES.LOADING) return <AccountStatePage kind="loading" />
   if (allow.includes(authState)) return children
-  return <Navigate to={routeForAuthState(authState) || '/signin'} replace state={{ from: location.pathname }} />
+  return <Navigate to={routeForAuthState(authState) || AUTH_ENTRY_PATH} replace state={{ from: location.pathname }} />
 }
 
 function PublicOnly({ children }) {
@@ -30,10 +33,14 @@ export function AuthApp() {
   return (
     <BrowserRouter>
       <Suspense fallback={<AccountStatePage kind="loading" />}><Routes>
-        <Route path="/" element={<Navigate to="/signin" replace />} />
-        <Route path="/signin" element={<PublicOnly><SignInPage /></PublicOnly>} />
-        <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
-        <Route path="/forgot-password" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
+        <Route path="/" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
+        <Route path={AUTH_ENTRY_PATH} element={<PublicOnly><AccessChooserPage /></PublicOnly>} />
+        <Route path={STAFF_SIGN_IN_PATH} element={<PublicOnly><SignInPage /></PublicOnly>} />
+        <Route path={STAFF_REGISTER_PATH} element={<PublicOnly><RegisterPage /></PublicOnly>} />
+        <Route path={STAFF_FORGOT_PASSWORD_PATH} element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
+        <Route path={AGENT_SIGN_IN_PATH} element={<PublicOnly><AgentSignInPage /></PublicOnly>} />
+        <Route path="/register" element={<Navigate to={STAFF_REGISTER_PATH} replace />} />
+        <Route path="/forgot-password" element={<Navigate to={STAFF_FORGOT_PASSWORD_PATH} replace />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/auth/verify" element={<VerifyEmailPage />} />
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
@@ -43,7 +50,7 @@ export function AuthApp() {
         <Route path="/account-blocked" element={<RouteGate allow={[AUTH_STATES.BLOCKED]}><AccountStatePage kind="blocked" /></RouteGate>} />
         <Route path="/account-inactive" element={<RouteGate allow={[AUTH_STATES.INACTIVE]}><AccountStatePage kind="inactive" /></RouteGate>} />
         <Route path="/account-error" element={<RouteGate allow={[AUTH_STATES.ERROR, AUTH_STATES.MISSING_PROFILE]}><AccountStatePage kind="error" /></RouteGate>} />
-        <Route path="*" element={<Navigate to="/signin" replace />} />
+        <Route path="*" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
       </Routes></Suspense>
     </BrowserRouter>
   )
