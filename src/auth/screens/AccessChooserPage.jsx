@@ -14,8 +14,8 @@ export function AccessChooserPage() {
       <div className="auth-access-chooser">
         <section className="auth-access-section" aria-labelledby="staff-access-heading">
           <p className="auth-access-label">Staff</p>
-          <h2 id="staff-access-heading">Internal company access</h2>
-          <p>For QA, supervisors, training, HR, IT, payroll, and internal staff.</p>
+          <h2 id="staff-access-heading">Company access</h2>
+          <p>For verified company accounts.</p>
           <div className="auth-access-actions">
             <Button type="button" size="lg" variant="secondary" onClick={() => setGoogleNotice('Google sign-in is reserved for staff and will be enabled after the supported OAuth flow is ready.')}>Continue with Google</Button>
             <Link className="auth-access-link auth-access-link--primary" to={STAFF_SIGN_IN_PATH}>Corporate Email</Link>
@@ -27,8 +27,8 @@ export function AccessChooserPage() {
 
         <section className="auth-access-section" aria-labelledby="agent-access-heading">
           <p className="auth-access-label">Agent</p>
-          <h2 id="agent-access-heading">Operational access</h2>
-          <p>For agent access and operational tools. This path is separate from corporate Staff access.</p>
+          <h2 id="agent-access-heading">Agent access</h2>
+          <p>For operational tools.</p>
           <Link className="auth-access-link auth-access-link--secondary" to={AGENT_SIGN_IN_PATH}>Agent Sign In</Link>
         </section>
       </div>
