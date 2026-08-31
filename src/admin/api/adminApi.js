@@ -198,6 +198,9 @@ export function normalizeManagedUser(row = {}) {
     status: row.status ?? 'inactive',
     departmentId: row.department_id ?? null,
     teamId: row.team_id ?? null,
+    positionId: row.position_id ?? null,
+    positionCode: row.position_code ?? null,
+    positionName: row.position_name ?? null,
     authEmailConfirmed: Boolean(row.auth_email_confirmed),
     roles: Array.isArray(row.roles) ? row.roles.map(normalizeRole) : [],
   }
@@ -249,6 +252,43 @@ export async function getManagedUser(client, userId) {
   const row = data?.[0] ?? data ?? null
   if (!row || Array.isArray(row)) return { data: null, error: publicError('not_found', 'This Pulse user could not be found.') }
   return { data: normalizeManagedUser(row), error: null }
+}
+
+export function normalizeOperationalAssignment(row = {}) {
+  const assignmentId = row.assignment_id ?? null
+  const userId = row.user_id ?? null
+  const positionId = row.position_id ?? null
+  const campaignId = row.campaign_id ?? null
+  const teamId = row.team_id ?? null
+  if (![assignmentId, userId, positionId, campaignId].every((value) => UUID_PATTERN.test(value ?? ''))) return null
+  if (teamId !== null && !UUID_PATTERN.test(teamId)) return null
+  if (!row.started_at) return null
+  return {
+    id: assignmentId,
+    userId,
+    positionId,
+    positionCode: row.position_code ?? '',
+    positionName: row.position_name ?? 'Unknown position',
+    campaignId,
+    campaignCode: row.campaign_code ?? '',
+    campaignName: row.campaign_name ?? 'Unknown campaign',
+    teamId,
+    teamCode: row.team_code ?? null,
+    teamName: row.team_name ?? null,
+    isPrimary: Boolean(row.is_primary),
+    startedAt: row.started_at,
+    endedAt: row.ended_at ?? null,
+    isActive: Boolean(row.is_active),
+  }
+}
+
+export async function getUserOperationalAssignments(client, userId) {
+  if (!UUID_PATTERN.test(userId ?? '')) {
+    return { data: [], error: publicError('invalid_request', 'The requested user is not valid.') }
+  }
+  const { data, error } = await client.rpc('get_user_operational_assignments', { target_user_id: userId })
+  if (error) return { data: [], error: normalizeAdminError(error) }
+  return { data: (data ?? []).map(normalizeOperationalAssignment).filter(Boolean), error: null }
 }
 
 function normalizeLifecycleResult(row, targetUserId, expectedStatus) {
@@ -548,6 +588,22 @@ function normalizeCampaign(row = {}) {
   }
 }
 
+export function normalizePosition(row = {}) {
+  if (!UUID_PATTERN.test(row.id ?? '')) return null
+  return {
+    id: row.id,
+    code: row.code ?? '',
+    name: row.name ?? 'Unknown position',
+    description: row.description ?? '',
+    isActive: Boolean(row.is_active),
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+    currentUserCount: count(row.current_user_count),
+    assignmentCount: count(row.assignment_count),
+    activeAssignmentCount: count(row.active_assignment_count),
+  }
+}
+
 export async function listManagedDepartments(client) {
   const { data, error } = await client.rpc('list_managed_departments')
   if (error) return { data: [], error: normalizeAdminError(error) }
@@ -564,6 +620,12 @@ export async function listManagedCampaigns(client) {
   const { data, error } = await client.rpc('list_managed_campaigns')
   if (error) return { data: [], error: normalizeAdminError(error) }
   return { data: (data ?? []).map(normalizeCampaign).filter(Boolean), error: null }
+}
+
+export async function listManagedPositions(client) {
+  const { data, error } = await client.rpc('list_managed_positions')
+  if (error) return { data: [], error: normalizeAdminError(error) }
+  return { data: (data ?? []).map(normalizePosition).filter(Boolean), error: null }
 }
 
 function validOrganizationInput({ code, name, description = '' } = {}) {

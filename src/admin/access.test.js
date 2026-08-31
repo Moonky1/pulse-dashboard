@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageCampaigns, canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewTeams, canViewUserHistory, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
+import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageCampaigns, canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewOperationalAssignments, canViewPositions, canViewTeams, canViewUserHistory, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
 
 test('Admin is visible only with both required canonical permissions', () => {
   assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
@@ -73,4 +73,13 @@ test('campaign catalog access uses only canonical campaign permissions', () => {
   assert.equal(canManageCampaigns(['admin.access', 'campaigns.manage']), false)
   assert.equal(canManageCampaigns(['super_admin', 'campaigns.manage']), false)
   assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'campaigns.view'] }), 'allowed')
+})
+
+test('Position and operational assignment reads use distinct canonical permissions', () => {
+  assert.equal(canViewPositions(['admin.access', 'positions.view']), true)
+  assert.equal(canViewPositions(['positions.view']), false)
+  assert.equal(canViewOperationalAssignments(['admin.access', 'users.view', 'assignments.view']), true)
+  assert.equal(canViewOperationalAssignments(['admin.access', 'assignments.view']), false)
+  assert.equal(canViewOperationalAssignments(['super_admin', 'assignments.view']), false)
+  assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'positions.view'] }), 'allowed')
 })

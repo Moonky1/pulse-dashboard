@@ -11,6 +11,8 @@ export const ADMIN_AUDIT_PERMISSIONS = Object.freeze(['admin.access', 'audit.vie
 export const ADMIN_USER_HISTORY_PERMISSIONS = Object.freeze(['admin.access', 'users.view', 'audit.view'])
 export const ADMIN_CAMPAIGNS_VIEW_PERMISSIONS = Object.freeze(['admin.access', 'campaigns.view'])
 export const ADMIN_CAMPAIGNS_MANAGE_PERMISSIONS = Object.freeze([...ADMIN_CAMPAIGNS_VIEW_PERMISSIONS, 'campaigns.manage'])
+export const ADMIN_POSITIONS_VIEW_PERMISSIONS = Object.freeze(['admin.access', 'positions.view'])
+export const ADMIN_ASSIGNMENTS_VIEW_PERMISSIONS = Object.freeze(['admin.access', 'users.view', 'assignments.view'])
 
 function hasEvery(permissionKeys, required) {
   const keys = new Set(permissionKeys)
@@ -73,12 +75,21 @@ export function canManageCampaigns(permissionKeys = []) {
   return hasEvery(permissionKeys, ADMIN_CAMPAIGNS_MANAGE_PERMISSIONS)
 }
 
+export function canViewPositions(permissionKeys = []) {
+  return hasEvery(permissionKeys, ADMIN_POSITIONS_VIEW_PERMISSIONS)
+}
+
+export function canViewOperationalAssignments(permissionKeys = []) {
+  return hasEvery(permissionKeys, ADMIN_ASSIGNMENTS_VIEW_PERMISSIONS)
+}
+
 export function hasAnyAdminSurfaceAccess(permissionKeys = []) {
   return hasAdminUsersAccess(permissionKeys)
     || canViewAudit(permissionKeys)
     || canViewDepartments(permissionKeys)
     || canViewTeams(permissionKeys)
     || canViewCampaigns(permissionKeys)
+    || canViewPositions(permissionKeys)
 }
 
 export function resolveAdminAccess({ loading = false, error = null, permissionKeys = [] } = {}) {
