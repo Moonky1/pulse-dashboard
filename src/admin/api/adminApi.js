@@ -504,6 +504,21 @@ function normalizeTeam(row = {}) {
   }
 }
 
+function normalizeCampaign(row = {}) {
+  if (!UUID_PATTERN.test(row.id ?? '')) return null
+  return {
+    id: row.id,
+    code: row.code ?? '',
+    name: row.name ?? 'Unknown campaign',
+    description: row.description ?? '',
+    isActive: Boolean(row.is_active),
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+    teamCount: count(row.team_count),
+    activeTeamCount: count(row.active_team_count),
+  }
+}
+
 export async function listManagedDepartments(client) {
   const { data, error } = await client.rpc('list_managed_departments')
   if (error) return { data: [], error: normalizeAdminError(error) }
@@ -514,6 +529,12 @@ export async function listManagedTeams(client) {
   const { data, error } = await client.rpc('list_managed_teams')
   if (error) return { data: [], error: normalizeAdminError(error) }
   return { data: (data ?? []).map(normalizeTeam).filter(Boolean), error: null }
+}
+
+export async function listManagedCampaigns(client) {
+  const { data, error } = await client.rpc('list_managed_campaigns')
+  if (error) return { data: [], error: normalizeAdminError(error) }
+  return { data: (data ?? []).map(normalizeCampaign).filter(Boolean), error: null }
 }
 
 function validOrganizationInput({ code, name, description = '' } = {}) {

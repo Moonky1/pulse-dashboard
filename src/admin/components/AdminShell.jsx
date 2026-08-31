@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Button } from '../../components/ui/Button.jsx'
 import { PulseOrb } from '../../components/ui/PulseOrb.jsx'
 import { useAuth } from '../../auth/AuthProvider.jsx'
-import { canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewDepartments, canViewTeams, hasAdminUsersAccess } from '../access.js'
+import { canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewTeams, hasAdminUsersAccess } from '../access.js'
 import { useAdminPermissions } from '../AdminAccessContext.js'
 
 export function AdminShell() {
@@ -14,6 +14,7 @@ export function AdminShell() {
   const organizationAccess = canViewDepartments(permissionKeys) || canViewTeams(permissionKeys)
   const organizationAdmin = canManageDepartments(permissionKeys) || canManageTeams(permissionKeys)
   const auditAccess = canViewAudit(permissionKeys)
+  const campaignsAccess = canViewCampaigns(permissionKeys)
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -24,6 +25,7 @@ export function AdminShell() {
           {usersAccess && <NavLink to="/admin/users">Users</NavLink>}
           {usersAccess && <NavLink to="/admin/pending">Pending approval</NavLink>}
           {organizationAccess && <NavLink to="/admin/organization">Organization</NavLink>}
+          {campaignsAccess && <NavLink to="/admin/campaigns">Campaigns</NavLink>}
           {auditAccess && <NavLink to="/admin/audit">Audit</NavLink>}
         </nav>
         <div className="admin-identity">

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewDepartments, canViewTeams, canViewUserHistory, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
+import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageCampaigns, canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewTeams, canViewUserHistory, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
 
 test('Admin is visible only with both required canonical permissions', () => {
   assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
@@ -64,4 +64,13 @@ test('audit and user history require exact canonical permission combinations', (
   assert.equal(canViewUserHistory(['admin.access', 'users.view', 'audit.view']), true)
   assert.equal(canViewUserHistory(['admin.access', 'audit.view']), false)
   assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'audit.view'] }), 'allowed')
+})
+
+test('campaign catalog access uses only canonical campaign permissions', () => {
+  assert.equal(canViewCampaigns(['admin.access', 'campaigns.view']), true)
+  assert.equal(canViewCampaigns(['campaigns.view']), false)
+  assert.equal(canManageCampaigns(['admin.access', 'campaigns.view', 'campaigns.manage']), true)
+  assert.equal(canManageCampaigns(['admin.access', 'campaigns.manage']), false)
+  assert.equal(canManageCampaigns(['super_admin', 'campaigns.manage']), false)
+  assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'campaigns.view'] }), 'allowed')
 })

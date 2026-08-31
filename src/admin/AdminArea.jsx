@@ -5,7 +5,7 @@ import { AdminAccessGate } from './components/AdminAccessGate.jsx'
 import { AdminShell } from './components/AdminShell.jsx'
 import { AdminStatePanel } from './components/AdminStatePanel.jsx'
 import { useAdminPermissions } from './AdminAccessContext.js'
-import { canViewAudit, canViewDepartments, canViewTeams, hasAdminUsersAccess } from './access.js'
+import { canViewAudit, canViewCampaigns, canViewDepartments, canViewTeams, hasAdminUsersAccess } from './access.js'
 import './styles/admin.css'
 
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage.jsx').then((module) => ({ default: module.AdminUsersPage })))
@@ -13,10 +13,17 @@ const AdminUserDetailPage = lazy(() => import('./pages/AdminUserDetailPage.jsx')
 const AdminPendingUsersPage = lazy(() => import('./pages/AdminPendingUsersPage.jsx').then((module) => ({ default: module.AdminPendingUsersPage })))
 const AdminOrganizationPage = lazy(() => import('./pages/AdminOrganizationPage.jsx').then((module) => ({ default: module.AdminOrganizationPage })))
 const AdminAuditPage = lazy(() => import('./pages/AdminAuditPage.jsx').then((module) => ({ default: module.AdminAuditPage })))
+const AdminCampaignsPage = lazy(() => import('./pages/AdminCampaignsPage.jsx').then((module) => ({ default: module.AdminCampaignsPage })))
 
 function AdminLanding() {
   const { permissionKeys } = useAdminPermissions()
-  const destination = hasAdminUsersAccess(permissionKeys) ? 'users' : canViewAudit(permissionKeys) ? 'audit' : 'organization'
+  const destination = hasAdminUsersAccess(permissionKeys)
+    ? 'users'
+    : canViewAudit(permissionKeys)
+      ? 'audit'
+      : canViewDepartments(permissionKeys) || canViewTeams(permissionKeys)
+        ? 'organization'
+        : 'campaigns'
   return <Navigate to={destination} replace />
 }
 
@@ -35,6 +42,11 @@ function AuditRoute({ children }) {
   return canViewAudit(permissionKeys) ? children : <AdminLanding />
 }
 
+function CampaignsRoute({ children }) {
+  const { permissionKeys } = useAdminPermissions()
+  return canViewCampaigns(permissionKeys) ? children : <AdminLanding />
+}
+
 export function AdminArea() {
   return (
     <AdminAccessGate>
@@ -48,6 +60,7 @@ export function AdminArea() {
             <Route path="users/:userId" element={<UsersRoute><AdminUserDetailPage /></UsersRoute>} />
             <Route path="organization" element={<OrganizationRoute><AdminOrganizationPage /></OrganizationRoute>} />
             <Route path="audit" element={<AuditRoute><AdminAuditPage /></AuditRoute>} />
+            <Route path="campaigns" element={<CampaignsRoute><AdminCampaignsPage /></CampaignsRoute>} />
             <Route path="*" element={<AdminLanding />} />
           </Route>
         </Routes>

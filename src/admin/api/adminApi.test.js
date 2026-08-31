@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, inactivateManagedUser, listAuditEvents, listManagedDepartments, listManagedTeams, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
+import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedTeams, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -364,6 +364,35 @@ test('organization catalogs use only protected RPCs and preserve parent/count da
   assert.equal(teams.data[0].departmentId, DEPARTMENT_ID)
   assert.equal(directory.data.departments[0].id, DEPARTMENT_ID)
   assert.deepEqual(calls, ['list_managed_departments', 'list_managed_teams', 'list_managed_departments', 'list_managed_teams'])
+})
+
+test('campaign catalog uses only its protected read RPC and normalizes counts', async () => {
+  const calls = []
+  const result = await listManagedCampaigns({ rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ id: 'f5000000-0000-4000-8000-000000000001', code: 'campaign_one', name: 'Campaign One', description: null, is_active: true, team_count: 2, active_team_count: 1 }], error: null }
+  } })
+  assert.deepEqual(calls, [{ name: 'list_managed_campaigns', args: undefined }])
+  assert.deepEqual(result.data[0], {
+    id: 'f5000000-0000-4000-8000-000000000001',
+    code: 'campaign_one',
+    name: 'Campaign One',
+    description: '',
+    isActive: true,
+    createdAt: null,
+    updatedAt: null,
+    teamCount: 2,
+    activeTeamCount: 1,
+  })
+})
+
+test('campaign catalog preserves an empty result, drops malformed rows, and sanitizes errors', async () => {
+  assert.deepEqual(await listManagedCampaigns({ rpc: async () => ({ data: [], error: null }) }), { data: [], error: null })
+  const malformed = await listManagedCampaigns({ rpc: async () => ({ data: [{ id: 'not-a-uuid', code: 'bad' }], error: null }) })
+  assert.deepEqual(malformed, { data: [], error: null })
+  const failed = await listManagedCampaigns({ rpc: async () => ({ data: null, error: { code: 'XX000', message: 'campaigns SQL stack' } }) })
+  assert.equal(failed.error.code, 'unavailable')
+  assert.doesNotMatch(failed.error.message, /campaigns|SQL|stack/i)
 })
 
 test('department create and update call exact audited RPC contracts', async () => {
