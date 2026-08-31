@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 
 const migrationUrl = new URL('../../supabase/migrations/20260825000200_audited_user_lifecycle_operations.sql', import.meta.url)
 const organizationMigrationUrl = new URL('../../supabase/migrations/20260827000100_organization_administration.sql', import.meta.url)
+const auditMigrationUrl = new URL('../../supabase/migrations/20260830000100_admin_audit_history.sql', import.meta.url)
 const cliUrl = new URL('./cli.js', import.meta.url)
 
 test('migration exposes only narrow lifecycle, role, and read RPCs', async () => {
@@ -44,4 +45,15 @@ test('organization migration exposes only narrow audited RPCs without hard delet
   assert.match(sql, /pg_advisory_xact_lock/)
   assert.doesNotMatch(sql, /execute\s+format|\bdelete\s+from\s+public\.(departments|teams)|\btruncate\b/i)
   assert.doesNotMatch(sql, /grant\s+(insert|update|delete|all).*authenticated/i)
+})
+
+test('audit migration removes direct browser reads and exposes only bounded read RPCs', async () => {
+  const sql = await readFile(auditMigrationUrl, 'utf8')
+  assert.match(sql, /revoke select on table public\.audit_events from authenticated/i)
+  assert.match(sql, /create function public\.list_audit_events\(/)
+  assert.match(sql, /create function public\.get_user_audit_history\(/)
+  assert.match(sql, /requested_limit.*between 1 and 100/is)
+  assert.match(sql, /security definer[\s\S]*set search_path = pg_catalog/i)
+  assert.doesNotMatch(sql, /grant\s+(select|insert|update|delete|all).*audit_events.*authenticated/i)
+  assert.doesNotMatch(sql, /\binsert\s+into\s+public\.audit_events|\bupdate\s+public\.audit_events|\bdelete\s+from\s+public\.audit_events/i)
 })

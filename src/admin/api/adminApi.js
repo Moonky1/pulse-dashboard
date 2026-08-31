@@ -635,3 +635,90 @@ export async function loadAssignableRoleOptions(client, targetUserId) {
   if (error) return { data: [], error: normalizeAdminError(error) }
   return { data: (data ?? []).map(normalizeAssignableRoleOption).filter(Boolean), error: null }
 }
+
+export function normalizeAuditError(error) {
+  if (!error) return null
+  if (['42501', '28000'].includes(error.code)) return publicError('access_denied', 'You do not have permission to view Pulse audit history.')
+  if (['22023', '22P02'].includes(error.code)) return publicError('invalid_request', 'The requested audit filters or cursor are not valid.')
+  if (error.code === 'P0002') return publicError('not_found', 'The requested Pulse user could not be found.')
+  return publicError('unavailable', 'Pulse could not load audit history. Try again shortly.')
+}
+
+const SAFE_AUDIT_METADATA_KEYS = Object.freeze(['previous_status', 'scope_type', 'code', 'name', 'before', 'after'])
+
+function normalizeAuditMetadata(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return Object.fromEntries(SAFE_AUDIT_METADATA_KEYS.filter((key) => Object.hasOwn(value, key)).map((key) => [key, value[key]]))
+}
+
+export function normalizeAuditEvent(row = {}) {
+  if (!UUID_PATTERN.test(row.event_id ?? '') || !row.action || !row.occurred_at) return null
+  return {
+    id: row.event_id,
+    action: row.action,
+    category: row.category || 'system',
+    source: row.source || 'server',
+    occurredAt: row.occurred_at,
+    actor: row.actor_user_id ? { id: row.actor_user_id, name: row.actor_display_name || row.actor_full_name || 'Unknown actor', employeeId: row.actor_employee_id || null } : null,
+    target: row.target_id ? { type: row.target_type || 'record', id: row.target_id, name: row.target_name || 'Unknown target', employeeId: row.target_employee_id || null } : null,
+    reason: row.reason || null,
+    role: row.role_id ? { id: row.role_id, name: row.role_name || 'Unknown role' } : null,
+    scope: { type: row.scope_type || null, departmentId: row.department_id || null, departmentName: row.department_name || null, teamId: row.team_id || null, teamName: row.team_name || null },
+    metadata: normalizeAuditMetadata(row.safe_metadata),
+    hasMore: Boolean(row.has_more),
+  }
+}
+
+function validAuditOptions(options = {}) {
+  const limit = options.limit ?? 25
+  const cursor = options.cursor ?? null
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) return false
+  if (cursor && (!UUID_PATTERN.test(cursor.id ?? '') || Number.isNaN(Date.parse(cursor.occurredAt ?? '')))) return false
+  if (options.actorUserId && !UUID_PATTERN.test(options.actorUserId)) return false
+  if (options.targetId && !UUID_PATTERN.test(options.targetId)) return false
+  if (options.from && Number.isNaN(Date.parse(options.from))) return false
+  if (options.to && Number.isNaN(Date.parse(options.to))) return false
+  return true
+}
+
+function auditResult(data = []) {
+  const events = data.map(normalizeAuditEvent).filter(Boolean)
+  const last = events.at(-1)
+  return {
+    events,
+    hasMore: Boolean(events[0]?.hasMore),
+    nextCursor: last ? { occurredAt: last.occurredAt, id: last.id } : null,
+  }
+}
+
+export async function listAuditEvents(client, options = {}) {
+  if (!validAuditOptions(options)) return { data: { events: [], hasMore: false, nextCursor: null }, error: publicError('invalid_request', 'The requested audit filters are invalid.') }
+  const cursor = options.cursor ?? null
+  const { data, error } = await client.rpc('list_audit_events', {
+    requested_limit: options.limit ?? 25,
+    before_occurred_at: cursor?.occurredAt ?? null,
+    before_event_id: cursor?.id ?? null,
+    requested_category: options.category || null,
+    requested_action: options.action || null,
+    requested_actor_user_id: options.actorUserId || null,
+    requested_target_type: options.targetType || null,
+    requested_target_id: options.targetId || null,
+    occurred_from: options.from || null,
+    occurred_to: options.to || null,
+  })
+  if (error) return { data: { events: [], hasMore: false, nextCursor: null }, error: normalizeAuditError(error) }
+  return { data: auditResult(data ?? []), error: null }
+}
+
+export async function getUserAuditHistory(client, targetUserId, options = {}) {
+  if (!UUID_PATTERN.test(targetUserId ?? '') || !validAuditOptions(options)) return { data: { events: [], hasMore: false, nextCursor: null }, error: publicError('invalid_request', 'The requested user history is invalid.') }
+  const cursor = options.cursor ?? null
+  const { data, error } = await client.rpc('get_user_audit_history', {
+    target_user_id: targetUserId,
+    requested_limit: options.limit ?? 10,
+    before_occurred_at: cursor?.occurredAt ?? null,
+    before_event_id: cursor?.id ?? null,
+  })
+  if (error) return { data: { events: [], hasMore: false, nextCursor: null }, error: normalizeAuditError(error) }
+  return { data: auditResult(data ?? []), error: null }
+}

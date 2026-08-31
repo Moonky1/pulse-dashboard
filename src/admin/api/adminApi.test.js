@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, inactivateManagedUser, listManagedDepartments, listManagedTeams, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
+import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, inactivateManagedUser, listAuditEvents, listManagedDepartments, listManagedTeams, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -434,4 +434,28 @@ test('organization errors are sanitized for permissions, duplicates, dependencie
     assert.equal(normalized.code, code)
     assert.doesNotMatch(normalized.message, /SQL|stack|index/i)
   })
+})
+
+test('audit pages use only the protected RPC and carry an exact keyset cursor', async () => {
+  const calls = []
+  const first = { event_id: '11111111-1111-4111-8111-111111111111', action: 'account.approved', category: 'account', source: 'database', occurred_at: '2026-08-30T12:00:00Z', actor_user_id: USER_ID, actor_full_name: 'Admin', target_type: 'user', target_id: USER_ID, target_name: 'Example', safe_metadata: { previous_status: 'pending_approval', auth_user_id: 'hidden' }, has_more: true }
+  const client = { rpc: async (name, args) => { calls.push({ name, args }); return { data: [first], error: null } } }
+  const result = await listAuditEvents(client, { limit: 10, category: 'account' })
+  assert.equal(result.data.events[0].metadata.auth_user_id, undefined)
+  assert.equal(result.data.events[0].metadata.previous_status, 'pending_approval')
+  assert.deepEqual(result.data.nextCursor, { occurredAt: first.occurred_at, id: first.event_id })
+  assert.equal(calls[0].name, 'list_audit_events')
+  assert.equal(calls[0].args.requested_limit, 10)
+  assert.equal(calls[0].args.requested_category, 'account')
+})
+
+test('user history is target-bound and audit failures never expose backend details', async () => {
+  const calls = []
+  const client = { rpc: async (name, args) => { calls.push({ name, args }); return { data: [], error: null } } }
+  assert.deepEqual((await getUserAuditHistory(client, USER_ID)).data.events, [])
+  assert.deepEqual(calls, [{ name: 'get_user_audit_history', args: { target_user_id: USER_ID, requested_limit: 10, before_occurred_at: null, before_event_id: null } }])
+  assert.equal((await getUserAuditHistory(client, 'bad')).error.code, 'invalid_request')
+  const hidden = normalizeAuditError({ code: 'XX000', message: 'audit_events SQL stack and JWT' })
+  assert.equal(hidden.code, 'unavailable')
+  assert.doesNotMatch(hidden.message, /SQL|JWT|audit_events/i)
 })
