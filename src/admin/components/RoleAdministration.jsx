@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button.jsx'
 import { supabase } from '../../utils/supabase.js'
 import { assignManagedUserRole, removeManagedUserRole } from '../api/adminApi.js'
+import { roleScopeLabel } from '../adminViewModel.js'
 import { roleCatalogMessage, roleMutationSuccessMessage } from '../roleActions.js'
 import { runRoleMutation } from '../roleMutation.js'
 import { RoleActionDialog } from './RoleActionDialog.jsx'
@@ -45,7 +46,7 @@ export function RoleAdministration({ user, directory, roleOptions, roleOptionsEr
       <div className="admin-role-actions__heading"><div><p className="admin-section-label">Authorized operations</p><h2 id="role-actions-title">Role administration</h2><span>Every confirmed assignment or removal is authorized and audited by the database.</span></div><Button type="button" disabled={!assignmentAvailable} onClick={openAssignment}>Assign role</Button></div>
       {catalogMessage && <p className={roleOptionsError ? 'admin-dialog__error' : 'admin-role-actions__catalog-state'} role={roleOptionsError ? 'alert' : 'status'}>{catalogMessage}</p>}
       <ul className="admin-role-actions__assignments">
-        {user.roles.map((assignment) => <li key={assignment.userRoleId}><div><strong>{assignment.name}</strong><span>{assignment.scopeType === 'global' ? 'Global · All Pulse' : assignment.scopeType === 'department' ? `Department · ${directory.departments.find((department) => department.id === assignment.departmentId)?.name ?? 'Unknown department'}` : `Team · ${directory.teams.find((team) => team.id === assignment.teamId)?.name ?? 'Unknown team'}`}</span></div><Button type="button" variant="secondary" size="sm" onClick={() => openRemoval(assignment)}>Remove</Button></li>)}
+        {user.roles.map((assignment) => <li key={assignment.userRoleId}><div><strong>{assignment.name}</strong><span>{roleScopeLabel(assignment, directory)}</span></div><Button type="button" variant="secondary" size="sm" onClick={() => openRemoval(assignment)}>Remove</Button></li>)}
       </ul>
       {notice && <p className="admin-lifecycle-actions__notice" role="status">{notice}</p>}
       {selected && <RoleActionDialog action={selected} user={user} directory={directory} roleOptions={roleOptions} submitting={submitting} error={error} onCancel={cancel} onConfirm={confirm} />}

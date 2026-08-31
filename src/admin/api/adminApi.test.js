@@ -168,6 +168,9 @@ test('pending approval catalog accepts only exact resolved combinations from its
     teamId: rawOption.team_id,
     teamCode: 'support_one',
     teamName: 'Support One',
+    campaignId: null,
+    campaignCode: null,
+    campaignName: null,
     roleId: ROLE_ID,
     roleKey: 'admin',
     roleName: 'Admin',
@@ -206,7 +209,7 @@ test('pending approval calls only approve_pending_user with the selected protect
     target_user_id: USER_ID,
     selected_department_id: option.departmentId,
     selected_team_id: option.teamId,
-    requested_roles: [{ role_id: ROLE_ID, scope_type: 'team' }],
+    requested_roles: [{ role_id: ROLE_ID, scope_type: 'team', campaign_id: null }],
   } }])
 })
 
@@ -250,6 +253,7 @@ test('role assignment calls only the canonical RPC with a target-bound scope', a
     requested_role_id: ROLE_ID,
     requested_scope_type: 'department',
     requested_department_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    requested_campaign_id: null,
     requested_team_id: null,
   } }])
 })
@@ -293,10 +297,40 @@ test('assignable role catalog calls only the target-bound protected RPC', async 
   const calls = []
   const result = await loadAssignableRoleOptions({ rpc: async (name, args) => {
     calls.push({ name, args })
-    return { data: [{ role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'global', department_id: null, team_id: null }], error: null }
+    return { data: [{ role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'global', department_id: null, campaign_id: null, team_id: null }], error: null }
   } }, USER_ID)
   assert.deepEqual(calls, [{ name: 'list_assignable_role_options', args: { target_user_id: USER_ID } }])
-  assert.deepEqual(result.data, [{ roleId: ROLE_ID, roleKey: 'admin', roleName: 'Admin', scopeType: 'global', departmentId: null, departmentName: null, teamId: null, teamName: null }])
+  assert.deepEqual(result.data, [{ roleId: ROLE_ID, roleKey: 'admin', roleName: 'Admin', scopeType: 'global', departmentId: null, departmentName: null, campaignId: null, campaignCode: null, campaignName: null, teamId: null, teamName: null }])
+})
+
+test('Campaign role options are authoritative and assignments use the six-argument RPC', async () => {
+  const campaignId = 'f5000000-0000-4000-8000-000000000001'
+  const option = { role_id: ROLE_ID, role_key: 'qa', role_name: 'QA', scope_type: 'campaign', department_id: null, campaign_id: campaignId, campaign_code: 'garrett', campaign_name: 'Garrett', team_id: null }
+  const loaded = await loadAssignableRoleOptions({ rpc: async () => ({ data: [option], error: null }) }, USER_ID)
+  assert.equal(loaded.data[0].campaignName, 'Garrett')
+  const calls = []
+  const assigned = await assignManagedUserRole({ rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ user_role_id: ASSIGNMENT_ID, created: true }], error: null }
+  } }, { targetUserId: USER_ID, requestedRoleId: ROLE_ID, requestedScopeType: 'campaign', requestedCampaignId: campaignId })
+  assert.equal(assigned.data.created, true)
+  assert.equal(calls[0].args.requested_campaign_id, campaignId)
+  assert.equal(calls[0].args.requested_department_id, null)
+  assert.equal(calls[0].args.requested_team_id, null)
+  assert.equal((await assignManagedUserRole({ rpc: async () => { throw new Error('must not run') } }, { targetUserId: USER_ID, requestedRoleId: ROLE_ID, requestedScopeType: 'campaign', requestedCampaignId: null })).error.code, 'invalid_request')
+})
+
+test('pending approval preserves independent employment and Campaign authorization', async () => {
+  const departmentId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  const campaignId = 'f5000000-0000-4000-8000-000000000001'
+  const option = { departmentId, departmentName: 'Quality Assurance', departmentCode: 'qa', teamId: null, roleId: ROLE_ID, roleKey: 'qa', roleName: 'QA', scopeType: 'campaign', campaignId, campaignCode: 'garrett', campaignName: 'Garrett' }
+  const calls = []
+  const result = await approvePendingUser({ rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ id: USER_ID, employee_id: 'KK-001234', status: 'active', department_id: departmentId, team_id: null }], error: null }
+  } }, USER_ID, option)
+  assert.equal(result.data.departmentId, departmentId)
+  assert.deepEqual(calls[0].args.requested_roles, [{ role_id: ROLE_ID, scope_type: 'campaign', campaign_id: campaignId }])
 })
 
 test('assignable role catalog preserves legitimate empty results and sanitizes failures', async () => {
@@ -309,9 +343,9 @@ test('assignable role catalog preserves legitimate empty results and sanitizes f
 
 test('assignable role catalog drops malformed or arbitrary scope combinations', async () => {
   const data = [
-    { role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'global', department_id: null, team_id: null },
-    { role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'global', department_id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', team_id: null },
-    { role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'planet', department_id: null, team_id: null },
+    { role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'global', department_id: null, campaign_id: null, team_id: null },
+    { role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'global', department_id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', campaign_id: null, team_id: null },
+    { role_id: ROLE_ID, role_key: 'admin', role_name: 'Admin', scope_type: 'planet', department_id: null, campaign_id: null, team_id: null },
   ]
   const result = await loadAssignableRoleOptions({ rpc: async () => ({ data, error: null }) }, USER_ID)
   assert.equal(result.data.length, 1)
@@ -467,11 +501,14 @@ test('organization errors are sanitized for permissions, duplicates, dependencie
 
 test('audit pages use only the protected RPC and carry an exact keyset cursor', async () => {
   const calls = []
-  const first = { event_id: '11111111-1111-4111-8111-111111111111', action: 'account.approved', category: 'account', source: 'database', occurred_at: '2026-08-30T12:00:00Z', actor_user_id: USER_ID, actor_full_name: 'Admin', target_type: 'user', target_id: USER_ID, target_name: 'Example', safe_metadata: { previous_status: 'pending_approval', auth_user_id: 'hidden' }, has_more: true }
+  const first = { event_id: '11111111-1111-4111-8111-111111111111', action: 'role.assigned', category: 'roles', source: 'database', occurred_at: '2026-08-30T12:00:00Z', actor_user_id: USER_ID, actor_full_name: 'Admin', target_type: 'user', target_id: USER_ID, target_name: 'Example', scope_type: 'campaign', safe_metadata: { previous_status: 'pending_approval', campaign_code: 'garrett', campaign_name: 'Garrett', campaign_id: 'hidden', auth_user_id: 'hidden' }, has_more: true }
   const client = { rpc: async (name, args) => { calls.push({ name, args }); return { data: [first], error: null } } }
   const result = await listAuditEvents(client, { limit: 10, category: 'account' })
   assert.equal(result.data.events[0].metadata.auth_user_id, undefined)
   assert.equal(result.data.events[0].metadata.previous_status, 'pending_approval')
+  assert.equal(result.data.events[0].scope.campaignName, 'Garrett')
+  assert.equal(result.data.events[0].scope.campaignId, null)
+  assert.equal(result.data.events[0].metadata.campaign_id, undefined)
   assert.deepEqual(result.data.nextCursor, { occurredAt: first.occurred_at, id: first.event_id })
   assert.equal(calls[0].name, 'list_audit_events')
   assert.equal(calls[0].args.requested_limit, 10)

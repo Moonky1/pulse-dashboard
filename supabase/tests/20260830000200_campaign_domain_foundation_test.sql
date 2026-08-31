@@ -29,10 +29,10 @@ select ok(exists(
   join public.permissions permission on permission.id=role_permission.permission_id
   where role.key='super_admin' and permission.key='campaigns.manage'
 ),'Super Admin receives reserved campaign management authority');
-select throws_ok(
-  $$insert into public.role_scopes(role_id,scope_type) values ('10000000-0000-0000-0000-000000000010','campaign')$$,
-  '23514',null,'campaign authorization scope is not partially activated'
-);
+select ok(not exists(
+  select 1 from public.role_scopes
+  where role_id='10000000-0000-0000-0000-000000000010' and scope_type='campaign'
+),'Campaign scope activation does not broaden Super Admin semantics');
 
 insert into public.departments(id,code,name,is_active)
 values ('d7000000-0000-4000-8000-000000000001','admin6_department','ADMIN-6 Department',true);

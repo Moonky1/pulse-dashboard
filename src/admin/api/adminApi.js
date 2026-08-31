@@ -181,6 +181,9 @@ function normalizeRole(role = {}) {
     name: role.role_name ?? 'Unknown role',
     scopeType: role.scope_type ?? 'global',
     departmentId: role.department_id ?? null,
+    campaignId: role.campaign_id ?? null,
+    campaignCode: role.campaign_code ?? null,
+    campaignName: role.campaign_name ?? null,
     teamId: role.team_id ?? null,
   }
 }
@@ -321,11 +324,15 @@ export async function blockPendingUser(client, targetUserId, reason = null) {
 function normalizePendingApprovalOption(row = {}) {
   const scopeType = row.scope_type ?? ''
   const departmentId = row.department_id ?? null
+  const campaignId = row.campaign_id ?? null
   const teamId = row.team_id ?? null
   if (!UUID_PATTERN.test(departmentId ?? '') || !UUID_PATTERN.test(row.role_id ?? '')) return null
-  if (!['global', 'department', 'team'].includes(scopeType)) return null
+  if (!['global', 'department', 'campaign', 'team'].includes(scopeType)) return null
   if (teamId !== null && !UUID_PATTERN.test(teamId)) return null
+  if (campaignId !== null && !UUID_PATTERN.test(campaignId)) return null
   if (scopeType === 'team' && !teamId) return null
+  if (scopeType === 'campaign' && !campaignId) return null
+  if (scopeType !== 'campaign' && campaignId) return null
   return {
     departmentId,
     departmentCode: row.department_code ?? '',
@@ -333,6 +340,9 @@ function normalizePendingApprovalOption(row = {}) {
     teamId,
     teamCode: row.team_code ?? null,
     teamName: row.team_name ?? null,
+    campaignId,
+    campaignCode: row.campaign_code ?? null,
+    campaignName: row.campaign_name ?? null,
     roleId: row.role_id,
     roleKey: row.role_key ?? '',
     roleName: row.role_name ?? 'Unknown role',
@@ -360,6 +370,9 @@ export async function approvePendingUser(client, targetUserId, approvalOption = 
     team_id: approvalOption.teamId ?? null,
     team_code: approvalOption.teamCode,
     team_name: approvalOption.teamName,
+    campaign_id: approvalOption.campaignId ?? null,
+    campaign_code: approvalOption.campaignCode,
+    campaign_name: approvalOption.campaignName,
     role_id: approvalOption.roleId,
     role_key: approvalOption.roleKey,
     role_name: approvalOption.roleName,
@@ -372,7 +385,11 @@ export async function approvePendingUser(client, targetUserId, approvalOption = 
     target_user_id: targetUserId,
     selected_department_id: normalizedOption.departmentId,
     selected_team_id: normalizedOption.teamId,
-    requested_roles: [{ role_id: normalizedOption.roleId, scope_type: normalizedOption.scopeType }],
+    requested_roles: [{
+      role_id: normalizedOption.roleId,
+      scope_type: normalizedOption.scopeType,
+      campaign_id: normalizedOption.campaignId,
+    }],
   })
   if (error) return { data: null, error: normalizePendingApprovalError(error) }
   const row = Array.isArray(data) ? data[0] : data
@@ -413,22 +430,34 @@ export async function assignManagedUserRole(client, {
   requestedRoleId,
   requestedScopeType,
   requestedDepartmentId = null,
+  requestedCampaignId = null,
   requestedTeamId = null,
 } = {}) {
   if (!UUID_PATTERN.test(targetUserId ?? '') || !UUID_PATTERN.test(requestedRoleId ?? '')) {
     return { data: null, error: publicError('invalid_request', 'The requested user or role is not valid.') }
   }
-  if (!['global', 'department', 'team'].includes(requestedScopeType)) {
+  if (!['global', 'department', 'campaign', 'team'].includes(requestedScopeType)) {
     return { data: null, error: publicError('invalid_request', 'The requested role scope is not valid.') }
   }
-  if ((requestedDepartmentId && !UUID_PATTERN.test(requestedDepartmentId)) || (requestedTeamId && !UUID_PATTERN.test(requestedTeamId))) {
+  if ((requestedDepartmentId && !UUID_PATTERN.test(requestedDepartmentId))
+      || (requestedCampaignId && !UUID_PATTERN.test(requestedCampaignId))
+      || (requestedTeamId && !UUID_PATTERN.test(requestedTeamId))) {
     return { data: null, error: publicError('invalid_request', 'The requested organization scope is not valid.') }
   }
+  const exactScope = requestedScopeType === 'global'
+    ? !requestedDepartmentId && !requestedCampaignId && !requestedTeamId
+    : requestedScopeType === 'department'
+      ? Boolean(requestedDepartmentId && !requestedCampaignId && !requestedTeamId)
+      : requestedScopeType === 'campaign'
+        ? Boolean(!requestedDepartmentId && requestedCampaignId && !requestedTeamId)
+        : Boolean(!requestedDepartmentId && !requestedCampaignId && requestedTeamId)
+  if (!exactScope) return { data: null, error: publicError('invalid_request', 'Select one exact server-provided scope target.') }
   const { data, error } = await client.rpc('assign_user_role', {
     target_user_id: targetUserId,
     requested_role_id: requestedRoleId,
     requested_scope_type: requestedScopeType,
     requested_department_id: requestedDepartmentId,
+    requested_campaign_id: requestedCampaignId,
     requested_team_id: requestedTeamId,
   })
   if (error) return { data: null, error: normalizeRoleMutationError(error) }
@@ -631,11 +660,13 @@ export function setManagedTeamActive(client, team, active) {
 function normalizeAssignableRoleOption(row = {}) {
   const scopeType = row.scope_type ?? ''
   const departmentId = row.department_id ?? null
+  const campaignId = row.campaign_id ?? null
   const teamId = row.team_id ?? null
-  if (!UUID_PATTERN.test(row.role_id ?? '') || !['global', 'department', 'team'].includes(scopeType)) return null
-  if (scopeType === 'global' && (departmentId || teamId)) return null
-  if (scopeType === 'department' && (!UUID_PATTERN.test(departmentId ?? '') || teamId)) return null
-  if (scopeType === 'team' && (!UUID_PATTERN.test(departmentId ?? '') || !UUID_PATTERN.test(teamId ?? ''))) return null
+  if (!UUID_PATTERN.test(row.role_id ?? '') || !['global', 'department', 'campaign', 'team'].includes(scopeType)) return null
+  if (scopeType === 'global' && (departmentId || campaignId || teamId)) return null
+  if (scopeType === 'department' && (!UUID_PATTERN.test(departmentId ?? '') || campaignId || teamId)) return null
+  if (scopeType === 'campaign' && (departmentId || !UUID_PATTERN.test(campaignId ?? '') || teamId)) return null
+  if (scopeType === 'team' && (departmentId || campaignId || !UUID_PATTERN.test(teamId ?? ''))) return null
   return {
     roleId: row.role_id,
     roleKey: row.role_key ?? '',
@@ -643,6 +674,9 @@ function normalizeAssignableRoleOption(row = {}) {
     scopeType,
     departmentId,
     departmentName: row.department_name ?? null,
+    campaignId,
+    campaignCode: row.campaign_code ?? null,
+    campaignName: row.campaign_name ?? null,
     teamId,
     teamName: row.team_name ?? null,
   }
@@ -665,7 +699,7 @@ export function normalizeAuditError(error) {
   return publicError('unavailable', 'Pulse could not load audit history. Try again shortly.')
 }
 
-const SAFE_AUDIT_METADATA_KEYS = Object.freeze(['previous_status', 'scope_type', 'code', 'name', 'before', 'after'])
+const SAFE_AUDIT_METADATA_KEYS = Object.freeze(['previous_status', 'scope_type', 'code', 'name', 'campaign_code', 'campaign_name', 'before', 'after'])
 
 function normalizeAuditMetadata(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
@@ -674,6 +708,7 @@ function normalizeAuditMetadata(value) {
 
 export function normalizeAuditEvent(row = {}) {
   if (!UUID_PATTERN.test(row.event_id ?? '') || !row.action || !row.occurred_at) return null
+  const metadata = normalizeAuditMetadata(row.safe_metadata)
   return {
     id: row.event_id,
     action: row.action,
@@ -684,8 +719,17 @@ export function normalizeAuditEvent(row = {}) {
     target: row.target_id ? { type: row.target_type || 'record', id: row.target_id, name: row.target_name || 'Unknown target', employeeId: row.target_employee_id || null } : null,
     reason: row.reason || null,
     role: row.role_id ? { id: row.role_id, name: row.role_name || 'Unknown role' } : null,
-    scope: { type: row.scope_type || null, departmentId: row.department_id || null, departmentName: row.department_name || null, teamId: row.team_id || null, teamName: row.team_name || null },
-    metadata: normalizeAuditMetadata(row.safe_metadata),
+    scope: {
+      type: row.scope_type || null,
+      departmentId: row.department_id || null,
+      departmentName: row.department_name || null,
+      campaignId: null,
+      campaignCode: metadata.campaign_code || null,
+      campaignName: metadata.campaign_name || null,
+      teamId: row.team_id || null,
+      teamName: row.team_name || null,
+    },
+    metadata,
     hasMore: Boolean(row.has_more),
   }
 }

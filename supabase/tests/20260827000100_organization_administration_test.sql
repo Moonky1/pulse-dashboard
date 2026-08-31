@@ -160,8 +160,8 @@ select throws_ok($$select * from public.set_team_active(
   (select updated_at from public.teams where id='e5000000-0000-4000-8000-000000000001')
 )$$,'55000',null,'team with active users cannot be deactivated');
 update public.users set team_id=null, department_id='d5000000-0000-4000-8000-000000000004' where id='b5000000-0000-4000-8000-000000000003';
-insert into public.user_roles(id,user_id,role_id,scope_type,department_id,team_id,assigned_by_user_id)
-values('c5000000-0000-4000-8000-000000000004','b5000000-0000-4000-8000-000000000003','10000000-0000-0000-0000-000000000004','team','d5000000-0000-4000-8000-000000000001','e5000000-0000-4000-8000-000000000001','b5000000-0000-4000-8000-000000000001');
+insert into public.user_roles(id,user_id,role_id,scope_type,team_id,assigned_by_user_id)
+values('c5000000-0000-4000-8000-000000000004','b5000000-0000-4000-8000-000000000003','10000000-0000-0000-0000-000000000004','team','e5000000-0000-4000-8000-000000000001','b5000000-0000-4000-8000-000000000001');
 select throws_ok($$select * from public.set_team_active(
   'e5000000-0000-4000-8000-000000000001',false,
   (select updated_at from public.teams where id='e5000000-0000-4000-8000-000000000001')

@@ -39,6 +39,14 @@ test('approval choices cascade department to team and exact role scope', () => {
   assert.deepEqual(pendingApprovalChoices([option, departmentOnly], option.departmentId, '').roleOptions, [departmentOnly])
 })
 
+test('Campaign authorization remains independent from employment placement', () => {
+  const campaign = { ...option, teamId: null, scopeType: 'campaign', campaignId: 'f5000000-0000-4000-8000-000000000001', campaignName: 'Garrett' }
+  const key = pendingApprovalOptionKey(campaign)
+  assert.equal(resolvePendingApprovalSelection([campaign], { departmentId: option.departmentId, teamId: '', optionKey: key }), campaign)
+  assert.deepEqual(pendingApprovalChoices([campaign], option.departmentId, '').roleOptions, [campaign])
+  assert.match(key, /f5000000/)
+})
+
 test('approval catalog exposes explicit loading, failure, empty, and ready states', () => {
   assert.equal(pendingApprovalCatalogState({ loading: true }), 'loading')
   assert.equal(pendingApprovalCatalogState({ error: { code: 'unavailable' } }), 'error')

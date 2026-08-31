@@ -40,7 +40,7 @@ export function AdminCampaignsPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>Operations</p><h1>Campaigns</h1><span>Review the canonical campaign directory. Campaign authorization scopes and mutations are not enabled in this foundation.</span></div>
+        <div><p>Operations</p><h1>Campaigns</h1><span>Review the canonical campaign directory. Campaign administration remains read-only; authorization scopes are managed from protected user workflows.</span></div>
         <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--campaigns" aria-label="Campaign filters">

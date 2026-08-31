@@ -6,9 +6,11 @@ import { assignableRoles, isSuperAdminRole, organizationForRoleOption, roleAssig
 const ROLE_ID = '10000000-0000-0000-0000-000000000004'
 const DEPARTMENT_ID = 'd0000000-0000-0000-0000-000000000001'
 const TEAM_ID = 'e0000000-0000-0000-0000-000000000001'
+const CAMPAIGN_ID = 'f5000000-0000-4000-8000-000000000001'
 const OPTIONS = [
-  { roleId: ROLE_ID, roleKey: 'supervisor', roleName: 'Supervisor', scopeType: 'department', departmentId: DEPARTMENT_ID, departmentName: 'Corporate', teamId: null, teamName: null },
-  { roleId: ROLE_ID, roleKey: 'supervisor', roleName: 'Supervisor', scopeType: 'team', departmentId: DEPARTMENT_ID, departmentName: 'Corporate', teamId: TEAM_ID, teamName: 'North' },
+  { roleId: ROLE_ID, roleKey: 'supervisor', roleName: 'Supervisor', scopeType: 'department', departmentId: DEPARTMENT_ID, departmentName: 'Corporate', campaignId: null, teamId: null, teamName: null },
+  { roleId: ROLE_ID, roleKey: 'supervisor', roleName: 'Supervisor', scopeType: 'team', departmentId: null, campaignId: null, teamId: TEAM_ID, teamName: 'North' },
+  { roleId: ROLE_ID, roleKey: 'supervisor', roleName: 'Supervisor', scopeType: 'campaign', departmentId: null, campaignId: CAMPAIGN_ID, campaignName: 'Garrett', teamId: null },
 ]
 
 test('role and scope rendering comes only from exact server-returned options', () => {
@@ -18,6 +20,7 @@ test('role and scope rendering comes only from exact server-returned options', (
   assert.equal(organizationForRoleOption({ scopeType: 'global' }).label, 'Global · All Pulse')
   assert.equal(organizationForRoleOption(OPTIONS[0]).label, 'Department · Corporate')
   assert.equal(organizationForRoleOption(OPTIONS[1]).label, 'Team · North')
+  assert.equal(organizationForRoleOption(OPTIONS[2]).label, 'Campaign · Garrett')
 })
 
 test('assignment request reuses one exact server-resolved grant combination', () => {
@@ -25,11 +28,21 @@ test('assignment request reuses one exact server-resolved grant combination', ()
     requestedRoleId: ROLE_ID,
     requestedScopeType: 'department',
     requestedDepartmentId: DEPARTMENT_ID,
+    requestedCampaignId: null,
     requestedTeamId: null,
-    organization: { label: 'Department · Corporate', departmentId: DEPARTMENT_ID, teamId: null, valid: true },
+    organization: { label: 'Department · Corporate', departmentId: DEPARTMENT_ID, campaignId: null, teamId: null, valid: true },
+  })
+  assert.deepEqual(roleAssignmentRequest(OPTIONS[2]), {
+    requestedRoleId: ROLE_ID,
+    requestedScopeType: 'campaign',
+    requestedDepartmentId: null,
+    requestedCampaignId: CAMPAIGN_ID,
+    requestedTeamId: null,
+    organization: { label: 'Campaign · Garrett', departmentId: null, campaignId: CAMPAIGN_ID, teamId: null, valid: true },
   })
   assert.equal(roleAssignmentRequest({ ...OPTIONS[0], scopeType: 'planet' }), null)
   assert.equal(roleAssignmentRequest({ ...OPTIONS[1], teamId: null }), null)
+  assert.equal(roleAssignmentRequest({ ...OPTIONS[2], campaignId: null }), null)
 })
 
 test('role notices distinguish idempotency and privileged Super Admin assignments', () => {

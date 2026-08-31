@@ -8,10 +8,11 @@ test('lifecycle states expose readable labels, not color alone', () => {
   assert.match(lifecycleMeta('blocked').description, /restricted/)
 })
 
-test('role scopes clearly distinguish global, department, and team access', () => {
+test('role scopes clearly distinguish global, department, Campaign, and team access', () => {
   const directory = { departments: [{ id: 'd1', name: 'Corporate' }], teams: [{ id: 't1', name: 'North' }] }
   assert.equal(roleScopeLabel({ scopeType: 'global' }, directory), 'Global · All Pulse')
   assert.equal(roleScopeLabel({ scopeType: 'department', departmentId: 'd1' }, directory), 'Department · Corporate')
+  assert.equal(roleScopeLabel({ scopeType: 'campaign', campaignName: 'Garrett' }, directory), 'Campaign · Garrett')
   assert.equal(roleScopeLabel({ scopeType: 'team', teamId: 't1' }, directory), 'Team · North')
 })
 
