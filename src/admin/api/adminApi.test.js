@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedTeams, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
+import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, getUserOperationalAssignments, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedPositions, listManagedTeams, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -427,6 +427,59 @@ test('campaign catalog preserves an empty result, drops malformed rows, and sani
   const failed = await listManagedCampaigns({ rpc: async () => ({ data: null, error: { code: 'XX000', message: 'campaigns SQL stack' } }) })
   assert.equal(failed.error.code, 'unavailable')
   assert.doesNotMatch(failed.error.message, /campaigns|SQL|stack/i)
+})
+
+test('Position catalog uses only its protected read RPC and normalizes safe counts', async () => {
+  const calls = []
+  const result = await listManagedPositions({ rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ id: 'f6000000-0000-4000-8000-000000000001', code: 'qa_analyst', name: 'QA Analyst', description: null, is_active: true, current_user_count: 1, assignment_count: 3, active_assignment_count: 2 }], error: null }
+  } })
+  assert.deepEqual(calls, [{ name: 'list_managed_positions', args: undefined }])
+  assert.deepEqual(result.data[0], {
+    id: 'f6000000-0000-4000-8000-000000000001',
+    code: 'qa_analyst',
+    name: 'QA Analyst',
+    description: '',
+    isActive: true,
+    createdAt: null,
+    updatedAt: null,
+    currentUserCount: 1,
+    assignmentCount: 3,
+    activeAssignmentCount: 2,
+  })
+})
+
+test('operational assignments use one protected resolved RPC and preserve Campaign-only history', async () => {
+  const calls = []
+  const assignment = {
+    assignment_id: 'f6000000-0000-4000-8000-000000000010',
+    user_id: USER_ID,
+    position_id: 'f6000000-0000-4000-8000-000000000001',
+    position_code: 'qa_analyst',
+    position_name: 'QA Analyst',
+    campaign_id: 'f5000000-0000-4000-8000-000000000001',
+    campaign_code: 'garrett',
+    campaign_name: 'Garrett',
+    team_id: null,
+    team_code: null,
+    team_name: null,
+    is_primary: true,
+    started_at: '2026-08-31T00:00:00Z',
+    ended_at: null,
+    is_active: true,
+  }
+  const result = await getUserOperationalAssignments({ rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [assignment, { ...assignment, assignment_id: 'invalid' }], error: null }
+  } }, USER_ID)
+  assert.deepEqual(calls, [{ name: 'get_user_operational_assignments', args: { target_user_id: USER_ID } }])
+  assert.equal(result.data.length, 1)
+  assert.equal(result.data[0].campaignName, 'Garrett')
+  assert.equal(result.data[0].teamId, null)
+  assert.equal(result.data[0].positionName, 'QA Analyst')
+  assert.equal(result.data[0].isActive, true)
+  assert.equal((await getUserOperationalAssignments({ rpc: async () => { throw new Error('must not run') } }, 'bad-id')).error.code, 'invalid_request')
 })
 
 test('department create and update call exact audited RPC contracts', async () => {
