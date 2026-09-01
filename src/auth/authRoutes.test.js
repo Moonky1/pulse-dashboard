@@ -28,6 +28,7 @@ test('staff and agent surfaces have no chooser or cross-link', () => {
   const registerSource = readFileSync(new URL('./screens/RegisterPage.jsx', import.meta.url), 'utf8')
   const agentSource = readFileSync(new URL('./screens/AgentSignInPage.jsx', import.meta.url), 'utf8')
   const workspaceSource = readFileSync(new URL('./screens/WorkspacePage.jsx', import.meta.url), 'utf8')
+  const authStyles = readFileSync(new URL('./styles/auth.css', import.meta.url), 'utf8')
 
   assert.doesNotMatch(appSource, /AccessChooserPage/)
   assert.doesNotMatch(shellSource, /Designed for focused, trusted work/)
@@ -35,6 +36,7 @@ test('staff and agent surfaces have no chooser or cross-link', () => {
   assert.equal(signInSource.match(/auth-trace-action/g)?.length, 2)
   assert.match(registerSource, /auth-trace-action/)
   assert.match(workspaceSource, /auth-admin-link auth-trace-action/)
+  assert.doesNotMatch(authStyles, /auth-trace-loop|auth-trace-action::after/)
   assert.doesNotMatch(signInSource, /Agent/)
   assert.doesNotMatch(agentSource, /AUTH_ENTRY_PATH|Staff|corporate/)
 })
