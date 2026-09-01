@@ -39,7 +39,7 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthShell eyebrow="Staff access request" title="Create your Pulse account" description="Your access will be reviewed by an authorized company administrator." footer={<><span>Already registered?</span> <Link to={STAFF_SIGN_IN_PATH}>Sign in</Link></>}>
+    <AuthShell title="Create your account" footer={<><span>Already have an account?</span> <Link to={STAFF_SIGN_IN_PATH}>Sign in</Link></>}>
       <form className="auth-form" onSubmit={submit} noValidate>
         <Input id="register-name" label="Full name" autoComplete="name" value={form.fullName} onChange={update('fullName')} error={errors.fullName} required />
         <Input id="register-email" label="Email address" type="email" inputMode="email" autoComplete="email" value={form.email} onChange={update('email')} error={errors.email} required />
@@ -47,7 +47,6 @@ export function RegisterPage() {
         <PasswordInput id="register-confirm" label="Confirm password" autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} error={errors.confirmPassword} required />
         {submitError && <AuthNotice>{submitError}</AuthNotice>}
         <Button type="submit" size="lg" loading={submitting}>Create account</Button>
-        <p className="auth-consent">Creating an account does not grant access. Company approval is required.</p>
       </form>
     </AuthShell>
   )

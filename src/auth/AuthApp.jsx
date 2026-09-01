@@ -2,10 +2,9 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import { AUTH_STATES, routeForAuthState } from './authState.js'
-import { AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH, STAFF_SIGN_IN_PATH } from './authRoutes.js'
+import { AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH } from './authRoutes.js'
 import { useAuth } from './AuthProvider.jsx'
 const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').then((module) => ({ default: module.AccountStatePage })))
-const AccessChooserPage = lazy(() => import('./screens/AccessChooserPage.jsx').then((module) => ({ default: module.AccessChooserPage })))
 const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => ({ default: module.AdminArea })))
 const AgentSignInPage = lazy(() => import('./screens/AgentSignInPage.jsx').then((module) => ({ default: module.AgentSignInPage })))
 const AuthCallbackPage = lazy(() => import('./screens/AuthCallbackPage.jsx').then((module) => ({ default: module.AuthCallbackPage })))
@@ -34,13 +33,13 @@ export function AuthApp() {
     <BrowserRouter>
       <Suspense fallback={<AccountStatePage kind="loading" />}><Routes>
         <Route path="/" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
-        <Route path={AUTH_ENTRY_PATH} element={<PublicOnly><AccessChooserPage /></PublicOnly>} />
-        <Route path={STAFF_SIGN_IN_PATH} element={<PublicOnly><SignInPage /></PublicOnly>} />
+        <Route path={AUTH_ENTRY_PATH} element={<PublicOnly><SignInPage /></PublicOnly>} />
         <Route path={STAFF_REGISTER_PATH} element={<PublicOnly><RegisterPage /></PublicOnly>} />
         <Route path={STAFF_FORGOT_PASSWORD_PATH} element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
         <Route path={AGENT_SIGN_IN_PATH} element={<PublicOnly><AgentSignInPage /></PublicOnly>} />
-        <Route path="/register" element={<Navigate to={STAFF_REGISTER_PATH} replace />} />
-        <Route path="/forgot-password" element={<Navigate to={STAFF_FORGOT_PASSWORD_PATH} replace />} />
+        <Route path="/staff/signin" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
+        <Route path="/staff/register" element={<Navigate to={STAFF_REGISTER_PATH} replace />} />
+        <Route path="/staff/forgot-password" element={<Navigate to={STAFF_FORGOT_PASSWORD_PATH} replace />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/auth/verify" element={<VerifyEmailPage />} />
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />

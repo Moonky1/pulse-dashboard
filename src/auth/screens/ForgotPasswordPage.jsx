@@ -27,7 +27,7 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <AuthShell eyebrow="Staff account recovery" title="Reset your password" description="Enter your verified company email and we’ll send recovery instructions." footer={<Link to={STAFF_SIGN_IN_PATH}>Return to Staff sign in</Link>}>
+    <AuthShell title="Reset your password" description="Enter your email to receive a reset link." footer={<Link to={STAFF_SIGN_IN_PATH}>Back to sign in</Link>}>
       <form className="auth-form" onSubmit={submit} noValidate>
         <Input id="recovery-email" label="Email address" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} error={error} required />
         {sent && <AuthNotice tone="info">If the address is eligible, password recovery instructions are on their way.</AuthNotice>}
