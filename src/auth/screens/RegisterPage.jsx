@@ -46,7 +46,7 @@ export function RegisterPage() {
         <PasswordInput id="register-password" label="Password" autoComplete="new-password" hint="Use at least 8 characters." value={form.password} onChange={update('password')} error={errors.password} required />
         <PasswordInput id="register-confirm" label="Confirm password" autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} error={errors.confirmPassword} required />
         {submitError && <AuthNotice>{submitError}</AuthNotice>}
-        <Button className="auth-liquid-action" type="submit" size="lg" loading={submitting}>Create account</Button>
+        <Button className="auth-holo-action" type="submit" size="lg" loading={submitting}>Create account</Button>
       </form>
     </AuthShell>
   )
