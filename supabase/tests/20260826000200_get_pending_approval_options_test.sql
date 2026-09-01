@@ -87,11 +87,11 @@ select ok(not exists(
 ),'no team can escape its returned department');
 select ok(exists(select 1 from public.get_pending_approval_options('b4000000-0000-4000-8000-000000000004') where role_key='employee' and scope_type='global' and team_id is null),'Global role option is returned with an exact department placement');
 select ok(exists(select 1 from public.get_pending_approval_options('b4000000-0000-4000-8000-000000000004') where role_key='supervisor' and scope_type='department' and team_id is null),'Department role option is returned');
-select ok(exists(select 1 from public.get_pending_approval_options('b4000000-0000-4000-8000-000000000004') where role_key='agent' and scope_type='team' and team_id='e4000000-0000-4000-8000-000000000001'),'Team role option is returned only with an exact team placement');
+select ok(exists(select 1 from public.get_pending_approval_options('b4000000-0000-4000-8000-000000000004') where role_key='team_leader' and scope_type='team' and team_id='e4000000-0000-4000-8000-000000000001'),'Team role option is returned only with an exact team placement');
 select ok(not exists(select 1 from public.get_pending_approval_options('b4000000-0000-4000-8000-000000000004') where role_key='employee' and scope_type='team'),'unsupported role scopes are filtered by the canonical role_scopes catalog');
 
 select set_config('request.jwt.claim.sub','a4000000-0000-4000-8000-000000000002',true);
-select ok(exists(select 1 from public.get_pending_approval_options('b4000000-0000-4000-8000-000000000004') where role_key='agent' and scope_type='team'),'Admin grant rules expose operational roles');
+select ok(exists(select 1 from public.get_pending_approval_options('b4000000-0000-4000-8000-000000000004') where role_key='team_leader' and scope_type='team'),'Admin grant rules expose operational Staff roles');
 select ok(not exists(select 1 from public.get_pending_approval_options('b4000000-0000-4000-8000-000000000004') where role_key in ('super_admin','admin','human_resources')),'lower operator cannot browse privileged roles outside grant rules');
 
 select set_config('request.jwt.claim.sub','a4000000-0000-4000-8000-000000000001',true);

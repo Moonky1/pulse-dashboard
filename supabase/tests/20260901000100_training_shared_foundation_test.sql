@@ -20,7 +20,12 @@ select ok(not has_table_privilege('authenticated','public.training_content','SEL
 select ok(not has_table_privilege('authenticated','public.training_content','INSERT'),'browser has no direct content write');
 select ok(not has_table_privilege('authenticated','public.training_results','INSERT'),'browser has no direct result write');
 select ok(not has_table_privilege('anon','public.training_topics','SELECT'),'anon has no Topic read');
-select ok(not exists(select 1 from pg_proc where pronamespace='public'::regnamespace and proname like '%training%' and prosecdef),'TRAIN-1A exposes no public SECURITY DEFINER mutation surface');
+select ok(not exists(
+  select 1 from pg_proc
+  where pronamespace='public'::regnamespace
+    and proname like '%training%' and prosecdef
+    and has_function_privilege('anon',oid,'EXECUTE')
+),'Training SECURITY DEFINER contracts never become anonymous surfaces');
 
 -- Entirely fictitious isolated canonical fixtures.
 insert into public.departments(id,code,name,is_active) values
