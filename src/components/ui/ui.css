@@ -85,16 +85,82 @@
 .pulse-spinner--md { width: 1.5rem; height: 1.5rem; }
 .pulse-spinner--lg { width: 2.25rem; height: 2.25rem; border-width: 3px; }
 
-.pulse-orb { --orb-size: 2.5rem; position: relative; isolation: isolate; display: inline-grid; width: var(--orb-size); height: var(--orb-size); place-items: center; border-radius: 50%; filter: drop-shadow(0 12px 22px rgba(39, 57, 145, 0.22)); }
+@property --pulse-orb-primary-arc {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 38deg;
+}
+
+@property --pulse-orb-secondary-arc {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 28deg;
+}
+
+@property --pulse-orb-flow-arc {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 64deg;
+}
+
+.pulse-orb { --orb-size: 2.5rem; position: relative; isolation: isolate; display: inline-grid; width: var(--orb-size); height: var(--orb-size); place-items: center; border-radius: 50%; filter: drop-shadow(0 16px 28px rgba(0,0,0,.56)); }
 .pulse-orb--sm { --orb-size: 1.75rem; }
 .pulse-orb--md { --orb-size: 2.5rem; }
 .pulse-orb--lg { --orb-size: 4rem; }
 .pulse-orb--xl { --orb-size: clamp(8rem, 18vw, 13rem); }
-.pulse-orb::before { content: ''; position: absolute; inset: -15%; z-index: -2; border-radius: inherit; background: radial-gradient(circle, rgba(112,92,255,0.16), rgba(75,141,255,0.055) 42%, transparent 69%); filter: blur(calc(var(--orb-size) * 0.16)); }
-.pulse-orb::after { content: ''; position: absolute; inset: 1%; z-index: -1; border-radius: inherit; background: conic-gradient(from 228deg, transparent 0 10%, rgba(90,174,255,.20) 18%, transparent 29% 47%, rgba(211,124,186,.16) 55%, transparent 67% 82%, rgba(126,111,255,.18) 92%, transparent); filter: blur(calc(var(--orb-size) * .045)); opacity: .78; }
-.pulse-orb__rim { position: absolute; inset: 3%; border-radius: inherit; background: conic-gradient(from 224deg, #274f9f 0%, #4c8fe5 12%, #8a72ef 27%, #b078d0 39%, #d08fae 46%, #896fdd 57%, #4a83dc 72%, #3958a8 88%, #274f9f 100%); -webkit-mask: radial-gradient(circle, transparent 54%, #000 56%, #000 68%, transparent 70%); mask: radial-gradient(circle, transparent 54%, #000 56%, #000 68%, transparent 70%); box-shadow: inset 0 0 calc(var(--orb-size) * .12) rgba(255,255,255,.22); }
-.pulse-orb__rim::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: conic-gradient(from 250deg, transparent 0 18%, rgba(238,246,255,.78) 22%, transparent 27% 51%, rgba(255,198,224,.34) 56%, transparent 62% 100%); -webkit-mask: radial-gradient(circle, transparent 59%, #000 61%, #000 65%, transparent 67%); mask: radial-gradient(circle, transparent 59%, #000 61%, #000 65%, transparent 67%); opacity: .7; }
-.pulse-orb__core { position: absolute; inset: 18%; border: 1px solid rgba(208,219,255,.16); border-radius: inherit; background: radial-gradient(circle at 31% 23%, rgba(205,220,255,.20), transparent 16%), radial-gradient(circle at 66% 72%, rgba(50,65,111,.22), transparent 48%), linear-gradient(145deg,#111827,#050811 74%); box-shadow: inset 0 1px 1px rgba(255,255,255,.11), inset -8px -12px 22px rgba(0,0,0,.55), 0 0 0 1px rgba(6,8,16,.72); }
-.pulse-orb__glint { position: absolute; width: 17%; height: 7%; left: 27%; top: 22%; border-radius: 50%; background: linear-gradient(90deg,rgba(238,244,255,.88),rgba(173,201,255,.34)); filter: blur(calc(var(--orb-size) * .015)); transform: rotate(-31deg); opacity: .82; }
-.pulse-orb--active .pulse-orb__rim { animation: pulse-spin 8s linear infinite; }
-.pulse-orb--active::before { animation: pulse-breathe 3.8s var(--pulse-ease-standard) infinite; }
+.pulse-orb::before { content:'';position:absolute;inset:-20%;z-index:-2;border-radius:inherit;background:radial-gradient(circle,rgba(205,225,255,.11) 0,rgba(82,126,202,.075) 31%,rgba(52,74,116,.025) 52%,transparent 72%);filter:blur(calc(var(--orb-size) * .18)) }
+.pulse-orb::after { content:'';position:absolute;inset:0;z-index:-1;border:1px solid rgba(239,246,255,.18);border-radius:inherit;background:radial-gradient(circle at 31% 18%,rgba(255,255,255,.08),transparent 30%);box-shadow:inset 0 0 0 calc(var(--orb-size) * .012) rgba(255,255,255,.075),inset 0 0 calc(var(--orb-size) * .08) rgba(171,184,205,.12),0 0 calc(var(--orb-size) * .06) rgba(93,123,172,.14) }
+.pulse-orb__rim { position:absolute;inset:3%;border-radius:inherit;background:conic-gradient(from 212deg,#060709 0 7%,#293039 11%,#8d969f 14%,#f7f9fb 17%,#6f7780 20%,#111419 26%,#030405 39%,#242a31 47%,#aeb6bd 52%,#f8fafb 55%,#747c84 58%,#111419 64%,#040507 76%,#303740 85%,#e8ecef 91%,#5e6670 95%,#060709 100%);-webkit-mask:radial-gradient(circle,transparent 50%,#000 53%,#000 72%,transparent 75%);mask:radial-gradient(circle,transparent 50%,#000 53%,#000 72%,transparent 75%);box-shadow:inset 0 0 calc(var(--orb-size) * .115) rgba(247,250,255,.21),inset 0 0 calc(var(--orb-size) * .044) rgba(0,0,0,.9),0 0 calc(var(--orb-size) * .034) rgba(210,226,248,.18);transform-origin:50% 50% }
+.pulse-orb__rim::after { content:'';position:absolute;inset:0;border-radius:inherit;background:conic-gradient(from 8deg,transparent 0 7deg,rgba(255,132,54,.72) 10deg,rgba(255,231,178,.9) 14deg,rgba(253,255,255,.98) 18deg,rgba(90,229,255,.78) 22deg,rgba(61,97,255,.56) 26deg,transparent 31deg 360deg),conic-gradient(from 189deg,transparent 0 5deg,rgba(69,106,255,.52) 8deg,rgba(89,227,255,.72) 12deg,rgba(252,255,255,.96) 16deg,rgba(255,224,165,.82) 20deg,rgba(255,126,48,.52) 23deg,transparent 28deg 360deg);-webkit-mask:radial-gradient(circle,transparent 55%,#000 58%,#000 66%,transparent 69%);mask:radial-gradient(circle,transparent 55%,#000 58%,#000 66%,transparent 69%);mix-blend-mode:screen;opacity:.7;filter:brightness(1.02) drop-shadow(0 0 calc(var(--orb-size) * .022) rgba(236,246,255,.42));transform-origin:50% 50%;will-change:transform,opacity,filter }
+.pulse-orb__spill { position:absolute;inset:-7%;z-index:1;border-radius:47% 53% 44% 56%/56% 45% 55% 44%;background:radial-gradient(ellipse at 27% 20%,transparent 0 18%,rgba(255,130,50,.3) 23%,rgba(255,242,210,.56) 27%,rgba(84,226,255,.35) 31%,transparent 38%),radial-gradient(ellipse at 73% 82%,transparent 0 16%,rgba(57,92,255,.3) 22%,rgba(246,253,255,.56) 27%,rgba(255,139,53,.26) 32%,transparent 39%);-webkit-mask:radial-gradient(ellipse at center,transparent 45%,#000 48%,#000 55%,transparent 60%);mask:radial-gradient(ellipse at center,transparent 45%,#000 48%,#000 55%,transparent 60%);filter:blur(calc(var(--orb-size) * .036)) brightness(1.02) drop-shadow(0 0 calc(var(--orb-size) * .065) rgba(213,232,255,.22));mix-blend-mode:screen;opacity:.3;transform-origin:50% 50%;will-change:transform,border-radius,opacity,filter;pointer-events:none }
+.pulse-orb__flow { position:absolute;inset:-9%;z-index:2;border-radius:43% 57% 48% 52%/55% 42% 58% 45%;background:radial-gradient(ellipse at 24% 18%,transparent 0 17%,rgba(255,127,46,.48) 21%,rgba(255,240,203,.8) 26%,rgba(249,255,255,.94) 29%,rgba(78,224,255,.62) 33%,rgba(66,94,255,.42) 36%,transparent 42%),radial-gradient(ellipse at 76% 84%,transparent 0 15%,rgba(54,88,255,.4) 20%,rgba(72,222,255,.63) 24%,rgba(251,255,255,.92) 28%,rgba(255,224,166,.68) 31%,rgba(255,125,46,.38) 35%,transparent 41%);-webkit-mask:radial-gradient(ellipse at center,transparent 39%,#000 42%,#000 50%,transparent 54%);mask:radial-gradient(ellipse at center,transparent 39%,#000 42%,#000 50%,transparent 54%);mix-blend-mode:screen;opacity:.38;filter:blur(calc(var(--orb-size) * .021)) brightness(1.03) drop-shadow(0 0 calc(var(--orb-size) * .06) rgba(232,244,255,.25));transform-origin:50% 50%;will-change:transform,border-radius,opacity,filter;pointer-events:none }
+.pulse-orb__core { position:absolute;inset:18%;z-index:3;border:1px solid rgba(238,245,255,.31);border-radius:inherit;background:radial-gradient(circle at 33% 22%,rgba(250,253,255,.48),transparent 12%),radial-gradient(circle at 66% 67%,rgba(82,96,122,.13),transparent 46%),linear-gradient(145deg,#30353e 0%,#12161d 34%,#030405 82%);box-shadow:inset 0 2px 2px rgba(255,255,255,.19),inset -11px -16px 28px rgba(0,0,0,.82),inset 6px 8px 18px rgba(111,130,161,.07),0 0 0 2px rgba(2,3,5,.88),0 0 0 3px rgba(232,241,255,.07) }
+.pulse-orb__glint { position:absolute;width:17%;height:6%;left:27%;top:22%;z-index:4;border-radius:50%;background:linear-gradient(90deg,rgba(252,254,255,.98),rgba(204,220,241,.3));filter:blur(calc(var(--orb-size) * .013));transform:rotate(-31deg);opacity:.9 }
+.pulse-orb--active .pulse-orb__rim::after { animation:pulse-orb-reflection 5.6s cubic-bezier(.45,.04,.2,1) infinite; }
+.pulse-orb--active .pulse-orb__flow { animation:pulse-orb-liquid-flow 5.6s cubic-bezier(.45,.04,.2,1) infinite; }
+.pulse-orb--active .pulse-orb__spill { animation:pulse-orb-spill 5.6s cubic-bezier(.45,.04,.2,1) infinite; }
+.pulse-orb--active::before { animation:pulse-breathe 5.2s var(--pulse-ease-standard) infinite; }
+
+@keyframes pulse-orb-reflection {
+  0% { opacity:.42;filter:brightness(.9) drop-shadow(0 0 calc(var(--orb-size) * .012) rgba(236,246,255,.22));transform:rotate(-14deg) scale(.98,1.02) }
+  18% { opacity:.78;filter:brightness(1.12) drop-shadow(0 0 calc(var(--orb-size) * .028) rgba(248,252,255,.44));transform:rotate(46deg) scale(1.02,.97) }
+  43% { opacity:.94;filter:brightness(1.24) drop-shadow(0 0 calc(var(--orb-size) * .038) rgba(237,247,255,.52));transform:rotate(132deg) scale(.97,1.04) }
+  67% { opacity:.58;filter:brightness(.98) drop-shadow(0 0 calc(var(--orb-size) * .018) rgba(106,215,255,.26));transform:rotate(229deg) scale(1.03,.96) }
+  84% { opacity:.82;filter:brightness(1.13) drop-shadow(0 0 calc(var(--orb-size) * .03) rgba(255,211,150,.34));transform:rotate(298deg) scale(.98,1.03) }
+  100% { opacity:.42;filter:brightness(.9) drop-shadow(0 0 calc(var(--orb-size) * .012) rgba(236,246,255,.22));transform:rotate(346deg) scale(.98,1.02) }
+}
+
+@keyframes pulse-orb-liquid-flow {
+  0% { border-radius:43% 57% 48% 52%/55% 42% 58% 45%;opacity:.18;filter:blur(calc(var(--orb-size) * .018)) brightness(.88);transform:rotate(-20deg) scale(.96,1.05) translate(-2%,1%) }
+  20% { border-radius:56% 44% 53% 47%/43% 59% 41% 57%;opacity:.52;filter:blur(calc(var(--orb-size) * .026)) brightness(1.08);transform:rotate(38deg) scale(1.06,.94) translate(2%,-2%) }
+  45% { border-radius:40% 60% 45% 55%/61% 39% 58% 42%;opacity:.72;filter:blur(calc(var(--orb-size) * .034)) brightness(1.2);transform:rotate(128deg) scale(.94,1.1) translate(-3%,-2%) }
+  68% { border-radius:58% 42% 46% 54%/42% 62% 38% 58%;opacity:.3;filter:blur(calc(var(--orb-size) * .022)) brightness(.96);transform:rotate(226deg) scale(1.09,.92) translate(3%,2%) }
+  84% { border-radius:47% 53% 59% 41%/57% 43% 51% 49%;opacity:.6;filter:blur(calc(var(--orb-size) * .029)) brightness(1.12);transform:rotate(294deg) scale(.97,1.07) translate(-2%,1%) }
+  100% { border-radius:43% 57% 48% 52%/55% 42% 58% 45%;opacity:.18;filter:blur(calc(var(--orb-size) * .018)) brightness(.88);transform:rotate(340deg) scale(.96,1.05) translate(-2%,1%) }
+}
+
+@keyframes pulse-orb-spill {
+  0% { border-radius:47% 53% 44% 56%/56% 45% 55% 44%;filter:blur(calc(var(--orb-size) * .032)) brightness(.92);opacity:.12;transform:rotate(8deg) scale(.91,1.04) translate(-2%,2%) }
+  20% { border-radius:56% 44% 52% 48%/44% 58% 42% 56%;filter:blur(calc(var(--orb-size) * .041)) brightness(1.05);opacity:.38;transform:rotate(-10deg) scale(1.07,.92) translate(3%,-3%) }
+  45% { border-radius:42% 58% 45% 55%/59% 41% 62% 38%;filter:blur(calc(var(--orb-size) * .047)) brightness(1.16);opacity:.52;transform:rotate(15deg) scale(.95,1.11) translate(-3%,-4%) }
+  68% { border-radius:59% 41% 46% 54%/41% 62% 38% 59%;filter:blur(calc(var(--orb-size) * .036)) brightness(.98);opacity:.22;transform:rotate(-7deg) scale(1.09,.91) translate(3%,2%) }
+  84% { border-radius:46% 54% 58% 42%/57% 43% 50% 50%;filter:blur(calc(var(--orb-size) * .043)) brightness(1.08);opacity:.44;transform:rotate(11deg) scale(.96,1.08) translate(-2%,-2%) }
+  100% { border-radius:47% 53% 44% 56%/56% 45% 55% 44%;filter:blur(calc(var(--orb-size) * .032)) brightness(.92);opacity:.12;transform:rotate(8deg) scale(.91,1.04) translate(-2%,2%) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-orb--active .pulse-orb__rim::after {
+    animation-duration: 5.6s !important;
+    animation-iteration-count: infinite !important;
+    animation-timing-function: linear !important;
+  }
+  .pulse-orb--active .pulse-orb__flow {
+    animation-duration: 5.6s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .pulse-orb--active .pulse-orb__spill {
+    animation-duration: 5.6s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .pulse-orb--active::before { animation: none !important; }
+}

@@ -9,6 +9,7 @@ import { useAuth } from '../AuthProvider.jsx'
 import { AuthNotice } from '../components/AuthNotice.jsx'
 import { AuthShell } from '../components/AuthShell.jsx'
 import { resendSignupVerification } from '../pulseAuthService.js'
+import { STAFF_SIGN_IN_PATH } from '../authRoutes.js'
 
 const RESEND_COOLDOWN_SECONDS = 60
 
@@ -47,7 +48,7 @@ export function VerifyEmailPage() {
         {notice && <AuthNotice tone="info">{notice}</AuthNotice>}
         {email ? <Button type="button" variant="secondary" loading={sending} disabled={cooldown > 0} onClick={resend}>{cooldown ? `Resend available in ${cooldown}s` : 'Resend verification email'}</Button> : <p className="auth-safe-detail">For security, resend is available only immediately after registration. Return to registration if your link expired.</p>}
         <Button type="button" variant="ghost" onClick={() => window.location.reload()}>I verified my email</Button>
-        <Link className="auth-inline-link" to="/signin">Return to sign in</Link>
+        <Link className="auth-inline-link" to={STAFF_SIGN_IN_PATH}>Back to sign in</Link>
       </div>
     </AuthShell>
   )

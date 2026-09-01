@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button.jsx'
 import { Input } from '../../components/ui/Input.jsx'
 import { isEmailFormatValid } from '../pulseAuthService.js'
+import { STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH } from '../authRoutes.js'
 import { useAuth } from '../AuthProvider.jsx'
 import { AuthNotice } from '../components/AuthNotice.jsx'
 import { AuthShell } from '../components/AuthShell.jsx'
@@ -16,6 +17,7 @@ export function SignInPage() {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [googleNotice, setGoogleNotice] = useState('')
 
   const submit = async (event) => {
     event.preventDefault()
@@ -32,16 +34,20 @@ export function SignInPage() {
   }
 
   return (
-    <AuthShell eyebrow="Welcome back" title="Sign in to Pulse" description="Use your verified company account." footer={<><span>New to Pulse?</span> <Link to="/register">Create an account</Link></>}>
+    <AuthShell eyebrow="Welcome back" title="Sign in to Pulse" footer={<><span>New to Pulse?</span> <Link to={STAFF_REGISTER_PATH}>Create an account</Link></>}>
       <form className="auth-form" onSubmit={submit} noValidate>
         {location.state?.passwordUpdated && <AuthNotice tone="info">Your password was updated. Sign in with your new password.</AuthNotice>}
         <Input id="signin-email" label="Email address" type="email" autoComplete="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@company.com" required />
         <PasswordInput id="signin-password" label="Password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-        <div className="auth-form-meta"><span>Secure company access</span><Link className="auth-text-button" to="/forgot-password">Forgot password?</Link></div>
+        <div className="auth-form-meta auth-form-meta--end"><Link className="auth-text-button" to={STAFF_FORGOT_PASSWORD_PATH}>Forgot password?</Link></div>
         {error && <AuthNotice>{error}</AuthNotice>}
-        <Button type="submit" size="lg" loading={submitting}>Sign in</Button>
-        <Button type="button" size="lg" variant="secondary" disabled>Continue with Google</Button>
-        <p className="auth-helper">Google sign-in is intentionally deferred.</p>
+        <Button className="auth-trace-action" type="submit" size="lg" loading={submitting}>Sign in</Button>
+        <div className="auth-option-divider" role="separator"><span>or</span></div>
+        <Button className="auth-trace-action" type="button" size="lg" variant="secondary" onClick={() => setGoogleNotice('Google sign-in is coming soon.')}>
+          <span className="auth-google-mark" aria-hidden="true">G</span>
+          Continue with Google
+        </Button>
+        {googleNotice && <AuthNotice tone="info">{googleNotice}</AuthNotice>}
       </form>
     </AuthShell>
   )

@@ -9,6 +9,7 @@ import { AuthShell } from '../components/AuthShell.jsx'
 import { PasswordInput } from '../components/PasswordInput.jsx'
 import { validateRegistration } from '../pulseAuthService.js'
 import { getAuthRedirect } from '../authRedirects.js'
+import { STAFF_SIGN_IN_PATH } from '../authRoutes.js'
 
 export function RegisterPage() {
   const { register } = useAuth()
@@ -38,15 +39,14 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthShell eyebrow="Request access" title="Create your Pulse account" description="Your access will be reviewed by an authorized company administrator." footer={<><span>Already registered?</span> <Link to="/signin">Sign in</Link></>}>
+    <AuthShell title="Create your account" footer={<><span>Already have an account?</span> <Link to={STAFF_SIGN_IN_PATH}>Sign in</Link></>}>
       <form className="auth-form" onSubmit={submit} noValidate>
         <Input id="register-name" label="Full name" autoComplete="name" value={form.fullName} onChange={update('fullName')} error={errors.fullName} required />
         <Input id="register-email" label="Email address" type="email" inputMode="email" autoComplete="email" value={form.email} onChange={update('email')} error={errors.email} required />
         <PasswordInput id="register-password" label="Password" autoComplete="new-password" hint="Use at least 8 characters." value={form.password} onChange={update('password')} error={errors.password} required />
         <PasswordInput id="register-confirm" label="Confirm password" autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} error={errors.confirmPassword} required />
         {submitError && <AuthNotice>{submitError}</AuthNotice>}
-        <Button type="submit" size="lg" loading={submitting}>Create account</Button>
-        <p className="auth-consent">Creating an account does not grant access. Company approval is required.</p>
+        <Button className="auth-trace-action" type="submit" size="lg" loading={submitting}>Create account</Button>
       </form>
     </AuthShell>
   )

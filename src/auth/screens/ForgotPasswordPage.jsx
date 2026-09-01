@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button.jsx'
 import { Input } from '../../components/ui/Input.jsx'
 import { supabase } from '../../utils/supabase.js'
 import { getAuthRedirect } from '../authRedirects.js'
+import { STAFF_SIGN_IN_PATH } from '../authRoutes.js'
 import { AuthNotice } from '../components/AuthNotice.jsx'
 import { AuthShell } from '../components/AuthShell.jsx'
 import { isEmailFormatValid, requestPasswordRecovery } from '../pulseAuthService.js'
@@ -26,7 +27,7 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <AuthShell eyebrow="Account recovery" title="Reset your password" description="Enter your verified account email and we’ll send recovery instructions." footer={<Link to="/signin">Return to sign in</Link>}>
+    <AuthShell title="Reset your password" description="Enter your email to receive a reset link." footer={<Link to={STAFF_SIGN_IN_PATH}>Back to sign in</Link>}>
       <form className="auth-form" onSubmit={submit} noValidate>
         <Input id="recovery-email" label="Email address" type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} error={error} required />
         {sent && <AuthNotice tone="info">If the address is eligible, password recovery instructions are on their way.</AuthNotice>}
