@@ -21,12 +21,18 @@ test('legacy explicit staff links redirect to the simple public paths', () => {
   })
 })
 
-test('staff and agent surfaces have no chooser, Google prompt, or cross-link', () => {
+test('staff and agent surfaces have no chooser or cross-link', () => {
   const appSource = readFileSync(new URL('./AuthApp.jsx', import.meta.url), 'utf8')
+  const shellSource = readFileSync(new URL('./components/AuthShell.jsx', import.meta.url), 'utf8')
   const signInSource = readFileSync(new URL('./screens/SignInPage.jsx', import.meta.url), 'utf8')
+  const registerSource = readFileSync(new URL('./screens/RegisterPage.jsx', import.meta.url), 'utf8')
   const agentSource = readFileSync(new URL('./screens/AgentSignInPage.jsx', import.meta.url), 'utf8')
 
   assert.doesNotMatch(appSource, /AccessChooserPage/)
-  assert.doesNotMatch(signInSource, /Google|Agent/)
+  assert.doesNotMatch(shellSource, /Designed for focused, trusted work/)
+  assert.match(signInSource, /Continue with Google/)
+  assert.match(signInSource, /auth-liquid-action/)
+  assert.match(registerSource, /auth-liquid-action/)
+  assert.doesNotMatch(signInSource, /Agent/)
   assert.doesNotMatch(agentSource, /AUTH_ENTRY_PATH|Staff|corporate/)
 })

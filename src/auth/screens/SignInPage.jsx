@@ -17,6 +17,7 @@ export function SignInPage() {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [googleNotice, setGoogleNotice] = useState('')
 
   const submit = async (event) => {
     event.preventDefault()
@@ -40,7 +41,13 @@ export function SignInPage() {
         <PasswordInput id="signin-password" label="Password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
         <div className="auth-form-meta auth-form-meta--end"><Link className="auth-text-button" to={STAFF_FORGOT_PASSWORD_PATH}>Forgot password?</Link></div>
         {error && <AuthNotice>{error}</AuthNotice>}
-        <Button type="submit" size="lg" loading={submitting}>Sign in</Button>
+        <Button className="auth-liquid-action" type="submit" size="lg" loading={submitting}>Sign in</Button>
+        <div className="auth-option-divider" role="separator"><span>or</span></div>
+        <Button type="button" size="lg" variant="secondary" onClick={() => setGoogleNotice('Google sign-in is coming soon.')}>
+          <span className="auth-google-mark" aria-hidden="true">G</span>
+          Continue with Google
+        </Button>
+        {googleNotice && <AuthNotice tone="info">{googleNotice}</AuthNotice>}
       </form>
     </AuthShell>
   )

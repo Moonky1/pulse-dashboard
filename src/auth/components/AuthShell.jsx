@@ -23,7 +23,6 @@ export function AuthShell({ eyebrow, title, description, children, footer, brand
           <h2>One identity.<br />Every part of Pulse.</h2>
           <p>Secure access to the tools, knowledge, and signals that move the company forward.</p>
         </div>
-        <p className="auth-brand-note">Designed for focused, trusted work.</p>
       </section>
       <section className="auth-form-panel">
         <div className="auth-mobile-brand"><Brand compact homePath={brandPath} /></div>

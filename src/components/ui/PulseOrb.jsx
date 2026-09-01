@@ -8,6 +8,8 @@ export function PulseOrb({ size = 'md', active = false, label = 'Pulse' }) {
       aria-label={label}
     >
       <span className="pulse-orb__rim" aria-hidden="true" />
+      <span className="pulse-orb__spill" aria-hidden="true" />
+      <span className="pulse-orb__flow" aria-hidden="true" />
       <span className="pulse-orb__core" aria-hidden="true" />
       <span className="pulse-orb__glint" aria-hidden="true" />
     </span>
