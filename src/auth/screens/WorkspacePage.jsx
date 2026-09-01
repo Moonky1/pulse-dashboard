@@ -28,7 +28,7 @@ export function WorkspacePage() {
         <p className="auth-safe-detail">The production workspace will be built in a future checkpoint.</p>
         {adminAccessNotice && <p className="auth-workspace-notice" role="status">{adminAccessNotice === 'denied' ? 'Your account does not have access to Administration.' : 'Pulse could not verify Administration access. Try again later.'}</p>}
         <div className="auth-workspace-actions">
-          {adminAccess.state === 'allowed' && <Link className="auth-admin-link" to="/admin/users">Open Administration</Link>}
+          {adminAccess.state === 'allowed' && <Link className="auth-admin-link auth-trace-action" to="/admin/users">Open Administration</Link>}
         </div>
       </Card>
     </main>
