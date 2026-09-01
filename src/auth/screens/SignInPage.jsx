@@ -41,9 +41,9 @@ export function SignInPage() {
         <PasswordInput id="signin-password" label="Password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
         <div className="auth-form-meta auth-form-meta--end"><Link className="auth-text-button" to={STAFF_FORGOT_PASSWORD_PATH}>Forgot password?</Link></div>
         {error && <AuthNotice>{error}</AuthNotice>}
-        <Button className="auth-liquid-action" type="submit" size="lg" loading={submitting}>Sign in</Button>
+        <Button className="auth-trace-action" type="submit" size="lg" loading={submitting}>Sign in</Button>
         <div className="auth-option-divider" role="separator"><span>or</span></div>
-        <Button type="button" size="lg" variant="secondary" onClick={() => setGoogleNotice('Google sign-in is coming soon.')}>
+        <Button className="auth-trace-action" type="button" size="lg" variant="secondary" onClick={() => setGoogleNotice('Google sign-in is coming soon.')}>
           <span className="auth-google-mark" aria-hidden="true">G</span>
           Continue with Google
         </Button>
