@@ -50,11 +50,11 @@ select is((select count(*) from public.users where auth_user_id='a3000000-0000-4
 select ok(exists(select 1 from public.audit_events where target_id=(select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003') and action='account.pending_created'),'pending registration is audited');
 
 select set_config('request.jwt.claim.sub','a3000000-0000-4000-8000-000000000002',true);
-select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001','e3000000-0000-4000-8000-000000000001','[{"role_id":"10000000-0000-0000-0000-000000000002","scope_type":"team"}]')$$,'42501',null,'operator without approval permissions is rejected');
+select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001','e3000000-0000-4000-8000-000000000001','[{"role_id":"10000000-0000-0000-0000-000000000003","scope_type":"team"}]')$$,'42501',null,'operator without approval permissions is rejected');
 
 select set_config('request.jwt.claim.sub','a3000000-0000-4000-8000-000000000001',true);
 select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3999999-0000-4000-8000-000000000099',null,'[{"role_id":"10000000-0000-0000-0000-000000000001","scope_type":"global"}]')$$,'23503',null,'inactive or missing department is rejected');
-select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001','e3000000-0000-4000-8000-000000000002','[{"role_id":"10000000-0000-0000-0000-000000000002","scope_type":"team"}]')$$,'23503',null,'team outside the selected department is rejected');
+select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001','e3000000-0000-4000-8000-000000000002','[{"role_id":"10000000-0000-0000-0000-000000000003","scope_type":"team"}]')$$,'23503',null,'team outside the selected department is rejected');
 select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001',null,'[]')$$,'22023',null,'approval requires at least one initial role');
 select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001',null,'[{"role_id":"10000000-0000-0000-0000-000000000010","scope_type":"global"}]')$$,'42501',null,'grant rules prevent a prohibited privileged assignment');
 select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001','e3000000-0000-4000-8000-000000000001','[{"role_id":"10000000-0000-0000-0000-000000000001","scope_type":"team"}]')$$,'23503',null,'unsupported role scope is rejected');
@@ -63,15 +63,15 @@ select is((select status from public.approve_pending_user(
   (select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),
   'd3000000-0000-4000-8000-000000000001',
   'e3000000-0000-4000-8000-000000000001',
-  '[{"role_id":"10000000-0000-0000-0000-000000000002","scope_type":"team"}]'
+  '[{"role_id":"10000000-0000-0000-0000-000000000003","scope_type":"team"}]'
 )), 'active', 'authorized approval activates the pending profile');
 select is((select department_id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001'::uuid,'approval stores the selected department');
 select is((select team_id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'e3000000-0000-4000-8000-000000000001'::uuid,'approval stores the selected team');
 select matches((select employee_id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'^KK-[0-9]{6}$','approval generates a valid employee ID');
-select ok(exists(select 1 from public.user_roles where user_id=(select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003') and role_id='10000000-0000-0000-0000-000000000002' and scope_type='team' and team_id='e3000000-0000-4000-8000-000000000001'),'approval creates the exact initial role assignment');
+select ok(exists(select 1 from public.user_roles where user_id=(select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003') and role_id='10000000-0000-0000-0000-000000000003' and scope_type='team' and team_id='e3000000-0000-4000-8000-000000000001'),'approval creates the exact initial role assignment');
 select ok(exists(select 1 from public.audit_events where target_id=(select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003') and action='account.approved'),'approval is audited');
 select ok(exists(select 1 from public.audit_events where target_id=(select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003') and action='role.assigned'),'initial role assignment is audited');
-select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001','e3000000-0000-4000-8000-000000000001','[{"role_id":"10000000-0000-0000-0000-000000000002","scope_type":"team"}]')$$,'55000',null,'concurrent or duplicate approval fails closed');
+select throws_ok($$select * from public.approve_pending_user((select id from public.users where auth_user_id='a3000000-0000-4000-8000-000000000003'),'d3000000-0000-4000-8000-000000000001','e3000000-0000-4000-8000-000000000001','[{"role_id":"10000000-0000-0000-0000-000000000003","scope_type":"team"}]')$$,'55000',null,'concurrent or duplicate approval fails closed');
 
 select set_config('request.jwt.claim.sub','a3000000-0000-4000-8000-000000000004',true);
 select is((select status from public.create_pending_profile('Pending Block')), 'pending_approval', 'second verified identity creates a pending profile for block certification');

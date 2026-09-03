@@ -8,14 +8,15 @@
     "build": "vite build",
     "build:maintenance": "vite build --config vite.maintenance.config.js",
     "lint": "eslint .",
-    "lint:pulse": "eslint src/auth src/admin src/studio scripts/pulse-operator",
+    "lint:pulse": "eslint src/auth src/admin src/training src/studio scripts/pulse-operator",
     "preview": "vite preview",
     "operator": "node scripts/pulse-operator/cli.js",
     "test:operator": "node --test scripts/pulse-operator/*.test.js",
     "test:auth": "node --test src/auth/*.test.js",
     "test:admin": "node --test src/admin/*.test.js src/admin/api/*.test.js",
     "test:studio": "node --test src/studio/*.test.js",
-    "pulse:check": "npm run lint:pulse && npm run test:auth && npm run test:admin && npm run test:studio && npm run test:operator && npm run build",
+    "test:training": "node --test src/training/*.test.js",
+    "pulse:check": "npm run lint:pulse && npm run test:auth && npm run test:admin && npm run test:training && npm run test:studio && npm run test:operator && npm run build",
     "pulse:release-check": "npm run pulse:check && git diff --check"
   },
   "dependencies": {
