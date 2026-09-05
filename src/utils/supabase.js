@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { assertLocalTrainingDestination, AUTHORING_MUTATIONS } from '../training/localIsolation.js'
 
 const DEFAULT_SUPABASE_URL = 'https://lhgnbcaundgjeofjrscg.supabase.co'
 
@@ -40,7 +41,15 @@ if (!supabaseKey) {
 
 export const supabase = createClient(
   supabaseUrl,
-  supabaseKey || 'local-dev-placeholder-key'
+  supabaseKey || 'local-dev-placeholder-key',
+  { global: { fetch: (input, init) => {
+    const destination = typeof input === 'string' ? input : input.url
+    const url = new URL(destination)
+    if (import.meta.env.DEV || AUTHORING_MUTATIONS.has(url.pathname.split('/').pop())) {
+      assertLocalTrainingDestination(url.origin)
+    }
+    return fetch(input, { ...init, redirect: 'error' })
+  } } }
 )
 
 export default supabase

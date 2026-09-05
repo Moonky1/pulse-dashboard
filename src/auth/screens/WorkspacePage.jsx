@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAdminAccess } from '../../admin/hooks/useAdminAccess.js'
+import { canCreateStudioContent } from '../../studio/studioAccess.js'
+import { useStudioAccess } from '../../studio/hooks/useStudioAccess.js'
 import { Badge } from '../../components/ui/Badge.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { Card } from '../../components/ui/Card.jsx'
@@ -14,6 +16,7 @@ export function WorkspacePage() {
   const navigate = useNavigate()
   const [adminAccessNotice] = useState(() => location.state?.adminAccess ?? null)
   const adminAccess = useAdminAccess()
+  const studioAccess = useStudioAccess()
   useEffect(() => {
     if (location.state?.adminAccess) navigate(location.pathname, { replace: true, state: null })
   }, [location.pathname, location.state?.adminAccess, navigate])
@@ -28,6 +31,7 @@ export function WorkspacePage() {
         <p className="auth-safe-detail">The production workspace will be built in a future checkpoint.</p>
         {adminAccessNotice && <p className="auth-workspace-notice" role="status">{adminAccessNotice === 'denied' ? 'Your account does not have access to Administration.' : 'Pulse could not verify Administration access. Try again later.'}</p>}
         <div className="auth-workspace-actions">
+          {studioAccess.state === 'allowed' && <Link className="auth-admin-link" to="/studio">Open Studio{canCreateStudioContent(studioAccess.permissionKeys) ? '' : ' catalog'}</Link>}
           {adminAccess.state === 'allowed' && <Link className="auth-admin-link auth-trace-action" to="/admin/users">Open Administration</Link>}
         </div>
       </Card>

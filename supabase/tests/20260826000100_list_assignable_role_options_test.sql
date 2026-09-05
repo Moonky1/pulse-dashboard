@@ -51,7 +51,7 @@ select is((select count(*) from public.list_assignable_role_options('bb000000-00
 select is((select count(*) from public.list_assignable_role_options('bb000000-0000-4000-8000-000000000005')),0::bigint,'pending target returns no options');
 select ok(exists(select 1 from public.list_assignable_role_options('bb000000-0000-4000-8000-000000000004') where role_key='admin' and scope_type='global' and department_id is null and team_id is null),'Super Admin receives a resolved Global option');
 select ok(exists(select 1 from public.list_assignable_role_options('bb000000-0000-4000-8000-000000000004') where role_key='supervisor' and scope_type='department' and department_name='ADMIN-2B Department' and team_id is null),'Super Admin receives a resolved Department option');
-select ok(exists(select 1 from public.list_assignable_role_options('bb000000-0000-4000-8000-000000000004') where role_key='agent' and scope_type='team' and department_name='ADMIN-2B Department' and team_name='ADMIN-2B Team'),'Super Admin receives a resolved Team option');
+select ok(exists(select 1 from public.list_assignable_role_options('bb000000-0000-4000-8000-000000000004') where role_key='team_leader' and scope_type='team' and department_name='ADMIN-2B Department' and team_name='ADMIN-2B Team'),'Super Admin receives a resolved Team option');
 select ok(not exists(select 1 from public.list_assignable_role_options('bb000000-0000-4000-8000-000000000004') where role_key='employee' and scope_type='global'),'already-assigned exact combination is excluded');
 
 select set_config('request.jwt.claim.sub','aa000000-0000-4000-8000-000000000002',true);

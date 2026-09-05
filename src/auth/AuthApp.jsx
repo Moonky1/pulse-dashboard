@@ -13,6 +13,8 @@ const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx
 const RegisterPage = lazy(() => import('./screens/RegisterPage.jsx').then((module) => ({ default: module.RegisterPage })))
 const ResetPasswordPage = lazy(() => import('./screens/ResetPasswordPage.jsx').then((module) => ({ default: module.ResetPasswordPage })))
 const SignInPage = lazy(() => import('./screens/SignInPage.jsx').then((module) => ({ default: module.SignInPage })))
+const StudioPage = lazy(() => import('../studio/StudioPage.jsx').then((module) => ({ default: module.StudioPage })))
+const StudioBuilder = lazy(() => import('../studio/StudioBuilder.jsx').then((module) => ({ default: module.StudioBuilder })))
 const VerifyEmailPage = lazy(() => import('./screens/VerifyEmailPage.jsx').then((module) => ({ default: module.VerifyEmailPage })))
 const WorkspacePage = lazy(() => import('./screens/WorkspacePage.jsx').then((module) => ({ default: module.WorkspacePage })))
 
@@ -45,6 +47,9 @@ export function AuthApp() {
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/pending-approval" element={<RouteGate allow={[AUTH_STATES.PENDING]}><PendingApprovalPage /></RouteGate>} />
         <Route path="/workspace" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><WorkspacePage /></RouteGate>} />
+        <Route path="/studio" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioPage /></RouteGate>} />
+        <Route path="/studio/create" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />
+        <Route path="/studio/content/:contentId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />
         <Route path="/admin/*" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AdminArea /></RouteGate>} />
         <Route path="/account-blocked" element={<RouteGate allow={[AUTH_STATES.BLOCKED]}><AccountStatePage kind="blocked" /></RouteGate>} />
         <Route path="/account-inactive" element={<RouteGate allow={[AUTH_STATES.INACTIVE]}><AccountStatePage kind="inactive" /></RouteGate>} />
