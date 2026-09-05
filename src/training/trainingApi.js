@@ -1,3 +1,6 @@
+import { assertLocalTrainingDestination, AUTHORING_MUTATIONS } from './localIsolation.js'
+import { validateQuestions } from './questionValidation.js'
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const LANGUAGES = new Set(['en', 'es'])
 const SCOPES = new Set(['global', 'campaign', 'team'])
@@ -13,15 +16,21 @@ export function normalizeTrainingError(error) {
     return publicError('access_denied', 'You do not have permission for this Training action.')
   }
   if (error.code === 'P0002') return publicError('not_found', 'This Training item is unavailable.')
-  if (error.code === '40001') return publicError('stale_draft', 'This draft changed. Refresh before saving again.')
+  if (['40001', 'PT409'].includes(error.code)) return publicError('stale_draft', 'This item changed elsewhere. Reload the latest version before continuing.')
   if (error.code === '55000') return publicError('invalid_state', 'This Training item is no longer in the required state.')
-  if (['22023', '22P02', '23503', '23514', '23505'].includes(error.code)) {
-    return publicError('invalid_request', 'Review the Training selection and try again.')
+  if (['22023', '22P02', '23503', '23514', '23505'].includes(error.code) ||
+      (error.code === 'P0001' && /^(published training|questions may|text questions|multiple-choice|true\/false)/.test(error.message || ''))) {
+    return publicError('invalid_request', 'Check the title, audience, topics and answers before trying again.')
   }
   return publicError('unavailable', 'Pulse Training is temporarily unavailable.')
 }
 
 async function rpc(client, name, args) {
+  if (AUTHORING_MUTATIONS.has(name)) {
+    try { assertLocalTrainingDestination(client.supabaseUrl) } catch {
+      return { data: null, error: publicError('local_only', 'Authoring is available only in the isolated local environment.') }
+    }
+  }
   try {
     const { data, error } = await client.rpc(name, args)
     return error ? { data: null, error: normalizeTrainingError(error) } : { data, error: null }
@@ -63,6 +72,22 @@ export function getTrainingFilterOptions(client, context = 'learner') {
   return rpc(client, 'get_training_filter_options', { requested_context: context })
 }
 
+export function getStudioCapabilities(client, contentId = null) {
+  if (contentId && !validUuid(contentId)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'get_studio_capabilities', { requested_content_id: contentId })
+}
+
+export function listStudioContent(client, { status = null, language = null, topicId = null, search = '', limit = 24, offset = 0 } = {}) {
+  if ((status && !['draft', 'published', 'archived'].includes(status)) ||
+    (language && !LANGUAGES.has(language)) || (topicId && !validUuid(topicId)) ||
+    !Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(offset) || offset < 0) return Promise.resolve(invalidRequest())
+  return rpc(client, 'list_studio_content', {
+    requested_status: status, requested_language: language, requested_topic_id: topicId,
+    requested_search: typeof search === 'string' ? search.trim() || null : null,
+    requested_limit: limit, requested_offset: offset,
+  })
+}
+
 export function getTrainingContentAuthoringDetails(client, contentId) {
   if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
   return rpc(client, 'get_training_content_authoring_details', {
@@ -77,7 +102,8 @@ export function listAcademyModules(client, language = null) {
 
 function validDraft(input) {
   if (!input || !CONTENT_TYPES.has(input.contentType) || !LANGUAGES.has(input.language) ||
-      typeof input.title !== 'string' || input.title.trim().length < 2 ||
+      typeof input.title !== 'string' || input.title.trim().length < 2 || input.title.trim().length > 180 ||
+      (input.description || '').trim().length > 2000 ||
       !validUuidList(input.topicIds, { required: true }) || !SCOPES.has(input.scopeType) ||
       !validUuidList(input.positionIds || [])) return false
   if (input.scopeType === 'global') return !input.campaignId && !input.teamId
@@ -118,7 +144,7 @@ export function updateTrainingContentDraft(client, contentId, input) {
 }
 
 export function replaceTrainingQuestions(client, contentId, questions, expectedUpdatedAt) {
-  if (!validUuid(contentId) || !Array.isArray(questions) || questions.length < 1 || !expectedUpdatedAt) {
+  if (!validUuid(contentId) || validateQuestions(questions) || !expectedUpdatedAt) {
     return Promise.resolve(invalidRequest())
   }
   return rpc(client, 'replace_training_questions', {
@@ -133,7 +159,10 @@ function contentAction(client, name, contentId) {
   return rpc(client, name, { requested_content_id: contentId })
 }
 
-export const publishTrainingContent = (client, contentId) => contentAction(client, 'publish_training_content', contentId)
+export function publishTrainingContent(client, contentId, expectedUpdatedAt) {
+  if (!validUuid(contentId) || !expectedUpdatedAt) return Promise.resolve(invalidRequest())
+  return rpc(client, 'publish_training_content', { requested_content_id: contentId, expected_updated_at: expectedUpdatedAt })
+}
 export const archiveTrainingContent = (client, contentId) => contentAction(client, 'archive_training_content', contentId)
 export const getGoPracticeContent = (client, contentId) => contentAction(client, 'get_go_practice_content', contentId)
 

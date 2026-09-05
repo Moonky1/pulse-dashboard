@@ -15,6 +15,8 @@
     "test:auth": "node --test src/auth/*.test.js",
     "test:admin": "node --test src/admin/*.test.js src/admin/api/*.test.js",
     "test:studio": "node --test src/studio/*.test.js",
+    "test:studio:browser": "node scripts/studio-certification/browser.mjs",
+    "test:studio:concurrency": "node scripts/studio-certification/concurrency.mjs",
     "test:training": "node --test src/training/*.test.js",
     "pulse:check": "npm run lint:pulse && npm run test:auth && npm run test:admin && npm run test:training && npm run test:studio && npm run test:operator && npm run build",
     "pulse:release-check": "npm run pulse:check && git diff --check"

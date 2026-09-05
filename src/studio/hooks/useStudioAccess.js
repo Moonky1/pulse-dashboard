@@ -1,26 +1,25 @@
 import { useEffect, useState } from 'react'
 
 import { useAuth } from '../../auth/AuthProvider.jsx'
-import { loadOwnGlobalPermissionKeys } from '../../admin/api/adminApi.js'
+import { getStudioCapabilities } from '../../training/trainingApi.js'
 import { supabase } from '../../utils/supabase.js'
-import { resolveStudioAccess } from '../studioAccess.js'
 
 export function useStudioAccess() {
   const { profile } = useAuth()
   const profileId = profile?.id ?? null
-  const [result, setResult] = useState({ profileId: null, permissionKeys: [], loading: true, error: null })
+  const [result, setResult] = useState({ profileId: null, capabilities: null, loading: true, error: null })
 
   useEffect(() => {
     let current = true
-    void loadOwnGlobalPermissionKeys(supabase, profileId).then(({ data, error }) => {
-      if (current) setResult({ profileId, permissionKeys: data, loading: false, error })
+    void getStudioCapabilities(supabase).then(({ data, error }) => {
+      if (current) setResult({ profileId, capabilities: data, loading: false, error })
     })
     return () => { current = false }
   }, [profileId])
 
   const currentResult = result.profileId === profileId
     ? result
-    : { profileId, permissionKeys: [], loading: true, error: null }
+    : { profileId, capabilities: null, loading: true, error: null }
 
-  return { ...currentResult, state: resolveStudioAccess(currentResult) }
+  return { ...currentResult, state: currentResult.loading ? 'loading' : currentResult.error ? 'error' : currentResult.capabilities?.can_view_studio ? 'allowed' : 'denied' }
 }

@@ -17,7 +17,7 @@ test('Studio catalog calls only its protected read RPCs with bounded canonical a
   await listStudioCatalog(client, { language: 'es', topicId: TOPIC_ID, search: ' policy ', limit: 24, offset: 24 })
   await getStudioFilterOptions(client)
   assert.deepEqual(calls, [
-    { name: 'list_training_catalog', args: { requested_view: 'studio', requested_language: 'es', requested_topic_id: TOPIC_ID, requested_search: 'policy', requested_limit: 24, requested_offset: 24 } },
+    { name: 'list_studio_content', args: { requested_status: null, requested_language: 'es', requested_topic_id: TOPIC_ID, requested_search: 'policy', requested_limit: 24, requested_offset: 24 } },
     { name: 'get_training_filter_options', args: { requested_context: 'studio' } },
   ])
 })

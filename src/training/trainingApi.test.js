@@ -29,7 +29,7 @@ function recorder(data = []) {
   const calls = []
   return {
     calls,
-    client: { rpc: async (name, args) => { calls.push({ name, args }); return { data, error: null } } },
+    client: { supabaseUrl: 'http://127.0.0.1:54321', rpc: async (name, args) => { calls.push({ name, args }); return { data, error: null } } },
   }
 }
 
@@ -93,13 +93,14 @@ test('draft update and structured questions preserve stale-write token', async (
 
 test('publish, archive and GO Practice use exact content actions', async () => {
   const { client, calls } = recorder()
-  await publishTrainingContent(client, CONTENT_ID)
+  await publishTrainingContent(client, CONTENT_ID, UPDATED_AT)
   await archiveTrainingContent(client, CONTENT_ID)
   await getGoPracticeContent(client, CONTENT_ID)
   assert.deepEqual(calls.map(({ name }) => name), [
     'publish_training_content', 'archive_training_content', 'get_go_practice_content',
   ])
-  assert.ok(calls.every(({ args }) => Object.keys(args).join() === 'requested_content_id'))
+  assert.equal(calls[0].args.expected_updated_at, UPDATED_AT)
+  assert.ok(calls.slice(1).every(({ args }) => Object.keys(args).join() === 'requested_content_id'))
 })
 
 test('attempt start cannot submit learner identity and completion cannot submit score', async () => {

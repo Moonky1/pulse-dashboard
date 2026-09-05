@@ -12,7 +12,7 @@ select has_function('public','list_training_catalog',array['text','text','uuid',
 select has_function('public','get_training_filter_options',array['text'],'protected filter catalog exists');
 select has_function('public','create_training_content_draft',array['text','text','text','text','uuid[]','text','uuid','uuid','uuid[]'],'draft creation contract exists');
 select has_function('public','replace_training_questions',array['uuid','jsonb','timestamp with time zone'],'question replacement contract exists');
-select has_function('public','publish_training_content',array['uuid'],'publish contract exists');
+select has_function('public','publish_training_content',array['uuid','timestamp with time zone'],'version-safe publish contract exists');
 select has_function('public','archive_training_content',array['uuid'],'archive contract exists');
 select has_function('public','get_go_practice_content',array['uuid'],'GO Practice contract exists');
 select has_function('public','start_training_attempt',array['uuid','text'],'attempt start contract has no learner UUID');
@@ -122,7 +122,7 @@ select is((select count(*) from public.audit_events where action='training.conte
 select set_config('request.jwt.claim.sub','ab000000-0000-4000-8000-000000000002',true);
 select is((select count(*) from public.list_training_catalog('learner',null,null,null,50,0)),0::bigint,'draft is hidden from learner catalog');
 select set_config('request.jwt.claim.sub','ab000000-0000-4000-8000-000000000001',true);
-select throws_ok(format($q$select * from public.update_training_content_draft(%L::uuid,'Stale title',null,'en',array['2b000000-0000-4000-8000-000000000001'::uuid],'campaign','cb000000-0000-4000-8000-000000000001',null,array['1b000000-0000-4000-8000-000000000001'::uuid],'2000-01-01'::timestamptz)$q$,(select content_id from train1b_fixture)),'40001',null,'stale draft update is rejected');
+select throws_ok(format($q$select * from public.update_training_content_draft(%L::uuid,'Stale title',null,'en',array['2b000000-0000-4000-8000-000000000001'::uuid],'campaign','cb000000-0000-4000-8000-000000000001',null,array['1b000000-0000-4000-8000-000000000001'::uuid],'2000-01-01'::timestamptz)$q$,(select content_id from train1b_fixture)),'PT409',null,'stale draft update is rejected');
 select lives_ok(format($q$select * from public.update_training_content_draft(%L::uuid,'TRAIN-1B Campaign Quiz Updated','Fictitious secure practice','en',array['2b000000-0000-4000-8000-000000000001'::uuid],'campaign','cb000000-0000-4000-8000-000000000001',null,array['1b000000-0000-4000-8000-000000000001'::uuid],%L::timestamptz)$q$,(select content_id from train1b_fixture),(select updated_at from public.training_content where id=(select content_id from train1b_fixture))),'draft owner updates with exact freshness token');
 select throws_ok($$select * from public.create_training_content_draft('lesson','Inactive target',null,'en',array['2b000000-0000-4000-8000-000000000001'::uuid],'campaign','cb000000-0000-4000-8000-000000000002',null,'{}'::uuid[])$$,'22023',null,'inactive Campaign target fails closed');
 select throws_ok($$select * from public.create_training_content_draft('lesson','Inactive Position',null,'en',array['2b000000-0000-4000-8000-000000000001'::uuid],'global',null,null,array['1b000000-0000-4000-8000-000000000002'::uuid])$$,'22023',null,'inactive Position target is rejected');
@@ -132,9 +132,9 @@ select lives_ok(format($q$select * from public.replace_training_questions(%L::uu
 select is((select count(*) from public.training_question_topics qt join public.training_questions q on q.id=qt.question_id where q.content_id=(select content_id from train1b_fixture)),2::bigint,'each question has exact Topic attribution');
 
 select set_config('request.jwt.claim.sub','ab000000-0000-4000-8000-000000000003',true);
-select throws_ok(format('select * from public.publish_training_content(%L::uuid)',(select content_id from train1b_fixture)),'42501',null,'missing studio.publish is denied');
+select throws_ok(format('select * from public.publish_training_content(%L::uuid,%L::timestamptz)',(select content_id from train1b_fixture),(select updated_at from public.training_content where id=(select content_id from train1b_fixture))),'42501',null,'missing studio.publish is denied');
 select set_config('request.jwt.claim.sub','ab000000-0000-4000-8000-000000000001',true);
-select lives_ok(format('select * from public.publish_training_content(%L::uuid)',(select content_id from train1b_fixture)),'authorized publication succeeds');
+select lives_ok(format('select * from public.publish_training_content(%L::uuid,%L::timestamptz)',(select content_id from train1b_fixture),(select updated_at from public.training_content where id=(select content_id from train1b_fixture))),'authorized publication succeeds');
 select is((select status from public.training_content where id=(select content_id from train1b_fixture)),'published','publication transition is canonical');
 select is((select count(*) from public.audit_events where action='training.content_published' and target_id=(select content_id from train1b_fixture)),1::bigint,'publication is audited once');
 select throws_ok(format('delete from public.training_questions where content_id=%L::uuid',(select content_id from train1b_fixture)),'P0001',null,'published question history remains immutable');
@@ -146,7 +146,7 @@ select id from public.create_training_content_draft(
   array['2b000000-0000-4000-8000-000000000001'::uuid],
   'team',null,'eb000000-0000-4000-8000-000000000001','{}'::uuid[]
 );
-select lives_ok(format('select * from public.publish_training_content(%L::uuid)',(select content_id from train1b_team_content)),'valid Team-targeted lesson publishes');
+select lives_ok(format('select * from public.publish_training_content(%L::uuid,%L::timestamptz)',(select content_id from train1b_team_content),(select updated_at from public.training_content where id=(select content_id from train1b_team_content))),'valid Team-targeted lesson publishes');
 select set_config('request.jwt.claim.sub','ab000000-0000-4000-8000-000000000002',true);
 select is((select count(*) from public.list_training_catalog('learner','es',null,'Team Lesson',50,0)),1::bigint,'Team learner sees matching Team-targeted content');
 select set_config('request.jwt.claim.sub','ab000000-0000-4000-8000-000000000001',true);
@@ -159,7 +159,7 @@ select id from public.create_training_content_draft(
   array['2b000000-0000-4000-8000-000000000001'::uuid],
   'global',null,null,'{}'::uuid[]
 );
-select throws_ok(format('select * from public.publish_training_content(%L::uuid)',(select content_id from train1b_invalid_content)),'23514',null,'quiz with missing questions cannot publish');
+select throws_ok(format('select * from public.publish_training_content(%L::uuid,%L::timestamptz)',(select content_id from train1b_invalid_content),(select updated_at from public.training_content where id=(select content_id from train1b_invalid_content))),'23514',null,'quiz with missing questions cannot publish');
 
 -- Academy composition reads the same published content.
 insert into public.training_modules(id,title,language,created_by_user_id) values

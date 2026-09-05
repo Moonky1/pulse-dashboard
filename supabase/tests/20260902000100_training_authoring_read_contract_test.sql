@@ -173,13 +173,13 @@ select lives_ok(format(
   (select updated_at from public.training_content where id=(select content_id from studio1b1_published))
 ),'published fixture question persists');
 select set_config('request.jwt.claim.sub','a2100000-0000-4000-8000-000000000002',true);
-select lives_ok(format('select * from public.publish_training_content(%L::uuid)',(select content_id from studio1b1_published)),'publisher creates canonical published fixture');
+select lives_ok(format('select * from public.publish_training_content(%L::uuid,%L::timestamptz)',(select content_id from studio1b1_published),(select updated_at from public.training_content where id=(select content_id from studio1b1_published))),'publisher creates canonical published fixture');
 select is((select public.get_training_content_authoring_details(content_id)->'content'->>'status' from studio1b1_published),'published','publisher may inspect published content');
 select ok((select public.get_training_content_authoring_details(content_id)->'content'->>'published_at' is not null from studio1b1_published),'published timestamp is returned');
 select ok((select public.get_go_practice_content(content_id) from studio1b1_published)::text !~ 'correct_answer|explanation','learner Practice payload omits answer keys and explanations');
 select ok((select public.get_go_practice_content(content_id) from studio1b1_published)::text ~ 'Published check','learner Practice still returns the question prompt');
 select set_config('request.jwt.claim.sub','a2100000-0000-4000-8000-000000000001',true);
-select throws_ok(format('select public.get_training_content_authoring_details(%L::uuid)',(select content_id from studio1b1_published)),'P0002','Studio content unavailable','studio.create alone does not retain published answer-key access');
+select lives_ok(format('select public.get_training_content_authoring_details(%L::uuid)',(select content_id from studio1b1_published)),'scope-authorized creator retains read-only access to their published work');
 select set_config('request.jwt.claim.sub','a2100000-0000-4000-8000-000000000002',true);
 select lives_ok(format('select * from public.archive_training_content(%L::uuid)',(select content_id from studio1b1_published)),'publisher creates canonical archived fixture');
 select is((select public.get_training_content_authoring_details(content_id)->'content'->>'status' from studio1b1_published),'archived','publisher may inspect archived content');
