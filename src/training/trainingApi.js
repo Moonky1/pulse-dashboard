@@ -1,4 +1,4 @@
-import { assertLocalTrainingDestination, AUTHORING_MUTATIONS } from './localIsolation.js'
+import { assertTrainingAuthoringDestination, AUTHORING_MUTATIONS } from './authoringDestination.js'
 import { validateQuestions } from './questionValidation.js'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -27,8 +27,8 @@ export function normalizeTrainingError(error) {
 
 async function rpc(client, name, args) {
   if (AUTHORING_MUTATIONS.has(name)) {
-    try { assertLocalTrainingDestination(client.supabaseUrl) } catch {
-      return { data: null, error: publicError('local_only', 'Authoring is available only in the isolated local environment.') }
+    try { assertTrainingAuthoringDestination(client.supabaseUrl) } catch {
+      return { data: null, error: publicError('authoring_blocked', 'Authoring is not enabled for this Pulse destination.') }
     }
   }
   try {

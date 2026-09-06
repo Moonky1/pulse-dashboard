@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { validateQuestions } from '../training/questionValidation.js'
-import { assertLocalTrainingDestination } from '../training/localIsolation.js'
+import { assertTrainingAuthoringDestination } from '../training/authoringDestination.js'
 import { createTrainingContentDraft, publishTrainingContent, listStudioContent, normalizeTrainingError } from '../training/trainingApi.js'
 import { emptyDraft, draftFromDetails, questionsFromDetails, orderedQuestions, validateAudience, validateBasics } from './builderModel.js'
 
@@ -10,15 +10,15 @@ const content = '43200000-0000-4000-8000-000000000001'
 const mc = { position: 1, question_type: 'multiple_choice', prompt: 'Which one?', answer_options: ['Alpha', 'Beta'], correct_answer: 1, topic_ids: [topic] }
 const draft = { ...emptyDraft(), contentType: 'quiz', title: 'A test title', topicIds: [topic], scopeType: 'global' }
 
-test('authoring rejects every remote destination before invoking transport', async () => {
+test('authoring rejects unapproved remote destinations before invoking transport', async () => {
   for (const url of ['https://example.supabase.co', 'http://127.0.0.1:9999', 'http://localhost.evil.test:54321', 'https://localhost:54321', undefined]) {
-    assert.throws(() => assertLocalTrainingDestination(url))
+    assert.throws(() => assertTrainingAuthoringDestination(url))
     let calls = 0
     const result = await createTrainingContentDraft({ supabaseUrl: url, rpc: () => { calls++ } }, draft)
-    assert.equal(result.error.code, 'local_only')
+    assert.equal(result.error.code, 'authoring_blocked')
     assert.equal(calls, 0)
   }
-  assert.doesNotThrow(() => assertLocalTrainingDestination('http://127.0.0.1:54321'))
+  assert.doesNotThrow(() => assertTrainingAuthoringDestination('http://127.0.0.1:54321'))
 })
 test('publish requires and preserves microsecond reviewed token', async () => {
   const calls = []
