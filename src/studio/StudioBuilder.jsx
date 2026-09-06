@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button.jsx'
 import { supabase } from '../utils/supabase.js'
 import { createTrainingContentDraft, updateTrainingContentDraft, replaceTrainingQuestions, getTrainingContentAuthoringDetails, getTrainingFilterOptions, publishTrainingContent, archiveTrainingContent } from '../training/trainingApi.js'
 import { validateQuestions } from '../training/questionValidation.js'
+import { resolveTrainingAuthoringDestination } from '../training/authoringDestination.js'
 import { useStudioAccess } from './hooks/useStudioAccess.js'
 import { useUnsavedChanges } from './hooks/useUnsavedChanges.js'
 import { StudioShell, StudioAccessState } from './StudioShell.jsx'
@@ -41,8 +42,10 @@ export function StudioBuilder() {
   const savedDestination = useRef(null)
   const confirmLeave = useUnsavedChanges(dirty, savedDestination)
   const capabilities = details?.capabilities || access.capabilities
+  const authoringEnabled = resolveTrainingAuthoringDestination(supabase.supabaseUrl).allowed
   const supported = !details || ['quiz', 'assessment'].includes(details.content.content_type)
-  const editable = supported && (contentId ? !!details?.capabilities?.can_edit : !!access.capabilities?.can_create)
+  const serverEditable = contentId ? !!details?.capabilities?.can_edit : !!access.capabilities?.can_create
+  const editable = supported && serverEditable && authoringEnabled
   const blocked = busy || loading || error?.code === 'stale_draft' || error?.code === 'reload_required'
   useEffect(() => {
     let current = true
@@ -133,6 +136,7 @@ export function StudioBuilder() {
     <header className="studio-heading studio-heading--builder"><div><p className="studio-eyebrow">Pulse Studio</p><h1>{draft.title || 'Start with an idea.'}</h1></div><div className="studio-save-status" aria-live="polite">{busy ? 'Saving / loading…' : dirty ? 'Unsaved changes' : details ? 'Saved' : ''}</div></header>
     {loading ? <p role="status">Opening your item…</p> : <>
       {error && <div className="studio-error" role="alert"><p>{error.message}</p>{['stale_draft', 'reload_required', 'unavailable'].includes(error.code) && <Button variant="secondary" onClick={() => { if (confirmLeave()) { setReview(null); setRevision(v => v + 1) } }}>Reload latest</Button>}</div>}
+      {serverEditable && !authoringEnabled && <p className="studio-notice" role="status">Authoring is read-only in this environment.</p>}
       {notice && <p className="studio-notice" role="status">{notice}</p>}
       {(!contentId || details) && <>
         {!draft.contentType ? <section className="studio-type-choice"><h2>What do you want to create?</h2><div>{[['quiz','Quiz','Interactive questions for learning and practice.'],['assessment','Assessment','Check knowledge and understanding.']].map(([value,label,description]) => <button key={value} disabled={!editable} onClick={() => changeDraft({ contentType: value })}><span aria-hidden="true">{value === 'quiz' ? '✦' : '✓'}</span><h3>{label}</h3><p>{description}</p><strong>Start {label.toLowerCase()} →</strong></button>)}</div></section> : <>
