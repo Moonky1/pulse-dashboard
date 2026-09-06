@@ -9,6 +9,9 @@ const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => (
 const AgentSignInPage = lazy(() => import('./screens/AgentSignInPage.jsx').then((module) => ({ default: module.AgentSignInPage })))
 const AuthCallbackPage = lazy(() => import('./screens/AuthCallbackPage.jsx').then((module) => ({ default: module.AuthCallbackPage })))
 const ForgotPasswordPage = lazy(() => import('./screens/ForgotPasswordPage.jsx').then((module) => ({ default: module.ForgotPasswordPage })))
+const GoLandingPage = lazy(() => import('../go-product/GoLandingPage.jsx').then((module) => ({ default: module.GoLandingPage })))
+const GoPracticePlayer = lazy(() => import('../go-product/GoPracticePlayer.jsx').then((module) => ({ default: module.GoPracticePlayer })))
+const GoPracticeSelection = lazy(() => import('../go-product/GoPracticeSelection.jsx').then((module) => ({ default: module.GoPracticeSelection })))
 const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx').then((module) => ({ default: module.PendingApprovalPage })))
 const RegisterPage = lazy(() => import('./screens/RegisterPage.jsx').then((module) => ({ default: module.RegisterPage })))
 const ResetPasswordPage = lazy(() => import('./screens/ResetPasswordPage.jsx').then((module) => ({ default: module.ResetPasswordPage })))
@@ -47,6 +50,9 @@ export function AuthApp() {
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/pending-approval" element={<RouteGate allow={[AUTH_STATES.PENDING]}><PendingApprovalPage /></RouteGate>} />
         <Route path="/workspace" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><WorkspacePage /></RouteGate>} />
+        <Route path="/go" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoLandingPage /></RouteGate>} />
+        <Route path="/go/practice" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoPracticeSelection /></RouteGate>} />
+        <Route path="/go/practice/:contentId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoPracticePlayer /></RouteGate>} />
         <Route path="/studio" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioPage /></RouteGate>} />
         <Route path="/studio/create" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />
         <Route path="/studio/content/:contentId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />
