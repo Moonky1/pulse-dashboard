@@ -10,6 +10,8 @@ const AgentSignInPage = lazy(() => import('./screens/AgentSignInPage.jsx').then(
 const AuthCallbackPage = lazy(() => import('./screens/AuthCallbackPage.jsx').then((module) => ({ default: module.AuthCallbackPage })))
 const ForgotPasswordPage = lazy(() => import('./screens/ForgotPasswordPage.jsx').then((module) => ({ default: module.ForgotPasswordPage })))
 const GoLandingPage = lazy(() => import('../go-product/GoLandingPage.jsx').then((module) => ({ default: module.GoLandingPage })))
+const GoHostSelection = lazy(() => import('../go-product/GoHostSelection.jsx').then((module) => ({ default: module.GoHostSelection })))
+const GoHostedRoomPage = lazy(() => import('../go-product/GoHostedRoomPage.jsx').then((module) => ({ default: module.GoHostedRoomPage })))
 const GoPracticePlayer = lazy(() => import('../go-product/GoPracticePlayer.jsx').then((module) => ({ default: module.GoPracticePlayer })))
 const GoPracticeSelection = lazy(() => import('../go-product/GoPracticeSelection.jsx').then((module) => ({ default: module.GoPracticeSelection })))
 const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx').then((module) => ({ default: module.PendingApprovalPage })))
@@ -51,6 +53,9 @@ export function AuthApp() {
         <Route path="/pending-approval" element={<RouteGate allow={[AUTH_STATES.PENDING]}><PendingApprovalPage /></RouteGate>} />
         <Route path="/workspace" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><WorkspacePage /></RouteGate>} />
         <Route path="/go" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoLandingPage /></RouteGate>} />
+        <Route path="/go/host" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostSelection /></RouteGate>} />
+        <Route path="/go/host/:sessionId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostedRoomPage expectedViewer="host" /></RouteGate>} />
+        <Route path="/go/room/:sessionId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostedRoomPage expectedViewer="participant" /></RouteGate>} />
         <Route path="/go/practice" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoPracticeSelection /></RouteGate>} />
         <Route path="/go/practice/:contentId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoPracticePlayer /></RouteGate>} />
         <Route path="/studio" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioPage /></RouteGate>} />
