@@ -28,7 +28,7 @@ export function GoHostSelection() {
 
   if (access.state !== 'allowed') return <GoAccessState access={access} />
   if (!canHost(access.capabilities)) return <GoAccessState access={{ state: 'denied' }} />
-  if (!destination.allowed) return <GoShell><section className="go-state"><h1>Hosting stays local for now.</h1><p>No room was created.</p><Link to="/go">Back to GO</Link></section></GoShell>
+  if (!destination.allowed) return <GoShell><section className="go-state"><h1>Hosting is not enabled here.</h1><p>No room was created.</p><Link to="/go">Back to GO</Link></section></GoShell>
 
   async function createRoom(contentId) {
     setCreating(contentId)

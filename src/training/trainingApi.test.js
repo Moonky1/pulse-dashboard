@@ -170,7 +170,7 @@ test('GO Practice mutations fail closed for remote Pulse destinations', async ()
   assert.deepEqual(calls, [])
 })
 
-test('Hosted GO reads and mutations remain isolated-local only', async () => {
+test('Hosted GO reads and mutations fail closed for an unconfigured remote destination', async () => {
   const calls = []
   const client = { supabaseUrl: 'https://lhgnbcaundgjeofjrscg.supabase.co', rpc: async (name, args) => { calls.push({ name, args }); return { data: [], error: null } } }
   assert.equal((await listGoHostCatalog(client)).error.code, 'hosted_blocked')

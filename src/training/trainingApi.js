@@ -48,7 +48,7 @@ const HOSTED_MUTATIONS = new Set([
 
 function hostedRpc(client, name, args) {
   try { assertGoHostedDestination(client.supabaseUrl) } catch {
-    return Promise.resolve({ data: null, error: publicError('hosted_blocked', 'Live games are available only in the isolated local environment.') })
+    return Promise.resolve({ data: null, error: publicError('hosted_blocked', 'Live games are not enabled for this Pulse destination.') })
   }
   if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog' && name !== 'get_go_hosted_session') {
     return Promise.resolve(invalidRequest())
