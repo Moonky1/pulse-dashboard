@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { createPendingProfile, exchangeAuthCode, isEmailFormatValid, loadOwnProfile, normalizeEmail, requestPasswordRecovery, resendSignupVerification, signInWithPassword, signOutSession, signUpWithPassword, updateAccountPassword, validatePasswordUpdate, validateRegistration } from './pulseAuthService.js'
+import { createPendingProfile, exchangeAuthCode, getPendingProfileName, isEmailFormatValid, loadOwnProfile, normalizeEmail, requestPasswordRecovery, resendSignupVerification, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword, updateAccountPassword, validatePasswordUpdate, validateRegistration } from './pulseAuthService.js'
 
 test('normalizes email without treating its domain as authorization', () => {
   assert.equal(normalizeEmail('  Simon@KampaignKings.com '), 'simon@kampaignkings.com')
@@ -24,6 +24,27 @@ test('passes password only to Supabase Auth and never persists it', async () => 
   const client = { auth: { signInWithPassword: async (payload) => { received = payload; return { data: {}, error: null } } } }
   await signInWithPassword(client, { email: ' USER@EXAMPLE.ORG ', password: 'secret-value' })
   assert.deepEqual(received, { email: 'user@example.org', password: 'secret-value' })
+})
+
+test('starts Google Staff OAuth with only minimal identity scopes and an exact callback', async () => {
+  let received
+  const client = { auth: { async signInWithOAuth(payload) { received = payload; return { data: {}, error: null } } } }
+  await signInWithGoogle(client, { redirectTo: 'https://pulse-auth.example/auth/callback?flow=google' })
+  assert.deepEqual(received, {
+    provider: 'google',
+    options: {
+      redirectTo: 'https://pulse-auth.example/auth/callback?flow=google',
+      scopes: 'openid email profile',
+    },
+  })
+  assert.doesNotMatch(JSON.stringify(received), /role|department|team|campaign|position|service_role|client_secret/i)
+})
+
+test('derives a safe pending display name from provider metadata without granting access', () => {
+  assert.equal(getPendingProfileName({ user_metadata: { full_name: '  Casey Rivera  ' }, email: 'casey@example.test' }), 'Casey Rivera')
+  assert.equal(getPendingProfileName({ user_metadata: { name: 'Taylor Quinn' }, email: 'taylor@example.test' }), 'Taylor Quinn')
+  assert.equal(getPendingProfileName({ user_metadata: {}, email: 'jordan.lee@example.test' }), 'jordan lee')
+  assert.equal(getPendingProfileName({ user_metadata: {}, email: 'x@example.test' }), '')
 })
 
 test('sign up carries only profile name metadata and verification redirect', async () => {

@@ -1,6 +1,7 @@
 export const PRODUCTION_AUTH_ORIGIN = 'https://www.pulse-kk.com'
 
 const AUTH_PATHS = Object.freeze({
+  google: '/auth/callback?flow=google',
   verification: '/auth/callback?flow=verification',
   recovery: '/auth/callback?flow=recovery',
 })
