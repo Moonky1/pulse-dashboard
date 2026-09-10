@@ -1,4 +1,5 @@
 import { assertTrainingAuthoringDestination, AUTHORING_MUTATIONS } from './authoringDestination.js'
+import { assertGoPracticeDestination } from './goPracticeDestination.js'
 import { validateQuestions } from './questionValidation.js'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -166,9 +167,32 @@ export function publishTrainingContent(client, contentId, expectedUpdatedAt) {
 export const archiveTrainingContent = (client, contentId) => contentAction(client, 'archive_training_content', contentId)
 export const getGoPracticeContent = (client, contentId) => contentAction(client, 'get_go_practice_content', contentId)
 
+export function getGoCapabilities(client) {
+  return rpc(client, 'get_go_capabilities')
+}
+
+export function listGoPracticeCatalog(client, {
+  language = null, topicId = null, limit = 100, offset = 0,
+} = {}) {
+  if ((language && !LANGUAGES.has(language)) || (topicId && !validUuid(topicId)) ||
+      !Number.isInteger(limit) || limit < 1 || limit > 100 ||
+      !Number.isInteger(offset) || offset < 0) return Promise.resolve(invalidRequest())
+  return rpc(client, 'list_go_practice_catalog', {
+    requested_language: language,
+    requested_topic_id: topicId,
+    requested_limit: limit,
+    requested_offset: offset,
+  })
+}
+
 export function startTrainingAttempt(client, contentId, sourceMode) {
   if (!validUuid(contentId) || !['go_practice', 'academy'].includes(sourceMode)) {
     return Promise.resolve(invalidRequest())
+  }
+  if (sourceMode === 'go_practice') {
+    try { assertGoPracticeDestination(client.supabaseUrl) } catch {
+      return Promise.resolve({ data: null, error: publicError('practice_blocked', 'Practice is available only in the isolated local environment.') })
+    }
   }
   return rpc(client, 'start_training_attempt', {
     requested_content_id: contentId,
@@ -176,10 +200,15 @@ export function startTrainingAttempt(client, contentId, sourceMode) {
   })
 }
 
-export function completeTrainingAttempt(client, attemptId, answers, durationSeconds = null) {
+export function completeTrainingAttempt(client, attemptId, answers, durationSeconds = null, context = {}) {
   if (!validUuid(attemptId) || !Array.isArray(answers) || answers.length < 1 ||
       (durationSeconds !== null && (!Number.isInteger(durationSeconds) || durationSeconds < 0))) {
     return Promise.resolve(invalidRequest())
+  }
+  if (context.sourceMode === 'go_practice') {
+    try { assertGoPracticeDestination(client.supabaseUrl) } catch {
+      return Promise.resolve({ data: null, error: publicError('practice_blocked', 'Practice is available only in the isolated local environment.') })
+    }
   }
   return rpc(client, 'complete_training_attempt', {
     requested_attempt_id: attemptId,

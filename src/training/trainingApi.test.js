@@ -6,11 +6,13 @@ import {
   archiveTrainingContent,
   completeTrainingAttempt,
   createTrainingContentDraft,
+  getGoCapabilities,
   getGoPracticeContent,
   getTrainingContentAuthoringDetails,
   getTrainingFilterOptions,
   listAcademyModules,
   listMyTrainingResults,
+  listGoPracticeCatalog,
   listTrainingCatalog,
   normalizeTrainingError,
   publishTrainingContent,
@@ -42,6 +44,16 @@ test('catalog and filter clients use only bounded protected RPCs', async () => {
     { name: 'list_training_catalog', args: { requested_view: 'learner', requested_language: 'es', requested_topic_id: TOPIC_ID, requested_search: 'policy', requested_limit: 20, requested_offset: 5 } },
     { name: 'get_training_filter_options', args: { requested_context: 'studio' } },
     { name: 'list_academy_modules', args: { requested_language: 'en' } },
+  ])
+})
+
+test('GO capability and Practice catalog clients use exact protected RPCs', async () => {
+  const { client, calls } = recorder()
+  await getGoCapabilities(client)
+  await listGoPracticeCatalog(client, { language: 'en', topicId: TOPIC_ID, limit: 20, offset: 2 })
+  assert.deepEqual(calls, [
+    { name: 'get_go_capabilities', args: undefined },
+    { name: 'list_go_practice_catalog', args: { requested_language: 'en', requested_topic_id: TOPIC_ID, requested_limit: 20, requested_offset: 2 } },
   ])
 })
 
@@ -106,7 +118,7 @@ test('publish, archive and GO Practice use exact content actions', async () => {
 test('attempt start cannot submit learner identity and completion cannot submit score', async () => {
   const { client, calls } = recorder()
   await startTrainingAttempt(client, CONTENT_ID, 'go_practice', { learnerId: 'forged' })
-  await completeTrainingAttempt(client, ATTEMPT_ID, [{ question_id: TOPIC_ID, answer: 0 }], 14, { score: 100 })
+  await completeTrainingAttempt(client, ATTEMPT_ID, [{ question_id: TOPIC_ID, answer: 0 }], 14, { sourceMode: 'go_practice', score: 100 })
   assert.deepEqual(calls[0], { name: 'start_training_attempt', args: { requested_content_id: CONTENT_ID, requested_source_mode: 'go_practice' } })
   assert.deepEqual(calls[1], { name: 'complete_training_attempt', args: { requested_attempt_id: ATTEMPT_ID, requested_answers: [{ question_id: TOPIC_ID, answer: 0 }], requested_duration_seconds: 14 } })
   assert.doesNotMatch(JSON.stringify(calls), /learner|score|correct_answers/i)
@@ -116,6 +128,14 @@ test('history is own-only and takes no target learner identifier', async () => {
   const { client, calls } = recorder()
   await listMyTrainingResults(client, 25)
   assert.deepEqual(calls, [{ name: 'list_my_training_results', args: { requested_limit: 25 } }])
+})
+
+test('GO Practice mutations fail closed for remote Pulse destinations', async () => {
+  const calls = []
+  const client = { supabaseUrl: 'https://pulse-dev.example.test', rpc: async (name, args) => { calls.push({ name, args }); return { data: [], error: null } } }
+  assert.equal((await startTrainingAttempt(client, CONTENT_ID, 'go_practice')).error.code, 'practice_blocked')
+  assert.equal((await completeTrainingAttempt(client, ATTEMPT_ID, [{ question_id: TOPIC_ID, answer: true }], 3, { sourceMode: 'go_practice' })).error.code, 'practice_blocked')
+  assert.deepEqual(calls, [])
 })
 
 test('invalid local input never reaches the backend', async () => {
@@ -142,6 +162,7 @@ test('Training client has no direct tables, role-name gates, localStorage, or le
     'list_training_catalog', 'get_training_filter_options', 'create_training_content_draft',
     'get_training_content_authoring_details',
     'replace_training_questions', 'publish_training_content', 'get_go_practice_content',
-    'start_training_attempt', 'complete_training_attempt', 'list_my_training_results',
+    'get_go_capabilities', 'list_go_practice_catalog', 'start_training_attempt',
+    'complete_training_attempt', 'list_my_training_results',
   ]) assert.match(source, new RegExp(rpcName))
 })
