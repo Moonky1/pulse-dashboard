@@ -15,6 +15,16 @@ Last verified: 2026-08-25 (America/Bogota). This is an operational reference, no
 
 Expected counts: Auth users 1; Pulse users 1; departments 1; teams 0; roles 10; role scopes 12; permissions 31; role permissions 155; role grant rules 26; user roles 1; audit events 1; Storage buckets 0; Edge Functions 0. Simon remains `KK-000001`, active, Corporate, Super Admin, global, with 31 effective permissions.
 
+## Supabase environment identities
+
+Verified 2026-09-10 (America/Bogota):
+
+- **Pulse Dev** (`lhgnbcaundgjeofjrscg`, `us-east-1`) remains the current real/live backend during the transition and still serves Production. Do not create fictitious validation identities or destructive multiplayer fixtures here.
+- **Pulse Preview** (`sgshbawggqapuyqzkyhs`, `us-east-1`) is an isolated Free-plan project in the separate `Pulse Preview` organization (`tadhmkzlafkhxwlaioro`). It is reserved for synthetic remote validation only. Its repository migration ledger is bootstrapped through `20260906000100`; GO Hosted migration `20260910000100` and GO validation fixtures are intentionally absent at this checkpoint.
+- **Pulse Live** is the name reserved for a future final Production backend. It has not been created.
+
+Never copy Pulse Dev Auth users, business rows, database passwords, service-role keys, or Vercel Production configuration into Pulse Preview. Preview origins and redirect URLs must be exact allowlists added only by an authorized validation checkpoint.
+
 ## Monitoring matrix
 
 | Area | Signal | Initial check | Escalate when |
