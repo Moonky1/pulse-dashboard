@@ -6,6 +6,14 @@ import {
   archiveTrainingContent,
   completeTrainingAttempt,
   createTrainingContentDraft,
+  createGoHostedSession,
+  joinGoHostedSession,
+  getGoHostedSession,
+  listGoHostCatalog,
+  startGoHostedSession,
+  submitGoHostedAnswer,
+  advanceGoHostedSession,
+  cancelGoHostedSession,
   getGoCapabilities,
   getGoPracticeContent,
   getTrainingContentAuthoringDetails,
@@ -25,6 +33,7 @@ const CONTENT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const TOPIC_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 const CAMPAIGN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 const ATTEMPT_ID = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+const SESSION_ID = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
 const UPDATED_AT = '2026-09-01T12:00:00.000Z'
 
 function recorder(data = []) {
@@ -55,6 +64,29 @@ test('GO capability and Practice catalog clients use exact protected RPCs', asyn
     { name: 'get_go_capabilities', args: undefined },
     { name: 'list_go_practice_catalog', args: { requested_language: 'en', requested_topic_id: TOPIC_ID, requested_limit: 20, requested_offset: 2 } },
   ])
+})
+
+test('Hosted GO client sends only canonical room, version, question, and answer fields', async () => {
+  const { client, calls } = recorder()
+  await listGoHostCatalog(client, { language: 'es', limit: 20, offset: 2 })
+  await createGoHostedSession(client, CONTENT_ID)
+  await joinGoHostedSession(client, 'KK 1234')
+  await getGoHostedSession(client, SESSION_ID)
+  await startGoHostedSession(client, SESSION_ID, 3)
+  await submitGoHostedAnswer(client, SESSION_ID, TOPIC_ID, 1, 2)
+  await advanceGoHostedSession(client, SESSION_ID, 4)
+  await cancelGoHostedSession(client, SESSION_ID, 5)
+  assert.deepEqual(calls, [
+    { name: 'list_go_host_catalog', args: { requested_language: 'es', requested_limit: 20, requested_offset: 2 } },
+    { name: 'create_go_hosted_session', args: { requested_content_id: CONTENT_ID } },
+    { name: 'join_go_hosted_session', args: { requested_room_code: 'KK 1234' } },
+    { name: 'get_go_hosted_session', args: { requested_session_id: SESSION_ID } },
+    { name: 'start_go_hosted_session', args: { requested_session_id: SESSION_ID, expected_version: 3 } },
+    { name: 'submit_go_hosted_answer', args: { requested_session_id: SESSION_ID, requested_question_id: TOPIC_ID, requested_answer: 1, expected_question_position: 2 } },
+    { name: 'advance_go_hosted_session', args: { requested_session_id: SESSION_ID, expected_version: 4 } },
+    { name: 'cancel_go_hosted_session', args: { requested_session_id: SESSION_ID, expected_version: 5 } },
+  ])
+  assert.doesNotMatch(JSON.stringify(calls), /user_id|learner_id|attempt_id|score|is_correct/i)
 })
 
 test('authoring details use the one protected answer-key RPC and preserve server timestamps', async () => {
@@ -138,6 +170,15 @@ test('GO Practice mutations fail closed for remote Pulse destinations', async ()
   assert.deepEqual(calls, [])
 })
 
+test('Hosted GO reads and mutations fail closed for an unconfigured remote destination', async () => {
+  const calls = []
+  const client = { supabaseUrl: 'https://lhgnbcaundgjeofjrscg.supabase.co', rpc: async (name, args) => { calls.push({ name, args }); return { data: [], error: null } } }
+  assert.equal((await listGoHostCatalog(client)).error.code, 'hosted_blocked')
+  assert.equal((await createGoHostedSession(client, CONTENT_ID)).error.code, 'hosted_blocked')
+  assert.equal((await joinGoHostedSession(client, 'KK 1234')).error.code, 'hosted_blocked')
+  assert.deepEqual(calls, [])
+})
+
 test('invalid local input never reaches the backend', async () => {
   const { client, calls } = recorder()
   assert.equal((await listTrainingCatalog(client, { limit: 101 })).error.code, 'invalid_request')
@@ -164,5 +205,8 @@ test('Training client has no direct tables, role-name gates, localStorage, or le
     'replace_training_questions', 'publish_training_content', 'get_go_practice_content',
     'get_go_capabilities', 'list_go_practice_catalog', 'start_training_attempt',
     'complete_training_attempt', 'list_my_training_results',
+    'list_go_host_catalog', 'create_go_hosted_session', 'join_go_hosted_session',
+    'get_go_hosted_session', 'start_go_hosted_session', 'submit_go_hosted_answer',
+    'advance_go_hosted_session', 'cancel_go_hosted_session',
   ]) assert.match(source, new RegExp(rpcName))
 })

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 
 import { apiUrl, appUrl, localAnonKey, sql, startBrowserRuntime, startLocalApp } from '../studio-certification/local-runtime.mjs'
 
@@ -9,8 +10,11 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 const requests = [], unexpected = [], errors = [], passes = []
 const pass = name => { passes.push(name); console.log('PASS ' + name) }
 
-assert.equal(sql("select count(*) from auth.users where email='go1a.player@example.test'"), '1')
 assert.equal(sql("select count(*) from auth.users where email<>'go1a.player@example.test'"), '0')
+if (sql('select count(*) from auth.users') === '0') {
+  sql(readFileSync(new URL('./fixtures.sql', import.meta.url), 'utf8'))
+}
+assert.equal(sql("select count(*) from auth.users where email='go1a.player@example.test'"), '1')
 const password = randomBytes(24).toString('hex')
 sql("update auth.users set encrypted_password=extensions.crypt('" + password + "',extensions.gen_salt('bf')) where email='go1a.player@example.test'")
 context.on('page', page => {
@@ -37,11 +41,10 @@ try {
 
   await page.getByRole('link', { name: 'Open Pulse GO' }).click()
   await page.getByRole('heading', { name: 'Train. Practice. Play.' }).waitFor()
-  await page.getByRole('button', { name: 'Host a game' }).click()
-  await page.getByText('Live hosting is being prepared. No room was created.').waitFor()
+  assert.equal(await page.getByRole('link', { name: 'Host a game' }).count(), 1)
   assert.equal(sql('select count(*) from public.training_attempts'), '0')
   assert.equal(await page.getByRole('button', { name: 'Join' }).isDisabled(), true)
-  pass('GO landing exposes only authorized Practice/Host and honest deferred live play')
+  pass('GO landing exposes authorized Practice/Host and requires a complete room code to join')
 
   await page.getByRole('link', { name: 'Start Practice' }).click()
   await page.getByRole('heading', { name: 'Choose your challenge' }).waitFor()

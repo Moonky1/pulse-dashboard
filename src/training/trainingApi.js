@@ -1,5 +1,6 @@
 import { assertTrainingAuthoringDestination, AUTHORING_MUTATIONS } from './authoringDestination.js'
 import { assertGoPracticeDestination } from './goPracticeDestination.js'
+import { assertGoHostedDestination } from './goHostedDestination.js'
 import { validateQuestions } from './questionValidation.js'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -38,6 +39,21 @@ async function rpc(client, name, args) {
   } catch {
     return { data: null, error: normalizeTrainingError({ code: 'unavailable' }) }
   }
+}
+
+const HOSTED_MUTATIONS = new Set([
+  'create_go_hosted_session', 'join_go_hosted_session', 'start_go_hosted_session',
+  'submit_go_hosted_answer', 'advance_go_hosted_session', 'cancel_go_hosted_session',
+])
+
+function hostedRpc(client, name, args) {
+  try { assertGoHostedDestination(client.supabaseUrl) } catch {
+    return Promise.resolve({ data: null, error: publicError('hosted_blocked', 'Live games are not enabled for this Pulse destination.') })
+  }
+  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog' && name !== 'get_go_hosted_session') {
+    return Promise.resolve(invalidRequest())
+  }
+  return rpc(client, name, args)
 }
 
 function validUuid(value) {
@@ -182,6 +198,58 @@ export function listGoPracticeCatalog(client, {
     requested_topic_id: topicId,
     requested_limit: limit,
     requested_offset: offset,
+  })
+}
+
+export function listGoHostCatalog(client, { language = null, limit = 100, offset = 0 } = {}) {
+  if ((language && !LANGUAGES.has(language)) || !Number.isInteger(limit) || limit < 1 || limit > 100 ||
+      !Number.isInteger(offset) || offset < 0) return Promise.resolve(invalidRequest())
+  return hostedRpc(client, 'list_go_host_catalog', {
+    requested_language: language, requested_limit: limit, requested_offset: offset,
+  })
+}
+
+export function createGoHostedSession(client, contentId) {
+  if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
+  return hostedRpc(client, 'create_go_hosted_session', { requested_content_id: contentId })
+}
+
+export function joinGoHostedSession(client, roomCode) {
+  if (typeof roomCode !== 'string' || !/^\s*kk[\s-]?\d{4}\s*$/i.test(roomCode)) {
+    return Promise.resolve({ data: null, error: publicError('not_found', 'That game code is not available.') })
+  }
+  return hostedRpc(client, 'join_go_hosted_session', { requested_room_code: roomCode })
+}
+
+export function getGoHostedSession(client, sessionId) {
+  if (!validUuid(sessionId)) return Promise.resolve(invalidRequest())
+  return hostedRpc(client, 'get_go_hosted_session', { requested_session_id: sessionId })
+}
+
+function hostedVersionAction(client, name, sessionId, expectedVersion) {
+  if (!validUuid(sessionId) || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+    return Promise.resolve(invalidRequest())
+  }
+  return hostedRpc(client, name, { requested_session_id: sessionId, expected_version: expectedVersion })
+}
+
+export const startGoHostedSession = (client, sessionId, expectedVersion) =>
+  hostedVersionAction(client, 'start_go_hosted_session', sessionId, expectedVersion)
+export const advanceGoHostedSession = (client, sessionId, expectedVersion) =>
+  hostedVersionAction(client, 'advance_go_hosted_session', sessionId, expectedVersion)
+export const cancelGoHostedSession = (client, sessionId, expectedVersion) =>
+  hostedVersionAction(client, 'cancel_go_hosted_session', sessionId, expectedVersion)
+
+export function submitGoHostedAnswer(client, sessionId, questionId, answer, expectedQuestionPosition) {
+  if (!validUuid(sessionId) || !validUuid(questionId) || answer === undefined ||
+      !Number.isInteger(expectedQuestionPosition) || expectedQuestionPosition < 1) {
+    return Promise.resolve(invalidRequest())
+  }
+  return hostedRpc(client, 'submit_go_hosted_answer', {
+    requested_session_id: sessionId,
+    requested_question_id: questionId,
+    requested_answer: answer,
+    expected_question_position: expectedQuestionPosition,
   })
 }
 

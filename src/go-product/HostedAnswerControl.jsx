@@ -1,0 +1,5 @@
+export function HostedAnswerControl({ question, answer, onChange, disabled = false }) {
+  if (question.question_type === 'multiple_choice') return <fieldset className="go-answer-list"><legend>Choose one answer</legend>{question.answer_options.map((option, index) => <label key={index}><input disabled={disabled} type="radio" name={question.id} checked={answer === index} onChange={() => onChange(index)} /><span>{option}</span></label>)}</fieldset>
+  if (question.question_type === 'true_false') return <fieldset className="go-answer-list go-answer-list--binary"><legend>Choose one answer</legend>{[true, false].map(value => <label key={String(value)}><input disabled={disabled} type="radio" name={question.id} checked={answer === value} onChange={() => onChange(value)} /><span>{value ? 'True' : 'False'}</span></label>)}</fieldset>
+  return <label className="go-text-answer"><span>Your answer</span><textarea disabled={disabled} rows="4" value={answer ?? ''} maxLength="1000" onChange={event => onChange(event.target.value)} /></label>
+}
