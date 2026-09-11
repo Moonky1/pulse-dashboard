@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { normalizeStaffReturnPath, readStaffReturnPath, rememberStaffReturnPath, STAFF_OAUTH_RETURN_KEY, takeStaffReturnPath } from './staffOAuth.js'
+import { normalizeStaffReturnPath, readStaffReturnPath, rememberStaffReturnPath, shouldRejectStaffOAuthCallback, STAFF_OAUTH_RETURN_KEY, takeStaffReturnPath } from './staffOAuth.js'
 
 function memoryStorage() {
   const values = new Map()
@@ -39,4 +39,12 @@ test('invalid destinations clear a previously stored return path', () => {
   rememberStaffReturnPath('/admin', storage)
   rememberStaffReturnPath('https://evil.example', storage)
   assert.equal(storage.getItem(STAFF_OAUTH_RETURN_KEY), null)
+})
+
+test('waits for canonical auth resolution before rejecting an empty Google callback', () => {
+  assert.equal(shouldRejectStaffOAuthCallback({ authLoading: true }), false)
+  assert.equal(shouldRejectStaffOAuthCallback({ authLoading: false, isAuthenticated: true }), false)
+  assert.equal(shouldRejectStaffOAuthCallback({ authLoading: false, isAuthenticated: false }), true)
+  assert.equal(shouldRejectStaffOAuthCallback({ providerError: true, authLoading: true, isAuthenticated: true }), true)
+  assert.equal(shouldRejectStaffOAuthCallback({ hasAuthPayload: true, authLoading: false, isAuthenticated: false }), false)
 })

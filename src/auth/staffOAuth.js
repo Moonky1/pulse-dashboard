@@ -8,6 +8,11 @@ function browserSessionStorage() {
   return typeof sessionStorage === 'undefined' ? null : sessionStorage
 }
 
+export function shouldRejectStaffOAuthCallback({ providerError = false, hasAuthPayload = false, authLoading = true, isAuthenticated = false } = {}) {
+  if (providerError) return true
+  return !hasAuthPayload && !authLoading && !isAuthenticated
+}
+
 export function normalizeStaffReturnPath(value) {
   if (typeof value !== 'string') return null
   const candidate = value.trim()
