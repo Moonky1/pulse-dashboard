@@ -1,5 +1,7 @@
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+const INVITATION_STATUSES = new Set(['pending_send', 'sent', 'accepted', 'revoked', 'expired', 'failed'])
+
 function publicError(code, message) {
   return { code, message }
 }
@@ -848,4 +850,99 @@ export async function getUserAuditHistory(client, targetUserId, options = {}) {
   })
   if (error) return { data: { events: [], hasMore: false, nextCursor: null }, error: normalizeAuditError(error) }
   return { data: auditResult(data ?? []), error: null }
+}
+
+function invitationError(error) {
+  if (!error) return null
+  if (['42501', '28000'].includes(error.code)) return publicError('access_denied', 'You do not have permission to manage Staff invitations.')
+  if (error.code === '23505') return publicError('identity_conflict', 'This email already has a Pulse identity or an active invitation.')
+  if (error.code === 'P0002') return publicError('not_found', 'This invitation is no longer available.')
+  if (error.code === '55000') return publicError('stale_invitation', 'This invitation changed or can no longer perform that action. Refresh and try again.')
+  if (['22023', '22P02', '23503', '23514'].includes(error.code)) return publicError('invalid_proposal', 'The selected identity, placement, position, role, or scope is no longer valid.')
+  return publicError('unavailable', 'Pulse could not complete the invitation action.')
+}
+
+function safeCatalogItem(item = {}) {
+  return UUID_PATTERN.test(item.id ?? '') ? { id: item.id, code: item.code ?? '', name: item.name ?? 'Unknown' } : null
+}
+
+function safeRoleOption(item = {}) {
+  const scopeType = item.scope_type ?? ''
+  if (!UUID_PATTERN.test(item.role_id ?? '') || !['global', 'department', 'campaign', 'team'].includes(scopeType)) return null
+  return {
+    roleId: item.role_id,
+    roleKey: item.role_key ?? '',
+    roleName: item.role_name ?? 'Unknown role',
+    scopeType,
+    departmentId: item.department_id ?? null,
+    campaignId: item.campaign_id ?? null,
+    campaignCode: item.campaign_code ?? null,
+    campaignName: item.campaign_name ?? null,
+    teamId: item.team_id ?? null,
+  }
+}
+
+export function normalizeStaffInvitationOptions(value = {}) {
+  const departments = (value.departments ?? []).map(safeCatalogItem).filter(Boolean)
+  const teams = (value.teams ?? []).map((item) => {
+    const normalized = safeCatalogItem(item)
+    return normalized && UUID_PATTERN.test(item.department_id ?? '') ? { ...normalized, departmentId: item.department_id } : null
+  }).filter(Boolean)
+  return {
+    departments,
+    teams,
+    positions: (value.positions ?? []).map(safeCatalogItem).filter(Boolean),
+    roleOptions: (value.role_options ?? []).map(safeRoleOption).filter(Boolean),
+  }
+}
+
+export async function loadStaffInvitationOptions(client) {
+  const { data, error } = await client.rpc('get_staff_invitation_options')
+  return error ? { data: null, error: invitationError(error) } : { data: normalizeStaffInvitationOptions(data), error: null }
+}
+
+function normalizeStaffInvitation(row = {}) {
+  if (!UUID_PATTERN.test(row.invitation_id ?? '') || !INVITATION_STATUSES.has(row.invitation_status)) return null
+  return {
+    id: row.invitation_id,
+    email: row.email ?? '',
+    fullName: row.invitee_full_name ?? 'Unknown invitee',
+    status: row.invitation_status,
+    expiresAt: row.expires_at ?? null,
+    department: { id: row.department_id, name: row.department_name ?? 'Unknown department' },
+    team: row.team_id ? { id: row.team_id, name: row.team_name ?? 'Unknown team' } : null,
+    position: row.position_id ? { id: row.position_id, name: row.position_name ?? 'Unknown position' } : null,
+    role: { id: row.role_id, name: row.role_name ?? 'Unknown role' },
+    scope: {
+      type: row.scope_type,
+      department: row.scope_department_id ? { id: row.scope_department_id, name: row.scope_department_name ?? 'Unknown department' } : null,
+      campaign: row.scope_campaign_id ? { id: row.scope_campaign_id, name: row.scope_campaign_name ?? 'Unknown campaign' } : null,
+      team: row.scope_team_id ? { id: row.scope_team_id, name: row.scope_team_name ?? 'Unknown team' } : null,
+    },
+    createdByName: row.created_by_name ?? 'Unknown operator',
+    deliveryAttemptCount: Number(row.delivery_attempt_count ?? 0),
+    failureCode: row.failure_code ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    canResend: Boolean(row.can_resend),
+    canRevoke: Boolean(row.can_revoke),
+  }
+}
+
+export async function listStaffInvitations(client, { status = null, limit = 50 } = {}) {
+  if ((status && !INVITATION_STATUSES.has(status)) || !Number.isInteger(limit) || limit < 1 || limit > 100) return { data: [], error: publicError('invalid_request', 'The requested invitation filters are invalid.') }
+  const { data, error } = await client.rpc('list_staff_invitations', { requested_status: status, requested_limit: limit })
+  return error ? { data: [], error: invitationError(error) } : { data: (data ?? []).map(normalizeStaffInvitation).filter(Boolean), error: null }
+}
+
+export function sendStaffInvitation(client, proposal) {
+  return client.functions.invoke('pulse-staff-invitations', { body: { action: 'send', requestKey: crypto.randomUUID(), ...proposal } }).then(({ data, error }) => ({ data, error: error ? invitationError(error) : null }))
+}
+
+export function resendStaffInvitation(client, invitation) {
+  return client.functions.invoke('pulse-staff-invitations', { body: { action: 'resend', requestKey: crypto.randomUUID(), invitationId: invitation.id, expectedUpdatedAt: invitation.updatedAt } }).then(({ data, error }) => ({ data, error: error ? invitationError(error) : null }))
+}
+
+export function revokeStaffInvitation(client, invitation) {
+  return client.functions.invoke('pulse-staff-invitations', { body: { action: 'revoke', invitationId: invitation.id, expectedUpdatedAt: invitation.updatedAt } }).then(({ data, error }) => ({ data, error: error ? invitationError(error) : null }))
 }

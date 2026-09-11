@@ -1,1 +1,4 @@
 # Pulse Dev has been cleaned. Foundation V1 configuration will be added in a later checkpoint.
+
+[functions.pulse-staff-invitations]
+verify_jwt = true

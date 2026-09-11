@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
 import { supabase } from '../utils/supabase.js'
-import { createPendingProfile, getPendingProfileName, loadOwnProfile, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword } from './pulseAuthService.js'
+import { acceptOwnStaffInvitation, createPendingProfile, getPendingProfileName, loadOwnProfile, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword } from './pulseAuthService.js'
 import { deriveAuthState } from './authState.js'
 
 const AuthContext = createContext(null)
@@ -39,6 +39,10 @@ export function AuthProvider({ children, client = supabase }) {
     const pendingProfileName = getPendingProfileName(nextSession.user)
     if (!result.data && !result.error && allowCreate && nextSession.user.email_confirmed_at && pendingProfileName) {
       result = await createPendingProfile(client, pendingProfileName)
+    }
+    if (result.data?.status === 'pending_approval' && nextSession.user.email_confirmed_at) {
+      const accepted = await acceptOwnStaffInvitation(client)
+      if (accepted.data?.accepted) result = await loadOwnProfile(client, nextSession.user.id)
     }
     if (currentRequest !== requestId.current) return null
 
