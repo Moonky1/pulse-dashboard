@@ -71,6 +71,7 @@ select ok((select delivery_required from public.claim_staff_invitation_send(
  ' Invitee@Example.test ',' Invitee Person ','da120000-0000-4000-8000-000000000001',null,'fa120000-0000-4000-8000-000000000001',
  '10000000-0000-0000-0000-000000000005','campaign',null,'ca120000-0000-4000-8000-000000000001',null,'ac120000-0000-4000-8000-000000000001'
 )),'authorized operator claims one exact invitation delivery');
+select ok((select expires_at between now()+interval '71 hours 59 minutes' and now()+interval '72 hours 1 minute' from public.list_staff_invitations(null,50) where email='invitee@example.test'),'new invitation validity is server-owned at 72 hours');
 select ok(not (select delivery_required from public.claim_staff_invitation_send(
  'invitee@example.test','Invitee Person','da120000-0000-4000-8000-000000000001',null,'fa120000-0000-4000-8000-000000000001',
  '10000000-0000-0000-0000-000000000005','campaign',null,'ca120000-0000-4000-8000-000000000001',null,'ac120000-0000-4000-8000-000000000001'
@@ -127,10 +128,13 @@ set local role authenticated;
 select ok((select accepted from public.accept_own_staff_invitation()),'verified invited identity accepts once');
 select ok(not (select accepted from public.accept_own_staff_invitation()),'acceptance retry is idempotent');
 reset role;
-select ok(exists(select 1 from public.users where auth_user_id='aa120000-0000-4000-8000-000000000020' and email='invitee@example.test' and full_name='Invitee Person' and status='pending_approval' and department_id is null and team_id is null and position_id is null),'acceptance creates only the canonical pending profile from server-owned name');
-select ok(not exists(select 1 from public.user_roles ur join public.users u on u.id=ur.user_id where u.auth_user_id='aa120000-0000-4000-8000-000000000020'),'acceptance never assigns the proposed role');
+select ok(exists(select 1 from public.users where auth_user_id='aa120000-0000-4000-8000-000000000020' and email='invitee@example.test' and full_name='Invitee Person' and status='active' and employee_id is not null and department_id='da120000-0000-4000-8000-000000000001' and team_id is null and position_id='fa120000-0000-4000-8000-000000000001'),'acceptance atomically activates the canonical profile with server-owned identity and employment');
+select ok(exists(select 1 from public.user_roles ur join public.users u on u.id=ur.user_id where u.auth_user_id='aa120000-0000-4000-8000-000000000020' and ur.role_id='10000000-0000-0000-0000-000000000005' and ur.scope_type='campaign' and ur.department_id is null and ur.campaign_id='ca120000-0000-4000-8000-000000000001' and ur.team_id is null and ur.assigned_by_user_id='ba120000-0000-4000-8000-000000000002'),'acceptance applies the exact preauthorized role and Campaign scope');
+select is((select count(*) from public.user_roles ur join public.users u on u.id=ur.user_id where u.auth_user_id='aa120000-0000-4000-8000-000000000020'),1::bigint,'acceptance retry creates no duplicate role');
 select is((select status from public.staff_invitations where email_normalized='invitee@example.test'),'accepted','invitation transitions to accepted exactly once');
 select ok(exists(select 1 from public.audit_events e where e.target_id=(select id from public.staff_invitations where email_normalized='invitee@example.test') and e.action='staff_invitation.accepted'),'acceptance is audited');
+select is((select count(*) from public.audit_events e join public.users u on u.id=e.target_id where u.auth_user_id='aa120000-0000-4000-8000-000000000020' and e.action='account.approved'),1::bigint,'invitation activation writes one canonical approval audit');
+select is((select count(*) from public.audit_events e join public.users u on u.id=e.target_id where u.auth_user_id='aa120000-0000-4000-8000-000000000020' and e.action='role.assigned'),1::bigint,'invitation activation writes one canonical role audit');
 
 select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000002',true);
 set local role authenticated;
@@ -146,6 +150,7 @@ select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000002'
 select set_config('request.jwt.claim.role','authenticated',true);
 set local role authenticated;
 select ok((select delivery_required from public.claim_staff_invitation_resend((select invitation_id from public.list_staff_invitations(null,50) where email='failed@example.test'),(select updated_at from public.list_staff_invitations(null,50) where email='failed@example.test'),'ac120000-0000-4000-8000-000000000023')),'failed delivery can be retried with a fresh claim');
+select ok((select expires_at between now()+interval '71 hours 59 minutes' and now()+interval '72 hours 1 minute' from public.list_staff_invitations(null,50) where email='failed@example.test'),'resend renews validity from server time for 72 hours');
 select ok(not (select delivery_required from public.claim_staff_invitation_resend((select invitation_id from public.list_staff_invitations(null,50) where email='failed@example.test'),(select updated_at from public.list_staff_invitations(null,50) where email='failed@example.test'),'ac120000-0000-4000-8000-000000000023')),'duplicate resend request is idempotent');
 
 select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000002',true);
@@ -192,5 +197,80 @@ reset role;
 select is((select status from public.staff_invitations where email_normalized='expired@example.test'),'expired','acceptance check records explicit expiry safely');
 
 reset role;
+
+-- A pre-existing pending profile can be activated by an invitation that was
+-- legitimately issued before that profile appeared. Other lifecycle states
+-- fail closed and are never replaced or reactivated.
+insert into public.staff_invitations(
+  id,email_normalized,full_name,status,expires_at,created_by_user_id,department_id,
+  position_id,role_id,scope_type,auth_user_id,request_key,sent_at
+) values
+ ('dc120000-0000-4000-8000-000000000001','auth12.existing.pending@example.test','Existing Pending Invited','sent',now()+interval '72 hours','ba120000-0000-4000-8000-000000000002','da120000-0000-4000-8000-000000000001','fa120000-0000-4000-8000-000000000001','10000000-0000-0000-0000-000000000001','global','aa120000-0000-4000-8000-000000000005','bc120000-0000-4000-8000-000000000001',now()),
+ ('dc120000-0000-4000-8000-000000000002','auth12.existing.active@example.test','Existing Active Invited','sent',now()+interval '72 hours','ba120000-0000-4000-8000-000000000002','da120000-0000-4000-8000-000000000001',null,'10000000-0000-0000-0000-000000000001','global','aa120000-0000-4000-8000-000000000004','bc120000-0000-4000-8000-000000000002',now()),
+ ('dc120000-0000-4000-8000-000000000003','auth12.existing.blocked@example.test','Existing Blocked Invited','sent',now()+interval '72 hours','ba120000-0000-4000-8000-000000000002','da120000-0000-4000-8000-000000000001',null,'10000000-0000-0000-0000-000000000001','global','aa120000-0000-4000-8000-000000000006','bc120000-0000-4000-8000-000000000003',now()),
+ ('dc120000-0000-4000-8000-000000000004','auth12.existing.inactive@example.test','Existing Inactive Invited','sent',now()+interval '72 hours','ba120000-0000-4000-8000-000000000002','da120000-0000-4000-8000-000000000001',null,'10000000-0000-0000-0000-000000000001','global','aa120000-0000-4000-8000-000000000007','bc120000-0000-4000-8000-000000000004',now());
+
+select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000005',true);
+select ok((select accepted from public.accept_own_staff_invitation()),'same canonical pending profile may accept a valid preauthorized invitation');
+reset role;
+select is((select count(*) from public.users where auth_user_id='aa120000-0000-4000-8000-000000000005'),1::bigint,'pending acceptance creates no duplicate profile');
+select ok(exists(select 1 from public.users where auth_user_id='aa120000-0000-4000-8000-000000000005' and status='active' and full_name='Existing Pending Invited' and department_id='da120000-0000-4000-8000-000000000001' and position_id='fa120000-0000-4000-8000-000000000001'),'pending profile receives the exact invitation package');
+
+select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000004',true);
+select throws_ok($$select * from public.accept_own_staff_invitation()$$,'55000',null,'active Staff cannot be replaced by an invitation');
+select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000006',true);
+select throws_ok($$select * from public.accept_own_staff_invitation()$$,'42501',null,'blocked Staff cannot be activated by an invitation');
+select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000007',true);
+select throws_ok($$select * from public.accept_own_staff_invitation()$$,'42501',null,'inactive Staff cannot be reactivated by an invitation');
+reset role;
+select ok(not exists(select 1 from public.staff_invitations where id in ('dc120000-0000-4000-8000-000000000002','dc120000-0000-4000-8000-000000000003','dc120000-0000-4000-8000-000000000004') and status='accepted'),'active, blocked, and inactive invitation fixtures remain unconsumed');
+
+-- Provider-neutral uninvited registrations retain the ordinary pending path.
+insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at) values
+ ('aa120000-0000-4000-8000-000000000025','authenticated','authenticated','auth12.uninvited.password@example.test','',now(),'{"provider":"email","providers":["email"]}','{"full_name":"Uninvited Password"}',now(),now()),
+ ('aa120000-0000-4000-8000-000000000026','authenticated','authenticated','auth12.uninvited.google@example.test','',now(),'{"provider":"google","providers":["google"]}','{"full_name":"Uninvited Google"}',now(),now());
+select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000025',true);
+select is((select status from public.create_pending_profile('Uninvited Password')),'pending_approval','uninvited email registration remains pending approval');
+select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000026',true);
+select is((select status from public.create_pending_profile('Uninvited Google')),'pending_approval','uninvited first-time Google registration remains pending approval');
+reset role;
+select ok(not exists(select 1 from public.user_roles assignment join public.users target on target.id=assignment.user_id where target.auth_user_id in ('aa120000-0000-4000-8000-000000000025','aa120000-0000-4000-8000-000000000026')),'uninvited registrations receive no role assignment');
+
+-- Revalidate the original inviter at acceptance time. Removing the inviter's
+-- current users.invite permission converts the invitation into a safe,
+-- reissue-required terminal state without partial activation.
+insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at) values
+ ('aa120000-0000-4000-8000-000000000030','authenticated','authenticated','auth12.stale.inviter@example.test','',now(),'{}','{"full_name":"Stale Inviter Recipient"}',now(),now());
+insert into public.staff_invitations(
+  id,email_normalized,full_name,status,expires_at,created_by_user_id,department_id,
+  role_id,scope_type,auth_user_id,request_key,sent_at
+) values (
+  'dc120000-0000-4000-8000-000000000030','auth12.stale.inviter@example.test','Stale Inviter Recipient','sent',now()+interval '72 hours',
+  'ba120000-0000-4000-8000-000000000002','da120000-0000-4000-8000-000000000001',
+  '10000000-0000-0000-0000-000000000001','global','aa120000-0000-4000-8000-000000000030','bc120000-0000-4000-8000-000000000030',now()
+);
+delete from public.role_permissions
+where role_id='10000000-0000-0000-0000-000000000009'
+  and permission_id='20000000-0000-0000-0000-000000000036';
+select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000030',true);
+select is((select status from public.accept_own_staff_invitation()),'reissue_required','stale inviter authority returns safe reissue guidance');
+select is((select status from public.accept_own_staff_invitation()),'reissue_required','reissue-required acceptance retry remains stable');
+reset role;
+select is((select status from public.staff_invitations where id='dc120000-0000-4000-8000-000000000030'),'failed','stale inviter invitation fails closed');
+select is((select failure_code from public.staff_invitations where id='dc120000-0000-4000-8000-000000000030'),'authorization_changed','stale inviter stores only a safe failure code');
+select ok(exists(select 1 from public.users where auth_user_id='aa120000-0000-4000-8000-000000000030' and status='pending_approval' and department_id is null and team_id is null and position_id is null),'stale inviter denial leaves only a normal pending profile');
+select ok(not exists(select 1 from public.user_roles assignment join public.users target on target.id=assignment.user_id where target.auth_user_id='aa120000-0000-4000-8000-000000000030'),'stale inviter denial applies no role');
+select is((select count(*) from public.audit_events where target_id='dc120000-0000-4000-8000-000000000030' and action='staff_invitation.failed'),1::bigint,'stale inviter failure is audited exactly once');
+insert into public.role_permissions(role_id,permission_id)
+values('10000000-0000-0000-0000-000000000009','20000000-0000-0000-0000-000000000036');
+
 select * from finish();
 rollback;

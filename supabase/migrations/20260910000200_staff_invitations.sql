@@ -2,7 +2,7 @@
 -- Delivery is performed only by the separately deployed trusted Edge Function.
 
 insert into public.permissions(id,key,description)
-values ('20000000-0000-0000-0000-000000000036','users.invite','Invite Staff identities into the pending approval lifecycle');
+values ('20000000-0000-0000-0000-000000000036','users.invite','Invite Staff identities through preauthorized onboarding.');
 
 insert into public.role_permissions(role_id,permission_id)
 select role.id,'20000000-0000-0000-0000-000000000036'::uuid
@@ -14,7 +14,7 @@ create table public.staff_invitations (
   email_normalized text not null,
   full_name text not null,
   status text not null default 'pending_send',
-  expires_at timestamptz not null default (now() + interval '1 hour'),
+  expires_at timestamptz not null default (now() + interval '72 hours'),
   created_by_user_id uuid not null,
   department_id uuid not null,
   team_id uuid,
@@ -101,6 +101,32 @@ security definer
 set search_path=pg_catalog
 as $function$
 begin
+  if not exists(
+    select 1
+    from public.users actor
+    where actor.id=actor_user_id and actor.status='active'
+  ) then raise exception 'active invitation operator required' using errcode='42501'; end if;
+
+  if not exists(
+    select 1
+    from public.user_roles actor_assignment
+    join public.roles actor_role on actor_role.id=actor_assignment.role_id and actor_role.is_active
+    join public.role_permissions actor_role_permission on actor_role_permission.role_id=actor_role.id
+    join public.permissions actor_permission on actor_permission.id=actor_role_permission.permission_id and actor_permission.is_active
+    where actor_assignment.user_id=actor_user_id
+      and actor_assignment.scope_type='global'
+      and actor_permission.key='admin.access'
+  ) or not exists(
+    select 1
+    from public.user_roles actor_assignment
+    join public.roles actor_role on actor_role.id=actor_assignment.role_id and actor_role.is_active
+    join public.role_permissions actor_role_permission on actor_role_permission.role_id=actor_role.id
+    join public.permissions actor_permission on actor_permission.id=actor_role_permission.permission_id and actor_permission.is_active
+    where actor_assignment.user_id=actor_user_id
+      and actor_assignment.scope_type='global'
+      and actor_permission.key='users.invite'
+  ) then raise exception 'current global invitation authority required' using errcode='42501'; end if;
+
   if not exists(select 1 from public.departments d where d.id=proposed_department_id and d.is_active) then
     raise exception 'selected department is unavailable' using errcode='23503';
   end if;
@@ -287,7 +313,7 @@ begin
   end if;
   if exists(select 1 from public.users u where u.email=invitation.email_normalized) then raise exception 'email already belongs to a Pulse profile' using errcode='23505'; end if;
   perform pulse_private.validate_staff_invitation_proposal(actor_id,invitation.department_id,invitation.team_id,invitation.position_id,invitation.role_id,invitation.scope_type,invitation.scope_department_id,invitation.scope_campaign_id,invitation.scope_team_id);
-  update public.staff_invitations set status='pending_send',expires_at=now()+interval '1 hour',last_delivery_request_id=requested_request_key,
+  update public.staff_invitations set status='pending_send',expires_at=now()+interval '72 hours',last_delivery_request_id=requested_request_key,
     delivery_claim_id=claim_id,delivery_claimed_at=now(),delivery_attempt_count=delivery_attempt_count+1,
     sent_at=null,failed_at=null,failure_code=null,updated_at=now()
   where id=invitation.id returning * into invitation;
@@ -379,16 +405,29 @@ create function public.accept_own_staff_invitation()
 returns table(invitation_id uuid,user_id uuid,status text,accepted boolean)
 language plpgsql security definer set search_path=pg_catalog
 as $function$
-declare caller_auth_id uuid := auth.uid(); authoritative_email text; invitation public.staff_invitations%rowtype; profile public.users%rowtype;
+declare
+  caller_auth_id uuid := auth.uid();
+  authoritative_email text;
+  invitation public.staff_invitations%rowtype;
+  profile public.users%rowtype;
+  assigned_department_id uuid;
+  assigned_campaign_id uuid;
+  assigned_team_id uuid;
+  generated_employee_id text;
 begin
   if caller_auth_id is null then raise exception 'authentication required' using errcode='28000'; end if;
   select lower(btrim(au.email)) into authoritative_email from auth.users au where au.id=caller_auth_id and au.email_confirmed_at is not null and au.deleted_at is null and (au.banned_until is null or au.banned_until<now());
   if authoritative_email is null then raise exception 'verified Auth identity required' using errcode='28000'; end if;
   perform pg_advisory_xact_lock(hashtextextended(authoritative_email,20260910000200));
   select * into invitation from public.staff_invitations i
-  where i.email_normalized=authoritative_email and (i.auth_user_id is null or i.auth_user_id=caller_auth_id)
-    and i.status in ('sent','accepted') order by i.created_at desc limit 1 for update;
+  where i.email_normalized=authoritative_email and i.auth_user_id=caller_auth_id
+    and (i.status in ('sent','accepted') or (i.status='failed' and i.failure_code='authorization_changed'))
+  order by i.created_at desc limit 1 for update;
   if not found then return; end if;
+  if invitation.status='failed' then
+    return query select invitation.id,null::uuid,'reissue_required'::text,false;
+    return;
+  end if;
   if invitation.status='sent' and invitation.expires_at<=now() then
     update public.staff_invitations set status='expired',updated_at=now() where id=invitation.id; return;
   end if;
@@ -397,9 +436,113 @@ begin
     perform public.create_pending_profile(invitation.full_name);
     select * into profile from public.users u where u.auth_user_id=caller_auth_id;
   end if;
-  if profile.email<>authoritative_email or profile.status<>'pending_approval' then raise exception 'invited profile is not eligible for pending approval' using errcode='55000'; end if;
-  if invitation.status='accepted' then return query select invitation.id,profile.id,profile.status,false; return; end if;
+
+  if profile.email<>authoritative_email then
+    raise exception 'invited profile does not match the verified identity' using errcode='55000';
+  end if;
+
+  assigned_department_id := case when invitation.scope_type='department' then invitation.scope_department_id end;
+  assigned_campaign_id := case when invitation.scope_type='campaign' then invitation.scope_campaign_id end;
+  assigned_team_id := case when invitation.scope_type='team' then invitation.scope_team_id end;
+
+  if invitation.status='accepted' then
+    if profile.status<>'active'
+      or profile.department_id<>invitation.department_id
+      or profile.team_id is distinct from invitation.team_id
+      or profile.position_id is distinct from invitation.position_id
+      or not exists(
+        select 1 from public.user_roles assignment
+        where assignment.user_id=profile.id
+          and assignment.role_id=invitation.role_id
+          and assignment.scope_type=invitation.scope_type
+          and assignment.department_id is not distinct from assigned_department_id
+          and assignment.campaign_id is not distinct from assigned_campaign_id
+          and assignment.team_id is not distinct from assigned_team_id
+      ) then raise exception 'accepted invitation state is inconsistent' using errcode='55000'; end if;
+    return query select invitation.id,profile.id,profile.status,false;
+    return;
+  end if;
+
+  if profile.status='active' then
+    raise exception 'active Staff cannot be replaced by an invitation' using errcode='55000';
+  end if;
+  if profile.status='blocked' then
+    raise exception 'blocked Staff cannot be activated by an invitation' using errcode='42501';
+  end if;
+  if profile.status='inactive' then
+    raise exception 'inactive Staff requires an explicit lifecycle action' using errcode='42501';
+  end if;
+  if profile.status<>'pending_approval' then
+    raise exception 'invited profile is not eligible for activation' using errcode='55000';
+  end if;
+  if exists(select 1 from public.user_roles assignment where assignment.user_id=profile.id) then
+    raise exception 'pending Staff already has an access assignment' using errcode='55000';
+  end if;
+
+  begin
+    perform pulse_private.validate_staff_invitation_proposal(
+      invitation.created_by_user_id,
+      invitation.department_id,
+      invitation.team_id,
+      invitation.position_id,
+      invitation.role_id,
+      invitation.scope_type,
+      invitation.scope_department_id,
+      invitation.scope_campaign_id,
+      invitation.scope_team_id
+    );
+  exception when others then
+    update public.staff_invitations
+    set status='failed',failed_at=now(),failure_code='authorization_changed',updated_at=now()
+    where id=invitation.id;
+    insert into public.audit_events(actor_user_id,target_type,target_id,action,source,metadata)
+    values(invitation.created_by_user_id,'staff_invitation',invitation.id,'staff_invitation.failed','database',
+      jsonb_build_object('status','failed','failure_code','authorization_changed'));
+    return query select invitation.id,profile.id,'reissue_required'::text,false;
+    return;
+  end;
+
+  generated_employee_id := coalesce(profile.employee_id,pulse_private.next_employee_id());
+
+  insert into public.user_roles(
+    user_id,role_id,scope_type,department_id,campaign_id,team_id,assigned_by_user_id
+  ) values (
+    profile.id,invitation.role_id,invitation.scope_type,
+    assigned_department_id,assigned_campaign_id,assigned_team_id,invitation.created_by_user_id
+  );
+
+  update public.users target
+  set full_name=invitation.full_name,
+      employee_id=generated_employee_id,
+      department_id=invitation.department_id,
+      team_id=invitation.team_id,
+      position_id=invitation.position_id,
+      status='active'
+  where target.id=profile.id
+  returning target.* into profile;
+
   update public.staff_invitations set status='accepted',auth_user_id=caller_auth_id,accepted_at=now(),updated_at=now() where id=invitation.id;
+
+  insert into public.audit_events(actor_user_id,target_type,target_id,action,source,metadata)
+  values(invitation.created_by_user_id,'user',profile.id,'account.approved','database',jsonb_build_object(
+    'department_id',invitation.department_id,
+    'team_id',invitation.team_id,
+    'position_id',invitation.position_id,
+    'employee_id',generated_employee_id,
+    'role_count',1,
+    'staff_invitation_id',invitation.id
+  ));
+
+  insert into public.audit_events(actor_user_id,target_type,target_id,action,source,metadata)
+  values(invitation.created_by_user_id,'user',profile.id,'role.assigned','database',jsonb_build_object(
+    'role_id',invitation.role_id,
+    'scope_type',invitation.scope_type,
+    'department_id',assigned_department_id,
+    'campaign_id',assigned_campaign_id,
+    'team_id',assigned_team_id,
+    'staff_invitation_id',invitation.id
+  ));
+
   insert into public.audit_events(actor_user_id,target_type,target_id,action,source,metadata)
   values(profile.id,'staff_invitation',invitation.id,'staff_invitation.accepted','database',jsonb_build_object('status','accepted','user_id',profile.id));
   return query select invitation.id,profile.id,profile.status,true;
@@ -431,5 +574,5 @@ grant execute on function public.revoke_staff_invitation(uuid,timestamptz) to au
 grant execute on function public.list_staff_invitations(text,integer) to authenticated;
 grant execute on function public.accept_own_staff_invitation() to authenticated;
 
-comment on table public.staff_invitations is 'Protected Staff invitation ledger; proposal data is applied only by later human approval.';
-comment on function public.accept_own_staff_invitation() is 'Binds a verified invited identity to pending approval without applying proposed placement, position, role, or scope.';
+comment on table public.staff_invitations is 'Protected Staff invitation ledger with server-owned 72-hour validity and preauthorized onboarding proposals.';
+comment on function public.accept_own_staff_invitation() is 'Atomically revalidates and applies a trusted Staff invitation package to the exact verified invited identity.';

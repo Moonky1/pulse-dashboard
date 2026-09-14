@@ -14,7 +14,7 @@ Suggested body:
 
 > You've been invited to join Pulse.
 >
-> Accept this invitation to verify your identity and continue to Pulse's approval step. This invitation expires {{ .Data.expires_at }} and does not grant access by itself.
+> Accept this invitation to verify your identity and join Pulse with the access package prepared for you. The package is revalidated when you accept. This invitation expires {{ .Data.expires_at }} and can be used once.
 >
 > Accept invitation
 >
@@ -30,7 +30,7 @@ The final HTML and plaintext templates must use Supabase-owned confirmation valu
 4. Approve a From address on the verified subdomain and the From name `Pulse — Kampaign Kings`.
 5. Configure Supabase custom SMTP host, port, username, password, sender address, and sender name through project secrets only.
 6. Configure the invite template and exact allowed Site URL/redirect URL.
-7. Align Supabase Email OTP expiration with the Pulse invitation expiry. AUTH-12 Stage 1 uses one hour because that matches the current project-default Supabase invite-token lifetime.
+7. Align the Supabase invite-token lifetime with Pulse's server-owned 72-hour Staff invitation validity before real delivery is enabled.
 8. Set conservative Auth email rate limits and provider quotas; validate bounce, suppression, retry, and abuse handling.
 9. Use one explicitly approved synthetic mailbox for end-to-end validation before any employee invitation.
 10. Rotate any temporary credential after validation and document ownership and recovery.

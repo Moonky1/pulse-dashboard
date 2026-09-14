@@ -5,7 +5,7 @@ import { useAuth } from '../AuthProvider.jsx'
 import { Brand } from '../components/AuthShell.jsx'
 
 export function PendingApprovalPage() {
-  const { profile, refreshProfile, signOut, loading } = useAuth()
+  const { profile, invitationNotice, refreshProfile, signOut, loading } = useAuth()
   return (
     <main className="auth-status-page">
       <header><Brand compact /></header>
@@ -14,6 +14,7 @@ export function PendingApprovalPage() {
         <Badge tone="pending" dot>Awaiting approval</Badge>
         <h1>Your Pulse account is verified.</h1>
         <p>Your account is waiting for company approval. An authorized reviewer will assign your access and activate your account.</p>
+        {invitationNotice && <p className="auth-form-error" role="alert">{invitationNotice}</p>}
         <dl className="auth-profile-summary">
           <div><dt>Name</dt><dd>{profile?.full_name}</dd></div>
           <div><dt>Email</dt><dd>{profile?.email}</dd></div>
