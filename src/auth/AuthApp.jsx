@@ -15,6 +15,8 @@ const GoHostedRoomPage = lazy(() => import('../go-product/GoHostedRoomPage.jsx')
 const GoPracticePlayer = lazy(() => import('../go-product/GoPracticePlayer.jsx').then((module) => ({ default: module.GoPracticePlayer })))
 const GoPracticeSelection = lazy(() => import('../go-product/GoPracticeSelection.jsx').then((module) => ({ default: module.GoPracticeSelection })))
 const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx').then((module) => ({ default: module.PendingApprovalPage })))
+const PublicHomePage = lazy(() => import('./screens/PublicHomePage.jsx').then((module) => ({ default: module.PublicHomePage })))
+const PublicLegalPage = lazy(() => import('./screens/PublicLegalPage.jsx').then((module) => ({ default: module.PublicLegalPage })))
 const RegisterPage = lazy(() => import('./screens/RegisterPage.jsx').then((module) => ({ default: module.RegisterPage })))
 const ResetPasswordPage = lazy(() => import('./screens/ResetPasswordPage.jsx').then((module) => ({ default: module.ResetPasswordPage })))
 const SignInPage = lazy(() => import('./screens/SignInPage.jsx').then((module) => ({ default: module.SignInPage })))
@@ -39,7 +41,9 @@ export function AuthApp() {
   return (
     <BrowserRouter>
       <Suspense fallback={<AccountStatePage kind="loading" />}><Routes>
-        <Route path="/" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
+        <Route path="/" element={<PublicHomePage />} />
+        <Route path="/privacy" element={<PublicLegalPage kind="privacy" />} />
+        <Route path="/terms" element={<PublicLegalPage kind="terms" />} />
         <Route path={AUTH_ENTRY_PATH} element={<PublicOnly><SignInPage /></PublicOnly>} />
         <Route path={STAFF_REGISTER_PATH} element={<PublicOnly><RegisterPage /></PublicOnly>} />
         <Route path={STAFF_FORGOT_PASSWORD_PATH} element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
