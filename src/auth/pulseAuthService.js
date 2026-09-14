@@ -1,3 +1,5 @@
+import { STAFF_OAUTH_PROVIDER } from './staffOAuth.js'
+
 const PROFILE_FIELDS = 'id, auth_user_id, email, full_name, display_name, employee_id, department_id, team_id, status, approved_at, created_at, updated_at'
 
 export function normalizeEmail(value) {
@@ -40,6 +42,16 @@ export function signInWithPassword(client, { email, password }) {
   return client.auth.signInWithPassword({ email: normalizeEmail(email), password })
 }
 
+export function signInWithGoogle(client, { redirectTo }) {
+  return client.auth.signInWithOAuth({
+    provider: STAFF_OAUTH_PROVIDER,
+    options: {
+      redirectTo,
+      scopes: 'openid email profile',
+    },
+  })
+}
+
 export function signUpWithPassword(client, { fullName, email, password, emailRedirectTo }) {
   return client.auth.signUp({
     email: normalizeEmail(email),
@@ -66,4 +78,21 @@ export function updateAccountPassword(client, password) {
 
 export function exchangeAuthCode(client, code) {
   return client.auth.exchangeCodeForSession(code)
+}
+
+export function getPendingProfileName(authUser) {
+  const metadata = authUser?.user_metadata ?? {}
+  const candidates = [metadata.full_name, metadata.name, metadata.display_name]
+
+  for (const value of candidates) {
+    const name = String(value ?? '').trim()
+    if (name.length >= 2 && name.length <= 160) return name
+  }
+
+  const emailName = String(authUser?.email ?? '')
+    .split('@')[0]
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return emailName.length >= 2 && emailName.length <= 160 ? emailName : ''
 }

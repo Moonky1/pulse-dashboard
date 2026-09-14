@@ -8,10 +8,12 @@ test('uses www as the production canonical Auth origin', () => {
   assert.equal(getAuthOrigin('https://pulse-kk.com'), PRODUCTION_AUTH_ORIGIN)
   assert.equal(getAuthRedirect('verification', 'https://pulse-kk.com'), 'https://www.pulse-kk.com/auth/callback?flow=verification')
   assert.equal(getAuthRedirect('recovery', 'https://www.pulse-kk.com'), 'https://www.pulse-kk.com/auth/callback?flow=recovery')
+  assert.equal(getAuthRedirect('google', 'https://www.pulse-kk.com'), 'https://www.pulse-kk.com/auth/callback?flow=google')
 })
 
 test('keeps localhost redirects local for controlled testing', () => {
   assert.equal(getAuthOrigin('http://127.0.0.1:4175'), 'http://127.0.0.1:4175')
   assert.equal(getAuthRedirect('recovery', 'https://pulse-auth-git-preview.vercel.app'), 'https://pulse-auth-git-preview.vercel.app/auth/callback?flow=recovery')
+  assert.equal(getAuthRedirect('google', 'https://pulse-auth-git-preview.vercel.app'), 'https://pulse-auth-git-preview.vercel.app/auth/callback?flow=google')
   assert.throws(() => getAuthRedirect('unknown'), /Unsupported/)
 })

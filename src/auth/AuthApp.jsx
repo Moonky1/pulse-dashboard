@@ -28,7 +28,7 @@ function RouteGate({ allow, children }) {
   const location = useLocation()
   if (authState === AUTH_STATES.LOADING) return <AccountStatePage kind="loading" />
   if (allow.includes(authState)) return children
-  return <Navigate to={routeForAuthState(authState) || AUTH_ENTRY_PATH} replace state={{ from: location.pathname }} />
+  return <Navigate to={routeForAuthState(authState) || AUTH_ENTRY_PATH} replace state={{ from: `${location.pathname}${location.search}${location.hash}` }} />
 }
 
 function PublicOnly({ children }) {

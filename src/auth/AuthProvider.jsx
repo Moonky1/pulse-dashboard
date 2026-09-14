@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
 import { supabase } from '../utils/supabase.js'
-import { createPendingProfile, loadOwnProfile, signInWithPassword, signOutSession, signUpWithPassword } from './pulseAuthService.js'
+import { createPendingProfile, getPendingProfileName, loadOwnProfile, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword } from './pulseAuthService.js'
 import { deriveAuthState } from './authState.js'
 
 const AuthContext = createContext(null)
@@ -36,8 +36,9 @@ export function AuthProvider({ children, client = supabase }) {
 
     setLoading(true)
     let result = await loadOwnProfile(client, nextSession.user.id)
-    if (!result.data && !result.error && allowCreate && nextSession.user.email_confirmed_at && nextSession.user.user_metadata?.full_name) {
-      result = await createPendingProfile(client, nextSession.user.user_metadata.full_name)
+    const pendingProfileName = getPendingProfileName(nextSession.user)
+    if (!result.data && !result.error && allowCreate && nextSession.user.email_confirmed_at && pendingProfileName) {
+      result = await createPendingProfile(client, pendingProfileName)
     }
     if (currentRequest !== requestId.current) return null
 
@@ -85,6 +86,11 @@ export function AuthProvider({ children, client = supabase }) {
     return signInWithPassword(client, credentials)
   }, [client])
 
+  const signInGoogle = useCallback(async (options) => {
+    setProfileError(null)
+    return signInWithGoogle(client, options)
+  }, [client])
+
   const register = useCallback((registration) => signUpWithPassword(client, registration), [client])
   const signOut = useCallback(async () => {
     requestId.current += 1
@@ -114,11 +120,12 @@ export function AuthProvider({ children, client = supabase }) {
     isAuthenticated: Boolean(session?.user),
     recoveryMode,
     signIn,
+    signInGoogle,
     register,
     signOut,
     refreshProfile,
     completeRecovery,
-  }), [session, profile, profileError, loading, authState, recoveryMode, signIn, register, signOut, refreshProfile, completeRecovery])
+  }), [session, profile, profileError, loading, authState, recoveryMode, signIn, signInGoogle, register, signOut, refreshProfile, completeRecovery])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

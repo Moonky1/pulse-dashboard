@@ -10,14 +10,16 @@ import { PasswordInput } from '../components/PasswordInput.jsx'
 import { validateRegistration } from '../pulseAuthService.js'
 import { getAuthRedirect } from '../authRedirects.js'
 import { STAFF_SIGN_IN_PATH } from '../authRoutes.js'
+import { rememberStaffReturnPath } from '../staffOAuth.js'
 
 export function RegisterPage() {
-  const { register } = useAuth()
+  const { register, signInGoogle } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' })
   const [errors, setErrors] = useState({})
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [googleSubmitting, setGoogleSubmitting] = useState(false)
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
 
   const submit = async (event) => {
@@ -38,15 +40,31 @@ export function RegisterPage() {
     navigate('/auth/verify', { replace: true, state: { submitted: true, hasSession: Boolean(data.session), email: submittedEmail } })
   }
 
+  const continueWithGoogle = async () => {
+    setGoogleSubmitting(true)
+    setSubmitError('')
+    rememberStaffReturnPath(null)
+    const { error } = await signInGoogle({ redirectTo: getAuthRedirect('google') })
+    if (error) {
+      setSubmitError('Google sign-in could not be started. Please try again.')
+      setGoogleSubmitting(false)
+    }
+  }
+
   return (
     <AuthShell title="Create your account" footer={<><span>Already have an account?</span> <Link to={STAFF_SIGN_IN_PATH}>Sign in</Link></>}>
       <form className="auth-form" onSubmit={submit} noValidate>
+        <Button className="auth-trace-action" type="button" size="lg" variant="secondary" loading={googleSubmitting} disabled={submitting} onClick={continueWithGoogle}>
+          <span className="auth-google-mark" aria-hidden="true">G</span>
+          Continue with Google
+        </Button>
+        <div className="auth-option-divider" role="separator"><span>or use Corporate Email</span></div>
         <Input id="register-name" label="Full name" autoComplete="name" value={form.fullName} onChange={update('fullName')} error={errors.fullName} required />
         <Input id="register-email" label="Email address" type="email" inputMode="email" autoComplete="email" value={form.email} onChange={update('email')} error={errors.email} required />
         <PasswordInput id="register-password" label="Password" autoComplete="new-password" hint="Use at least 8 characters." value={form.password} onChange={update('password')} error={errors.password} required />
         <PasswordInput id="register-confirm" label="Confirm password" autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} error={errors.confirmPassword} required />
         {submitError && <AuthNotice>{submitError}</AuthNotice>}
-        <Button className="auth-trace-action" type="submit" size="lg" loading={submitting}>Create account</Button>
+        <Button className="auth-trace-action" type="submit" size="lg" loading={submitting} disabled={googleSubmitting}>Create account</Button>
       </form>
     </AuthShell>
   )
