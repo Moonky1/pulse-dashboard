@@ -62,7 +62,10 @@ Deno.serve(async (request) => {
     requested_scope_team_id: payload.scopeTeamId ?? null,
     requested_request_key: requestKey,
   } : { target_invitation_id: payload.invitationId, expected_updated_at: payload.expectedUpdatedAt, requested_request_key: requestKey })
-  if (claimError) return reply(origin, 400, { error: 'invitation_not_created' })
+  if (claimError) {
+    console.error(JSON.stringify({ event: 'staff_invitation_claim_failed', action: payload.action, code: claimError.code }))
+    return reply(origin, 400, { error: 'invitation_not_created' })
+  }
   const claim = Array.isArray(rows) ? rows[0] : rows
   if (!claim?.delivery_required) return reply(origin, 200, { invitationId: claim?.invitation_id, delivery: 'unchanged' })
 
