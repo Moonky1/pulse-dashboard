@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageCampaigns, canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewOperationalAssignments, canViewPositions, canViewTeams, canViewUserHistory, hasAdminUsersAccess, resolveAdminAccess } from './access.js'
+import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canInviteStaff, canManageCampaigns, canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewOperationalAssignments, canViewPositions, canViewTeams, canViewUserHistory, hasAdminUsersAccess, hasAnyAdminSurfaceAccess, resolveAdminAccess } from './access.js'
 
 test('Admin is visible only with both required canonical permissions', () => {
   assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
@@ -64,6 +64,13 @@ test('audit and user history require exact canonical permission combinations', (
   assert.equal(canViewUserHistory(['admin.access', 'users.view', 'audit.view']), true)
   assert.equal(canViewUserHistory(['admin.access', 'audit.view']), false)
   assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'audit.view'] }), 'allowed')
+})
+
+test('Staff invitations require the dedicated canonical permission', () => {
+  assert.equal(canInviteStaff(['admin.access', 'users.invite']), true)
+  assert.equal(canInviteStaff(['admin.access', 'users.approve', 'roles.assign']), false)
+  assert.equal(canInviteStaff(['users.invite']), false)
+  assert.equal(hasAnyAdminSurfaceAccess(['admin.access', 'users.invite']), true)
 })
 
 test('campaign catalog access uses only canonical campaign permissions', () => {

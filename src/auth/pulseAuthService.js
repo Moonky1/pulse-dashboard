@@ -38,6 +38,11 @@ export async function createPendingProfile(client, fullName) {
   return { data: Array.isArray(data) ? (data[0] ?? null) : data, error }
 }
 
+export async function acceptOwnStaffInvitation(client) {
+  const { data, error } = await client.rpc('accept_own_staff_invitation')
+  return { data: Array.isArray(data) ? (data[0] ?? null) : data, error }
+}
+
 export function signInWithPassword(client, { email, password }) {
   return client.auth.signInWithPassword({ email: normalizeEmail(email), password })
 }
