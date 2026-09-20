@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
 import { supabase } from '../utils/supabase.js'
-import { createPendingProfile, getPendingProfileName, loadOwnProfile, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword } from './pulseAuthService.js'
+import { acceptOwnStaffInvitation, createPendingProfile, getPendingProfileName, loadOwnProfile, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword } from './pulseAuthService.js'
 import { deriveAuthState } from './authState.js'
 
 const AuthContext = createContext(null)
@@ -16,6 +16,7 @@ export function AuthProvider({ children, client = supabase }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [profileError, setProfileError] = useState(null)
+  const [invitationNotice, setInvitationNotice] = useState(null)
   const [recoveryMode, setRecoveryMode] = useState(() => recoveryStorage()?.getItem(RECOVERY_MARKER) === 'active')
   const requestId = useRef(0)
   const sessionKey = useRef(null)
@@ -27,6 +28,7 @@ export function AuthProvider({ children, client = supabase }) {
     const currentRequest = ++requestId.current
     setSession(nextSession)
     setProfileError(null)
+    setInvitationNotice(null)
 
     if (!nextSession?.user) {
       setProfile(null)
@@ -38,7 +40,21 @@ export function AuthProvider({ children, client = supabase }) {
     let result = await loadOwnProfile(client, nextSession.user.id)
     const pendingProfileName = getPendingProfileName(nextSession.user)
     if (!result.data && !result.error && allowCreate && nextSession.user.email_confirmed_at && pendingProfileName) {
-      result = await createPendingProfile(client, pendingProfileName)
+      const accepted = await acceptOwnStaffInvitation(client)
+      if (accepted.data?.accepted || accepted.data?.status === 'reissue_required') {
+        result = await loadOwnProfile(client, nextSession.user.id)
+      } else {
+        result = await createPendingProfile(client, pendingProfileName)
+      }
+      if (accepted.data?.status === 'reissue_required') {
+        setInvitationNotice('This Staff invitation can no longer be accepted. Ask an authorized administrator to issue a new invitation.')
+      }
+    } else if (result.data?.status === 'pending_approval' && nextSession.user.email_confirmed_at) {
+      const accepted = await acceptOwnStaffInvitation(client)
+      if (accepted.data?.accepted) result = await loadOwnProfile(client, nextSession.user.id)
+      else if (accepted.data?.status === 'reissue_required') {
+        setInvitationNotice('This Staff invitation can no longer be accepted. Ask an authorized administrator to issue a new invitation.')
+      }
     }
     if (currentRequest !== requestId.current) return null
 
@@ -83,11 +99,13 @@ export function AuthProvider({ children, client = supabase }) {
 
   const signIn = useCallback(async (credentials) => {
     setProfileError(null)
+    setInvitationNotice(null)
     return signInWithPassword(client, credentials)
   }, [client])
 
   const signInGoogle = useCallback(async (options) => {
     setProfileError(null)
+    setInvitationNotice(null)
     return signInWithGoogle(client, options)
   }, [client])
 
@@ -101,6 +119,7 @@ export function AuthProvider({ children, client = supabase }) {
     setSession(null)
     setProfile(null)
     setProfileError(null)
+    setInvitationNotice(null)
     setLoading(false)
     return result
   }, [client])
@@ -115,6 +134,7 @@ export function AuthProvider({ children, client = supabase }) {
     authUser: session?.user ?? null,
     profile,
     profileError,
+    invitationNotice,
     loading,
     authState,
     isAuthenticated: Boolean(session?.user),
@@ -125,7 +145,7 @@ export function AuthProvider({ children, client = supabase }) {
     signOut,
     refreshProfile,
     completeRecovery,
-  }), [session, profile, profileError, loading, authState, recoveryMode, signIn, signInGoogle, register, signOut, refreshProfile, completeRecovery])
+  }), [session, profile, profileError, invitationNotice, loading, authState, recoveryMode, signIn, signInGoogle, register, signOut, refreshProfile, completeRecovery])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

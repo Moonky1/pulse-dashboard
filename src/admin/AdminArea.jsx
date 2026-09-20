@@ -5,7 +5,7 @@ import { AdminAccessGate } from './components/AdminAccessGate.jsx'
 import { AdminShell } from './components/AdminShell.jsx'
 import { AdminStatePanel } from './components/AdminStatePanel.jsx'
 import { useAdminPermissions } from './AdminAccessContext.js'
-import { canViewAudit, canViewCampaigns, canViewDepartments, canViewPositions, canViewTeams, hasAdminUsersAccess } from './access.js'
+import { canInviteStaff, canViewAudit, canViewCampaigns, canViewDepartments, canViewPositions, canViewTeams, hasAdminUsersAccess } from './access.js'
 import './styles/admin.css'
 
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage.jsx').then((module) => ({ default: module.AdminUsersPage })))
@@ -15,11 +15,14 @@ const AdminOrganizationPage = lazy(() => import('./pages/AdminOrganizationPage.j
 const AdminAuditPage = lazy(() => import('./pages/AdminAuditPage.jsx').then((module) => ({ default: module.AdminAuditPage })))
 const AdminCampaignsPage = lazy(() => import('./pages/AdminCampaignsPage.jsx').then((module) => ({ default: module.AdminCampaignsPage })))
 const AdminPositionsPage = lazy(() => import('./pages/AdminPositionsPage.jsx').then((module) => ({ default: module.AdminPositionsPage })))
+const AdminInvitationsPage = lazy(() => import('./pages/AdminInvitationsPage.jsx').then((module) => ({ default: module.AdminInvitationsPage })))
 
 function AdminLanding() {
   const { permissionKeys } = useAdminPermissions()
   const destination = hasAdminUsersAccess(permissionKeys)
     ? 'users'
+    : canInviteStaff(permissionKeys)
+      ? 'invitations'
     : canViewAudit(permissionKeys)
       ? 'audit'
       : canViewDepartments(permissionKeys) || canViewTeams(permissionKeys)
@@ -55,6 +58,11 @@ function PositionsRoute({ children }) {
   return canViewPositions(permissionKeys) ? children : <AdminLanding />
 }
 
+function InvitationsRoute({ children }) {
+  const { permissionKeys } = useAdminPermissions()
+  return canInviteStaff(permissionKeys) ? children : <AdminLanding />
+}
+
 export function AdminArea() {
   return (
     <AdminAccessGate>
@@ -70,6 +78,7 @@ export function AdminArea() {
             <Route path="audit" element={<AuditRoute><AdminAuditPage /></AuditRoute>} />
             <Route path="campaigns" element={<CampaignsRoute><AdminCampaignsPage /></CampaignsRoute>} />
             <Route path="positions" element={<PositionsRoute><AdminPositionsPage /></PositionsRoute>} />
+            <Route path="invitations" element={<InvitationsRoute><AdminInvitationsPage /></InvitationsRoute>} />
             <Route path="*" element={<AdminLanding />} />
           </Route>
         </Routes>

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { createPendingProfile, exchangeAuthCode, getPendingProfileName, isEmailFormatValid, loadOwnProfile, normalizeEmail, requestPasswordRecovery, resendSignupVerification, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword, updateAccountPassword, validatePasswordUpdate, validateRegistration } from './pulseAuthService.js'
+import { acceptOwnStaffInvitation, createPendingProfile, exchangeAuthCode, getPendingProfileName, isEmailFormatValid, loadOwnProfile, normalizeEmail, requestPasswordRecovery, resendSignupVerification, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword, updateAccountPassword, validatePasswordUpdate, validateRegistration } from './pulseAuthService.js'
 
 test('normalizes email without treating its domain as authorization', () => {
   assert.equal(normalizeEmail('  Simon@KampaignKings.com '), 'simon@kampaignkings.com')
@@ -69,6 +69,13 @@ test('pending profile creation uses the trusted RPC and unwraps its row', async 
   const result = await createPendingProfile(client, '  Alex Rivera ')
   assert.deepEqual(received, ['create_pending_profile', { requested_full_name: 'Alex Rivera' }])
   assert.equal(result.data.status, 'pending_approval')
+})
+
+test('invitation acceptance delegates identity matching to the protected RPC', async () => {
+  const calls = []
+  const result = await acceptOwnStaffInvitation({ rpc: async (name) => { calls.push(name); return { data: [{ invitation_id: 'invite', accepted: true }], error: null } } })
+  assert.deepEqual(calls, ['accept_own_staff_invitation'])
+  assert.equal(result.data.accepted, true)
 })
 
 test('sign out delegates to real Supabase Auth', async () => {

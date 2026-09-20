@@ -5,6 +5,7 @@ import { auditActionLabel, auditSummary, formatAuditTime } from './auditViewMode
 
 test('known audit actions have stable human labels', () => {
   assert.equal(auditActionLabel('role.assigned'), 'Role assigned')
+  assert.equal(auditActionLabel('staff_invitation.accepted'), 'Staff invitation accepted')
   assert.equal(auditActionLabel('department.deactivated'), 'Department deactivated')
 })
 
