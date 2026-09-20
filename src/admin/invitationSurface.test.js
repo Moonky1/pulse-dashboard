@@ -7,6 +7,8 @@ const dialogUrl = new URL('./components/StaffInvitationDialog.jsx', import.meta.
 const apiUrl = new URL('./api/adminApi.js', import.meta.url)
 const edgeUrl = new URL('../../supabase/functions/pulse-staff-invitations/index.ts', import.meta.url)
 const providerUrl = new URL('../auth/AuthProvider.jsx', import.meta.url)
+const templateUrl = new URL('../../supabase/templates/invite.html', import.meta.url)
+const supabaseConfigUrl = new URL('../../supabase/config.toml', import.meta.url)
 
 test('Admin invitation surface uses protected contracts and guarded send, resend, revoke actions', async () => {
   const [page, dialog, api] = await Promise.all([readFile(pageUrl, 'utf8'), readFile(dialogUrl, 'utf8'), readFile(apiUrl, 'utf8')])
@@ -20,6 +22,21 @@ test('Admin invitation surface uses protected contracts and guarded send, resend
   assert.match(page, /Invitation prepared\. Delivery is pending\./)
   assert.match(dialog, /addEventListener\('cancel'/)
   assert.doesNotMatch(`${page}\n${dialog}\n${api}`, /\.from\(['"]staff_invitations['"]\)/)
+})
+
+test('Staff invitation email has a branded, truthful and portable HTML template', async () => {
+  const [template, config] = await Promise.all([readFile(templateUrl, 'utf8'), readFile(supabaseConfigUrl, 'utf8')])
+  assert.match(template, /You’re invited to Pulse/)
+  assert.match(template, /\.Data\.full_name/)
+  assert.match(template, /Your place in Pulse is ready/)
+  assert.match(template, /Accept your invitation/)
+  assert.match(template, /expires in 72 hours/)
+  assert.match(template, /Pulse · Kampaign Kings/)
+  assert.match(template, /\{\{ \.ConfirmationURL \}\}/)
+  assert.doesNotMatch(template, /script|service_role|access token/i)
+  assert.match(config, /\[auth\.email\.template\.invite\]/)
+  assert.match(config, /subject = "Your Pulse invitation is ready"/)
+  assert.match(config, /content_path = "\.\/supabase\/templates\/invite\.html"/)
 })
 
 test('trusted delivery stays in the Edge Function and is disabled by default', async () => {
