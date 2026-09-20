@@ -53,6 +53,7 @@ export function signInWithGoogle(client, { redirectTo }) {
     options: {
       redirectTo,
       scopes: 'openid email profile',
+      queryParams: { prompt: 'select_account' },
     },
   })
 }
