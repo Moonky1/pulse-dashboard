@@ -35,6 +35,7 @@ test('starts Google Staff OAuth with only minimal identity scopes and an exact c
     options: {
       redirectTo: 'https://pulse-auth.example/auth/callback?flow=google',
       scopes: 'openid email profile',
+      queryParams: { prompt: 'select_account' },
     },
   })
   assert.doesNotMatch(JSON.stringify(received), /role|department|team|campaign|position|service_role|client_secret/i)
