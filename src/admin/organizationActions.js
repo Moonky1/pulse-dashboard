@@ -37,7 +37,7 @@ export function organizationMutationMessage(action, entityType, result = {}) {
     deactivate: 'deactivated',
     reactivate: 'reactivated',
   }
-  return `${label[0].toUpperCase()}${label.slice(1)} ${verbs[action] ?? 'updated'}. The canonical catalog has been refreshed.`
+  return `${label[0].toUpperCase()}${label.slice(1)} ${verbs[action] ?? 'updated'}. The organization list has been refreshed.`
 }
 
 export function organizationStatusConsequence(entityType, active) {

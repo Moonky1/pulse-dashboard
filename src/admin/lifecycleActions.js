@@ -48,5 +48,5 @@ export function lifecycleSuccessMessage(action, result) {
   const label = LIFECYCLE_ACTIONS[action]?.requestedState ?? 'Updated'
   return result?.changed === false
     ? `No change was needed. The account is already ${label.toLowerCase()}.`
-    : `Lifecycle updated to ${label}. The server-confirmed record has been refreshed.`
+    : `Account status updated to ${label}. The user record has been refreshed.`
 }

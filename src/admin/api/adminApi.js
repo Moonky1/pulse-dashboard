@@ -24,7 +24,7 @@ export function normalizeAdminError(error) {
 export function normalizeLifecycleMutationError(error) {
   if (!error) return null
   if (messageIncludes(error, 'self-')) {
-    return publicError('self_operation', 'You cannot perform this lifecycle action on your own account.')
+    return publicError('self_operation', 'You cannot perform this account action on your own account.')
   }
   if (messageIncludes(error, 'last active super admin')) {
     return publicError('protected_super_admin', 'The last active Super Admin is protected. Another active Super Admin is required first.')
@@ -33,7 +33,7 @@ export function normalizeLifecycleMutationError(error) {
     return publicError('privileged_target', 'Only an active Super Admin may manage another Super Admin account.')
   }
   if (['42501', '28000'].includes(error.code)) {
-    return publicError('access_denied', 'You do not have permission to perform this lifecycle action.')
+    return publicError('access_denied', 'You do not have permission to perform this account action.')
   }
   if (error.code === 'P0002') {
     return publicError('not_found', 'This Pulse user could not be found.')
@@ -42,7 +42,7 @@ export function normalizeLifecycleMutationError(error) {
     return publicError('invalid_reason', 'The audit note must be 500 characters or fewer.')
   }
   if (error.code === '55000') {
-    return publicError('invalid_transition', 'The account changed or is not eligible for this lifecycle action. Refresh and try again.')
+    return publicError('invalid_transition', 'The account changed or is not eligible for this action. Refresh and try again.')
   }
   if (messageIncludes(error, 'auth identity') || messageIncludes(error, 'email does not match')) {
     return publicError('auth_identity_invalid', 'The account Auth identity is not eligible for reactivation. Review the verified email and Auth status.')
@@ -57,9 +57,9 @@ export function normalizeLifecycleMutationError(error) {
     return publicError('organization_invalid', 'The account department or team is missing, inactive, or no longer valid.')
   }
   if (error.code === '23514') {
-    return publicError('account_invalid', 'The account is not eligible for this lifecycle action. Review its Auth, profile, and role state.')
+    return publicError('account_invalid', 'The account is not eligible for this action. Review its identity, profile, and roles.')
   }
-  return publicError('unavailable', 'Pulse could not complete the lifecycle action. No client-side change was applied.')
+  return publicError('unavailable', 'Pulse could not complete the account action. No change was applied.')
 }
 
 export function normalizePendingMutationError(error) {
@@ -319,7 +319,7 @@ async function mutateManagedUser(client, rpcName, targetUserId, reason, expected
   const row = Array.isArray(data) ? data[0] : data
   const normalized = normalizeLifecycleResult(row, targetUserId, expectedStatus)
   if (!normalized) {
-    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected lifecycle state. Refresh before trying again.') }
+    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected account status. Refresh before trying again.') }
   }
   return { data: normalized, error: null }
 }

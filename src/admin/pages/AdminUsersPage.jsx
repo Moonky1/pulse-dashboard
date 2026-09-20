@@ -9,7 +9,7 @@ import { directoryMaps, filterManagedUsers, roleOptions } from '../adminViewMode
 import { useManagedUsers } from '../hooks/useManagedUsers.js'
 
 const STATUS_OPTIONS = [
-  ['', 'All lifecycle states'],
+  ['', 'All account states'],
   ['pending_approval', 'Pending approval'],
   ['active', 'Active'],
   ['blocked', 'Blocked'],
@@ -37,7 +37,7 @@ export function AdminUsersPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>Identity & access</p><h1>Users</h1><span>Inspect lifecycle, organization, and role scope from the canonical Pulse directory.</span></div>
+        <div><p>Identity & access</p><h1>Users</h1><span>Review people, organization, and access.</span></div>
         <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
       </div>
 
@@ -54,11 +54,11 @@ export function AdminUsersPage() {
         : !filtered.length ? <AdminStatePanel kind="empty" title="No matching users" body="Adjust the search or filters to broaden these results." />
           : <section className="admin-users" aria-label="Managed users">
             <div className="admin-table" role="table">
-              <div className="admin-table__head" role="row"><span>Identity</span><span>Lifecycle</span><span>Organization</span><span>Access</span><span aria-label="Details" /></div>
+              <div className="admin-table__head" role="row"><span>Identity</span><span>Status</span><span>Organization</span><span>Access</span><span aria-label="Details" /></div>
               {filtered.map((user) => (
                 <article className="admin-user-row" role="row" key={user.id}>
                   <div className="admin-user-identity"><strong>{user.fullName}</strong><span>{user.employeeId || 'Employee ID pending'}</span><small>{user.email}</small></div>
-                  <div><span className="admin-mobile-label">Lifecycle</span><LifecycleBadge status={user.status} /></div>
+                  <div><span className="admin-mobile-label">Status</span><LifecycleBadge status={user.status} /></div>
                   <div className="admin-cell-text"><span className="admin-mobile-label">Organization</span><strong>{maps.departments.get(user.departmentId) || 'Unassigned'}</strong><small>{maps.teams.get(user.teamId) || 'No team'}</small></div>
                   <div><span className="admin-mobile-label">Access</span><RoleScopeList roles={user.roles} directory={directory} compact /></div>
                   <Link className="admin-detail-link" to={user.status === 'pending_approval' ? `/admin/pending/${user.id}` : `/admin/users/${user.id}`} aria-label={`View ${user.fullName}`}>View</Link>

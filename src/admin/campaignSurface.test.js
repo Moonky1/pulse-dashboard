@@ -21,7 +21,7 @@ test('Campaigns is lazy-routed, permission-gated, and present in protected navig
 
 test('Campaigns foundation is read-only and uses only its protected catalog hook', async () => {
   const [page, hook] = await Promise.all([readFile(pageUrl, 'utf8'), readFile(hookUrl, 'utf8')])
-  assert.match(page, /Campaign administration remains read-only/)
+  assert.match(page, /Campaigns are read-only here/)
   assert.match(page, /No campaigns/)
   assert.match(page, /No matching campaigns/)
   assert.match(page, /Refresh/)
@@ -44,7 +44,7 @@ test('Campaign authorization UI selects exact backend options and keeps employme
   assert.match(roleDialog, /organizationForRoleOption\(option\)\.label/)
   assert.doesNotMatch(roleDialog, /type=["']text["'].*campaign|campaign.*type=["']text["']/i)
   assert.match(pendingDialog, /Employment placement/)
-  assert.match(pendingDialog, /Authorization scope/)
+  assert.match(pendingDialog, /Access/)
   assert.match(pendingDialog, /campaignName/)
   assert.match(pendingDialog, /addEventListener\('cancel'/)
   assert.match(pendingActions, /campaignId/)

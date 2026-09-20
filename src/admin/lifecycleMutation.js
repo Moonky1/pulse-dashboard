@@ -5,14 +5,14 @@ function lifecycleError(code, message) {
 function refreshWarning() {
   return {
     code: 'refresh_failed',
-    message: 'The server confirmed the lifecycle change, but Pulse could not refresh the record. Reload before taking another action.',
+    message: 'The account change was confirmed, but Pulse could not refresh the record. Reload before taking another action.',
   }
 }
 
 export async function runLifecycleMutation({ guard, action, targetUserId, reason, operations, onSuccess }) {
-  if (guard.current) return lifecycleError('in_progress', 'A lifecycle action is already in progress.')
+  if (guard.current) return lifecycleError('in_progress', 'An account action is already in progress.')
   const operation = operations[action]
-  if (!operation) return lifecycleError('invalid_action', 'The requested lifecycle action is not supported.')
+  if (!operation) return lifecycleError('invalid_action', 'The requested account action is not supported.')
 
   guard.current = true
   try {
@@ -20,7 +20,7 @@ export async function runLifecycleMutation({ guard, action, targetUserId, reason
     try {
       result = await operation(targetUserId, reason)
     } catch {
-      return lifecycleError('unavailable', 'Pulse could not complete the lifecycle action. No client-side change was applied.')
+      return lifecycleError('unavailable', 'Pulse could not complete the account action. No change was applied.')
     }
     if (result.error) return result
     try {

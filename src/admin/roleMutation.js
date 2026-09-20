@@ -5,7 +5,7 @@ function roleError(code, message) {
 function refreshWarning() {
   return {
     code: 'refresh_failed',
-    message: 'The server confirmed the role change, but Pulse could not refresh the record. Reload before taking another action.',
+    message: 'The access change was saved, but Pulse could not refresh the record. Reload before taking another action.',
   }
 }
 

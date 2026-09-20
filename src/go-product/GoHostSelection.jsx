@@ -40,7 +40,7 @@ export function GoHostSelection() {
 
   return <GoShell>
     <section className="go-page-heading go-page-heading--with-art">
-      <div><p className="go-eyebrow">Host a live game</p><h1>Choose the challenge</h1><p>Your players join with one short code.</p></div>
+      <div><p className="go-eyebrow">Host a live game</p><h1>Pick a game.</h1><p>Players join with one short code.</p></div>
       <img src="/emojis/certification.webp" alt="" />
     </section>
     <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding host-ready games…' : catalog.error?.message || ''}</div>
@@ -51,7 +51,7 @@ export function GoHostSelection() {
         return <article className="go-content-card go-content-card--host" key={item.id}>
           <div className="go-card-meta"><span>{item.content_type}</span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
           <h2>{item.title}</h2>
-          <p>{item.description || 'A live challenge for your team.'}</p>
+          <p>{item.description || 'Ready for your team.'}</p>
           <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{item.question_count}</strong> questions</div>
           <div className="go-topic-list">{item.topics?.map(topic => <span key={topic.id}>{topic.name}</span>)}</div>
           <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>Create room</Button>

@@ -72,7 +72,7 @@ const pages = {
   terms: {
     eyebrow: 'Terms',
     title: 'Terms of Service',
-    intro: 'The basic conditions for authorized use of the Pulse internal platform.',
+    intro: 'The basic conditions for using Pulse.',
     sections: termsSections,
   },
 }

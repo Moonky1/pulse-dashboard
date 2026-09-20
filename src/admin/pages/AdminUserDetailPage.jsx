@@ -30,7 +30,7 @@ export function AdminUserDetailPage({ pendingOnly = false }) {
   const { permissionKeys } = useAdminPermissions()
   const assignmentsAccess = canViewOperationalAssignments(permissionKeys)
   const operationalAssignments = useOperationalAssignments(userId, { enabled: assignmentsAccess })
-  if (loading && !user) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading user" body="Reading the canonical user record…" /></main>
+  if (loading && !user) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading user" body="Getting the latest user details…" /></main>
   if (error || !user) return <main className="admin-content"><AdminStatePanel kind="error" title={error?.code === 'not_found' ? 'User not found' : 'User unavailable'} body={error?.message || 'The user record is unavailable.'} onRetry={error?.code === 'unavailable' ? refresh : undefined} /></main>
   if (pendingOnly && user.status !== 'pending_approval') return <Navigate to={`/admin/users/${user.id}`} replace />
 
@@ -40,7 +40,7 @@ export function AdminUserDetailPage({ pendingOnly = false }) {
     <main className="admin-content">
       <Link className="admin-back-link" to={pendingOnly ? '/admin/pending' : '/admin/users'}>← Back to {pendingOnly ? 'pending users' : 'users'}</Link>
       <div className="admin-page-heading admin-page-heading--detail">
-        <div><p>User record</p><h1>{user.fullName}</h1><span>{user.employeeId || 'Employee ID pending'} · Canonical Pulse profile</span></div>
+        <div><p>User profile</p><h1>{user.fullName}</h1><span>{user.employeeId || 'Employee ID pending'} · Pulse profile</span></div>
         <LifecycleBadge status={user.status} />
       </div>
       <div className="admin-detail-grid">
@@ -49,7 +49,7 @@ export function AdminUserDetailPage({ pendingOnly = false }) {
         <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Position / job</p><h2>Current function</h2><dl><Detail label="Position">{user.positionName}</Detail><Detail label="Position code">{user.positionCode}</Detail></dl><p className="admin-footnote">The current Position describes the person’s general job function. It does not grant access and does not require a Campaign assignment.</p></Card>
         {assignmentsAccess && <OperationalAssignments assignments={operationalAssignments.assignments} loading={operationalAssignments.loading} error={operationalAssignments.error} onRetry={operationalAssignments.refresh} />}
         <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Access</p><h2>Roles and scope</h2><RoleScopeList roles={user.roles} directory={directory} /></Card>
-        <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Account</p><h2>Authentication and lifecycle</h2><div className="admin-account-row"><LifecycleBadge status={user.status} /><Badge tone={user.authEmailConfirmed ? 'success' : 'warning'} dot>{user.authEmailConfirmed ? 'Auth email verified' : 'Auth email unverified'}</Badge></div><p>{lifecycle.description}</p><p className="admin-footnote">Sensitive timestamps and evidence remain available only through protected history contracts.</p></Card>
+        <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Account</p><h2>Authentication and status</h2><div className="admin-account-row"><LifecycleBadge status={user.status} /><Badge tone={user.authEmailConfirmed ? 'success' : 'warning'} dot>{user.authEmailConfirmed ? 'Email verified' : 'Email unverified'}</Badge></div><p>{lifecycle.description}</p><p className="admin-footnote">Detailed account history is available in the audit record.</p></Card>
       </div>
       {canViewUserHistory(permissionKeys) && <UserAuditHistory userId={user.id} />}
       {user.status === 'pending_approval'

@@ -51,7 +51,7 @@ function OrganizationSection({ title, description, items, type, canManage, query
         <div><h2 id={`${type}-heading`}>{title}</h2><p>{description}</p></div>
         {canManage && <Button type="button" onClick={() => onAction({ type: 'create', entityType: type })}>Create {type}</Button>}
       </div>
-      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {items.length} {title.toLowerCase()} <span>Protected catalog</span></div>
+      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {items.length} {title.toLowerCase()}</div>
       {!items.length ? <AdminStatePanel kind="empty" title={`No ${title.toLowerCase()}`} body={`The protected ${type} catalog returned no records.`} />
         : !filtered.length ? <AdminStatePanel kind="empty" title={`No matching ${title.toLowerCase()}`} body="Adjust the organization filters to broaden these results." />
           : <div className="admin-organization-grid">{filtered.map((entity) => <OrganizationCard key={entity.id} entity={entity} type={type} canManage={canManage} onAction={onAction} />)}</div>}
@@ -117,7 +117,7 @@ export function AdminOrganizationPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>Organization</p><h1>Departments & teams</h1><span>Manage the canonical Pulse organization without deleting identity or access history.</span></div>
+        <div><p>Organization</p><h1>Departments & teams</h1><span>Keep your organization clear and up to date.</span></div>
         <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--organization" aria-label="Organization filters">
@@ -126,7 +126,7 @@ export function AdminOrganizationPage() {
       </section>
       {notice && <p className="admin-operation-notice" role="status">{notice}</p>}
       {departmentRead && <OrganizationSection title="Departments" description="Top-level organization units. Deactivation requires every active dependency to be resolved first." items={departments} type="department" canManage={departmentManage} query={query} departmentId="" onAction={openAction} />}
-      {teamRead && <OrganizationSection title="Teams" description="Department-owned operating groups. Teams cannot be moved between departments in this checkpoint." items={teams} type="team" canManage={teamManage} query={query} departmentId={departmentId} onAction={openAction} />}
+      {teamRead && <OrganizationSection title="Teams" description="Department-owned operating groups. Teams stay with their current department." items={teams} type="team" canManage={teamManage} query={query} departmentId={departmentId} onAction={openAction} />}
       {action && <OrganizationActionDialog action={action} departments={departments} submitting={submitting} error={mutationError} onCancel={cancelAction} onConfirm={confirmAction} />}
     </main>
   )

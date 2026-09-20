@@ -6,7 +6,7 @@ export const LIFECYCLE = Object.freeze({
 })
 
 export function lifecycleMeta(status) {
-  return LIFECYCLE[status] ?? { label: 'Unknown', tone: 'neutral', description: 'The lifecycle state is not recognized.' }
+  return LIFECYCLE[status] ?? { label: 'Unknown', tone: 'neutral', description: 'The account status is not recognized.' }
 }
 
 export function directoryMaps(directory = {}) {

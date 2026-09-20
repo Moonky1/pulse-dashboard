@@ -6,6 +6,7 @@ import { resolveGoPracticeDestination } from '../training/goPracticeDestination.
 import { completeTrainingAttempt, getGoPracticeContent, startTrainingAttempt } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canPractice } from './goAccess.js'
+import { resultMedal } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { buildAnswerSubmission, isAnswerReady, isSafePracticePayload, normalizePracticeContent, normalizeResult } from './goPracticeModel.js'
 import { useGoAccess } from './useGoAccess.js'
@@ -48,7 +49,7 @@ export function GoPracticePlayer() {
   const progress = session.content ? ((questionIndex + 1) / session.content.questions.length) * 100 : 0
   if (access.state !== 'allowed') return <GoAccessState access={access} />
   if (!canPractice(access.capabilities)) return <GoAccessState access={{ state: 'denied' }} />
-  if (!destination.allowed) return <GoShell><section className="go-state"><h1>Practice stays local for now.</h1><p>No attempt was started.</p><Link to="/go">Back to GO</Link></section></GoShell>
+  if (!destination.allowed) return <GoShell><section className="go-state"><h1>Practice isn’t available here.</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
   if (session.loading) return <GoShell><section className="go-state" role="status"><h1>Preparing your practice…</h1></section></GoShell>
   if (session.error || !question) return <GoShell><section className="go-state" role="alert"><h1>We couldn’t start this practice.</h1><p>{session.error?.message}</p><Link to="/go/practice">Choose another</Link></section></GoShell>
 
@@ -67,12 +68,16 @@ export function GoPracticePlayer() {
     await openAttempt()
   }
 
-  if (result) return <GoShell><section className="go-result" role="status">
-    <p className="go-eyebrow">Practice complete</p><h1>{Math.round(Number(result.score_percent))}%</h1>
+  if (result) {
+    const medal = resultMedal(result.score_percent)
+    return <GoShell><section className="go-result" role="status">
+    <img src={medal.image} alt="" />
+    <p className="go-eyebrow">Practice complete</p><h2>{medal.label}</h2><h1>{Math.round(Number(result.score_percent))}%</h1>
     <p>{result.correct_answers} of {result.total_questions} correct</p>
     {!!result.topic_breakdown?.length && <div className="go-result-topics">{result.topic_breakdown.map(topic => <div key={topic.topic_id}><strong>{topic.topic_name}</strong><span>{topic.correct_answers}/{topic.total_questions}</span></div>)}</div>}
     <div className="go-result-actions"><Button onClick={() => void practiceAgain()}>Practice Again</Button><Link to="/go/practice">Choose another</Link></div>
   </section></GoShell>
+  }
 
   const ready = isAnswerReady(question, answers[question.id])
   const last = questionIndex === session.content.questions.length - 1

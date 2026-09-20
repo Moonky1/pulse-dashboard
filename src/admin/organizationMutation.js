@@ -5,7 +5,7 @@ function organizationError(code, message) {
 function refreshWarning() {
   return {
     code: 'refresh_failed',
-    message: 'The server confirmed the organization change, but Pulse could not refresh the catalog. Reload before taking another action.',
+    message: 'The organization change was saved, but Pulse could not refresh the list. Reload before taking another action.',
   }
 }
 

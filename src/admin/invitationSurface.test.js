@@ -18,7 +18,7 @@ test('Admin invitation surface uses protected contracts and guarded send, resend
   assert.match(page, /revokeStaffInvitation/)
   assert.match(dialog, /valid for 72 hours/)
   assert.match(dialog, /Employment/)
-  assert.match(dialog, /Authorization/)
+  assert.match(dialog, /Access/)
   assert.match(page, /Invitation prepared\. Delivery is pending\./)
   assert.match(dialog, /addEventListener\('cancel'/)
   assert.doesNotMatch(`${page}\n${dialog}\n${api}`, /\.from\(['"]staff_invitations['"]\)/)

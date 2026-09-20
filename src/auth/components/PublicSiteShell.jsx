@@ -18,7 +18,7 @@ export function PublicSiteShell({ children }) {
       </header>
       {children}
       <footer className="public-site-footer">
-        <span>Pulse · Kampaign Kings internal platform</span>
+        <span>Pulse · Kampaign Kings</span>
         <nav aria-label="Legal pages">
           <Link to="/privacy">Privacy</Link>
           <Link to="/terms">Terms</Link>

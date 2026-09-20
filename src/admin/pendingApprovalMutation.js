@@ -5,7 +5,7 @@ function approvalError(code, message) {
 function refreshWarning() {
   return {
     code: 'refresh_failed',
-    message: 'The server confirmed approval, but Pulse could not refresh the record. Reload before taking another action.',
+    message: 'The approval was saved, but Pulse could not refresh the record. Reload before taking another action.',
   }
 }
 

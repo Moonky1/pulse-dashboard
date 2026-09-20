@@ -29,12 +29,12 @@ export function AdminPendingUsersPage() {
         : !filtered.length ? <AdminStatePanel kind="empty" title="No matching pending users" body="Adjust the search to broaden these results." />
           : <section className="admin-users" aria-label="Pending users">
             <div className="admin-table admin-table--pending" role="table">
-              <div className="admin-table__head" role="row"><span>Identity</span><span>Auth</span><span>Lifecycle</span><span aria-label="Details" /></div>
+              <div className="admin-table__head" role="row"><span>Identity</span><span>Email</span><span>Status</span><span aria-label="Details" /></div>
               {filtered.map((user) => (
                 <article className="admin-user-row" role="row" key={user.id}>
                   <div className="admin-user-identity"><strong>{user.fullName}</strong><span>{user.employeeId || 'Employee ID assigned on approval'}</span><small>{user.email}</small></div>
-                  <div className="admin-cell-text"><span className="admin-mobile-label">Auth</span><strong>{user.authEmailConfirmed ? 'Verified email' : 'Verification unavailable'}</strong><small>Supabase Auth identity</small></div>
-                  <div><span className="admin-mobile-label">Lifecycle</span><LifecycleBadge status={user.status} /></div>
+                  <div className="admin-cell-text"><span className="admin-mobile-label">Email</span><strong>{user.authEmailConfirmed ? 'Verified email' : 'Verification unavailable'}</strong><small>Account email</small></div>
+                  <div><span className="admin-mobile-label">Status</span><LifecycleBadge status={user.status} /></div>
                   <Link className="admin-detail-link" to={`/admin/pending/${user.id}`} aria-label={`Review ${user.fullName}`}>Review</Link>
                 </article>
               ))}

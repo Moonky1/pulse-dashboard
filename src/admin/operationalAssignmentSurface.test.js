@@ -21,7 +21,7 @@ test('Positions is lazy-routed, permission-gated, searchable, and read-only', as
   assert.match(area, /path="positions"/)
   assert.match(area, /canViewPositions\(permissionKeys\)/)
   assert.match(shell, /positionsAccess.*NavLink to="\/admin\/positions"/s)
-  assert.match(page, /No Positions/)
+  assert.match(page, /No positions/)
   assert.match(page, /No matching Positions/)
   assert.match(page, /Search Positions/)
   assert.match(page, /Refresh/)

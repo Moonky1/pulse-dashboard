@@ -24,11 +24,12 @@ test('authenticated product routes remain protected', async () => {
   }
 })
 
-test('public homepage identifies Pulse without exposing internal data', async () => {
+test('public homepage presents concise Pulse entry without exposing internal data', async () => {
   const page = await read('./screens/PublicHomePage.jsx')
   const shell = await read('./components/PublicSiteShell.jsx')
 
-  assert.match(page, /internal workspace for training, operations, and team collaboration/i)
+  assert.match(page, /Welcome to Pulse/i)
+  assert.doesNotMatch(`${page}\n${shell}`, /internal platform|One identity|checkpoint/i)
   assert.match(page, /Staff sign in/)
   assert.match(shell, /Pulse home/)
   assert.doesNotMatch(`${page}\n${shell}`, /useAuth|supabase|employee|role|permission|audit/i)
@@ -55,4 +56,25 @@ test('public pages render without protected profile or auth hooks', async () => 
   ])
 
   assert.doesNotMatch(files.join('\n'), /useAuth|AuthProvider|loadOwnProfile|list_managed|from\(['"]users['"]\)|\.rpc\(/)
+})
+
+test('Staff entry and Workspace use finished product language', async () => {
+  const [shell, workspace] = await Promise.all([
+    read('./components/AuthShell.jsx'),
+    read('./screens/WorkspacePage.jsx'),
+  ])
+
+  assert.match(workspace, /Pulse GO/)
+  assert.match(workspace, /Studio/)
+  assert.match(workspace, /Administration/)
+  assert.doesNotMatch(`${shell}\n${workspace}`, /authenticated foundation|foundation ready|future checkpoint|internal platform|One identity/i)
+})
+
+test('the browser mark uses the Pulse metallic ring identity', async () => {
+  const favicon = await read('../../public/favicon.svg')
+
+  assert.match(favicon, /aria-label="Pulse"/)
+  assert.match(favicon, /id="metal"/)
+  assert.match(favicon, /id="pulse"/)
+  assert.doesNotMatch(favicon, /vite|lightning/i)
 })

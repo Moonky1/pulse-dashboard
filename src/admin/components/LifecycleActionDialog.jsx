@@ -39,7 +39,7 @@ export function LifecycleActionDialog({ action, user, submitting, error, onCance
       onClick={(event) => { if (event.target === event.currentTarget) cancel() }}
     >
       <form className="admin-dialog__surface" method="dialog" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
-        <div className="admin-dialog__eyebrow">Confirm lifecycle action</div>
+        <div className="admin-dialog__eyebrow">Confirm account action</div>
         <h2 id="lifecycle-dialog-title">{action.label}</h2>
         <div className="admin-dialog__target">
           <strong>{user.fullName}</strong>

@@ -46,3 +46,18 @@ test('Hosted UI selectively preserves existing GO personality without legacy run
   assert.match(css, /image-rendering:pixelated/)
   assert.doesNotMatch(host + room, /lucide|heroicons|fontawesome|from ['"]\.\.\/go\//i)
 })
+
+test('GO landing stays compact, action-led, and reuses legacy visual personality', async () => {
+  const landing = await read('GoLandingPage.jsx')
+  const practice = await read('GoPracticeSelection.jsx')
+  const player = await read('GoPracticePlayer.jsx')
+  assert.match(landing, /Start practice/)
+  assert.match(landing, /Host a game/)
+  assert.match(landing, /Have a room code/)
+  assert.match(landing, /\/emojis\/classic\.webp/)
+  assert.match(landing, /\/emojis\/medal1\.webp/)
+  assert.match(practice, /PRACTICE_ART/)
+  assert.match(practice, /languagePresentation/)
+  assert.match(player, /resultMedal/)
+  assert.doesNotMatch(`${landing}\n${practice}\n${player}`, /Train\. Practice\. Play\.|checkpoint/i)
+})

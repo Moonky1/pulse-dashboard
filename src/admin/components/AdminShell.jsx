@@ -40,7 +40,7 @@ export function AdminShell() {
       </aside>
       <div className="admin-main">
         <header className="admin-topbar">
-          <div><span className="admin-topbar__eyebrow">Pulse control plane</span><strong>{lifecycleAdmin || organizationAdmin ? 'Audited administration' : 'Read-only administration'}</strong></div>
+          <div><span className="admin-topbar__eyebrow">Pulse administration</span><strong>{lifecycleAdmin || organizationAdmin ? 'Management workspace' : 'Read-only workspace'}</strong></div>
           <Button type="button" variant="ghost" onClick={signOut}>Sign out</Button>
         </header>
         <Outlet />
