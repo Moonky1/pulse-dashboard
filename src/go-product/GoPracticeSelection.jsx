@@ -9,9 +9,10 @@ import { canPractice } from './goAccess.js'
 import { languagePresentation } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { catalogOptions, normalizeCatalog } from './goPracticeModel.js'
+import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
 
-const PRACTICE_ART = ['/emojis/classic.webp', '/emojis/goal.webp', '/emojis/valid.webp', '/emojis/points.webp']
+const PRACTICE_ART = [GO_ART.classic, GO_ART.goal, GO_ART.valid, GO_ART.points]
 
 export function GoPracticeSelection() {
   const access = useGoAccess()
@@ -40,7 +41,7 @@ export function GoPracticeSelection() {
   if (!destination.allowed) return <GoShell><section className="go-state" role="status"><h1>Practice isn’t available here.</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
 
   return <GoShell>
-    <section className="go-page-heading go-page-heading--with-art"><div><p className="go-eyebrow">Practice</p><h1>Pick a challenge.</h1><p>Choose something to play.</p></div><img src="/emojis/goal1.webp" alt="" /></section>
+    <section className="go-page-heading go-page-heading--with-art"><div><p className="go-eyebrow">Practice</p><h1>Pick a challenge.</h1><p>Choose something to play.</p></div><img src={GO_ART.goal1} alt="" /></section>
     <section className="go-filterbar" aria-label="Practice filters">
       <label>Language<select value={filters.language} onChange={event => setFilters(value => ({ ...value, language: event.target.value }))}><option value="">All languages</option>{options.languages.map(language => <option key={language} value={language}>{language === 'es' ? 'Español' : 'English'}</option>)}</select></label>
       <label>Topic<select value={filters.topicId} onChange={event => setFilters(value => ({ ...value, topicId: event.target.value }))}><option value="">All topics</option>{options.topics.map(topic => <option key={topic.id} value={topic.id}>{topic.name}</option>)}</select></label>

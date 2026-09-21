@@ -6,6 +6,7 @@ import { advanceGoHostedSession, cancelGoHostedSession, startGoHostedSession, su
 import { supabase } from '../utils/supabase.js'
 import { hostedAnswerReady, languagePresentation, resultMedal } from './goHostedModel.js'
 import { GoShell } from './GoShell.jsx'
+import { GO_ART, resolveGoArt } from './goVisualAssets.js'
 import { HostedAnswerControl } from './HostedAnswerControl.jsx'
 import { useHostedRoom } from './useHostedRoom.js'
 
@@ -13,7 +14,7 @@ function RoomHeader({ room }) {
   const language = languagePresentation(room.content.language)
   return <header className="go-room-heading">
     <div><p className="go-eyebrow">{room.viewer_role === 'host' ? 'Hosting live' : 'Live game'}</p><h1>{room.content.title}</h1><p><span aria-hidden="true">{language.flag}</span> {language.label} · {room.question_count} questions</p></div>
-    <div className="go-room-code"><img src="/emojis/classic.webp" alt="" /><div><span>Join with</span><strong>{room.room_code}</strong></div></div>
+    <div className="go-room-code"><img src={GO_ART.classic} alt="" /><div><span>Join with</span><strong>{room.room_code}</strong></div></div>
   </header>
 }
 
@@ -28,7 +29,7 @@ function Lobby({ room, action, busy, error }) {
         {!room.participant_count && <p className="go-room-empty">Share the game code. Players will appear here automatically.</p>}
       </article>
       <aside className="go-room-panel go-room-panel--action">
-        <img src="/emojis/classic.webp" alt="" />
+        <img src={GO_ART.classic} alt="" />
         <h2>{isHost ? 'Ready when they are.' : 'You’re in.'}</h2>
         <p>{isHost ? 'Start after everyone has joined.' : 'The host will start the first question.'}</p>
         {error && <p className="go-inline-error" role="alert">{error}</p>}
@@ -71,7 +72,7 @@ function Results({ room }) {
   const score = personal?.score_percent ?? room.host_summary?.average_score ?? 0
   const medal = resultMedal(score)
   return <section className="go-hosted-result" role="status">
-    <div className="go-result-art" aria-hidden="true"><img src={medal.image} alt="" /><img src="/emojis/points.webp" alt="" /><img src="/emojis/valid.webp" alt="" /></div>
+    <div className="go-result-art" aria-hidden="true"><img src={resolveGoArt(medal.image)} alt="" /><img src={GO_ART.points} alt="" /><img src={GO_ART.valid} alt="" /></div>
     <p className="go-eyebrow">Game complete</p><h1>{room.viewer_role === 'host' ? 'That’s a wrap!' : medal.label}</h1>
     {personal ? <><strong className="go-result-score">{Math.round(Number(personal.score_percent))}%</strong><p>{personal.correct_answers} of {personal.total_questions} correct</p>{!!personal.topic_breakdown?.length && <div className="go-result-topics">{personal.topic_breakdown.map(topic => <div key={topic.topic_id}><strong>{topic.topic_name}</strong><span>{topic.correct_answers}/{topic.total_questions}</span></div>)}</div>}</> : <div className="go-host-summary"><div><strong>{room.host_summary.players}</strong><span>Players</span></div><div><strong>{Math.round(Number(room.host_summary.average_score))}%</strong><span>Average</span></div><div><strong>{room.host_summary.completed_results}</strong><span>Results saved</span></div></div>}
     <Link className="go-primary" to="/go">Back to GO</Link>
@@ -105,7 +106,7 @@ export function GoHostedRoomPage({ expectedViewer }) {
   if (state.error || !room) return <GoShell><section className="go-state" role="alert"><h1>This game isn’t available.</h1><p>{state.error?.message}</p><Link to="/go">Back to GO</Link></section></GoShell>
   if (room.viewer_role !== expectedViewer) return <GoShell><section className="go-state"><h1>Use your game link.</h1><Link to={room.viewer_role === 'host' ? `/go/host/${room.session_id}` : `/go/room/${room.session_id}`}>Open room</Link></section></GoShell>
   if (room.status === 'completed') return <GoShell><Results room={room} /></GoShell>
-  if (['cancelled', 'expired'].includes(room.status)) return <GoShell><section className="go-state"><img className="go-state-art" src="/emojis/zero2.webp" alt="" /><h1>{room.status === 'expired' ? 'This room expired.' : 'This game was cancelled.'}</h1><p>No result was recorded.</p><Link to="/go">Back to GO</Link></section></GoShell>
+  if (['cancelled', 'expired'].includes(room.status)) return <GoShell><section className="go-state"><img className="go-state-art" src={GO_ART.zero2} alt="" /><h1>{room.status === 'expired' ? 'This room expired.' : 'This game was cancelled.'}</h1><p>No result was recorded.</p><Link to="/go">Back to GO</Link></section></GoShell>
   if (room.status === 'lobby') return <GoShell><Lobby room={room} action={hostAction} busy={busy} error={error} /></GoShell>
   return <GoShell>{room.viewer_role === 'host' ? <HostQuestion room={room} action={hostAction} busy={busy} error={error} /> : <PlayerQuestion key={room.current_question.id} room={room} submit={submit} busy={busy === 'submit'} error={error} />}</GoShell>
 }

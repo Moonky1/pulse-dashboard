@@ -8,6 +8,7 @@ import { supabase } from '../utils/supabase.js'
 import { canHost } from './goAccess.js'
 import { languagePresentation, roomPath } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
+import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
 
 export function GoHostSelection() {
@@ -41,7 +42,7 @@ export function GoHostSelection() {
   return <GoShell>
     <section className="go-page-heading go-page-heading--with-art">
       <div><p className="go-eyebrow">Host a game</p><h1>Pick what to play.</h1><p>We’ll make the room code.</p></div>
-      <img src="/emojis/certification.webp" alt="" />
+      <img src={GO_ART.certification} alt="" />
     </section>
     <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding host-ready games…' : catalog.error?.message || ''}</div>
     {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No games are ready to host.</h2><p>Published quizzes and assessments available to you will appear here.</p></section>}
@@ -49,7 +50,7 @@ export function GoHostSelection() {
       {catalog.items.map((item, index) => {
         const language = languagePresentation(item.language)
         return <article className="go-content-card go-content-card--host" key={item.id}>
-          <div className="go-card-visual"><span className="go-card-art"><img src={index % 2 ? '/emojis/classic.webp' : '/emojis/certification.webp'} alt="" /><i aria-hidden="true">LIVE</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
+          <div className="go-card-visual"><span className="go-card-art"><img src={index % 2 ? GO_ART.classic : GO_ART.certification} alt="" /><i aria-hidden="true">LIVE</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
           <div className="go-card-meta"><span>{item.content_type}</span><span>Team game</span></div>
           <h2>{item.title}</h2>
           <p>{item.description || 'Ready for your team.'}</p>
