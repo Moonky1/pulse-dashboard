@@ -13,7 +13,7 @@ function messageIncludes(error, value) {
 export function normalizeAdminError(error) {
   if (!error) return null
   if (['42501', '28000'].includes(error.code)) {
-    return publicError('access_denied', 'You do not have permission to view User Administration.')
+    return publicError('access_denied', 'You do not have permission to view People & access.')
   }
   if (['22023', '22P02'].includes(error.code)) {
     return publicError('invalid_request', 'The requested user or filter is not valid.')
@@ -24,42 +24,42 @@ export function normalizeAdminError(error) {
 export function normalizeLifecycleMutationError(error) {
   if (!error) return null
   if (messageIncludes(error, 'self-')) {
-    return publicError('self_operation', 'You cannot perform this lifecycle action on your own account.')
+    return publicError('self_operation', 'You cannot perform this account action on your own account.')
   }
   if (messageIncludes(error, 'last active super admin')) {
-    return publicError('protected_super_admin', 'The last active Super Admin is protected. Another active Super Admin is required first.')
+    return publicError('protected_super_admin', 'Another active Super Admin is required before changing this account.')
   }
   if (messageIncludes(error, 'only a super admin')) {
     return publicError('privileged_target', 'Only an active Super Admin may manage another Super Admin account.')
   }
   if (['42501', '28000'].includes(error.code)) {
-    return publicError('access_denied', 'You do not have permission to perform this lifecycle action.')
+    return publicError('access_denied', 'You do not have permission to perform this account action.')
   }
   if (error.code === 'P0002') {
     return publicError('not_found', 'This Pulse user could not be found.')
   }
   if (error.code === '22023') {
-    return publicError('invalid_reason', 'The audit note must be 500 characters or fewer.')
+    return publicError('invalid_reason', 'The note must be 500 characters or fewer.')
   }
   if (error.code === '55000') {
-    return publicError('invalid_transition', 'The account changed or is not eligible for this lifecycle action. Refresh and try again.')
+    return publicError('invalid_transition', 'The account changed or is not eligible for this action. Refresh and try again.')
   }
   if (messageIncludes(error, 'auth identity') || messageIncludes(error, 'email does not match')) {
-    return publicError('auth_identity_invalid', 'The account Auth identity is not eligible for reactivation. Review the verified email and Auth status.')
+    return publicError('auth_identity_invalid', 'This account cannot be reactivated. Review its verified email and account status.')
   }
   if (messageIncludes(error, 'employee id')) {
     return publicError('profile_incomplete', 'The account profile is missing its employee ID and cannot be reactivated.')
   }
   if (messageIncludes(error, 'role assignment') || messageIncludes(error, 'active role')) {
-    return publicError('role_required', 'The account needs at least one valid active role assignment before reactivation.')
+    return publicError('role_required', 'This person needs at least one active Pulse access entry before reactivation.')
   }
   if (error.code === '23503' || messageIncludes(error, 'department') || messageIncludes(error, 'team')) {
     return publicError('organization_invalid', 'The account department or team is missing, inactive, or no longer valid.')
   }
   if (error.code === '23514') {
-    return publicError('account_invalid', 'The account is not eligible for this lifecycle action. Review its Auth, profile, and role state.')
+    return publicError('account_invalid', 'The account is not eligible for this action. Review its profile, work details and Pulse access.')
   }
-  return publicError('unavailable', 'Pulse could not complete the lifecycle action. No client-side change was applied.')
+  return publicError('unavailable', 'Pulse could not complete the account action. No change was applied.')
 }
 
 export function normalizePendingMutationError(error) {
@@ -71,7 +71,7 @@ export function normalizePendingMutationError(error) {
     return publicError('access_denied', 'You do not have permission to review pending Pulse users.')
   }
   if (error.code === '22023') {
-    return publicError('invalid_reason', 'The audit note must be 500 characters or fewer.')
+    return publicError('invalid_reason', 'The note must be 500 characters or fewer.')
   }
   if (error.code === '55000') {
     return publicError('stale_pending_user', 'This account is no longer pending approval. Refresh before taking another action.')
@@ -79,7 +79,7 @@ export function normalizePendingMutationError(error) {
   if (error.code === 'P0002') {
     return publicError('not_found', 'This pending Pulse user could not be found.')
   }
-  return publicError('unavailable', 'Pulse could not complete the pending-user action. No client-side change was applied.')
+  return publicError('unavailable', 'Pulse could not complete this approval action. No change was applied.')
 }
 
 export function normalizePendingApprovalError(error) {
@@ -97,50 +97,50 @@ export function normalizePendingApprovalError(error) {
     return publicError('stale_pending_user', 'This account is no longer pending approval. Refresh before taking another action.')
   }
   if (error.code === '23514' || messageIncludes(error, 'auth identity') || messageIncludes(error, 'email does not match')) {
-    return publicError('auth_identity_invalid', 'The pending account no longer has an eligible verified Auth identity.')
+    return publicError('auth_identity_invalid', 'This account no longer has an eligible verified email.')
   }
   if (error.code === '23503') {
-    return publicError('catalog_invalid', 'The selected department, team, role, or scope is no longer available. Refresh the approval options.')
+    return publicError('catalog_invalid', 'The selected work details or Pulse access are no longer available. Refresh the approval options.')
   }
   if (['22023', '22P02', '23505'].includes(error.code)) {
     return publicError('invalid_selection', 'The selected approval combination is invalid or duplicated. Refresh the approval options.')
   }
-  return publicError('unavailable', 'Pulse could not approve the pending account. No client-side change was applied.')
+  return publicError('unavailable', 'Pulse could not approve this account. No change was applied.')
 }
 
 export function normalizeRoleMutationError(error) {
   if (!error) return null
   if (messageIncludes(error, 'self role changes')) {
-    return publicError('self_operation', 'You cannot change your own role assignments.')
+    return publicError('self_operation', 'You cannot change your own Pulse access.')
   }
   if (messageIncludes(error, 'last active super admin')) {
-    return publicError('protected_super_admin', 'The last active Super Admin is protected. Another active Super Admin is required first.')
+    return publicError('protected_super_admin', 'Another active Super Admin is required before changing this access.')
   }
   if (messageIncludes(error, 'only a super admin')) {
-    return publicError('privileged_role', 'Only an active Super Admin may change a Super Admin role assignment.')
+    return publicError('privileged_role', 'Only an active Super Admin may change Super Admin access.')
   }
   if (messageIncludes(error, 'cannot grant') || messageIncludes(error, 'cannot remove')) {
-    return publicError('grant_not_allowed', 'Your current access cannot change that role and scope.')
+    return publicError('grant_not_allowed', 'Your current access cannot make that change.')
   }
   if (['42501', '28000'].includes(error.code)) {
-    return publicError('access_denied', 'You do not have permission to manage role assignments.')
+    return publicError('access_denied', 'You do not have permission to manage Pulse access.')
   }
   if (error.code === 'P0002') {
     return publicError('not_found', 'This Pulse user could not be found.')
   }
   if (error.code === '22023' || error.code === '22P02') {
-    return publicError('invalid_request', 'The requested role assignment is not valid.')
+    return publicError('invalid_request', 'The requested Pulse access is not valid.')
   }
   if (error.code === '23503') {
-    return publicError('catalog_invalid', 'The requested role or organization catalog entry is inactive or unavailable.')
+    return publicError('catalog_invalid', 'The selected role or access area is inactive or unavailable.')
   }
   if (error.code === '23514') {
-    return publicError('organization_invalid', 'That role scope must match the target user’s current organization.')
+    return publicError('organization_invalid', 'That access is not available for this person’s current work details.')
   }
   if (error.code === '55000') {
-    return publicError('protected_assignment', 'This role assignment is protected or no longer eligible. Refresh and try again.')
+    return publicError('protected_assignment', 'This Pulse access can no longer be changed. Refresh and try again.')
   }
-  return publicError('unavailable', 'Pulse could not complete the role change. No client-side change was applied.')
+  return publicError('unavailable', 'Pulse could not complete the access change. No change was applied.')
 }
 
 export function normalizeOrganizationMutationError(error) {
@@ -152,7 +152,7 @@ export function normalizeOrganizationMutationError(error) {
     return publicError('not_found', 'This organization record could not be found. Refresh before trying again.')
   }
   if (error.code === '23505') {
-    return publicError('duplicate', 'That code or name already exists in the selected organization scope.')
+    return publicError('duplicate', 'That code or name already exists in this part of the organization.')
   }
   if (error.code === '23503') {
     return publicError('parent_invalid', 'The selected parent department is unavailable.')
@@ -167,7 +167,7 @@ export function normalizeOrganizationMutationError(error) {
     return publicError('inactive_parent', 'A team can be created or reactivated only under an active department.')
   }
   if (error.code === '55000' && messageIncludes(error, 'depend')) {
-    return publicError('dependencies', 'Active or pending identities or scoped access still depend on this record. Resolve those dependencies first.')
+    return publicError('dependencies', 'Active staff, awaiting approvals or access assignments still depend on this item. Resolve them first.')
   }
   if (error.code === '55000' && messageIncludes(error, 'active teams')) {
     return publicError('dependencies', 'Deactivate every active team in this department before deactivating the department.')
@@ -229,7 +229,7 @@ export function extractGlobalPermissionKeys(assignments = []) {
 }
 
 export async function loadOwnGlobalPermissionKeys(client, userId) {
-  if (!userId) return { data: [], error: publicError('access_denied', 'A trusted Pulse profile is required.') }
+  if (!userId) return { data: [], error: publicError('access_denied', 'A Pulse profile is required.') }
   const { data, error } = await client
     .from('user_roles')
     .select('scope_type, role_scopes!user_roles_role_scope_fk!inner(roles!role_scopes_role_fk!inner(is_active, role_permissions!role_permissions_role_fk(permissions!role_permissions_permission_fk!inner(key,is_active))))')
@@ -319,7 +319,7 @@ async function mutateManagedUser(client, rpcName, targetUserId, reason, expected
   const row = Array.isArray(data) ? data[0] : data
   const normalized = normalizeLifecycleResult(row, targetUserId, expectedStatus)
   if (!normalized) {
-    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected lifecycle state. Refresh before trying again.') }
+    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected account status. Refresh before trying again.') }
   }
   return { data: normalized, error: null }
 }
@@ -479,12 +479,12 @@ export async function assignManagedUserRole(client, {
     return { data: null, error: publicError('invalid_request', 'The requested user or role is not valid.') }
   }
   if (!['global', 'department', 'campaign', 'team'].includes(requestedScopeType)) {
-    return { data: null, error: publicError('invalid_request', 'The requested role scope is not valid.') }
+    return { data: null, error: publicError('invalid_request', 'The requested access area is not valid.') }
   }
   if ((requestedDepartmentId && !UUID_PATTERN.test(requestedDepartmentId))
       || (requestedCampaignId && !UUID_PATTERN.test(requestedCampaignId))
       || (requestedTeamId && !UUID_PATTERN.test(requestedTeamId))) {
-    return { data: null, error: publicError('invalid_request', 'The requested organization scope is not valid.') }
+    return { data: null, error: publicError('invalid_request', 'The requested work or access area is not valid.') }
   }
   const exactScope = requestedScopeType === 'global'
     ? !requestedDepartmentId && !requestedCampaignId && !requestedTeamId
@@ -493,7 +493,7 @@ export async function assignManagedUserRole(client, {
       : requestedScopeType === 'campaign'
         ? Boolean(!requestedDepartmentId && requestedCampaignId && !requestedTeamId)
         : Boolean(!requestedDepartmentId && !requestedCampaignId && requestedTeamId)
-  if (!exactScope) return { data: null, error: publicError('invalid_request', 'Select one exact server-provided scope target.') }
+  if (!exactScope) return { data: null, error: publicError('invalid_request', 'Select one available access area.') }
   const { data, error } = await client.rpc('assign_user_role', {
     target_user_id: targetUserId,
     requested_role_id: requestedRoleId,
@@ -757,10 +757,10 @@ export async function loadAssignableRoleOptions(client, targetUserId) {
 
 export function normalizeAuditError(error) {
   if (!error) return null
-  if (['42501', '28000'].includes(error.code)) return publicError('access_denied', 'You do not have permission to view Pulse audit history.')
-  if (['22023', '22P02'].includes(error.code)) return publicError('invalid_request', 'The requested audit filters or cursor are not valid.')
+  if (['42501', '28000'].includes(error.code)) return publicError('access_denied', 'You do not have permission to view Pulse activity.')
+  if (['22023', '22P02'].includes(error.code)) return publicError('invalid_request', 'The requested activity filters are not valid.')
   if (error.code === 'P0002') return publicError('not_found', 'The requested Pulse user could not be found.')
-  return publicError('unavailable', 'Pulse could not load audit history. Try again shortly.')
+  return publicError('unavailable', 'Pulse could not load activity. Try again shortly.')
 }
 
 const SAFE_AUDIT_METADATA_KEYS = Object.freeze(['previous_status', 'scope_type', 'code', 'name', 'campaign_code', 'campaign_name', 'before', 'after'])
@@ -858,7 +858,7 @@ function invitationError(error) {
   if (error.code === '23505') return publicError('identity_conflict', 'This email already has a Pulse identity or an active invitation.')
   if (error.code === 'P0002') return publicError('not_found', 'This invitation is no longer available.')
   if (error.code === '55000') return publicError('stale_invitation', 'This invitation changed or can no longer perform that action. Refresh and try again.')
-  if (['22023', '22P02', '23503', '23514'].includes(error.code)) return publicError('invalid_proposal', 'The selected identity, placement, position, role, or scope is no longer valid.')
+  if (['22023', '22P02', '23503', '23514'].includes(error.code)) return publicError('invalid_proposal', 'The selected personal details, work details or Pulse access are no longer valid.')
   return publicError('unavailable', 'Pulse could not complete the invitation action.')
 }
 

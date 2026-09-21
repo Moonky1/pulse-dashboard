@@ -75,7 +75,7 @@ export function OrganizationActionDialog({ action, departments, submitting, erro
 
         {editing ? <div className="admin-organization-form">
           {action.entityType === 'team' && action.type === 'create' && <label><span>Parent department</span><select value={values.departmentId} onChange={update('departmentId')} autoFocus><option value="">Select an active department</option>{activeDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>}
-          {action.entityType === 'team' && action.type === 'update' && <div className="admin-dialog__target"><span>Parent department</span><strong>{action.entity.departmentName}</strong><small>Teams cannot be reparented in this checkpoint.</small></div>}
+          {action.entityType === 'team' && action.type === 'update' && <div className="admin-dialog__target"><span>Department</span><strong>{action.entity.departmentName}</strong><small>This team stays with its current department.</small></div>}
           <label><span>Code</span><input value={values.code} onChange={update('code')} autoFocus={action.entityType !== 'team' || action.type !== 'create'} placeholder="operations" maxLength={32} /></label>
           <label><span>Name</span><input value={values.name} onChange={update('name')} placeholder="Operations" maxLength={120} /></label>
           <label><span>Description <small>Optional</small></span><textarea value={values.description} onChange={update('description')} maxLength={500} placeholder="Purpose and ownership" /></label>
@@ -87,7 +87,7 @@ export function OrganizationActionDialog({ action, departments, submitting, erro
           </div>
         </>}
 
-        {editing && <p id="organization-dialog-description">Pulse will normalize and validate this record, reject duplicates, append database-owned audit evidence, and then refresh the canonical catalog.</p>}
+        {editing && <p id="organization-dialog-description">Pulse will validate the details, prevent duplicates, and refresh the organization list.</p>}
         {error && <p className="admin-dialog__error" role="alert">{error.message}</p>}
         <div className="admin-dialog__actions">
           <Button type="button" variant="secondary" disabled={submitting} onClick={onCancel}>Cancel</Button>

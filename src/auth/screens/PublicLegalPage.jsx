@@ -7,7 +7,7 @@ const privacySections = [
   },
   {
     title: 'Information Pulse handles',
-    body: 'Pulse stores the staff account and profile information, access status, authorization, and application activity needed to operate the service. This may include training progress and security or audit records created through authorized use of Pulse.',
+    body: 'Pulse stores the staff account and profile information, access status, and application activity needed to operate the service. This may include training progress and security or activity records created through normal use of Pulse.',
   },
   {
     title: 'Google Sign-In',
@@ -34,7 +34,7 @@ const privacySections = [
 const termsSections = [
   {
     title: 'Authorized use',
-    body: 'Pulse is intended for authorized Kampaign Kings staff. Successfully authenticating an identity does not itself grant access to Pulse; access depends on the company approval and authorization assigned to that staff account.',
+    body: 'Pulse is intended for approved Kampaign Kings staff. Signing in successfully does not by itself grant access; company approval and the access assigned to the staff account still apply.',
   },
   {
     title: 'Your account',
@@ -72,7 +72,7 @@ const pages = {
   terms: {
     eyebrow: 'Terms',
     title: 'Terms of Service',
-    intro: 'The basic conditions for authorized use of the Pulse internal platform.',
+    intro: 'The basic conditions for using Pulse.',
     sections: termsSections,
   },
 }

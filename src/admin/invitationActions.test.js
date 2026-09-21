@@ -23,7 +23,7 @@ const options = {
 test('invitation role choices are exact server options filtered by employment placement', () => {
   assert.equal(invitationRoleOptions(options.roleOptions, DEPARTMENT, '').length, 3)
   assert.equal(invitationRoleOptions(options.roleOptions, DEPARTMENT, TEAM).length, 4)
-  assert.match(invitationScopeLabel(options.roleOptions[2], options), /Campaign · Garrett/)
+  assert.equal(invitationScopeLabel(options.roleOptions[2], options), 'Garrett')
 })
 
 test('proposal keeps employment, position, and authorization separate without arbitrary IDs', () => {

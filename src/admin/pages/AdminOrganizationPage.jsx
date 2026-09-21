@@ -20,8 +20,8 @@ function Dependencies({ entity, type }) {
     <div className="admin-organization-dependencies">
       {type === 'department' && <span><strong>{entity.activeTeamCount}</strong> active teams</span>}
       <span><strong>{entity.activeUserCount}</strong> active users</span>
-      <span><strong>{entity.pendingUserCount}</strong> pending users</span>
-      <span><strong>{entity.activeRoleAssignmentCount}</strong> active scoped roles</span>
+      <span><strong>{entity.pendingUserCount}</strong> awaiting approval</span>
+      <span><strong>{entity.activeRoleAssignmentCount}</strong> access assignments</span>
     </div>
   )
 }
@@ -51,8 +51,8 @@ function OrganizationSection({ title, description, items, type, canManage, query
         <div><h2 id={`${type}-heading`}>{title}</h2><p>{description}</p></div>
         {canManage && <Button type="button" onClick={() => onAction({ type: 'create', entityType: type })}>Create {type}</Button>}
       </div>
-      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {items.length} {title.toLowerCase()} <span>Protected catalog</span></div>
-      {!items.length ? <AdminStatePanel kind="empty" title={`No ${title.toLowerCase()}`} body={`The protected ${type} catalog returned no records.`} />
+      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {items.length} {title.toLowerCase()}</div>
+      {!items.length ? <AdminStatePanel kind="empty" title={`No ${title.toLowerCase()} yet`} body={`${title} will appear here once they are added.`} />
         : !filtered.length ? <AdminStatePanel kind="empty" title={`No matching ${title.toLowerCase()}`} body="Adjust the organization filters to broaden these results." />
           : <div className="admin-organization-grid">{filtered.map((entity) => <OrganizationCard key={entity.id} entity={entity} type={type} canManage={canManage} onAction={onAction} />)}</div>}
     </section>
@@ -111,13 +111,13 @@ export function AdminOrganizationPage() {
     setNotice(result.warning?.message || organizationMutationMessage(confirmedAction.type, confirmedAction.entityType, result.data))
   }
 
-  if (loading && !departments.length && !teams.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading organization" body="Reading the protected department and team catalogs…" /></main>
+  if (loading && !departments.length && !teams.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading organization" body="Getting departments and teams…" /></main>
   if (error && !departments.length && !teams.length) return <main className="admin-content"><AdminStatePanel kind="error" title="Organization unavailable" body={error.message} onRetry={refresh} /></main>
 
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>Organization</p><h1>Departments & teams</h1><span>Manage the canonical Pulse organization without deleting identity or access history.</span></div>
+        <div><p>Organization</p><h1>Departments & teams</h1><span>Keep your organization clear and up to date.</span></div>
         <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--organization" aria-label="Organization filters">
@@ -125,8 +125,8 @@ export function AdminOrganizationPage() {
         {teamRead && departmentRead && <label className="admin-filter"><span>Team department</span><select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="">All departments</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>}
       </section>
       {notice && <p className="admin-operation-notice" role="status">{notice}</p>}
-      {departmentRead && <OrganizationSection title="Departments" description="Top-level organization units. Deactivation requires every active dependency to be resolved first." items={departments} type="department" canManage={departmentManage} query={query} departmentId="" onAction={openAction} />}
-      {teamRead && <OrganizationSection title="Teams" description="Department-owned operating groups. Teams cannot be moved between departments in this checkpoint." items={teams} type="team" canManage={teamManage} query={query} departmentId={departmentId} onAction={openAction} />}
+      {departmentRead && <OrganizationSection title="Departments" description="Where people belong in the company." items={departments} type="department" canManage={departmentManage} query={query} departmentId="" onAction={openAction} />}
+      {teamRead && <OrganizationSection title="Teams" description="Groups working together within the organization." items={teams} type="team" canManage={teamManage} query={query} departmentId={departmentId} onAction={openAction} />}
       {action && <OrganizationActionDialog action={action} departments={departments} submitting={submitting} error={mutationError} onCancel={cancelAction} onConfirm={confirmAction} />}
     </main>
   )

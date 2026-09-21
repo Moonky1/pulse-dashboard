@@ -12,10 +12,10 @@ export function invitationRoleOptions(options = [], departmentId = '', teamId = 
 }
 
 export function invitationScopeLabel(option = {}, catalogs = {}) {
-  if (option.scopeType === 'global') return 'Global · All Pulse'
-  if (option.scopeType === 'campaign') return `Campaign · ${option.campaignName ?? option.campaignCode ?? 'Unknown campaign'}`
-  if (option.scopeType === 'department') return `Department · ${catalogs.departments?.find((item) => item.id === option.departmentId)?.name ?? 'Unknown department'}`
-  return `Team · ${catalogs.teams?.find((item) => item.id === option.teamId)?.name ?? 'Unknown team'}`
+  if (option.scopeType === 'global') return 'All Pulse'
+  if (option.scopeType === 'campaign') return option.campaignName ?? option.campaignCode ?? 'Unknown campaign'
+  if (option.scopeType === 'department') return catalogs.departments?.find((item) => item.id === option.departmentId)?.name ?? 'Unknown department'
+  return catalogs.teams?.find((item) => item.id === option.teamId)?.name ?? 'Unknown team'
 }
 
 export function staffInvitationProposal(values, options) {

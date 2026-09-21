@@ -11,6 +11,6 @@ test('known audit actions have stable human labels', () => {
 
 test('unknown events degrade safely without hiding their action', () => {
   assert.equal(auditActionLabel('policy.reconciled'), 'Policy Reconciled')
-  assert.match(auditSummary({ action: 'policy.reconciled' }), /Pulse system.*protected record/)
+  assert.match(auditSummary({ action: 'policy.reconciled' }), /Pulse system.*Pulse item/)
   assert.equal(formatAuditTime('not-a-date'), 'Time unavailable')
 })

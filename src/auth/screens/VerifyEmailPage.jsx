@@ -43,7 +43,7 @@ export function VerifyEmailPage() {
     <AuthShell eyebrow="Email verification" title="Check your inbox" description="We sent a secure verification link to the email address you provided.">
       <div className="auth-state-stack">
         <div className="auth-state-icon" aria-hidden="true">✦</div>
-        <p>Open the link on this device or another trusted device. Pulse uses the verified Supabase session—not URL identity data—to continue.</p>
+        <p>Open the link on this device or another trusted device to continue securely.</p>
         {authUser?.email && <p className="auth-safe-detail">Signed in as {authUser.email}</p>}
         {notice && <AuthNotice tone="info">{notice}</AuthNotice>}
         {email ? <Button type="button" variant="secondary" loading={sending} disabled={cooldown > 0} onClick={resend}>{cooldown ? `Resend available in ${cooldown}s` : 'Resend verification email'}</Button> : <p className="auth-safe-detail">For security, resend is available only immediately after registration. Return to registration if your link expired.</p>}

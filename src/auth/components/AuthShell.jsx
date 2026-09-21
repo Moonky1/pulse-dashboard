@@ -19,9 +19,9 @@ export function AuthShell({ eyebrow, title, description, children, footer, brand
         <Brand homePath={brandPath} />
         <div className="auth-brand-moment">
           <PulseOrb size="xl" active />
-          <p className="auth-kicker">Kampaign Kings internal platform</p>
-          <h2>One identity.<br />Every part of Pulse.</h2>
-          <p>Secure access to the tools, knowledge, and signals that move the company forward.</p>
+          <p className="auth-kicker">Kampaign Kings</p>
+          <h2>Your place to<br />learn and work.</h2>
+          <p>Everything you need, ready when you are.</p>
         </div>
       </section>
       <section className="auth-form-panel">

@@ -39,17 +39,17 @@ export function LifecycleActionDialog({ action, user, submitting, error, onCance
       onClick={(event) => { if (event.target === event.currentTarget) cancel() }}
     >
       <form className="admin-dialog__surface" method="dialog" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
-        <div className="admin-dialog__eyebrow">Confirm lifecycle action</div>
+        <div className="admin-dialog__eyebrow">Confirm account action</div>
         <h2 id="lifecycle-dialog-title">{action.label}</h2>
         <div className="admin-dialog__target">
           <strong>{user.fullName}</strong>
-          <span>{user.employeeId || 'Employee ID pending'} · Current state: {lifecycle.label}</span>
+          <span>{user.employeeId || 'Employee ID pending'} · Account status: {lifecycle.label}</span>
         </div>
         <p id="lifecycle-dialog-description">{action.consequence}</p>
-        {privileged && <div className="admin-dialog__warning" role="note"><strong>Privileged account</strong><span>This user has global Super Admin access. Pulse will enforce the authoritative server protections before any change.</span></div>}
+        {privileged && <div className="admin-dialog__warning" role="note"><strong>Super Admin account</strong><span>This person has broad control across Pulse. Review the account action carefully.</span></div>}
         <label className="admin-dialog__reason">
-          <span>Audit note <small>Optional</small></span>
-          <textarea ref={noteRef} value={reason} maxLength={500} disabled={submitting} onChange={(event) => setReason(event.target.value)} placeholder="Add a concise reason for the audit record" />
+          <span>Note <small>Optional</small></span>
+          <textarea ref={noteRef} value={reason} maxLength={500} disabled={submitting} onChange={(event) => setReason(event.target.value)} placeholder="Add a short reason for this change" />
           <small>{reason.length}/500</small>
         </label>
         {error && <p className="admin-dialog__error" role="alert">{error.message}</p>}

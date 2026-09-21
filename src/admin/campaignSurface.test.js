@@ -19,9 +19,9 @@ test('Campaigns is lazy-routed, permission-gated, and present in protected navig
   assert.match(shell, /campaignsAccess.*NavLink to="\/admin\/campaigns"/s)
 })
 
-test('Campaigns foundation is read-only and uses only its protected catalog hook', async () => {
+test('Campaigns is read-only by capability and uses only its catalog hook', async () => {
   const [page, hook] = await Promise.all([readFile(pageUrl, 'utf8'), readFile(hookUrl, 'utf8')])
-  assert.match(page, /Campaign administration remains read-only/)
+  assert.match(page, /operations Pulse supports/)
   assert.match(page, /No campaigns/)
   assert.match(page, /No matching campaigns/)
   assert.match(page, /Refresh/)
@@ -36,15 +36,15 @@ test('Campaign authorization UI selects exact backend options and keeps employme
     readFile(roleActionsUrl, 'utf8'),
     readFile(pendingActionsUrl, 'utf8'),
   ])
-  assert.match(roleActions, /Campaign ·/)
+  assert.match(roleActions, /campaignName/)
   assert.match(roleActions, /requestedCampaignId/)
   assert.match(roleActions, /campaignId.*roleOptionKey|roleOptionKey[\s\S]*campaignId/)
-  assert.match(roleDialog, /Confirm role action/)
+  assert.match(roleDialog, /Manage access/)
   assert.match(roleDialog, /roleScopeLabel/)
   assert.match(roleDialog, /organizationForRoleOption\(option\)\.label/)
   assert.doesNotMatch(roleDialog, /type=["']text["'].*campaign|campaign.*type=["']text["']/i)
-  assert.match(pendingDialog, /Employment placement/)
-  assert.match(pendingDialog, /Authorization scope/)
+  assert.match(pendingDialog, /Work details/)
+  assert.match(pendingDialog, /Pulse access/)
   assert.match(pendingDialog, /campaignName/)
   assert.match(pendingDialog, /addEventListener\('cancel'/)
   assert.match(pendingActions, /campaignId/)

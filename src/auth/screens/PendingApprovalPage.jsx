@@ -13,12 +13,12 @@ export function PendingApprovalPage() {
         <div className="auth-status-orbit" aria-hidden="true"><span /></div>
         <Badge tone="pending" dot>Awaiting approval</Badge>
         <h1>Your Pulse account is verified.</h1>
-        <p>Your account is waiting for company approval. An authorized reviewer will assign your access and activate your account.</p>
+        <p>Your account is waiting for company approval. You’ll be able to enter Pulse once it’s approved.</p>
         {invitationNotice && <p className="auth-form-error" role="alert">{invitationNotice}</p>}
         <dl className="auth-profile-summary">
           <div><dt>Name</dt><dd>{profile?.full_name}</dd></div>
           <div><dt>Email</dt><dd>{profile?.email}</dd></div>
-          <div><dt>Status</dt><dd>Pending approval</dd></div>
+          <div><dt>Status</dt><dd>Awaiting approval</dd></div>
         </dl>
         <div className="auth-status-actions">
           <Button type="button" loading={loading} onClick={refreshProfile}>Refresh status</Button>

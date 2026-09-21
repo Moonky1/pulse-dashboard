@@ -39,10 +39,52 @@ test('Practice remains server scored while Hosted UI uses protected lifecycle co
 test('Hosted UI selectively preserves existing GO personality without legacy runtime imports', async () => {
   const host = await read('GoHostSelection.jsx')
   const room = await read('GoHostedRoomPage.jsx')
+  const visuals = await read('goVisualAssets.js')
   const css = await read('goProduct.css')
-  assert.match(host, /\/emojis\/certification\.webp/)
-  assert.match(room, /\/emojis\/classic\.webp/)
+  assert.match(host, /GO_ART\.certification/)
+  assert.match(room, /GO_ART\.classic/)
+  assert.match(visuals, /certification\.webp/)
+  assert.match(visuals, /classic\.webp/)
   assert.match(room, /resultMedal/)
   assert.match(css, /image-rendering:pixelated/)
   assert.doesNotMatch(host + room, /lucide|heroicons|fontawesome|from ['"]\.\.\/go\//i)
+})
+
+test('GO landing stays compact, action-led, and reuses legacy visual personality', async () => {
+  const landing = await read('GoLandingPage.jsx')
+  const practice = await read('GoPracticeSelection.jsx')
+  const player = await read('GoPracticePlayer.jsx')
+  const visuals = await read('goVisualAssets.js')
+  assert.match(landing, /Start practice/)
+  assert.match(landing, /Host a game/)
+  assert.match(landing, /Join a game/)
+  assert.match(landing, /Enter your code/)
+  assert.match(landing, /GO_ART\.classic/)
+  assert.match(landing, /GO_ART\.medal1/)
+  assert.match(visuals, /classic\.webp/)
+  assert.match(visuals, /medal1\.webp/)
+  assert.match(practice, /PRACTICE_ART/)
+  assert.match(practice, /languagePresentation/)
+  assert.match(player, /resultMedal/)
+  assert.doesNotMatch(`${landing}\n${practice}\n${player}`, /Train\. Practice\. Play\.|checkpoint/i)
+})
+
+test('VISUAL-2 keeps GO playful, responsive, and dependency-free', async () => {
+  const [landing, practice, player, hosted, workspace, visuals, css] = await Promise.all([
+    read('GoLandingPage.jsx'),
+    read('GoPracticeSelection.jsx'),
+    read('GoPracticePlayer.jsx'),
+    read('GoHostedRoomPage.jsx'),
+    read('../auth/screens/WorkspacePage.jsx'),
+    read('goVisualAssets.js'),
+    read('goProduct.css'),
+  ])
+  const source = [landing, practice, player, hosted, workspace].join('\n')
+  for (const asset of ['classic.webp', 'goal.webp', 'certification.webp', 'points.webp', 'medal1.webp', 'valid.webp']) {
+    assert.match(visuals, new RegExp(asset.replace('.', '\\.')))
+  }
+  assert.match(css, /@media\(max-width:620px\)/)
+  assert.match(css, /prefers-reduced-motion:reduce/)
+  assert.match(css, /\.go-mode-grid/)
+  assert.doesNotMatch(source, /lucide|heroicons|fontawesome|canvas|webgl/i)
 })

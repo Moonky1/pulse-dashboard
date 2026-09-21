@@ -8,6 +8,7 @@ import { supabase } from '../utils/supabase.js'
 import { canHost } from './goAccess.js'
 import { languagePresentation, roomPath } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
+import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
 
 export function GoHostSelection() {
@@ -40,18 +41,19 @@ export function GoHostSelection() {
 
   return <GoShell>
     <section className="go-page-heading go-page-heading--with-art">
-      <div><p className="go-eyebrow">Host a live game</p><h1>Choose the challenge</h1><p>Your players join with one short code.</p></div>
-      <img src="/emojis/certification.webp" alt="" />
+      <div><p className="go-eyebrow">Host a game</p><h1>Pick what to play.</h1><p>We’ll make the room code.</p></div>
+      <img src={GO_ART.certification} alt="" />
     </section>
     <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding host-ready games…' : catalog.error?.message || ''}</div>
-    {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No games are ready to host.</h2><p>Published quizzes and assessments in your scope will appear here.</p></section>}
+    {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No games are ready to host.</h2><p>Published quizzes and assessments available to you will appear here.</p></section>}
     <section className="go-catalog" aria-busy={catalog.loading}>
-      {catalog.items.map(item => {
+      {catalog.items.map((item, index) => {
         const language = languagePresentation(item.language)
         return <article className="go-content-card go-content-card--host" key={item.id}>
-          <div className="go-card-meta"><span>{item.content_type}</span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
+          <div className="go-card-visual"><span className="go-card-art"><img src={index % 2 ? GO_ART.classic : GO_ART.certification} alt="" /><i aria-hidden="true">LIVE</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
+          <div className="go-card-meta"><span>{item.content_type}</span><span>Team game</span></div>
           <h2>{item.title}</h2>
-          <p>{item.description || 'A live challenge for your team.'}</p>
+          <p>{item.description || 'Ready for your team.'}</p>
           <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{item.question_count}</strong> questions</div>
           <div className="go-topic-list">{item.topics?.map(topic => <span key={topic.id}>{topic.name}</span>)}</div>
           <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>Create room</Button>

@@ -103,7 +103,7 @@
   initial-value: 64deg;
 }
 
-.pulse-orb { --orb-size: 2.5rem; position: relative; isolation: isolate; display: inline-grid; width: var(--orb-size); height: var(--orb-size); place-items: center; border-radius: 50%; filter: drop-shadow(0 16px 28px rgba(0,0,0,.56)); }
+.pulse-orb { --orb-size: 2.5rem; position: relative; isolation: isolate; display: inline-grid; flex:0 0 auto; width: var(--orb-size); height: var(--orb-size); place-items: center; border-radius: 50%; filter: drop-shadow(0 16px 28px rgba(0,0,0,.56)); contain:layout paint; }
 .pulse-orb--sm { --orb-size: 1.75rem; }
 .pulse-orb--md { --orb-size: 2.5rem; }
 .pulse-orb--lg { --orb-size: 4rem; }
@@ -149,18 +149,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pulse-orb--active .pulse-orb__rim::after {
-    animation-duration: 5.6s !important;
-    animation-iteration-count: infinite !important;
-    animation-timing-function: linear !important;
-  }
-  .pulse-orb--active .pulse-orb__flow {
-    animation-duration: 5.6s !important;
-    animation-iteration-count: infinite !important;
-  }
-  .pulse-orb--active .pulse-orb__spill {
-    animation-duration: 5.6s !important;
-    animation-iteration-count: infinite !important;
-  }
+  .pulse-orb--active .pulse-orb__rim::after,
+  .pulse-orb--active .pulse-orb__flow,
+  .pulse-orb--active .pulse-orb__spill,
   .pulse-orb--active::before { animation: none !important; }
 }

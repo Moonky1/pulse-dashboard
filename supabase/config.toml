@@ -2,3 +2,7 @@
 
 [functions.pulse-staff-invitations]
 verify_jwt = true
+
+[auth.email.template.invite]
+subject = "Your Pulse invitation is ready"
+content_path = "./supabase/templates/invite.html"

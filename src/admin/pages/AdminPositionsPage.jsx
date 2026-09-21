@@ -35,21 +35,21 @@ export function AdminPositionsPage() {
       .some((value) => String(value ?? '').toLowerCase().includes(normalized)))
   }, [positions, query])
 
-  if (loading && !positions.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading Positions" body="Reading the protected Position catalog…" /></main>
+  if (loading && !positions.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading positions" body="Loading the position list…" /></main>
   if (error && !positions.length) return <main className="admin-content"><AdminStatePanel kind="error" title="Positions unavailable" body={error.message} onRetry={refresh} /></main>
 
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>Workforce foundation</p><h1>Positions</h1><span>Review canonical job functions. Positions describe work; they do not grant Pulse permissions.</span></div>
+        <div><p>People</p><h1>Positions</h1><span>Review what people do at work.</span></div>
         <Button type="button" variant="secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--positions" aria-label="Position filters">
         <label className="admin-search"><span>Search Positions</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, code, or description" /></label>
       </section>
-      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {positions.length} Positions <span>Protected catalog · Read-only</span></div>
+      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {positions.length} positions</div>
       {!positions.length
-        ? <AdminStatePanel kind="empty" title="No Positions" body="No canonical Position records have been created." />
+        ? <AdminStatePanel kind="empty" title="No positions" body="No positions have been created yet." />
         : !filtered.length
           ? <AdminStatePanel kind="empty" title="No matching Positions" body="Adjust the Position search to broaden these results." />
           : <div className="admin-organization-grid">{filtered.map((position) => <PositionCard key={position.id} position={position} />)}</div>}
