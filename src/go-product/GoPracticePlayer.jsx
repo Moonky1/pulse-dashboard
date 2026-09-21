@@ -70,8 +70,9 @@ export function GoPracticePlayer() {
 
   if (result) {
     const medal = resultMedal(result.score_percent)
+    const resultAccent = Number(result.score_percent) >= 65 ? '/emojis/valid.webp' : '/emojis/zero2.webp'
     return <GoShell><section className="go-result" role="status">
-    <img src={medal.image} alt="" />
+    <div className="go-result-art" aria-hidden="true"><img src={medal.image} alt="" /><img src={resultAccent} alt="" /><img src="/emojis/points.webp" alt="" /></div>
     <p className="go-eyebrow">Practice complete</p><h2>{medal.label}</h2><h1>{Math.round(Number(result.score_percent))}%</h1>
     <p>{result.correct_answers} of {result.total_questions} correct</p>
     {!!result.topic_breakdown?.length && <div className="go-result-topics">{result.topic_breakdown.map(topic => <div key={topic.topic_id}><strong>{topic.topic_name}</strong><span>{topic.correct_answers}/{topic.total_questions}</span></div>)}</div>}
@@ -82,9 +83,9 @@ export function GoPracticePlayer() {
   const ready = isAnswerReady(question, answers[question.id])
   const last = questionIndex === session.content.questions.length - 1
   return <GoShell><section className="go-player">
-    <header><div><p className="go-eyebrow">{session.content.title}</p><span>Question {questionIndex + 1} of {session.content.questions.length}</span></div><Link to="/go/practice">Exit</Link></header>
+    <header><div className="go-player-identity"><img src="/emojis/goal.webp" alt="" /><div><p className="go-eyebrow">{session.content.title}</p><span>Question {questionIndex + 1} of {session.content.questions.length}</span></div></div><Link to="/go/practice">Exit</Link></header>
     <div className="go-progress" role="progressbar" aria-valuemin="1" aria-valuemax={session.content.questions.length} aria-valuenow={questionIndex + 1}><span style={{ width: `${progress}%` }} /></div>
-    <article><h1>{question.prompt}</h1><AnswerControl question={question} answer={answers[question.id]} onChange={answer => setAnswers(value => ({ ...value, [question.id]: answer }))} /></article>
+    <article><span className="go-question-number" aria-hidden="true">{String(questionIndex + 1).padStart(2, '0')}</span><h1>{question.prompt}</h1><AnswerControl question={question} answer={answers[question.id]} onChange={answer => setAnswers(value => ({ ...value, [question.id]: answer }))} /></article>
     <footer><span aria-live="polite">{ready ? 'Answer saved.' : 'Choose an answer to continue.'}</span><Button disabled={!ready || submitting} onClick={() => last ? void finish() : setQuestionIndex(value => value + 1)}>{submitting ? 'Scoring…' : last ? 'See result' : 'Next'}</Button></footer>
   </section></GoShell>
 }

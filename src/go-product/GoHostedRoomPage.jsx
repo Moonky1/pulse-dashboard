@@ -13,7 +13,7 @@ function RoomHeader({ room }) {
   const language = languagePresentation(room.content.language)
   return <header className="go-room-heading">
     <div><p className="go-eyebrow">{room.viewer_role === 'host' ? 'Hosting live' : 'Live game'}</p><h1>{room.content.title}</h1><p><span aria-hidden="true">{language.flag}</span> {language.label} · {room.question_count} questions</p></div>
-    <div className="go-room-code"><span>Game code</span><strong>{room.room_code}</strong></div>
+    <div className="go-room-code"><img src="/emojis/classic.webp" alt="" /><div><span>Join with</span><strong>{room.room_code}</strong></div></div>
   </header>
 }
 
@@ -24,7 +24,7 @@ function Lobby({ room, action, busy, error }) {
     <section className="go-lobby-grid">
       <article className="go-room-panel">
         <div className="go-panel-title"><span className="go-pixel-symbol" aria-hidden="true">🛡️</span><div><p className="go-eyebrow">Lobby</p><h2>{room.participant_count} {room.participant_count === 1 ? 'player' : 'players'} ready</h2></div></div>
-        <div className="go-player-roster" aria-live="polite">{room.participants.map(player => <div key={player.seat}><span>{player.name.slice(0, 1).toUpperCase()}</span><strong>{player.name}</strong><small>Ready ✓</small></div>)}</div>
+        <div className="go-player-roster" aria-live="polite">{room.participants.map(player => <div key={player.seat}><span className={`go-player-marker go-player-marker--${(Number(player.seat) || 0) % 4}`}>{player.name.slice(0, 1).toUpperCase()}</span><strong>{player.name}</strong><small>Ready ✓</small></div>)}</div>
         {!room.participant_count && <p className="go-room-empty">Share the game code. Players will appear here automatically.</p>}
       </article>
       <aside className="go-room-panel go-room-panel--action">
@@ -71,7 +71,7 @@ function Results({ room }) {
   const score = personal?.score_percent ?? room.host_summary?.average_score ?? 0
   const medal = resultMedal(score)
   return <section className="go-hosted-result" role="status">
-    <img src={medal.image} alt="" />
+    <div className="go-result-art" aria-hidden="true"><img src={medal.image} alt="" /><img src="/emojis/points.webp" alt="" /><img src="/emojis/valid.webp" alt="" /></div>
     <p className="go-eyebrow">Game complete</p><h1>{room.viewer_role === 'host' ? 'That’s a wrap!' : medal.label}</h1>
     {personal ? <><strong className="go-result-score">{Math.round(Number(personal.score_percent))}%</strong><p>{personal.correct_answers} of {personal.total_questions} correct</p>{!!personal.topic_breakdown?.length && <div className="go-result-topics">{personal.topic_breakdown.map(topic => <div key={topic.topic_id}><strong>{topic.topic_name}</strong><span>{topic.correct_answers}/{topic.total_questions}</span></div>)}</div>}</> : <div className="go-host-summary"><div><strong>{room.host_summary.players}</strong><span>Players</span></div><div><strong>{Math.round(Number(room.host_summary.average_score))}%</strong><span>Average</span></div><div><strong>{room.host_summary.completed_results}</strong><span>Results saved</span></div></div>}
     <Link className="go-primary" to="/go">Back to GO</Link>

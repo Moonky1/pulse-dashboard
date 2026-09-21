@@ -53,11 +53,31 @@ test('GO landing stays compact, action-led, and reuses legacy visual personality
   const player = await read('GoPracticePlayer.jsx')
   assert.match(landing, /Start practice/)
   assert.match(landing, /Host a game/)
-  assert.match(landing, /Have a room code/)
+  assert.match(landing, /Join a game/)
+  assert.match(landing, /Enter your code/)
   assert.match(landing, /\/emojis\/classic\.webp/)
   assert.match(landing, /\/emojis\/medal1\.webp/)
   assert.match(practice, /PRACTICE_ART/)
   assert.match(practice, /languagePresentation/)
   assert.match(player, /resultMedal/)
   assert.doesNotMatch(`${landing}\n${practice}\n${player}`, /Train\. Practice\. Play\.|checkpoint/i)
+})
+
+test('VISUAL-2 keeps GO playful, responsive, and dependency-free', async () => {
+  const [landing, practice, player, hosted, workspace, css] = await Promise.all([
+    read('GoLandingPage.jsx'),
+    read('GoPracticeSelection.jsx'),
+    read('GoPracticePlayer.jsx'),
+    read('GoHostedRoomPage.jsx'),
+    read('../auth/screens/WorkspacePage.jsx'),
+    read('goProduct.css'),
+  ])
+  const source = [landing, practice, player, hosted, workspace].join('\n')
+  for (const asset of ['classic.webp', 'goal.webp', 'certification.webp', 'points.webp', 'medal1.webp', 'valid.webp']) {
+    assert.match(source, new RegExp(asset.replace('.', '\\.')))
+  }
+  assert.match(css, /@media\(max-width:620px\)/)
+  assert.match(css, /prefers-reduced-motion:reduce/)
+  assert.match(css, /\.go-mode-grid/)
+  assert.doesNotMatch(source, /lucide|heroicons|fontawesome|canvas|webgl/i)
 })

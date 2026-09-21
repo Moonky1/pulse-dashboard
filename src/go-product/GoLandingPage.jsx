@@ -27,28 +27,26 @@ export function GoLandingPage() {
     navigate(roomPath(data))
   }
   return <GoShell>
-    <section className="go-landing-grid">
-      <div className="go-hero">
-        <div className="go-hero-copy">
-          <p className="go-eyebrow">Pulse GO</p>
-          <h1>Ready for the next round?</h1>
-          <p>Practice solo or bring the team into a live game.</p>
-          <div className="go-hero-actions">
-            {canPractice(access.capabilities) && <Link className="go-primary" to="/go/practice">Start practice</Link>}
-            {canHost(access.capabilities) && <Link className="go-secondary" to="/go/host">Host a game</Link>}
-          </div>
-        </div>
-        <div className="go-hero-art" aria-hidden="true">
-          <img className="go-hero-art__main" src="/emojis/classic.webp" alt="" />
-          <img className="go-hero-art__medal" src="/emojis/medal1.webp" alt="" />
-          <img className="go-hero-art__points" src="/emojis/points.webp" alt="" />
-        </div>
-      </div>
-      <aside className="go-join" aria-labelledby="go-join-title">
-        <div className="go-join-icon" aria-hidden="true">⚡</div>
-        <div><p className="go-eyebrow">Live game</p><h2 id="go-join-title">Have a room code?</h2><p>Jump in when your host is ready.</p></div>
-        <form onSubmit={joinRoom}><label htmlFor="go-room-code">Game code</label><div><input id="go-room-code" inputMode="text" autoComplete="off" value={roomCode} onChange={event => setRoomCode(normalizeRoomCode(event.target.value))} placeholder="KK 0000" maxLength="7" /><Button loading={joining} disabled={!/^KK \d{4}$/.test(roomCode)}>Join</Button></div>{joinError && <p className="go-join-error" role="alert">{joinError}</p>}</form>
-      </aside>
+    <section className="go-mode-heading">
+      <div><p className="go-eyebrow">Pulse GO</p><h1>Choose a game.</h1><p>Practice, host, or join a live round.</p></div>
+      <div className="go-mode-heading__rewards" aria-hidden="true"><img src="/emojis/points.webp" alt="" /><img src="/emojis/medal1.webp" alt="" /></div>
+    </section>
+    <section className="go-mode-grid" aria-label="GO game modes">
+      {canPractice(access.capabilities) && <article className="go-mode-card go-mode-card--practice">
+        <div className="go-mode-art"><img src="/emojis/goal.webp" alt="" /><span>Solo</span></div>
+        <div><p className="go-eyebrow">Practice</p><h2>Sharpen your skills.</h2><p>Pick a topic and play at your pace.</p></div>
+        <Link className="go-primary" to="/go/practice">Start practice</Link>
+      </article>}
+      {canHost(access.capabilities) && <article className="go-mode-card go-mode-card--host">
+        <div className="go-mode-art"><img src="/emojis/certification.webp" alt="" /><span>Live</span></div>
+        <div><p className="go-eyebrow">Host a game</p><h2>Bring the team in.</h2><p>Choose a game and share one room code.</p></div>
+        <Link className="go-secondary" to="/go/host">Host a game</Link>
+      </article>}
+      <article className="go-mode-card go-mode-card--join" aria-labelledby="go-join-title">
+        <div className="go-mode-art"><img src="/emojis/classic.webp" alt="" /><span>Room code</span></div>
+        <div><p className="go-eyebrow">Join a game</p><h2 id="go-join-title">Enter your code.</h2></div>
+        <form onSubmit={joinRoom}><label htmlFor="go-room-code">Game code</label><input id="go-room-code" inputMode="text" autoComplete="off" value={roomCode} onChange={event => setRoomCode(normalizeRoomCode(event.target.value))} placeholder="KK 1234" maxLength="7" aria-describedby={joinError ? 'go-join-error' : undefined} /><Button loading={joining} disabled={!/^KK \d{4}$/.test(roomCode)}>Join</Button>{joinError && <p id="go-join-error" className="go-join-error" role="alert">{joinError}</p>}</form>
+      </article>
     </section>
   </GoShell>
 }
