@@ -18,29 +18,29 @@ export function roleOptionsForRole(options = [], roleId) {
 }
 
 export function organizationForRoleOption(option) {
-  if (option?.scopeType === 'global') return { label: 'Global · All Pulse', departmentId: null, campaignId: null, teamId: null, valid: true }
+  if (option?.scopeType === 'global') return { label: 'All Pulse', departmentId: null, campaignId: null, teamId: null, valid: true }
   if (option?.scopeType === 'department' && option.departmentId) return {
-    label: `Department · ${option.departmentName ?? 'Unknown department'}`,
+    label: option.departmentName ?? 'Unknown department',
     departmentId: option.departmentId,
     campaignId: null,
     teamId: null,
     valid: true,
   }
   if (option?.scopeType === 'campaign' && option.campaignId) return {
-    label: `Campaign · ${option.campaignName ?? option.campaignCode ?? 'Unknown campaign'}`,
+    label: option.campaignName ?? option.campaignCode ?? 'Unknown campaign',
     departmentId: null,
     campaignId: option.campaignId,
     teamId: null,
     valid: true,
   }
   if (option?.scopeType === 'team' && option.teamId) return {
-    label: `Team · ${option.teamName ?? 'Unknown team'}`,
+    label: option.teamName ?? 'Unknown team',
     departmentId: null,
     campaignId: null,
     teamId: option.teamId,
     valid: true,
   }
-  return { label: 'Unavailable organization scope', departmentId: null, campaignId: null, teamId: null, valid: false }
+  return { label: 'Access area unavailable', departmentId: null, campaignId: null, teamId: null, valid: false }
 }
 
 export function roleAssignmentRequest(option) {
@@ -60,11 +60,11 @@ export function roleMutationSuccessMessage(action, result, roleName) {
   if (action === 'remove') {
     return result?.removed === false
       ? 'No change was needed. That exact role assignment was already removed.'
-      : `${roleName} was removed. The server-confirmed record has been refreshed.`
+      : `${roleName} access was removed.`
   }
   return result?.created === false
     ? 'No change was needed. That exact role assignment already exists.'
-    : `${roleName} was assigned. The server-confirmed record has been refreshed.`
+    : `${roleName} access was added.`
 }
 
 export function isSuperAdminRole(role, scopeType) {
@@ -74,7 +74,7 @@ export function isSuperAdminRole(role, scopeType) {
 export function roleCatalogMessage({ loading, error, options = [] }) {
   if (loading) return 'Loading assignable roles…'
   if (error) return error.message || 'Assignable roles are temporarily unavailable.'
-  if (!options.length) return 'No role assignments are currently grantable for this user.'
+  if (!options.length) return 'No additional access is available for this person.'
   return null
 }
 

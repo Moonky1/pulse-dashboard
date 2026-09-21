@@ -6,7 +6,7 @@ export const LIFECYCLE_ACTIONS = Object.freeze({
     requestedState: 'Blocked',
     expectedStatus: 'blocked',
     tone: 'destructive',
-    consequence: 'Pulse access will be restricted until an authorized reactivation. The profile and role history remain intact.',
+    consequence: 'This person will not be able to enter Pulse until the account is reactivated. Their profile and history will remain available.',
   }),
   reactivate: Object.freeze({
     key: 'reactivate',
@@ -15,7 +15,7 @@ export const LIFECYCLE_ACTIONS = Object.freeze({
     requestedState: 'Active',
     expectedStatus: 'active',
     tone: 'primary',
-    consequence: 'Pulse will validate the Auth identity, organization, and active role assignments before restoring access.',
+    consequence: 'This person will be able to enter Pulse again with their current work details and access.',
   }),
   inactivate: Object.freeze({
     key: 'inactivate',
@@ -24,7 +24,7 @@ export const LIFECYCLE_ACTIONS = Object.freeze({
     requestedState: 'Inactive',
     expectedStatus: 'inactive',
     tone: 'destructive',
-    consequence: 'Pulse access will become inactive. This retains the historical profile and role history; it does not delete the user or Auth identity.',
+    consequence: 'This person will no longer be able to enter Pulse. Their profile and history will remain available.',
   }),
 })
 
@@ -48,5 +48,5 @@ export function lifecycleSuccessMessage(action, result) {
   const label = LIFECYCLE_ACTIONS[action]?.requestedState ?? 'Updated'
   return result?.changed === false
     ? `No change was needed. The account is already ${label.toLowerCase()}.`
-    : `Account status updated to ${label}. The user record has been refreshed.`
+    : `Account status updated to ${label}.`
 }

@@ -66,7 +66,7 @@ function InvitationsRoute({ children }) {
 export function AdminArea() {
   return (
     <AdminAccessGate>
-      <Suspense fallback={<AdminStatePanel kind="loading" title="Loading Administration" body="Preparing the secure management view…" />}>
+      <Suspense fallback={<AdminStatePanel kind="loading" title="Loading Administration" body="Opening Administration…" />}>
         <Routes>
           <Route element={<AdminShell />}>
             <Route index element={<AdminLanding />} />

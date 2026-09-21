@@ -6,14 +6,14 @@ import { Brand } from '../components/AuthShell.jsx'
 
 const content = {
   blocked: { eyebrow: 'Access denied', title: 'This account is blocked.', body: 'Your Pulse access has been restricted. Contact an authorized company administrator if you believe this is an error.' },
-  inactive: { eyebrow: 'Account inactive', title: 'This account is inactive.', body: 'Your company identity is valid, but Pulse access is not currently active. Contact your administrator for assistance.' },
-  error: { eyebrow: 'Account setup', title: 'Pulse could not finish loading your profile.', body: 'Your Auth session is secure, but no usable Pulse profile is available. Retry once or contact an administrator.' },
+  inactive: { eyebrow: 'Account inactive', title: 'This account is inactive.', body: 'Your company account is valid, but you cannot currently enter Pulse. Contact your administrator for assistance.' },
+  error: { eyebrow: 'Account setup', title: 'We couldn’t load your Pulse profile.', body: 'Try again. If the problem continues, contact an administrator.' },
 }
 
 export function AccountStatePage({ kind }) {
   const auth = useAuth()
   if (kind === 'loading') {
-    return <main className="auth-loading-page"><Brand compact /><Spinner size="lg" label="Restoring your secure session" /><p>Restoring your secure session…</p></main>
+    return <main className="auth-loading-page"><Brand compact /><Spinner size="lg" label="Opening Pulse" /><p>Opening Pulse…</p></main>
   }
   const state = content[kind] ?? content.error
   return (
@@ -24,7 +24,7 @@ export function AccountStatePage({ kind }) {
         <h1>{state.title}</h1>
         <p>{state.body}</p>
         <div className="auth-status-actions">
-          {kind === 'error' && <Button type="button" onClick={auth.refreshProfile}>Retry profile</Button>}
+          {kind === 'error' && <Button type="button" onClick={auth.refreshProfile}>Try again</Button>}
           <Button type="button" variant={kind === 'error' ? 'ghost' : 'primary'} onClick={auth.signOut}>Sign out</Button>
         </div>
       </Card>

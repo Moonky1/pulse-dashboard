@@ -10,12 +10,12 @@ function formatDate(value) {
 export function OperationalAssignments({ assignments = [], loading = false, error = null, onRetry }) {
   return (
     <Card level={2} className="admin-detail-card admin-detail-card--wide">
-      <p className="admin-section-label">Operations</p>
-      <h2>Operational assignments</h2>
-      <p className="admin-concept-note">Campaign and Team placement describes where this person operates. It does not grant a Role or change employment placement.</p>
-      {loading && !assignments.length && <p className="admin-muted">Loading protected assignment history…</p>}
+      <p className="admin-section-label">Work assignments</p>
+      <h2>Campaign assignments</h2>
+      <p className="admin-concept-note">Campaign and team assignments show where this person works day to day.</p>
+      {loading && !assignments.length && <p className="admin-muted">Loading campaign assignments…</p>}
       {error && !assignments.length && <div className="admin-inline-state"><span>{error.message}</span>{onRetry && <button type="button" onClick={onRetry}>Try again</button>}</div>}
-      {!loading && !error && !assignments.length && <p className="admin-empty-inline">No operational assignments have been recorded.</p>}
+      {!loading && !error && !assignments.length && <p className="admin-empty-inline">No campaign assignments yet.</p>}
       {assignments.length > 0 && (
         <ul className="admin-assignment-list">
           {assignments.map((assignment) => (

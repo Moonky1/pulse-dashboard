@@ -17,10 +17,10 @@ test('role and scope rendering comes only from exact server-returned options', (
   assert.deepEqual(assignableRoles(OPTIONS), [{ id: ROLE_ID, key: 'supervisor', name: 'Supervisor' }])
   assert.deepEqual(roleOptionsForRole(OPTIONS, ROLE_ID), OPTIONS)
   assert.match(roleOptionKey(OPTIONS[0]), new RegExp(ROLE_ID))
-  assert.equal(organizationForRoleOption({ scopeType: 'global' }).label, 'Global · All Pulse')
-  assert.equal(organizationForRoleOption(OPTIONS[0]).label, 'Department · Corporate')
-  assert.equal(organizationForRoleOption(OPTIONS[1]).label, 'Team · North')
-  assert.equal(organizationForRoleOption(OPTIONS[2]).label, 'Campaign · Garrett')
+  assert.equal(organizationForRoleOption({ scopeType: 'global' }).label, 'All Pulse')
+  assert.equal(organizationForRoleOption(OPTIONS[0]).label, 'Corporate')
+  assert.equal(organizationForRoleOption(OPTIONS[1]).label, 'North')
+  assert.equal(organizationForRoleOption(OPTIONS[2]).label, 'Garrett')
 })
 
 test('assignment request reuses one exact server-resolved grant combination', () => {
@@ -30,7 +30,7 @@ test('assignment request reuses one exact server-resolved grant combination', ()
     requestedDepartmentId: DEPARTMENT_ID,
     requestedCampaignId: null,
     requestedTeamId: null,
-    organization: { label: 'Department · Corporate', departmentId: DEPARTMENT_ID, campaignId: null, teamId: null, valid: true },
+    organization: { label: 'Corporate', departmentId: DEPARTMENT_ID, campaignId: null, teamId: null, valid: true },
   })
   assert.deepEqual(roleAssignmentRequest(OPTIONS[2]), {
     requestedRoleId: ROLE_ID,
@@ -38,7 +38,7 @@ test('assignment request reuses one exact server-resolved grant combination', ()
     requestedDepartmentId: null,
     requestedCampaignId: CAMPAIGN_ID,
     requestedTeamId: null,
-    organization: { label: 'Campaign · Garrett', departmentId: null, campaignId: CAMPAIGN_ID, teamId: null, valid: true },
+    organization: { label: 'Garrett', departmentId: null, campaignId: CAMPAIGN_ID, teamId: null, valid: true },
   })
   assert.equal(roleAssignmentRequest({ ...OPTIONS[0], scopeType: 'planet' }), null)
   assert.equal(roleAssignmentRequest({ ...OPTIONS[1], teamId: null }), null)
@@ -54,7 +54,7 @@ test('role notices distinguish idempotency and privileged Super Admin assignment
 
 test('catalog UI distinguishes loading, legitimate empty, error, and ready states', () => {
   assert.match(roleCatalogMessage({ loading: true }), /Loading/)
-  assert.match(roleCatalogMessage({ loading: false, options: [] }), /No role assignments/)
+  assert.match(roleCatalogMessage({ loading: false, options: [] }), /No additional access/)
   assert.equal(roleCatalogMessage({ loading: false, error: { message: 'Catalog unavailable' }, options: [] }), 'Catalog unavailable')
   assert.equal(roleCatalogMessage({ loading: false, options: OPTIONS }), null)
 })

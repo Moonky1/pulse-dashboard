@@ -1,15 +1,15 @@
 export const PENDING_BLOCK_ACTION = Object.freeze({
   key: 'blockPending',
-  label: 'Block pending user',
+  label: 'Block registration',
   shortLabel: 'Block',
   tone: 'destructive',
-  consequence: 'The pending registration will be blocked and will no longer be eligible for approval. The Auth identity and audit history remain intact.',
+  consequence: 'This person will not be able to enter Pulse. Their registration history will remain available.',
 })
 
 export const PENDING_APPROVAL_ACTION = Object.freeze({
   key: 'approvePending',
   label: 'Approve user',
-  consequence: 'Pulse will activate this verified account, generate its employee ID, and create the exact initial role assignment shown below.',
+  consequence: 'This person will become Active with the work details and Pulse access selected below.',
 })
 
 export function pendingApprovalOptionKey(option = {}) {
@@ -50,9 +50,9 @@ export function pendingReviewState(user, { canBlock = false, canApprove = false,
 }
 
 export function pendingBlockSuccessMessage() {
-  return 'The pending account was blocked. The server-confirmed record has been refreshed.'
+  return 'The registration was blocked.'
 }
 
 export function pendingApprovalSuccessMessage() {
-  return 'The pending account was approved. The server-confirmed record has been refreshed.'
+  return 'User approved. Their Pulse profile is ready.'
 }

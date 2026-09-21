@@ -42,7 +42,7 @@ test('privacy and terms content accurately bound Google identity and Pulse acces
   assert.match(legal, /does not request access to Gmail, Google Drive, Google Calendar/)
   assert.match(legal, /does not automatically grant Pulse access or permissions/)
   assert.match(legal, /does not sell staff personal information/)
-  assert.match(legal, /Successfully authenticating an identity does not itself grant access/)
+  assert.match(legal, /Signing in successfully does not by itself grant access/)
   assert.match(legal, /Do not transfer, share, or allow another person to use your staff account/)
   assert.match(legal, /Last updated: September 2026/)
   assert.doesNotMatch(legal, /service_role|\bRLS\b|\bRPC\b|GDPR|CCPA|HIPAA/i)

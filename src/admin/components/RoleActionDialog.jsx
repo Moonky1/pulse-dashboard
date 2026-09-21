@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '../../components/ui/Button.jsx'
-import { roleScopeLabel } from '../adminViewModel.js'
+import { lifecycleMeta, roleScopeLabel } from '../adminViewModel.js'
 import { assignableRoles, isSuperAdminRole, organizationForRoleOption, roleAssignmentRequest, roleOptionKey, roleOptionsForRole, shouldCancelRoleDialogOnKey } from '../roleActions.js'
 
 function Target({ user }) {
-  return <div className="admin-dialog__target"><strong>{user.fullName}</strong><span>{user.employeeId || 'Employee ID pending'} · Current state: {user.status}</span></div>
+  return <div className="admin-dialog__target"><strong>{user.fullName}</strong><span>{user.employeeId || 'Employee ID pending'} · Account status: {lifecycleMeta(user.status).label}</span></div>
 }
 
 function ScopeField({ label, value }) {
@@ -65,25 +65,25 @@ export function RoleActionDialog({ action, user, directory, roleOptions, submitt
       onClick={(event) => { if (event.target === event.currentTarget) cancel() }}
     >
       <form className="admin-dialog__surface" method="dialog" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
-        <div className="admin-dialog__eyebrow">Confirm role action</div>
-        <h2 id="role-dialog-title">{action.type === 'assign' ? 'Assign role' : 'Remove role'}</h2>
+        <div className="admin-dialog__eyebrow">Manage access</div>
+        <h2 id="role-dialog-title">{action.type === 'assign' ? 'Add Pulse access' : 'Remove Pulse access'}</h2>
         <Target user={user} />
         {action.type === 'assign' ? (
           <div className="admin-role-form">
             <label className="admin-role-field"><span>Role</span><select ref={roleSelectRef} value={selectedRole?.id ?? ''} disabled={submitting} onChange={(event) => { setRoleId(event.target.value); setSelectedOptionKey('') }}>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label>
-            <label className="admin-role-field"><span>Scope</span><select value={selectedOption ? roleOptionKey(selectedOption) : ''} disabled={submitting || !selectedRole} onChange={(event) => setSelectedOptionKey(event.target.value)}>{optionsForRole.map((option) => <option key={roleOptionKey(option)} value={roleOptionKey(option)}>{organizationForRoleOption(option).label}</option>)}</select></label>
-            <ScopeField label="Target organization" value={organization?.label ?? 'Select a supported scope'} />
+            <label className="admin-role-field"><span>Access area</span><select value={selectedOption ? roleOptionKey(selectedOption) : ''} disabled={submitting || !selectedRole} onChange={(event) => setSelectedOptionKey(event.target.value)}>{optionsForRole.map((option) => <option key={roleOptionKey(option)} value={roleOptionKey(option)}>{organizationForRoleOption(option).label}</option>)}</select></label>
+            <ScopeField label="Selected access" value={organization?.label ?? 'Select an access area'} />
           </div>
         ) : (
-          <div className="admin-role-form"><ScopeField label="Role" value={assignment?.name ?? 'Unknown role'} /><ScopeField label="Exact scope" value={removeScope} /></div>
+          <div className="admin-role-form"><ScopeField label="Role" value={assignment?.name ?? 'Unknown role'} /><ScopeField label="Access area" value={removeScope} /></div>
         )}
-        <p id="role-dialog-description">{action.type === 'assign' ? 'Pulse will validate your authority, the grant rule, the active catalog, and the target organization before creating this assignment.' : 'Pulse will remove only this exact role assignment after validating your authority and the final-role protections.'}</p>
-        {privileged && <div className="admin-dialog__warning" role="note"><strong>Privileged role</strong><span>This action involves a global Super Admin assignment. Pulse will enforce the authoritative server protections before any change.</span></div>}
-        {action.type === 'assign' && !assignmentRequest && <p className="admin-dialog__error" role="alert">The selected role scope is not available for this user’s current organization.</p>}
+        <p id="role-dialog-description">{action.type === 'assign' ? 'This person will receive the selected role for this access area.' : 'Only the selected Pulse access will be removed.'}</p>
+        {privileged && <div className="admin-dialog__warning" role="note"><strong>Super Admin access</strong><span>This grants broad control across Pulse. Review the person and access area carefully.</span></div>}
+        {action.type === 'assign' && !assignmentRequest && <p className="admin-dialog__error" role="alert">This role is not available for the selected access area.</p>}
         {error && <p className="admin-dialog__error" role="alert">{error.message}</p>}
         <div className="admin-dialog__actions">
           <Button type="button" variant="secondary" disabled={submitting} onClick={cancel}>Cancel</Button>
-          <Button type="submit" variant={action.type === 'remove' ? 'destructive' : 'primary'} loading={submitting} disabled={action.type === 'assign' && !assignmentRequest}>Confirm {action.type === 'assign' ? 'assignment' : 'removal'}</Button>
+          <Button type="submit" variant={action.type === 'remove' ? 'destructive' : 'primary'} loading={submitting} disabled={action.type === 'assign' && !assignmentRequest}>{action.type === 'assign' ? 'Add access' : 'Remove access'}</Button>
         </div>
       </form>
     </dialog>

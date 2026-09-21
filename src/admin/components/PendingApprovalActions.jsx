@@ -18,6 +18,7 @@ export function PendingApprovalActions({
   approvalOptionsError = null,
   onReloadApprovalOptions,
   onChanged,
+  onApproved,
 }) {
   const blockGuard = useRef(false)
   const approvalGuard = useRef(false)
@@ -66,24 +67,25 @@ export function PendingApprovalActions({
     }
     setNotice(result.warning?.message ?? pendingApprovalSuccessMessage())
     setDialog(null)
+    onApproved?.(result.data)
   }
 
   return (
     <section className="admin-pending-actions" aria-labelledby="pending-actions-title">
       <div className="admin-pending-actions__heading">
         <div>
-          <p className="admin-section-label">Authorized operations</p>
-          <h2 id="pending-actions-title">Pending approval review</h2>
-          <span>Every confirmed decision is authorized and audited by the database.</span>
+          <p className="admin-section-label">Approval</p>
+          <h2 id="pending-actions-title">Review registration</h2>
+          <span>Approve this person or block the registration.</span>
         </div>
         <div className="admin-pending-actions__buttons">
-          {state.canApprove && <Button type="button" disabled={!state.approvalAvailable || approvalOptionsLoading || Boolean(approvalOptionsError)} onClick={() => openDialog('approve')}>Approve user</Button>}
-          {state.canBlock && <Button type="button" variant="destructive" onClick={() => openDialog('block')}>Block pending user</Button>}
+          {state.canApprove && <Button type="button" disabled={!state.approvalAvailable || approvalOptionsLoading || Boolean(approvalOptionsError)} onClick={() => openDialog('approve')}>Approve</Button>}
+          {state.canBlock && <Button type="button" variant="destructive" onClick={() => openDialog('block')}>Block</Button>}
         </div>
       </div>
-      {state.canApprove && approvalOptionsLoading && <p className="admin-role-actions__catalog-state" role="status">Loading protected approval options…</p>}
+      {state.canApprove && approvalOptionsLoading && <p className="admin-role-actions__catalog-state" role="status">Loading approval options…</p>}
       {state.canApprove && !approvalOptionsLoading && approvalOptionsError && <div className="admin-pending-actions__catalog-error" role="alert"><span>{approvalOptionsError.message}</span>{onReloadApprovalOptions && <Button type="button" variant="secondary" onClick={onReloadApprovalOptions}>Try again</Button>}</div>}
-      {state.canApprove && !approvalOptionsLoading && !approvalOptionsError && !approvalOptions.length && <p className="admin-role-actions__catalog-state" role="status">No valid initial role and organization combination is currently available.</p>}
+      {state.canApprove && !approvalOptionsLoading && !approvalOptionsError && !approvalOptions.length && <p className="admin-role-actions__catalog-state" role="status">No work details and Pulse access combination is currently available.</p>}
       {notice && <p className="admin-lifecycle-actions__notice" role="status">{notice}</p>}
       {dialog === 'block' && <LifecycleActionDialog action={PENDING_BLOCK_ACTION} user={user} submitting={submitting} error={error} onCancel={cancel} onConfirm={confirmBlock} />}
       {dialog === 'approve' && <PendingApprovalDialog user={user} options={approvalOptions} submitting={submitting} error={error} onCancel={cancel} onConfirm={confirmApproval} />}

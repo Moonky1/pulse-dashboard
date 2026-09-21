@@ -54,7 +54,7 @@ test('approval catalog exposes explicit loading, failure, empty, and ready state
   assert.equal(pendingApprovalCatalogState({ options: [option] }), 'ready')
 })
 
-test('pending block success is described only after canonical refetch', () => {
-  assert.match(pendingBlockSuccessMessage(), /server-confirmed record has been refreshed/i)
-  assert.match(pendingApprovalSuccessMessage(), /server-confirmed record has been refreshed/i)
+test('approval results use clear product language', () => {
+  assert.equal(pendingBlockSuccessMessage(), 'The registration was blocked.')
+  assert.match(pendingApprovalSuccessMessage(), /User approved/)
 })

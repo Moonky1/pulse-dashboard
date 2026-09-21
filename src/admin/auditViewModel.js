@@ -31,12 +31,12 @@ export const AUDIT_CATEGORIES = Object.freeze([
 ])
 
 export function auditActionLabel(action = '') {
-  return ACTION_LABELS[action] || action.split(/[._]/).filter(Boolean).map((part) => part[0]?.toUpperCase() + part.slice(1)).join(' ') || 'Audit event'
+  return ACTION_LABELS[action] || action.split(/[._]/).filter(Boolean).map((part) => part[0]?.toUpperCase() + part.slice(1)).join(' ') || 'Activity'
 }
 
 export function auditSummary(event = {}) {
   const actor = event.actor?.name || 'Pulse system'
-  const target = event.target?.name || 'a protected record'
+  const target = event.target?.name || 'a Pulse item'
   return `${actor} · ${auditActionLabel(event.action)} · ${target}`
 }
 

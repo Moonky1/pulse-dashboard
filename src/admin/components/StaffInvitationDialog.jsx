@@ -31,14 +31,15 @@ export function StaffInvitationDialog({ options, submitting, error, onCancel, on
         <h2 id="staff-invitation-title">Invite Staff</h2>
         <p id="staff-invitation-description">This personal invitation is valid for 72 hours.</p>
         <div className="admin-organization-form">
+          <div className="admin-dialog__target"><strong>Personal details</strong><span>Enter the person’s name and email.</span></div>
           <label><span>Email</span><input ref={emailRef} type="email" autoComplete="email" value={values.email} disabled={submitting} onChange={update('email')} placeholder="name@company.com" /></label>
           <label><span>Full name</span><input value={values.fullName} maxLength={160} disabled={submitting} onChange={update('fullName')} /></label>
-          <div className="admin-dialog__target"><strong>Employment</strong><span>Choose where they’ll work.</span></div>
+          <div className="admin-dialog__target"><strong>Work details</strong><span>Choose where they’ll work.</span></div>
           <label><span>Department</span><select value={values.departmentId} disabled={submitting} onChange={(event) => setValues((current) => ({ ...current, departmentId: event.target.value, teamId: '', optionKey: '' }))}><option value="">Select department</option>{options.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label><span>Team <small>Optional</small></span><select value={values.teamId} disabled={submitting || !values.departmentId} onChange={(event) => setValues((current) => ({ ...current, teamId: event.target.value, optionKey: '' }))}><option value="">No team</option>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label><span>Position <small>Optional</small></span><select value={values.positionId} disabled={submitting} onChange={update('positionId')}><option value="">No position</option>{options.positions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-          <div className="admin-dialog__target"><strong>Access</strong><span>Choose their role and scope.</span></div>
-          <label><span>Role and scope</span><select value={values.optionKey} disabled={submitting || !values.departmentId} onChange={update('optionKey')}><option value="">Select role and scope</option>{roleOptions.map((option) => <option key={invitationOptionKey(option)} value={invitationOptionKey(option)}>{option.roleName} · {invitationScopeLabel(option, options)}</option>)}</select></label>
+          <div className="admin-dialog__target"><strong>Pulse access</strong><span>Choose their role and access area.</span></div>
+          <label><span>Role and access area</span><select value={values.optionKey} disabled={submitting || !values.departmentId} onChange={update('optionKey')}><option value="">Select Pulse access</option>{roleOptions.map((option) => <option key={invitationOptionKey(option)} value={invitationOptionKey(option)}>{option.roleName} · {invitationScopeLabel(option, options)}</option>)}</select></label>
         </div>
         {selected && <div className="admin-dialog__target"><strong>Invitation summary</strong><span>{values.fullName || 'Invitee'} · {selected.roleName} · {invitationScopeLabel(selected, options)}</span></div>}
         {error && <p className="admin-dialog__error" role="alert">{error.message}</p>}

@@ -40,13 +40,13 @@ export function AdminCampaignsPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>Operations</p><h1>Campaigns</h1><span>Review campaigns and their connected teams. Campaigns are read-only here.</span></div>
+        <div><p>Operations</p><h1>Campaigns</h1><span>Review the operations Pulse supports and their teams.</span></div>
         <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--campaigns" aria-label="Campaign filters">
         <label className="admin-search"><span>Search campaigns</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, code, or description" /></label>
       </section>
-      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {campaigns.length} campaigns <span>Read-only</span></div>
+      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {campaigns.length} campaigns</div>
       {!campaigns.length
         ? <AdminStatePanel kind="empty" title="No campaigns" body="No campaigns have been created yet." />
         : !filtered.length

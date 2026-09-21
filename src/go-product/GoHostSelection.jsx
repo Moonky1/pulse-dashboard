@@ -44,7 +44,7 @@ export function GoHostSelection() {
       <img src="/emojis/certification.webp" alt="" />
     </section>
     <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding host-ready games…' : catalog.error?.message || ''}</div>
-    {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No games are ready to host.</h2><p>Published quizzes and assessments in your scope will appear here.</p></section>}
+    {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No games are ready to host.</h2><p>Published quizzes and assessments available to you will appear here.</p></section>}
     <section className="go-catalog" aria-busy={catalog.loading}>
       {catalog.items.map(item => {
         const language = languagePresentation(item.language)

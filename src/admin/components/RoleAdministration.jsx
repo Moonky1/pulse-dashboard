@@ -42,8 +42,8 @@ export function RoleAdministration({ user, directory, roleOptions, roleOptionsEr
   }
 
   return (
-    <section className="admin-role-actions" aria-labelledby="role-actions-title">
-      <div className="admin-role-actions__heading"><div><p className="admin-section-label">Authorized operations</p><h2 id="role-actions-title">Role administration</h2><span>Every confirmed assignment or removal is authorized and audited by the database.</span></div><Button type="button" disabled={!assignmentAvailable} onClick={openAssignment}>Assign role</Button></div>
+    <section id="pulse-access-management" className="admin-role-actions" aria-labelledby="role-actions-title">
+      <div className="admin-role-actions__heading"><div><p className="admin-section-label">Pulse access</p><h2 id="role-actions-title">Manage access</h2><span>Add or remove access available to this person.</span></div><Button type="button" disabled={!assignmentAvailable} onClick={openAssignment}>Add access</Button></div>
       {catalogMessage && <p className={roleOptionsError ? 'admin-dialog__error' : 'admin-role-actions__catalog-state'} role={roleOptionsError ? 'alert' : 'status'}>{catalogMessage}</p>}
       <ul className="admin-role-actions__assignments">
         {user.roles.map((assignment) => <li key={assignment.userRoleId}><div><strong>{assignment.name}</strong><span>{roleScopeLabel(assignment, directory)}</span></div><Button type="button" variant="secondary" size="sm" onClick={() => openRemoval(assignment)}>Remove</Button></li>)}
