@@ -640,6 +640,50 @@ export async function listManagedPositions(client) {
   return { data: (data ?? []).map(normalizePosition).filter(Boolean), error: null }
 }
 
+function optionalUuid(value) {
+  return value == null || value === '' ? null : (UUID_PATTERN.test(value) ? value : undefined)
+}
+
+function normalizeBusinessCatalogEntity(row = {}, kind) {
+  if (!UUID_PATTERN.test(row.id ?? '')) return null
+  const entity = {
+    id: row.id,
+    code: row.code ?? '',
+    name: row.name ?? `Unknown ${kind}`,
+    description: row.description ?? '',
+    isActive: Boolean(row.is_active),
+  }
+  const relationFields = {
+    businessAreaId: optionalUuid(row.business_area_id),
+    departmentId: optionalUuid(row.department_id),
+    campaignId: optionalUuid(row.campaign_id),
+    operatingUnitId: optionalUuid(row.operating_unit_id),
+    parentUnitId: optionalUuid(row.parent_unit_id),
+  }
+  if (Object.values(relationFields).includes(undefined)) return null
+  return { ...entity, ...relationFields }
+}
+
+export async function loadBusinessCatalog(client) {
+  const { data, error } = await client.rpc('list_business_catalog')
+  if (error) return { data: null, error: normalizeAdminError(error) }
+  const payload = data && !Array.isArray(data) ? data : null
+  if (!payload) return { data: null, error: publicError('unexpected_result', 'Pulse returned an invalid business catalog. Refresh and try again.') }
+  const normalize = (key, kind) => (payload[key] ?? []).map((row) => normalizeBusinessCatalogEntity(row, kind)).filter(Boolean)
+  return {
+    data: {
+      version: payload.catalog_version ?? null,
+      businessAreas: normalize('business_areas', 'business area'),
+      departments: normalize('departments', 'department'),
+      campaigns: normalize('campaigns', 'campaign'),
+      operatingUnits: normalize('operating_units', 'operating unit'),
+      teams: normalize('teams', 'team'),
+      positions: normalize('positions', 'position'),
+    },
+    error: null,
+  }
+}
+
 function validOrganizationInput({ code, name, description = '' } = {}) {
   return /^[a-z][a-z0-9_]{1,31}$/.test(code ?? '')
     && String(name ?? '').trim().length >= 2

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, getUserOperationalAssignments, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedPositions, listManagedTeams, listManagedUsers, listManagedUsersWithDetails, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
+import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, getUserOperationalAssignments, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedPositions, listManagedTeams, listManagedUsers, listManagedUsersWithDetails, loadAssignableRoleOptions, loadBusinessCatalog, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -589,4 +589,36 @@ test('user history is target-bound and audit failures never expose backend detai
   const hidden = normalizeAuditError({ code: 'XX000', message: 'audit_events SQL stack and JWT' })
   assert.equal(hidden.code, 'unavailable')
   assert.doesNotMatch(hidden.message, /SQL|JWT|audit_events/i)
+})
+
+test('business catalog uses one protected RPC and preserves canonical parent links', async () => {
+  const AREA = '30000000-0000-4000-8000-000000000001'
+  const CAMPAIGN = '32000000-0000-4000-8000-000000000001'
+  const UNIT = '33000000-0000-4000-8000-000000000001'
+  const TEAM = '34000000-0000-4000-8000-000000000011'
+  const calls = []
+  const result = await loadBusinessCatalog({ rpc: async (name) => {
+    calls.push(name)
+    return { data: {
+      catalog_version: 'org-3a-2026-09',
+      business_areas: [{ id: AREA, code: 'operations', name: 'Operations', is_active: true }],
+      departments: [],
+      campaigns: [{ id: CAMPAIGN, business_area_id: AREA, code: 'auto_warranty_garrett', name: 'Auto Warranty Garrett', is_active: true }],
+      operating_units: [{ id: UNIT, business_area_id: AREA, campaign_id: CAMPAIGN, parent_unit_id: null, code: 'openers', name: 'Openers', is_active: true }],
+      teams: [{ id: TEAM, business_area_id: AREA, department_id: null, campaign_id: CAMPAIGN, operating_unit_id: UNIT, code: 'asia_team_a', name: 'Asia Team A', is_active: true }],
+      positions: [],
+    }, error: null }
+  } })
+  assert.deepEqual(calls, ['list_business_catalog'])
+  assert.equal(result.data.version, 'org-3a-2026-09')
+  assert.equal(result.data.teams[0].operatingUnitId, UNIT)
+  assert.equal(result.data.teams[0].departmentId, null)
+})
+
+test('business catalog rejects malformed relationship identifiers', async () => {
+  const result = await loadBusinessCatalog({ rpc: async () => ({ data: {
+    business_areas: [], departments: [], campaigns: [], operating_units: [], positions: [],
+    teams: [{ id: '34000000-0000-4000-8000-000000000011', business_area_id: 'not-a-uuid', code: 'bad', name: 'Bad', is_active: true }],
+  }, error: null }) })
+  assert.deepEqual(result.data.teams, [])
 })

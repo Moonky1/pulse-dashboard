@@ -1,8 +1,9 @@
 export const SUPER_ADMIN_ROLE_ID = '10000000-0000-0000-0000-000000000010'
 
-const SENSITIVE_ACTIONS = new Set(['approve', 'block', 'reactivate', 'inactivate', 'role-assign', 'role-remove'])
+const SENSITIVE_ACTIONS = new Set(['approve', 'block', 'reactivate', 'inactivate', 'role-assign', 'role-remove', 'catalog-apply'])
 
 export function confirmationPhrase(action, targetUserId, { roleId } = {}) {
+  if (action === 'catalog-apply') return `APPLY ORG-3A ${targetUserId}`
   if (action === 'role-assign' && roleId === SUPER_ADMIN_ROLE_ID) {
     return `GRANT SUPER ADMIN ${targetUserId}`
   }
@@ -31,7 +32,19 @@ async function inspect(client, targetUserId) {
 
 export async function executeOperatorCommand({ client, args, confirm, output = () => {} }) {
   const [group, verb, ...rest] = args
-  if (group !== 'users' && group !== 'roles') throw new Error('command must start with users or roles')
+  if (!['users', 'roles', 'catalog'].includes(group)) throw new Error('command must start with users, roles, or catalog')
+
+  if (group === 'catalog' && verb === 'inspect') return rpc(client, 'list_business_catalog')
+
+  if (group === 'catalog' && verb === 'apply') {
+    const targetProjectRef = String(rest[0] ?? '').trim()
+    if (!/^[a-z]{20}$/.test(targetProjectRef)) throw new Error('target project ref must be explicit')
+    const before = await rpc(client, 'list_business_catalog')
+    output({ action: 'catalog-apply', targetProjectRef, before, mutatesPeople: false })
+    const phrase = confirmationPhrase('catalog-apply', targetProjectRef)
+    if (!(await confirm(phrase))) throw new Error('operator cancelled; no RPC executed')
+    return rpc(client, 'apply_org3a_business_catalog')
+  }
 
   if (group === 'users' && verb === 'pending') {
     return rpc(client, 'list_managed_users', { requested_status: 'pending_approval' })

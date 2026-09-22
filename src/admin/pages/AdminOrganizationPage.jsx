@@ -1,11 +1,13 @@
 import { useMemo, useRef, useState } from 'react'
 
 import { Button } from '../../components/ui/Button.jsx'
+import { buildBusinessAreaBranches } from '../businessCatalog.js'
 import { canManageDepartments, canManageTeams, canViewDepartments, canViewTeams } from '../access.js'
 import { useAdminPermissions } from '../AdminAccessContext.js'
 import { createManagedDepartment, createManagedTeam, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from '../api/adminApi.js'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
 import { OrganizationActionDialog } from '../components/OrganizationActionDialog.jsx'
+import { useBusinessCatalog } from '../hooks/useBusinessCatalog.js'
 import { useOrganizationCatalog } from '../hooks/useOrganizationCatalog.js'
 import { filterOrganizationItems, organizationMutationMessage } from '../organizationActions.js'
 import { runOrganizationMutation } from '../organizationMutation.js'
@@ -59,6 +61,36 @@ function OrganizationSection({ title, description, items, type, canManage, query
   )
 }
 
+function BusinessAreaOverview({ catalog }) {
+  const areas = useMemo(() => buildBusinessAreaBranches(catalog), [catalog])
+  if (!areas.length) return null
+  return (
+    <section className="admin-organization-section" aria-labelledby="business-area-heading">
+      <div className="admin-organization-section__heading">
+        <div><h2 id="business-area-heading">Business areas</h2><p>Top-level company structure, separate from employment Departments.</p></div>
+      </div>
+      <div className="admin-catalog-areas">
+        {areas.map((area) => (
+          <article className="admin-catalog-area" key={area.id}>
+            <header><div><span>Business area</span><h3>{area.name}</h3></div><Status active={area.isActive} /></header>
+            <div className="admin-catalog-area__groups">
+              {area.departments.map((department) => (
+                <section key={department.id}>
+                  <div><span>Department</span><strong>{department.name}</strong></div>
+                  {department.teams.length > 0 && <div className="admin-catalog-pills">{department.teams.map((team) => <span className="admin-catalog-pill" key={team.id}><strong>{team.name}</strong><small>Team</small></span>)}</div>}
+                </section>
+              ))}
+              {area.directTeams.length > 0 && (
+                <section><div><span>Area functions</span><strong>Direct Teams</strong></div><div className="admin-catalog-pills">{area.directTeams.map((team) => <span className="admin-catalog-pill" key={team.id}><strong>{team.name}</strong><small>Team</small></span>)}</div></section>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function AdminOrganizationPage() {
   const { permissionKeys } = useAdminPermissions()
   const departmentRead = canViewDepartments(permissionKeys)
@@ -66,6 +98,7 @@ export function AdminOrganizationPage() {
   const departmentManage = canManageDepartments(permissionKeys)
   const teamManage = canManageTeams(permissionKeys)
   const { departments, teams, loading, error, refresh } = useOrganizationCatalog({ departments: departmentRead, teams: teamRead })
+  const { catalog, loading: catalogLoading, error: catalogError, refresh: refreshCatalog } = useBusinessCatalog()
   const [query, setQuery] = useState('')
   const [departmentId, setDepartmentId] = useState('')
   const [action, setAction] = useState(null)
@@ -111,20 +144,21 @@ export function AdminOrganizationPage() {
     setNotice(result.warning?.message || organizationMutationMessage(confirmedAction.type, confirmedAction.entityType, result.data))
   }
 
-  if (loading && !departments.length && !teams.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading organization" body="Getting departments and teams…" /></main>
-  if (error && !departments.length && !teams.length) return <main className="admin-content"><AdminStatePanel kind="error" title="Organization unavailable" body={error.message} onRetry={refresh} /></main>
+  if ((loading || catalogLoading) && !departments.length && !teams.length && !catalog.businessAreas.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading organization" body="Getting business areas, Departments and Teams…" /></main>
+  if ((error || catalogError) && !departments.length && !teams.length && !catalog.businessAreas.length) return <main className="admin-content"><AdminStatePanel kind="error" title="Organization unavailable" body={(error || catalogError).message} onRetry={() => Promise.all([refresh(), refreshCatalog()])} /></main>
 
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
         <div><p>Organization</p><h1>Departments & teams</h1><span>Keep your organization clear and up to date.</span></div>
-        <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
+        <Button type="button" variant="secondary" loading={loading || catalogLoading} onClick={() => Promise.all([refresh(), refreshCatalog()])}>Refresh</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--organization" aria-label="Organization filters">
         <label className="admin-search"><span>Search organization</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, code, description, or department" /></label>
         {teamRead && departmentRead && <label className="admin-filter"><span>Team department</span><select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="">All departments</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>}
       </section>
       {notice && <p className="admin-operation-notice" role="status">{notice}</p>}
+      <BusinessAreaOverview catalog={catalog} />
       {departmentRead && <OrganizationSection title="Departments" description="Where people belong in the company." items={departments} type="department" canManage={departmentManage} query={query} departmentId="" onAction={openAction} />}
       {teamRead && <OrganizationSection title="Teams" description="Groups working together within the organization." items={teams} type="team" canManage={teamManage} query={query} departmentId={departmentId} onAction={openAction} />}
       {action && <OrganizationActionDialog action={action} departments={departments} submitting={submitting} error={mutationError} onCancel={cancelAction} onConfirm={confirmAction} />}
