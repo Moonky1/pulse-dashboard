@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, getUserOperationalAssignments, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedPositions, listManagedTeams, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
+import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, getUserOperationalAssignments, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedPositions, listManagedTeams, listManagedUsers, listManagedUsersWithDetails, loadAssignableRoleOptions, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -52,6 +52,18 @@ test('users list sanitizes backend errors', async () => {
   const result = await listManagedUsers(client)
   assert.equal(result.error.code, 'unavailable')
   assert.doesNotMatch(result.error.message, /SQL/)
+})
+
+test('people directory enriches list rows through the existing protected detail contract', async () => {
+  const calls = []
+  const client = { rpc: async (name, args) => {
+    calls.push({ name, args })
+    if (name === 'list_managed_users') return { data: [row], error: null }
+    return { data: [{ ...row, position_id: ROLE_ID, position_code: 'qa_analyst', position_name: 'QA Analyst' }], error: null }
+  } }
+  const result = await listManagedUsersWithDetails(client)
+  assert.equal(result.data[0].positionName, 'QA Analyst')
+  assert.deepEqual(calls.map((call) => call.name), ['list_managed_users', 'get_managed_user'])
 })
 
 test('user detail normalizes a successful exact result', async () => {

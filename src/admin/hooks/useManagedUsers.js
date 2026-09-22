@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { supabase } from '../../utils/supabase.js'
-import { getManagedUser, listManagedUsers, loadAssignableRoleOptions, loadOrganizationDirectory, loadPendingApprovalOptions } from '../api/adminApi.js'
+import { getManagedUser, listManagedUsers, listManagedUsersWithDetails, loadAssignableRoleOptions, loadOrganizationDirectory, loadPendingApprovalOptions } from '../api/adminApi.js'
 
 const EMPTY_ROLE_OPTIONS = Object.freeze({ data: [], error: null })
 const EMPTY_DIRECTORY = Object.freeze({ data: { departments: [], teams: [] }, error: null })
@@ -43,9 +43,9 @@ function useAdminRequest(load, requestKey, loadRoleOptions = null, loadDirectory
   return { ...currentState, refresh }
 }
 
-export function useManagedUsers({ status = null, includeDirectory = true } = {}) {
-  const load = useCallback(() => listManagedUsers(supabase, { status }), [status])
-  const state = useAdminRequest(load, `users:${status ?? 'all'}`, null, includeDirectory)
+export function useManagedUsers({ status = null, includeDirectory = true, includeDetails = false } = {}) {
+  const load = useCallback(() => includeDetails ? listManagedUsersWithDetails(supabase, { status }) : listManagedUsers(supabase, { status }), [includeDetails, status])
+  const state = useAdminRequest(load, `users:${status ?? 'all'}:${includeDetails ? 'details' : 'summary'}`, null, includeDirectory)
   return { ...state, users: state.data ?? [] }
 }
 

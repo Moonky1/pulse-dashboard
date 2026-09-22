@@ -23,6 +23,7 @@ export function AdminShell() {
         <nav aria-label="Administration">
           <NavLink to="/workspace">Workspace</NavLink>
           {usersAccess && <NavLink to="/admin/users">People</NavLink>}
+          {usersAccess && <NavLink to="/admin/staff-tree">Staff Tree</NavLink>}
           {usersAccess && <NavLink to="/admin/pending">Approvals</NavLink>}
           {invitationsAccess && <NavLink to="/admin/invitations">Invitations</NavLink>}
           {organizationAccess && <NavLink to="/admin/organization">Organization</NavLink>}

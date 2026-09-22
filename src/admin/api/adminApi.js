@@ -245,6 +245,16 @@ export async function listManagedUsers(client, { status = null } = {}) {
   return { data: (data ?? []).map(normalizeManagedUser), error: null }
 }
 
+export async function listManagedUsersWithDetails(client, options = {}) {
+  const listed = await listManagedUsers(client, options)
+  if (listed.error || !listed.data.length) return listed
+  const details = await Promise.all(listed.data.map((user) => getManagedUser(client, user.id)))
+  return {
+    data: listed.data.map((user, index) => details[index].data ? { ...user, ...details[index].data } : user),
+    error: null,
+  }
+}
+
 export async function getManagedUser(client, userId) {
   if (!UUID_PATTERN.test(userId ?? '')) {
     return { data: null, error: publicError('invalid_request', 'The requested user is not valid.') }

@@ -15,7 +15,7 @@ export function OperationalAssignments({ assignments = [], loading = false, erro
       <p className="admin-concept-note">Campaign and team assignments show where this person works day to day.</p>
       {loading && !assignments.length && <p className="admin-muted">Loading campaign assignments…</p>}
       {error && !assignments.length && <div className="admin-inline-state"><span>{error.message}</span>{onRetry && <button type="button" onClick={onRetry}>Try again</button>}</div>}
-      {!loading && !error && !assignments.length && <p className="admin-empty-inline">No campaign assignments yet.</p>}
+      {!loading && !error && !assignments.length && <p className="admin-empty-inline">No campaigns assigned.</p>}
       {assignments.length > 0 && (
         <ul className="admin-assignment-list">
           {assignments.map((assignment) => (
