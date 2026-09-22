@@ -11,6 +11,7 @@ import { OperationalAssignments } from '../components/OperationalAssignments.jsx
 import { PendingApprovalActions } from '../components/PendingApprovalActions.jsx'
 import { RoleAdministration } from '../components/RoleAdministration.jsx'
 import { RoleScopeList } from '../components/RoleScopeList.jsx'
+import { StaffAvatar } from '../components/StaffAvatar.jsx'
 import { UserAuditHistory } from '../components/UserAuditHistory.jsx'
 import { directoryMaps, lifecycleMeta } from '../adminViewModel.js'
 import { useManagedUser, usePendingApprovalOptions } from '../hooks/useManagedUsers.js'
@@ -42,18 +43,20 @@ export function AdminUserDetailPage({ pendingOnly = false }) {
   return (
     <main className="admin-content">
       <Link className="admin-back-link" to={pendingOnly ? '/admin/pending' : '/admin/users'}>← Back to {pendingOnly ? 'approvals' : 'people'}</Link>
-      <div className="admin-page-heading admin-page-heading--detail">
-        <div><p>Staff profile</p><h1>{user.fullName}</h1><span>{user.employeeId || 'Employee ID pending'} · Pulse profile</span></div>
+      <section className="admin-profile-hero">
+        <StaffAvatar name={user.fullName} size="lg" />
+        <div className="admin-profile-hero__identity"><p>Staff profile</p><h1>{user.fullName}</h1><span>{user.employeeId || 'Employee ID pending'}</span></div>
+        <dl className="admin-profile-hero__work"><Detail label="Position">{user.positionName}</Detail><Detail label="Department">{maps.departments.get(user.departmentId)}</Detail><Detail label="Team">{maps.teams.get(user.teamId)}</Detail></dl>
         <LifecycleBadge status={user.status} />
-      </div>
+      </section>
       {justApproved && <section className="admin-setup-notice" role="status"><div><strong>User approved</strong><span>Review their work details and Pulse access below.</span></div><a href="#pulse-access-management">Manage access</a></section>}
       <div className="admin-detail-grid">
         <Card level={2} className="admin-detail-card"><p className="admin-section-label">Profile</p><h2>Profile</h2><dl><Detail label="Full name">{user.fullName}</Detail><Detail label="Display name">{user.displayName}</Detail><Detail label="Employee ID">{user.employeeId}</Detail><Detail label="Email">{user.email}</Detail></dl></Card>
         <Card level={2} className="admin-detail-card"><p className="admin-section-label">Work details</p><h2>Work details</h2><dl><Detail label="Department">{maps.departments.get(user.departmentId)}</Detail><Detail label="Team">{maps.teams.get(user.teamId)}</Detail></dl></Card>
-        <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Position</p><h2>Position</h2><dl><Detail label="Position">{user.positionName}</Detail></dl></Card>
+        <Card level={2} className="admin-detail-card"><p className="admin-section-label">Position</p><h2>Position</h2><dl><Detail label="Current position">{user.positionName}</Detail></dl></Card>
+        <Card level={2} className="admin-detail-card"><p className="admin-section-label">Account status</p><h2>Account status</h2><div className="admin-account-row"><LifecycleBadge status={user.status} /><Badge tone={user.authEmailConfirmed ? 'success' : 'warning'} dot>{user.authEmailConfirmed ? 'Email verified' : 'Email not verified'}</Badge></div><p>{lifecycle.description}</p></Card>
         {assignmentsAccess && <OperationalAssignments assignments={operationalAssignments.assignments} loading={operationalAssignments.loading} error={operationalAssignments.error} onRetry={operationalAssignments.refresh} />}
         <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Pulse access</p><h2>Pulse access</h2><RoleScopeList roles={user.roles} directory={directory} /></Card>
-        <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Account status</p><h2>Account status</h2><div className="admin-account-row"><LifecycleBadge status={user.status} /><Badge tone={user.authEmailConfirmed ? 'success' : 'warning'} dot>{user.authEmailConfirmed ? 'Email verified' : 'Email not verified'}</Badge></div><p>{lifecycle.description}</p></Card>
       </div>
       {canViewUserHistory(permissionKeys) && <UserAuditHistory userId={user.id} />}
       {user.status === 'pending_approval'

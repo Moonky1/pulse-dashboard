@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button.jsx'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
 import { LifecycleBadge } from '../components/LifecycleBadge.jsx'
 import { RoleScopeList } from '../components/RoleScopeList.jsx'
+import { StaffAvatar } from '../components/StaffAvatar.jsx'
 import { directoryMaps, filterManagedUsers, roleOptions } from '../adminViewModel.js'
 import { useManagedUsers } from '../hooks/useManagedUsers.js'
 
@@ -21,7 +22,7 @@ function Filter({ label, value, onChange, children }) {
 }
 
 export function AdminUsersPage() {
-  const { users, directory, loading, error, refresh } = useManagedUsers()
+  const { users, directory, loading, error, refresh } = useManagedUsers({ includeDetails: true })
   const [filters, setFilters] = useState({ query: '', status: '', departmentId: '', teamId: '', roleKey: '' })
   const maps = useMemo(() => directoryMaps(directory), [directory])
   const roles = useMemo(() => roleOptions(users), [users])
@@ -37,8 +38,8 @@ export function AdminUsersPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>People</p><h1>People</h1><span>Manage staff profiles, teams and access.</span></div>
-        <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
+        <div><p>Company directory</p><h1>People</h1><span>Find teammates and see where they work across Pulse.</span></div>
+        <div className="admin-heading-actions"><Link className="admin-secondary-link" to="/admin/staff-tree">Staff Tree</Link><Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button></div>
       </div>
 
       <section className="admin-filter-bar" aria-label="User filters">
@@ -53,16 +54,16 @@ export function AdminUsersPage() {
       {!users.length ? <AdminStatePanel kind="empty" title="No people yet" body="Staff profiles will appear here." />
         : !filtered.length ? <AdminStatePanel kind="empty" title="No matching people" body="Adjust the search or filters to broaden these results." />
           : <section className="admin-users" aria-label="People">
-            <div className="admin-table" role="table">
-              <div className="admin-table__head" role="row"><span>Person</span><span>Status</span><span>Organization</span><span>Access</span><span aria-label="Action" /></div>
+            <div className="admin-table admin-people-table" role="table">
+              <div className="admin-table__head" role="row"><span>Person</span><span>Work details</span><span>Pulse access</span><span>Status</span><span aria-label="Open profile" /></div>
               {filtered.map((user) => (
-                <article className="admin-user-row" role="row" key={user.id}>
-                  <div className="admin-user-identity"><strong>{user.fullName}</strong><span>{user.employeeId || 'Employee ID pending'}</span><small>{user.email}</small></div>
+                <Link className="admin-user-row" role="row" key={user.id} to={user.status === 'pending_approval' ? `/admin/pending/${user.id}` : `/admin/users/${user.id}`} aria-label={`Open ${user.fullName}'s staff profile`}>
+                  <div className="admin-user-identity admin-user-identity--avatar"><StaffAvatar name={user.fullName} /><span><strong>{user.fullName}</strong><small>{user.employeeId || 'Employee ID pending'}</small></span></div>
+                  <div className="admin-cell-text"><span className="admin-mobile-label">Work details</span><strong>{user.positionName || 'Position not assigned'}</strong><small>{maps.departments.get(user.departmentId) || 'Department not assigned'} · {maps.teams.get(user.teamId) || 'No team assigned'}</small></div>
+                  <div><span className="admin-mobile-label">Pulse access</span><RoleScopeList roles={user.roles} directory={directory} compact /></div>
                   <div><span className="admin-mobile-label">Status</span><LifecycleBadge status={user.status} /></div>
-                  <div className="admin-cell-text"><span className="admin-mobile-label">Organization</span><strong>{maps.departments.get(user.departmentId) || 'Unassigned'}</strong><small>{maps.teams.get(user.teamId) || 'No team'}</small></div>
-                  <div><span className="admin-mobile-label">Access</span><RoleScopeList roles={user.roles} directory={directory} compact /></div>
-                  <Link className="admin-detail-link" to={user.status === 'pending_approval' ? `/admin/pending/${user.id}` : `/admin/users/${user.id}`} aria-label={`View ${user.fullName}`}>View</Link>
-                </article>
+                  <span className="admin-row-arrow" aria-hidden="true">→</span>
+                </Link>
               ))}
             </div>
           </section>}

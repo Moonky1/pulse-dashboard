@@ -36,6 +36,7 @@ export function WorkspacePage() {
         </div>
         {invitationAccepted && <p className="auth-workspace-notice auth-workspace-notice--success" role="status">Invitation accepted. Welcome to Pulse.</p>}
         {adminAccessNotice && <p className="auth-workspace-notice" role="status">{adminAccessNotice === 'denied' ? 'Your account does not have access to Administration.' : 'Pulse could not verify Administration access. Try again later.'}</p>}
+        {adminAccess.state === 'allowed' && <Link className="auth-workspace-people-link" to="/admin/staff-tree"><span className="auth-workspace-people-icon" aria-hidden="true"><i>SK</i><i>AR</i></span><span><strong>People</strong><small>Browse the directory and Staff Tree</small></span><b aria-hidden="true">→</b></Link>}
         <div className="auth-workspace-actions">
           {goAccess.state === 'allowed' && (canPractice(goAccess.capabilities) || canHost(goAccess.capabilities)) && <Link className="auth-workspace-destination auth-workspace-destination--go" to="/go"><img src={GO_ART.classic} alt="" /><span><strong>Pulse GO</strong><small>Practice and live games</small></span><b aria-hidden="true">→</b></Link>}
           {studioAccess.state === 'allowed' && <Link className="auth-workspace-destination auth-workspace-destination--studio" to="/studio"><img src={GO_ART.goal2} alt="" /><span><strong>Studio</strong><small>{canCreateStudioContent(studioAccess.permissionKeys) ? 'Create and manage training' : 'Browse training content'}</small></span><b aria-hidden="true">→</b></Link>}

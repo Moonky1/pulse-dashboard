@@ -15,7 +15,7 @@ test('Administration navigation and primary pages use staff-friendly product lan
   assert.match(shell, />Approvals</)
   assert.match(shell, />Invitations</)
   assert.match(shell, />Activity</)
-  assert.match(people, /Manage staff profiles, teams and access/)
+  assert.match(people, /Find teammates and see where they work across Pulse/)
   assert.match(people, /All statuses/)
   assert.match(approvals, /Awaiting approval/)
   assert.match(approvals, /Email verified/)

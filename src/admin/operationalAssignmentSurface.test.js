@@ -44,7 +44,7 @@ test('staff profile separates work details, position, campaign assignments, and 
   assert.match(assignments, /Campaign assignments/)
   assert.match(assignments, /Campaign-wide/)
   assert.match(assignments, /Historical/)
-  assert.match(assignments, /No campaign assignments yet/)
+  assert.match(assignments, /No campaigns assigned/)
   assert.match(assignments, /where this person works day to day/)
   assert.match(hook, /getUserOperationalAssignments\(supabase, userId\)/)
   assert.doesNotMatch(`${assignments}\n${hook}`, /createOperational|updateOperational|endOperational|\.from\(/)
