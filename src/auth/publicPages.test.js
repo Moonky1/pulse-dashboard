@@ -78,3 +78,29 @@ test('the browser mark uses the Pulse metallic ring identity', async () => {
   assert.match(favicon, /id="pulse"/)
   assert.doesNotMatch(favicon, /vite|lightning/i)
 })
+
+test('the shared Pulse orb uses size-aware optical motion with a static reduced-motion state', async () => {
+  const [orb, styles, publicShell, authShell, workspace, goShell, studioShell, adminShell] = await Promise.all([
+    read('../components/ui/PulseOrb.jsx'),
+    read('../components/ui/ui.css'),
+    read('./components/PublicSiteShell.jsx'),
+    read('./components/AuthShell.jsx'),
+    read('./screens/WorkspacePage.jsx'),
+    read('../go-product/GoShell.jsx'),
+    read('../studio/StudioShell.jsx'),
+    read('../admin/components/AdminShell.jsx'),
+  ])
+
+  assert.match(orb, /pulse-orb__rim/)
+  assert.match(orb, /pulse-orb__flow/)
+  assert.match(styles, /--pulse-orb-primary-arc/)
+  assert.match(styles, /--orb-motion-duration: 20s/)
+  assert.match(styles, /\.pulse-orb--sm \.pulse-orb__spill \{ display: none; \}/)
+  assert.match(styles, /:where\(a, button\):focus-visible \.pulse-orb/)
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/)
+  assert.doesNotMatch(styles, /rotate\((?:132|226|229|294|298|340|346)deg\)/)
+
+  for (const surface of [publicShell, authShell, workspace, goShell, studioShell, adminShell]) {
+    assert.match(surface, /PulseOrb|<Brand/)
+  }
+})
