@@ -70,6 +70,23 @@ test('Staff entry and Workspace use finished product language', async () => {
   assert.doesNotMatch(`${shell}\n${workspace}`, /authenticated foundation|foundation ready|future checkpoint|internal platform|One identity/i)
 })
 
+test('invitation acceptance has concise progress and a one-time workspace welcome', async () => {
+  const [callback, workspace, styles] = await Promise.all([
+    read('./screens/AuthCallbackPage.jsx'),
+    read('./screens/WorkspacePage.jsx'),
+    read('./styles/auth.css'),
+  ])
+
+  assert.match(callback, /pulse_staff_invitation_id/)
+  assert.match(callback, /Accepting your invitation/)
+  assert.match(callback, /Preparing your place in Pulse/)
+  assert.match(callback, /invitationAccepted: true/)
+  assert.match(workspace, /Invitation accepted\. Welcome to Pulse\./)
+  assert.match(workspace, /state: null/)
+  assert.match(styles, /auth-workspace-notice--success/)
+  assert.doesNotMatch(`${callback}\n${workspace}`, /updateUser|verifyOtp|exchangeCodeForSession|acceptOwnStaffInvitation/)
+})
+
 test('the browser mark uses the Pulse metallic ring identity', async () => {
   const favicon = await read('../../public/favicon.svg')
 
