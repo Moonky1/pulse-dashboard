@@ -3,51 +3,62 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="supported-color-schemes" content="dark">
     <title>You’re invited to Pulse</title>
     <style>
       @media only screen and (max-width: 600px) {
-        .pulse-shell { padding: 20px 10px !important; }
-        .pulse-card-cell { padding-left: 24px !important; padding-right: 24px !important; }
-        .pulse-title { font-size: 30px !important; }
+        .pulse-shell { padding: 16px 8px !important; }
+        .pulse-card-cell { padding-left: 22px !important; padding-right: 22px !important; }
+        .pulse-title { font-size: 30px !important; line-height: 1.13 !important; }
+        .pulse-action-cell { width: 100% !important; }
         .pulse-action { display: block !important; text-align: center !important; }
       }
     </style>
   </head>
-  <body style="margin:0;background:#060910;color:#f5f7ff;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">Your personal invitation to join Kampaign Kings in Pulse.</div>
-    <table class="pulse-shell" role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#060910;padding:36px 16px;">
+  <body style="margin:0;background:#070a10;color:#f7f9ff;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">Your personal invitation to join Kampaign Kings in Pulse expires in 72 hours.</div>
+    <table class="pulse-shell" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#070a10;padding:36px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;border:1px solid #242b3a;border-radius:20px;background:#101622;box-shadow:0 24px 70px rgba(0,0,0,.35);">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:560px;border:1px solid #273044;border-radius:20px;background:#111722;">
             <tr>
-              <td class="pulse-card-cell" style="padding:36px 40px 18px;">
-                <table role="presentation" cellspacing="0" cellpadding="0">
+              <td class="pulse-card-cell" style="padding:34px 40px 20px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#dce8ff,#607399 36%,#080b11 66%);padding:3px;">
-                      <div style="width:28px;height:28px;border-radius:50%;background:#05070b;border:1px solid #dfe8f5;"></div>
+                    <td width="36" height="36" align="center" valign="middle" style="width:36px;height:36px;border:1px solid #8898bd;border-radius:50%;background:#171d29;box-shadow:inset 0 0 0 4px #090c12;">
+                      <span style="display:block;width:20px;height:20px;border:1px solid #dce5f7;border-radius:50%;background:#070a10;font-size:1px;line-height:20px;">&nbsp;</span>
                     </td>
-                    <td style="padding-left:12px;color:#ffffff;font-size:17px;font-weight:750;letter-spacing:-.02em;">Pulse</td>
+                    <td style="padding-left:12px;color:#ffffff;font-size:17px;font-weight:700;letter-spacing:-.02em;">Pulse</td>
                   </tr>
                 </table>
               </td>
             </tr>
             <tr>
               <td class="pulse-card-cell" style="padding:18px 40px 40px;">
-                <p style="margin:0 0 12px;color:#9cadd1;font-size:11px;font-weight:750;letter-spacing:.14em;text-transform:uppercase;">Kampaign Kings</p>
-                <p style="margin:0 0 14px;color:#dce4f5;font-size:16px;line-height:1.5;">{{ if .Data.full_name }}Hi {{ .Data.full_name }},{{ else }}Hi there,{{ end }}</p>
+                <p style="margin:0 0 12px;color:#9fb1d8;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;">Kampaign Kings</p>
+                <p style="margin:0 0 14px;color:#dce4f3;font-size:16px;line-height:1.5;">{{ if .Data.full_name }}Hi {{ .Data.full_name }},{{ else }}Hi there,{{ end }}</p>
                 <h1 class="pulse-title" style="margin:0;color:#ffffff;font-size:36px;line-height:1.12;letter-spacing:-.045em;">Your place in Pulse is ready.</h1>
-                <p style="margin:20px 0 12px;color:#c1cadb;font-size:16px;line-height:1.65;">You’ve been invited to join the Kampaign Kings workspace in Pulse.</p>
-                <p style="margin:0 0 28px;color:#8f9bb1;font-size:14px;line-height:1.65;">Learn, create, and stay connected with your team—all in one place.</p>
-                <a class="pulse-action" href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 24px;border-radius:11px;background:#f7f9ff;color:#111824;font-size:15px;font-weight:750;text-decoration:none;box-shadow:0 10px 28px rgba(0,0,0,.24);">Accept your invitation</a>
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:30px;border-top:1px solid #242b3a;">
+                <p style="margin:20px 0 26px;color:#c2ccdc;font-size:16px;line-height:1.65;">You’ve been invited to join the Kampaign Kings workspace in Pulse.</p>
+                <table class="pulse-action-cell" role="presentation" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td style="padding-top:22px;color:#7f8ba2;font-size:12px;line-height:1.65;">This invitation is personal and expires in 72 hours. Pulse will never ask you to share this link or your password. If you weren’t expecting this invitation, you can safely ignore it.</td>
+                    <td align="center" bgcolor="#f7f9ff" style="border-radius:11px;background:#f7f9ff;">
+                      <a class="pulse-action" href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 24px;border:1px solid #f7f9ff;border-radius:11px;background:#f7f9ff;color:#111824;font-size:15px;font-weight:700;line-height:1.2;text-decoration:none;">Accept your invitation</a>
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;margin-top:30px;border-top:1px solid #273044;">
+                  <tr>
+                    <td style="padding-top:22px;">
+                      <p style="margin:0 0 9px;color:#b7c4dd;font-size:13px;font-weight:700;line-height:1.55;">This personal invitation expires in 72 hours.</p>
+                      <p style="margin:0;color:#8491a8;font-size:12px;line-height:1.65;">Pulse will never ask you to share this link or your password. If you weren’t expecting this invitation, you can safely ignore it.</p>
+                    </td>
                   </tr>
                 </table>
               </td>
             </tr>
             <tr>
-              <td class="pulse-card-cell" style="padding:20px 40px;border-top:1px solid #242b3a;color:#77839a;font-size:12px;">Pulse · Kampaign Kings</td>
+              <td class="pulse-card-cell" style="padding:20px 40px;border-top:1px solid #273044;color:#7f8ca3;font-size:12px;line-height:1.5;">Pulse · Kampaign Kings</td>
             </tr>
           </table>
         </td>
