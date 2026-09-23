@@ -70,12 +70,19 @@ test('default Staff Tree omits empty catalog branches while filters remain avail
   assert.equal(filtered.departments.flatMap((department) => department.teams).some((team) => team.id === 'team-empty'), false)
 })
 
-test('users outside the current catalog remain visible in unassigned branches', () => {
-  const users = [...STAFF_TREE_PROTOTYPE.users, { id: 'person-unassigned', fullName: 'Morgan Gray', status: 'pending_approval' }]
+test('active users outside the current catalog remain visible while non-Staff lifecycle states stay out of the Tree', () => {
+  const users = [
+    ...STAFF_TREE_PROTOTYPE.users,
+    { id: 'person-unassigned', fullName: 'Morgan Gray', status: 'active' },
+    { id: 'person-pending', fullName: 'Pending Person', status: 'pending_approval' },
+    { id: 'person-blocked', fullName: 'Blocked Person', status: 'blocked' },
+  ]
   const tree = buildStaffTreeV2(users, STAFF_TREE_PROTOTYPE.directory, STAFF_TREE_PROTOTYPE.relationships)
   const unassigned = tree.departments.at(-1)
   assert.equal(unassigned.name, 'No department assigned')
   assert.equal(unassigned.teams[0].people[0].fullName, 'Morgan Gray')
+  assert.equal(tree.peopleCount, STAFF_TREE_PROTOTYPE.users.length + 1)
+  assert.doesNotMatch(JSON.stringify(tree), /Pending Person|Blocked Person/)
 })
 
 test('malformed cyclic reporting input never hides a person', () => {

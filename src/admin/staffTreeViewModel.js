@@ -78,7 +78,7 @@ function enrichPeople(people, department, team, coverageByPerson) {
 export function buildStaffTreeV2(users = [], directory = {}, relationships = {}, catalog = {}) {
   const departments = [...(directory.departments ?? [])].sort((left, right) => compareNames(left.name, right.name))
   const teams = [...(directory.teams ?? [])].sort((left, right) => compareNames(left.name, right.name))
-  const sortedUsers = [...users].sort((left, right) => compareNames(left.fullName, right.fullName))
+  const sortedUsers = users.filter((user) => user.status === 'active').sort((left, right) => compareNames(left.fullName, right.fullName))
   const primaryRelationships = relationships.reporting ?? []
   const coverageByPerson = new Map()
 

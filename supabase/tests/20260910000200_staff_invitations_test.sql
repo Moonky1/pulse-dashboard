@@ -149,9 +149,7 @@ reset role;
 select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claim.role','authenticated',true);
 set local role authenticated;
-select ok((select delivery_required from public.claim_staff_invitation_resend((select invitation_id from public.list_staff_invitations(null,50) where email='failed@example.test'),(select updated_at from public.list_staff_invitations(null,50) where email='failed@example.test'),'ac120000-0000-4000-8000-000000000023')),'failed delivery can be retried with a fresh claim');
-select ok((select expires_at between now()+interval '71 hours 59 minutes' and now()+interval '72 hours 1 minute' from public.list_staff_invitations(null,50) where email='failed@example.test'),'resend renews validity from server time for 72 hours');
-select ok(not (select delivery_required from public.claim_staff_invitation_resend((select invitation_id from public.list_staff_invitations(null,50) where email='failed@example.test'),(select updated_at from public.list_staff_invitations(null,50) where email='failed@example.test'),'ac120000-0000-4000-8000-000000000023')),'duplicate resend request is idempotent');
+select throws_ok($$select * from public.claim_staff_invitation_resend((select invitation_id from public.list_staff_invitations(null,50) where email='failed@example.test'),(select updated_at from public.list_staff_invitations(null,50) where email='failed@example.test'),'ac120000-0000-4000-8000-000000000023')$$,'55000',null,'failed delivery is terminal and requires a new invitation');
 
 select set_config('request.jwt.claim.sub','aa120000-0000-4000-8000-000000000002',true);
 set local role authenticated;

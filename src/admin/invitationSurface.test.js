@@ -10,15 +10,18 @@ const providerUrl = new URL('../auth/AuthProvider.jsx', import.meta.url)
 const templateUrl = new URL('../../supabase/templates/invite.html', import.meta.url)
 const supabaseConfigUrl = new URL('../../supabase/config.toml', import.meta.url)
 
-test('Admin invitation surface uses protected contracts and guarded send, resend, revoke actions', async () => {
+test('Admin invitation surface uses protected contracts and distinct re-invite, resend, revoke actions', async () => {
   const [page, dialog, api] = await Promise.all([readFile(pageUrl, 'utf8'), readFile(dialogUrl, 'utf8'), readFile(apiUrl, 'utf8')])
   assert.match(page, /Staff invitations/)
   assert.match(page, /Invite Staff/)
   assert.match(page, /resendStaffInvitation/)
   assert.match(page, /revokeStaffInvitation/)
+  assert.match(page, /reinviteStaffInvitation/)
+  assert.match(page, />Re-invite</)
   assert.match(dialog, /valid for 72 hours/)
   assert.match(dialog, /Personal details/)
   assert.match(dialog, /Work details/)
+  assert.match(dialog, /Operating Unit/)
   assert.match(dialog, /Pulse access/)
   assert.match(page, /Invitation prepared\. Delivery is pending\./)
   assert.match(dialog, /addEventListener\('cancel'/)
@@ -49,6 +52,8 @@ test('Staff invitation email has a branded, truthful and portable HTML template'
 test('trusted delivery stays in the Edge Function and is disabled by default', async () => {
   const [edge, provider] = await Promise.all([readFile(edgeUrl, 'utf8'), readFile(providerUrl, 'utf8')])
   assert.match(edge, /inviteUserByEmail/)
+  assert.match(edge, /signInWithOtp/)
+  assert.match(edge, /shouldCreateUser: false/)
   assert.match(edge, /PULSE_INVITATION_DELIVERY_MODE/)
   assert.match(edge, /deliveryMode !== 'supabase'/)
   assert.match(edge, /SUPABASE_SECRET_KEY/)
