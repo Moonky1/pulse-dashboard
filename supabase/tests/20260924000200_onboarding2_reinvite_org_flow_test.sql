@@ -1,5 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
+set local search_path = public, extensions, pg_catalog;
 select no_plan();
 
 select has_column('public','staff_invitations','campaign_id','invitation stores operational Campaign separately');
@@ -7,6 +8,8 @@ select has_column('public','staff_invitations','operating_unit_id','invitation s
 select has_column('public','staff_invitations','previous_invitation_id','new invitation can reference immutable terminal history');
 select ok(has_function_privilege('authenticated','public.claim_staff_invitation_send_v2(text,text,uuid,uuid,uuid,uuid,uuid,uuid,text,uuid,uuid,uuid,uuid,uuid)','EXECUTE'),'only authenticated operators can reach the V2 claim boundary');
 select ok(not has_function_privilege('anon','public.claim_staff_invitation_send_v2(text,text,uuid,uuid,uuid,uuid,uuid,uuid,text,uuid,uuid,uuid,uuid,uuid)','EXECUTE'),'anonymous callers cannot claim invitations');
+select ok(not has_table_privilege('authenticated','public.staff_invitations','INSERT'),'authenticated clients cannot bypass the server-owned invitation boundary');
+select ok(exists(select 1 from pg_indexes where schemaname='public' and tablename='staff_invitations' and indexname='staff_invitations_active_email_unique'),'one-active-invitation concurrency invariant is enforced by a unique index');
 
 insert into public.business_areas(id,code,name) values ('0b020000-0000-4000-8000-000000000001','onboarding2_ops','ONBOARDING-2 Operations');
 insert into public.departments(id,business_area_id,code,name,is_active) values ('0d020000-0000-4000-8000-000000000001','0b020000-0000-4000-8000-000000000001','onboarding2_people','ONBOARDING-2 People',true);
@@ -74,6 +77,35 @@ select ok(public.complete_staff_invitation_delivery(
 ),'exact reconciled Auth identity completes delivery');
 reset role;
 
+update public.staff_invitations set expires_at=now()+interval '5 minutes' where request_key='05020000-0000-4000-8000-000000000002';
+select set_config('onboarding2.invitation_id',(select id::text from public.staff_invitations where request_key='05020000-0000-4000-8000-000000000002'),true);
+select set_config('onboarding2.updated_at',(select updated_at::text from public.staff_invitations where request_key='05020000-0000-4000-8000-000000000002'),true);
+select set_config('request.jwt.claim.sub','01020000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+select ok((select delivery_required from public.claim_staff_invitation_resend_v2(
+  current_setting('onboarding2.invitation_id')::uuid,
+  current_setting('onboarding2.updated_at')::timestamptz,
+  '05020000-0000-4000-8000-000000000005'
+)),'Resend reuses the current invitation and starts a fresh delivery claim');
+reset role;
+select ok((select expires_at>now()+interval '71 hours' from public.staff_invitations where request_key='05020000-0000-4000-8000-000000000002'),'Resend renews the certified 72-hour acceptance window');
+select set_config('onboarding2.delivery_claim_id',(select delivery_claim_id::text from public.staff_invitations where request_key='05020000-0000-4000-8000-000000000002'),true);
+select set_config('request.jwt.claim.role','service_role',true);
+set local role service_role;
+select ok(public.complete_staff_invitation_delivery(
+ current_setting('onboarding2.invitation_id')::uuid,
+ current_setting('onboarding2.delivery_claim_id')::uuid,true,
+ '01020000-0000-4000-8000-000000000002',null
+),'resent invitation completes against the same exact Auth identity');
+reset role;
+
+select set_config('request.jwt.claim.sub','01020000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+select is((select count(*) from public.accept_own_staff_invitation()),0::bigint,'wrong Auth identity cannot accept another person''s invitation');
+reset role;
+
 select set_config('request.jwt.claim.sub','01020000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claim.role','authenticated',true);
 set local role authenticated;
@@ -89,6 +121,36 @@ select throws_ok($$select * from public.claim_staff_invitation_send_v2(
  '10000000-0000-0000-0000-000000000001','global',null,null,null,'05020000-0000-4000-8000-000000000004',null
 )$$,'23505',null,'accepted active Staff cannot be re-invited');
 reset role;
+
+insert into public.staff_invitations(
+ id,email_normalized,full_name,status,expires_at,created_by_user_id,department_id,campaign_id,operating_unit_id,team_id,position_id,
+ role_id,scope_type,request_key,sent_at
+) values (
+ '04020000-0000-4000-8000-000000000010','onboarding2.expired@example.test','Expired Person','expired',now()-interval '1 hour',
+ '02020000-0000-4000-8000-000000000001','0d020000-0000-4000-8000-000000000001','0c020000-0000-4000-8000-000000000001',
+ '0e020000-0000-4000-8000-000000000001','0f020000-0000-4000-8000-000000000001','0a020000-0000-4000-8000-000000000001',
+ '10000000-0000-0000-0000-000000000001','global','05020000-0000-4000-8000-000000000010',now()-interval '73 hours'
+);
+select set_config('request.jwt.claim.sub','01020000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claim.role','authenticated',true);
+set local role authenticated;
+select ok((select delivery_required from public.claim_staff_invitation_send_v2(
+ 'onboarding2.expired@example.test','Expired Reinvited','0d020000-0000-4000-8000-000000000001','0c020000-0000-4000-8000-000000000001',
+ '0e020000-0000-4000-8000-000000000001','0f020000-0000-4000-8000-000000000001','0a020000-0000-4000-8000-000000000001',
+ '10000000-0000-0000-0000-000000000001','global',null,null,null,'05020000-0000-4000-8000-000000000011','04020000-0000-4000-8000-000000000010'
+)),'expired invitation allows a distinct new invitation');
+reset role;
+select is((select count(*) from public.staff_invitations where email_normalized='onboarding2.expired@example.test'),2::bigint,'expired history remains while the new invitation is created');
+select set_config('onboarding2.expired_new_id',(select id::text from public.staff_invitations where request_key='05020000-0000-4000-8000-000000000011'),true);
+select set_config('onboarding2.expired_claim_id',(select delivery_claim_id::text from public.staff_invitations where request_key='05020000-0000-4000-8000-000000000011'),true);
+select set_config('request.jwt.claim.role','service_role',true);
+set local role service_role;
+select ok(public.complete_staff_invitation_delivery(
+ current_setting('onboarding2.expired_new_id')::uuid,
+ current_setting('onboarding2.expired_claim_id')::uuid,false,null,'delivery_deferred'
+),'deferred delivery closes the claimed attempt safely');
+reset role;
+select is((select status from public.staff_invitations where request_key='05020000-0000-4000-8000-000000000011'),'failed','deferred delivery leaves a terminal record eligible for a later re-invite');
 
 select * from finish();
 rollback;
