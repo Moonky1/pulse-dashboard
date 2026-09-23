@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-set local search_path = public, extensions, pg_catalog;
+select set_config('search_path','public,'||(select extnamespace::regnamespace::text from pg_extension where extname='pgtap')||',pg_catalog',true);
 select no_plan();
 
 select has_column('public','staff_invitations','campaign_id','invitation stores operational Campaign separately');
