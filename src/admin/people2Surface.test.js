@@ -18,10 +18,12 @@ test('Team Profile is protected, relational, and links back to authoritative Sta
 })
 
 test('Staff work and Pulse access use separate protected controls', async () => {
-  const [profile, work, access, api] = await files([
+  const [profile, work, access, roleDialog, styles, api] = await files([
     './pages/AdminUserDetailPage.jsx',
     './components/WorkDetailsAdministration.jsx',
     './components/RoleAdministration.jsx',
+    './components/RoleActionDialog.jsx',
+    './styles/admin.css',
     './api/adminApi.js',
   ])
   assert.match(profile, /WorkDetailsAdministration/)
@@ -29,6 +31,13 @@ test('Staff work and Pulse access use separate protected controls', async () => 
   assert.match(work, /updateManagedUserWorkDetails/)
   assert.match(work, /Position and operational placement are separate from Pulse access/)
   assert.match(access, /replaceManagedUserRole/)
+  assert.match(work, /admin-dialog admin-dialog--wide admin-work-details-dialog/)
+  assert.match(roleDialog, /admin-dialog admin-dialog--wide/)
+  assert.match(roleDialog, /admin-dialog__actions--destructive/)
+  assert.match(styles, /admin-dialog__surface\{[^}]*overflow-x:hidden;overflow-y:auto/)
+  assert.match(styles, /admin-dialog \.admin-role-field>select[^}]*width:100%/)
+  assert.match(styles, /admin-dialog__actions\{position:sticky/)
+  assert.doesNotMatch(styles, /admin-work-details-dialog\{width:/)
   assert.match(api, /rpc\('update_staff_work_details'/)
   assert.match(api, /rpc\('replace_user_role'/)
   assert.doesNotMatch(`${work}\n${access}`, /\.from\(/)

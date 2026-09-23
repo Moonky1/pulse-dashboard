@@ -60,7 +60,7 @@ export function RoleActionDialog({ action, user, directory, roleOptions, submitt
   return (
     <dialog
       ref={dialogRef}
-      className="admin-dialog"
+      className="admin-dialog admin-dialog--wide"
       aria-labelledby="role-dialog-title"
       aria-describedby="role-dialog-description"
       onCancel={(event) => { event.preventDefault(); cancel() }}
@@ -89,7 +89,7 @@ export function RoleActionDialog({ action, user, directory, roleOptions, submitt
         {privileged && <div className="admin-dialog__warning" role="note"><strong>Super Admin access</strong><span>This grants broad control across Pulse. Review the person and access area carefully.</span></div>}
         {editsAssignment && !assignmentRequest && <p className="admin-dialog__error" role="alert">This role is not available for the selected access area.</p>}
         {error && <p className="admin-dialog__error" role="alert">{error.message}</p>}
-        <div className="admin-dialog__actions">
+        <div className={action.type === 'remove' ? 'admin-dialog__actions admin-dialog__actions--destructive' : 'admin-dialog__actions'}>
           <Button type="button" variant="secondary" disabled={submitting} onClick={cancel}>Cancel</Button>
           <Button type="submit" variant={action.type === 'remove' ? 'destructive' : 'primary'} loading={submitting} disabled={editsAssignment && !assignmentRequest}>{action.type === 'assign' ? 'Add access' : action.type === 'change' ? 'Save changes' : 'Remove access'}</Button>
         </div>

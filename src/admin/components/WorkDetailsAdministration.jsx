@@ -50,8 +50,8 @@ function WorkDetailsDialog({ user, catalog, submitting, error, onCancel, onSave 
   }
 
   return (
-    <dialog ref={dialogRef} className="admin-dialog" aria-labelledby="work-details-dialog-title" onCancel={(event) => { event.preventDefault(); cancel() }} onClick={(event) => { if (event.target === event.currentTarget) cancel() }}>
-      <form className="admin-dialog__surface admin-work-details-dialog" method="dialog" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
+    <dialog ref={dialogRef} className="admin-dialog admin-dialog--wide admin-work-details-dialog" aria-labelledby="work-details-dialog-title" onCancel={(event) => { event.preventDefault(); cancel() }} onClick={(event) => { if (event.target === event.currentTarget) cancel() }}>
+      <form className="admin-dialog__surface" method="dialog" onSubmit={submit} onClick={(event) => event.stopPropagation()}>
         <div className="admin-dialog__eyebrow">Staff profile</div>
         <h2 id="work-details-dialog-title">Edit work details</h2>
         <div className="admin-dialog__target"><strong>{user.fullName}</strong><span>Position and operational placement are separate from Pulse access</span></div>
