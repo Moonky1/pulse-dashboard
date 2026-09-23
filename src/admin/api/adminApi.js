@@ -238,6 +238,9 @@ export function normalizeManagedUser(row = {}) {
     primaryTeamId: row.primary_team_id ?? null,
     primaryTeamCode: row.primary_team_code ?? null,
     primaryTeamName: row.primary_team_name ?? null,
+    googleAvatarUrl: row.google_avatar_url ?? null,
+    customAvatarPath: row.custom_avatar_path ?? null,
+    avatarUpdatedAt: row.avatar_updated_at ?? null,
     authEmailConfirmed: Boolean(row.auth_email_confirmed),
     roles: Array.isArray(row.roles) ? row.roles.map(normalizeRole) : [],
   }

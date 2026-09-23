@@ -9,6 +9,8 @@ import { GO_ART } from '../../go-product/goVisualAssets.js'
 import { useGoAccess } from '../../go-product/useGoAccess.js'
 import { Badge } from '../../components/ui/Badge.jsx'
 import { Button } from '../../components/ui/Button.jsx'
+import { AvatarControls } from '../../components/AvatarControls.jsx'
+import { StaffAvatar } from '../../components/StaffAvatar.jsx'
 import { useAuth } from '../AuthProvider.jsx'
 import { Brand } from '../components/AuthShell.jsx'
 
@@ -29,6 +31,7 @@ export function WorkspacePage() {
       <header><Brand compact /><Button type="button" variant="ghost" onClick={signOut}>Sign out</Button></header>
       <section className="auth-workspace-card">
         <div className="auth-workspace-intro">
+          <div className="auth-workspace-identity"><StaffAvatar name={profile?.display_name || profile?.full_name} customAvatarPath={profile?.custom_avatar_path} googleAvatarUrl={profile?.google_avatar_url} avatarUpdatedAt={profile?.avatar_updated_at} size="lg" /><AvatarControls compact /></div>
           <Badge tone="success" dot>Ready</Badge>
           <p className="auth-eyebrow">Workspace</p>
           <h1>Welcome back, {profile?.display_name || profile?.full_name}</h1>

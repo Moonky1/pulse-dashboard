@@ -15,7 +15,7 @@ function MemberCard({ member, directory }) {
   const destination = member.status === 'pending_approval' ? `/admin/pending/${member.id}` : `/admin/users/${member.id}`
   return (
     <Link className="admin-team-member" to={destination}>
-      <StaffAvatar name={member.fullName} />
+      <StaffAvatar name={member.fullName} customAvatarPath={member.customAvatarPath} googleAvatarUrl={member.googleAvatarUrl} avatarUpdatedAt={member.avatarUpdatedAt} />
       <span className="admin-team-member__identity"><strong>{member.fullName}</strong><small>{member.positionName || 'Position not assigned'}</small></span>
       <RoleScopeList roles={member.roles} directory={directory} compact />
       <LifecycleBadge status={member.status} />

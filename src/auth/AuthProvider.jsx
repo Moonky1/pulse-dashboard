@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
 import { supabase } from '../utils/supabase.js'
-import { acceptOwnStaffInvitation, createPendingProfile, getPendingProfileName, loadOwnProfile, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword } from './pulseAuthService.js'
+import { acceptOwnStaffInvitation, createPendingProfile, getPendingProfileName, loadOwnProfile, refreshOwnGoogleAvatar, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword } from './pulseAuthService.js'
 import { deriveAuthState } from './authState.js'
 
 const AuthContext = createContext(null)
@@ -55,6 +55,10 @@ export function AuthProvider({ children, client = supabase }) {
       else if (accepted.data?.status === 'reissue_required') {
         setInvitationNotice('This Staff invitation can no longer be accepted. Ask an authorized administrator to issue a new invitation.')
       }
+    }
+    if (result.data) {
+      const avatarRefresh = await refreshOwnGoogleAvatar(client)
+      if (!avatarRefresh.error) result = await loadOwnProfile(client, nextSession.user.id)
     }
     if (currentRequest !== requestId.current) return null
 
