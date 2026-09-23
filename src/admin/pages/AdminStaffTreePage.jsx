@@ -15,7 +15,7 @@ function PersonCard({ person }) {
   const destination = person.status === 'pending_approval' ? `/admin/pending/${person.id}` : `/admin/users/${person.id}`
   return (
     <Link className="admin-tree-person" to={destination} aria-label={`Open ${person.fullName}'s staff profile`}>
-      <StaffAvatar name={person.fullName} size="sm" />
+      <StaffAvatar name={person.fullName} customAvatarPath={person.customAvatarPath} googleAvatarUrl={person.googleAvatarUrl} avatarUpdatedAt={person.avatarUpdatedAt} size="sm" />
       <span className="admin-tree-person__identity">
         <strong>{person.fullName}</strong>
         <small>{person.positionName || 'Position not assigned'}</small>

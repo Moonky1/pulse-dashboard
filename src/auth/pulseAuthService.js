@@ -1,6 +1,6 @@
 import { STAFF_OAUTH_PROVIDER } from './staffOAuth.js'
 
-const PROFILE_FIELDS = 'id, auth_user_id, email, full_name, display_name, employee_id, department_id, team_id, status, approved_at, created_at, updated_at'
+const PROFILE_FIELDS = 'id, auth_user_id, email, full_name, display_name, employee_id, department_id, team_id, status, approved_at, google_avatar_url, custom_avatar_path, avatar_updated_at, created_at, updated_at'
 
 export function normalizeEmail(value) {
   return String(value ?? '').trim().toLowerCase()
@@ -56,6 +56,11 @@ export function signInWithGoogle(client, { redirectTo }) {
       queryParams: { prompt: 'select_account' },
     },
   })
+}
+
+export async function refreshOwnGoogleAvatar(client) {
+  const { data, error } = await client.rpc('refresh_own_google_avatar')
+  return { data: Array.isArray(data) ? (data[0] ?? null) : data, error }
 }
 
 export function signUpWithPassword(client, { fullName, email, password, emailRedirectTo }) {

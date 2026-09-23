@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 
 import { Button } from '../../components/ui/Button.jsx'
 import { PulseOrb } from '../../components/ui/PulseOrb.jsx'
+import { StaffAvatar } from '../../components/StaffAvatar.jsx'
 import { useAuth } from '../../auth/AuthProvider.jsx'
 import { canInviteStaff, canViewAudit, canViewCampaigns, canViewDepartments, canViewPositions, canViewTeams, hasAdminUsersAccess } from '../access.js'
 import { useAdminPermissions } from '../AdminAccessContext.js'
@@ -33,8 +34,7 @@ export function AdminShell() {
         </nav>
         <div className="admin-identity">
           <span>Signed in as</span>
-          <strong>{profile?.display_name || profile?.full_name}</strong>
-          <small>{profile?.employee_id}</small>
+          <div><StaffAvatar name={profile?.display_name || profile?.full_name} customAvatarPath={profile?.custom_avatar_path} googleAvatarUrl={profile?.google_avatar_url} avatarUpdatedAt={profile?.avatar_updated_at} size="sm" /><span><strong>{profile?.display_name || profile?.full_name}</strong><small>{profile?.employee_id}</small></span></div>
         </div>
       </aside>
       <div className="admin-main">

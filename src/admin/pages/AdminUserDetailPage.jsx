@@ -2,6 +2,8 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-route
 
 import { Badge } from '../../components/ui/Badge.jsx'
 import { Card } from '../../components/ui/Card.jsx'
+import { AvatarControls } from '../../components/AvatarControls.jsx'
+import { useAuth } from '../../auth/AuthProvider.jsx'
 import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canManageStaffWork, canManageUsers, canViewOperationalAssignments, canViewUserHistory } from '../access.js'
 import { useAdminPermissions } from '../AdminAccessContext.js'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
@@ -33,6 +35,7 @@ export function AdminUserDetailPage({ pendingOnly = false }) {
   })
   const pendingApprovalOptions = usePendingApprovalOptions(userId, { enabled: pendingOnly })
   const { permissionKeys } = useAdminPermissions()
+  const { profile } = useAuth()
   const assignmentsAccess = canViewOperationalAssignments(permissionKeys)
   const operationalAssignments = useOperationalAssignments(userId, { enabled: assignmentsAccess })
   if (loading && !user) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading user" body="Getting the latest user details…" /></main>
@@ -46,7 +49,7 @@ export function AdminUserDetailPage({ pendingOnly = false }) {
     <main className="admin-content">
       <Link className="admin-back-link" to={pendingOnly ? '/admin/pending' : '/admin/users'}>← Back to {pendingOnly ? 'approvals' : 'people'}</Link>
       <section className="admin-profile-hero">
-        <StaffAvatar name={user.fullName} size="lg" />
+        <div className="admin-profile-hero__avatar"><StaffAvatar name={user.fullName} customAvatarPath={user.customAvatarPath} googleAvatarUrl={user.googleAvatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} size="lg" />{profile?.id === user.id && <AvatarControls compact onChanged={refresh} />}</div>
         <div className="admin-profile-hero__identity"><p>Staff profile</p><h1>{user.fullName}</h1><span>{user.employeeId || 'Employee ID pending'}</span></div>
         <dl className="admin-profile-hero__work"><Detail label="Position">{user.positionName}</Detail><Detail label="Team">{user.primaryTeamName ? <TeamBadge teamId={user.primaryTeamId} name={user.primaryTeamName} code={user.primaryTeamCode} campaignCode={user.primaryCampaignCode} /> : 'Not assigned'}</Detail><Detail label="Campaign">{user.primaryCampaignName}</Detail></dl>
         <LifecycleBadge status={user.status} />
