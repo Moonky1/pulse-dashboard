@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, getUserOperationalAssignments, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedPositions, listManagedTeams, listManagedUsers, listManagedUsersWithDetails, loadAssignableRoleOptions, loadBusinessCatalog, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, reactivateManagedUser, removeManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from './adminApi.js'
+import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, getUserOperationalAssignments, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedPositions, listManagedTeams, listManagedUsers, listManagedUsersWithDetails, loadAssignableRoleOptions, loadBusinessCatalog, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, normalizeWorkDetailsMutationError, reactivateManagedUser, removeManagedUserRole, replaceManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam, updateManagedUserWorkDetails } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -286,6 +286,98 @@ test('role removal addresses one exact assignment through its canonical RPC', as
     return { data: [{ user_role_id: ASSIGNMENT_ID, removed: true }], error: null }
   } }
   assert.deepEqual(await removeManagedUserRole(client, USER_ID, ASSIGNMENT_ID), { data: { userRoleId: ASSIGNMENT_ID, removed: true }, error: null })
+})
+
+test('role replacement uses one atomic server contract and preserves the exact scope', async () => {
+  const calls = []
+  const departmentId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  const client = { rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ old_user_role_id: ASSIGNMENT_ID, user_role_id: ROLE_ID, replaced: true, created: true }], error: null }
+  } }
+  const result = await replaceManagedUserRole(client, {
+    targetUserId: USER_ID,
+    targetUserRoleId: ASSIGNMENT_ID,
+    requestedRoleId: ROLE_ID,
+    requestedScopeType: 'department',
+    requestedDepartmentId: departmentId,
+  })
+  assert.deepEqual(result.data, { oldUserRoleId: ASSIGNMENT_ID, userRoleId: ROLE_ID, replaced: true, created: true })
+  assert.deepEqual(calls, [{ name: 'replace_user_role', args: {
+    target_user_id: USER_ID,
+    target_user_role_id: ASSIGNMENT_ID,
+    requested_role_id: ROLE_ID,
+    requested_scope_type: 'department',
+    requested_department_id: departmentId,
+    requested_campaign_id: null,
+    requested_team_id: null,
+  } }])
+})
+
+test('role replacement rejects stale browser identifiers and unexpected server confirmation', async () => {
+  let calls = 0
+  const client = { rpc: async () => {
+    calls += 1
+    return { data: [{ old_user_role_id: ASSIGNMENT_ID, user_role_id: 'invalid', replaced: true, created: true }], error: null }
+  } }
+  assert.equal((await replaceManagedUserRole(client, { targetUserId: USER_ID, targetUserRoleId: 'bad', requestedRoleId: ROLE_ID, requestedScopeType: 'global' })).error.code, 'invalid_request')
+  assert.equal(calls, 0)
+  assert.equal((await replaceManagedUserRole(client, { targetUserId: USER_ID, targetUserRoleId: ASSIGNMENT_ID, requestedRoleId: ROLE_ID, requestedScopeType: 'global' })).error.code, 'unexpected_result')
+})
+
+test('Staff work details call only the protected RPC with relational identifiers', async () => {
+  const departmentId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  const campaignId = 'f5000000-0000-4000-8000-000000000001'
+  const operatingUnitId = 'f5000000-0000-4000-8000-000000000002'
+  const teamId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+  const positionId = 'f5000000-0000-4000-8000-000000000003'
+  const requestKey = 'f5000000-0000-4000-8000-000000000004'
+  const calls = []
+  const client = { rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ id: USER_ID, department_id: departmentId, position_id: positionId, primary_assignment_id: ASSIGNMENT_ID, campaign_id: campaignId, operating_unit_id: operatingUnitId, team_id: teamId, changed: true }], error: null }
+  } }
+  const result = await updateManagedUserWorkDetails(client, { targetUserId: USER_ID, departmentId, campaignId, operatingUnitId, teamId, positionId, requestKey })
+  assert.equal(result.data.changed, true)
+  assert.equal(result.data.teamId, teamId)
+  assert.deepEqual(calls, [{ name: 'update_staff_work_details', args: {
+    target_user_id: USER_ID,
+    requested_department_id: departmentId,
+    requested_campaign_id: campaignId,
+    requested_operating_unit_id: operatingUnitId,
+    requested_team_id: teamId,
+    requested_position_id: positionId,
+    request_key: requestKey,
+  } }])
+})
+
+test('Staff work details reject malformed relationships before the server call', async () => {
+  const departmentId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  const operatingUnitId = 'f5000000-0000-4000-8000-000000000002'
+  const requestKey = 'f5000000-0000-4000-8000-000000000004'
+  let calls = 0
+  const client = { rpc: async () => { calls += 1; return { data: [], error: null } } }
+  assert.equal((await updateManagedUserWorkDetails(client, { targetUserId: USER_ID, departmentId, operatingUnitId, requestKey })).error.code, 'invalid_relationship')
+  assert.equal((await updateManagedUserWorkDetails(client, { targetUserId: USER_ID, departmentId, campaignId: 'f5000000-0000-4000-8000-000000000001', requestKey })).error.code, 'invalid_relationship')
+  assert.equal((await updateManagedUserWorkDetails(client, { targetUserId: USER_ID, departmentId: 'bad', requestKey })).error.code, 'invalid_request')
+  assert.equal(calls, 0)
+})
+
+test('Staff work-details errors expose safe, actionable product messages', () => {
+  const cases = [
+    [{ code: '42501', message: 'permission SQL' }, 'access_denied'],
+    [{ code: 'P0002', message: 'missing row' }, 'not_found'],
+    [{ code: '55000', message: 'only active Staff' }, 'account_unavailable'],
+    [{ code: '23503', message: 'foreign key' }, 'catalog_invalid'],
+    [{ code: '23514', message: 'existing Department access conflict' }, 'access_conflict'],
+    [{ code: '23514', message: 'requested Team is outside unit' }, 'invalid_relationship'],
+    [{ code: 'XX000', message: 'sensitive SQL stack' }, 'unavailable'],
+  ]
+  cases.forEach(([error, code]) => {
+    const normalized = normalizeWorkDetailsMutationError(error)
+    assert.equal(normalized.code, code)
+    assert.doesNotMatch(normalized.message, /SQL|stack|foreign key/i)
+  })
 })
 
 test('role errors are sanitized for grant, scope, organization, self, and last-role protections', () => {

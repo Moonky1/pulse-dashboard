@@ -13,5 +13,5 @@ export function StudioShell({ children, confirmLeave = () => true }) {
 }
 
 export function StudioAccessState({ access }) {
-  return <StudioShell><section className="studio-empty" role="status"><h1>{access.state === 'loading' ? 'Opening Studio…' : access.state === 'denied' ? 'Studio is not available for this account.' : 'We couldn’t open Studio.'}</h1><p>{access.error?.message}</p><Link to="/workspace">Back to Workspace</Link></section></StudioShell>
+  return <StudioShell><section className="studio-empty" role="status"><h1>{access.state === 'loading' ? 'Opening Studio…' : access.state === 'denied' ? 'Studio is not available for this account' : 'We couldn’t open Studio'}</h1><p>{access.error?.message}</p><Link to="/workspace">Back to Workspace</Link></section></StudioShell>
 }

@@ -1,4 +1,5 @@
 import { roleScopeLabel } from '../adminViewModel.js'
+import { RoleBadge } from './RoleBadge.jsx'
 
 export function RoleScopeList({ roles = [], directory, compact = false }) {
   if (!roles.length) return <span className="admin-muted">No role assigned</span>
@@ -6,7 +7,7 @@ export function RoleScopeList({ roles = [], directory, compact = false }) {
     <ul className={`admin-role-list ${compact ? 'admin-role-list--compact' : ''}`}>
       {roles.map((role) => (
         <li key={role.userRoleId || `${role.roleId}-${role.scopeType}-${role.departmentId || role.campaignId || role.teamId || 'global'}`}>
-          <strong>{role.name}</strong><span>{roleScopeLabel(role, directory)}</span>
+          <RoleBadge role={role} /><span>{roleScopeLabel(role, directory)}</span>
         </li>
       ))}
     </ul>

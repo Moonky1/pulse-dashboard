@@ -40,7 +40,7 @@ export function StudioPage() {
   }
   return <StudioShell>
     <section className="studio-heading">
-      <div><p className="studio-eyebrow">Make room for a good idea</p><h1>Pulse Studio</h1><p>Create training your teams will actually use.</p></div>
+      <div><p className="studio-eyebrow">Make room for a good idea</p><h1>Pulse Studio</h1><p>Create training your teams will actually use</p></div>
       {access.capabilities?.can_create && <Link className="studio-primary" to="/studio/create">+ Create</Link>}
     </section>
     <section className="studio-library">
@@ -60,7 +60,7 @@ export function StudioPage() {
         <Button type="submit" variant="secondary">Search</Button>
       </form>
       <div aria-live="polite" className="studio-load-status">{catalog.loading ? 'Loading your library…' : catalog.error ? catalog.error.message : ''}</div>
-      {!catalog.loading && !catalog.error && !catalog.items.length && <div className="studio-empty"><span aria-hidden="true" className="studio-empty-symbol">✦</span><h2>Your next idea starts here.</h2><p>No items match this view. Create something new, or try another search.</p></div>}
+      {!catalog.loading && !catalog.error && !catalog.items.length && <div className="studio-empty"><span aria-hidden="true" className="studio-empty-symbol">✦</span><h2>Your next idea starts here</h2><p>No items match this view. Create something new, or try another search.</p></div>}
       <div className="studio-grid" aria-busy={catalog.loading}>
         {!catalog.loading && !catalog.error && catalog.items.map(item => <article className="studio-card" key={item.id}>
           <div className="studio-card__meta"><span>{typeLabel(item.content_type)}</span><span>{languageLabel(item.language)}</span></div>

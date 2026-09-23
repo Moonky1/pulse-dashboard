@@ -12,6 +12,17 @@ export function normalizeOrganizationForm({ code = '', name = '', description = 
   }
 }
 
+export function organizationCodeFromName(name = '') {
+  const code = String(name)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 32)
+  return /^[a-z]/.test(code) ? code : `team_${code}`.slice(0, 32)
+}
+
 export function validateOrganizationForm(values = {}) {
   const normalized = normalizeOrganizationForm(values)
   if (!/^[a-z][a-z0-9_]{1,31}$/.test(normalized.code)) {

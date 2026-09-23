@@ -38,17 +38,17 @@ export function GoPracticeSelection() {
   const options = useMemo(() => catalogOptions(catalog.items), [catalog.items])
   if (access.state !== 'allowed') return <GoAccessState access={access} />
   if (!canPractice(access.capabilities)) return <GoAccessState access={{ state: 'denied' }} />
-  if (!destination.allowed) return <GoShell><section className="go-state" role="status"><h1>Practice isn’t available here.</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
+  if (!destination.allowed) return <GoShell><section className="go-state" role="status"><h1>Practice isn’t available here</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
 
   return <GoShell>
-    <section className="go-page-heading go-page-heading--with-art"><div><p className="go-eyebrow">Practice</p><h1>Pick a challenge.</h1><p>Choose something to play.</p></div><img src={GO_ART.goal1} alt="" /></section>
+    <section className="go-page-heading go-page-heading--with-art"><div><p className="go-eyebrow">Practice</p><h1>Pick a challenge</h1><p>Choose something to play</p></div><img src={GO_ART.goal1} alt="" /></section>
     <section className="go-filterbar" aria-label="Practice filters">
       <label>Language<select value={filters.language} onChange={event => setFilters(value => ({ ...value, language: event.target.value }))}><option value="">All languages</option>{options.languages.map(language => <option key={language} value={language}>{language === 'es' ? 'Español' : 'English'}</option>)}</select></label>
       <label>Topic<select value={filters.topicId} onChange={event => setFilters(value => ({ ...value, topicId: event.target.value }))}><option value="">All topics</option>{options.topics.map(topic => <option key={topic.id} value={topic.id}>{topic.name}</option>)}</select></label>
       <Button variant="ghost" onClick={() => setFilters({ language: '', topicId: '' })}>Clear filters</Button>
     </section>
     <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding challenges…' : catalog.error?.message || ''}</div>
-    {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No practice is ready yet.</h2><p>Published quizzes and assessments you can access will appear here.</p></section>}
+    {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No practice is ready yet</h2><p>Published quizzes and assessments you can access will appear here.</p></section>}
     <section className="go-catalog" aria-busy={catalog.loading}>
       {!catalog.loading && catalog.items.map((item, index) => {
         const language = languagePresentation(item.language)

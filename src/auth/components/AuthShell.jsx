@@ -20,8 +20,8 @@ export function AuthShell({ eyebrow, title, description, children, footer, brand
         <div className="auth-brand-moment">
           <PulseOrb size="xl" active />
           <p className="auth-kicker">Kampaign Kings</p>
-          <h2>Your place to<br />learn and work.</h2>
-          <p>Everything you need, ready when you are.</p>
+          <h2>Your place to<br />learn and work</h2>
+          <p>Everything you need, ready when you are</p>
         </div>
       </section>
       <section className="auth-form-panel">

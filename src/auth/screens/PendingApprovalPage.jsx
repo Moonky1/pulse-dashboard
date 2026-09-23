@@ -12,7 +12,7 @@ export function PendingApprovalPage() {
       <Card level={2} className="auth-status-card">
         <div className="auth-status-orbit" aria-hidden="true"><span /></div>
         <Badge tone="pending" dot>Awaiting approval</Badge>
-        <h1>Your Pulse account is verified.</h1>
+        <h1>Your Pulse account is verified</h1>
         <p>Your account is waiting for company approval. You’ll be able to enter Pulse once it’s approved.</p>
         {invitationNotice && <p className="auth-form-error" role="alert">{invitationNotice}</p>}
         <dl className="auth-profile-summary">

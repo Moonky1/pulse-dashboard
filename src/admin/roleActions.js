@@ -17,6 +17,27 @@ export function roleOptionsForRole(options = [], roleId) {
   return options.filter((option) => option.roleId === roleId && ROLE_SCOPE_TYPES.includes(option.scopeType))
 }
 
+export function roleOptionsWithCurrent(options = [], assignment = null, directory = {}) {
+  if (!assignment?.roleId || !ROLE_SCOPE_TYPES.includes(assignment.scopeType)) return options
+  const departments = new Map((directory.departments ?? []).map((item) => [item.id, item.name]))
+  const teams = new Map((directory.teams ?? []).map((item) => [item.id, item.name]))
+  const current = {
+    roleId: assignment.roleId,
+    roleKey: assignment.key,
+    roleName: assignment.name,
+    scopeType: assignment.scopeType,
+    departmentId: assignment.departmentId ?? null,
+    departmentName: assignment.departmentId ? departments.get(assignment.departmentId) ?? null : null,
+    campaignId: assignment.campaignId ?? null,
+    campaignCode: assignment.campaignCode ?? null,
+    campaignName: assignment.campaignName ?? null,
+    teamId: assignment.teamId ?? null,
+    teamName: assignment.teamName ?? (assignment.teamId ? teams.get(assignment.teamId) ?? null : null),
+  }
+  const currentKey = roleOptionKey(current)
+  return [current, ...options.filter((option) => roleOptionKey(option) !== currentKey)]
+}
+
 export function organizationForRoleOption(option) {
   if (option?.scopeType === 'global') return { label: 'All Pulse', departmentId: null, campaignId: null, teamId: null, valid: true }
   if (option?.scopeType === 'department' && option.departmentId) return {

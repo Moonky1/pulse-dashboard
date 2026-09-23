@@ -59,6 +59,17 @@ test('search keeps reporting ancestors and department filter narrows the view', 
   assert.equal(qualityOnly.peopleCount, 2)
 })
 
+test('default Staff Tree omits empty catalog branches while filters remain available', () => {
+  const tree = buildStaffTreeV2(STAFF_TREE_PROTOTYPE.users, {
+    ...STAFF_TREE_PROTOTYPE.directory,
+    departments: [...STAFF_TREE_PROTOTYPE.directory.departments, { id: 'department-empty', name: 'Empty Department' }],
+    teams: [...STAFF_TREE_PROTOTYPE.directory.teams, { id: 'team-empty', departmentId: 'department-operations', name: 'Empty Team' }],
+  }, STAFF_TREE_PROTOTYPE.relationships)
+  const filtered = filterStaffTreeV2(tree)
+  assert.equal(filtered.departments.some((department) => department.id === 'department-empty'), false)
+  assert.equal(filtered.departments.flatMap((department) => department.teams).some((team) => team.id === 'team-empty'), false)
+})
+
 test('users outside the current catalog remain visible in unassigned branches', () => {
   const users = [...STAFF_TREE_PROTOTYPE.users, { id: 'person-unassigned', fullName: 'Morgan Gray', status: 'pending_approval' }]
   const tree = buildStaffTreeV2(users, STAFF_TREE_PROTOTYPE.directory, STAFF_TREE_PROTOTYPE.relationships)
@@ -78,4 +89,35 @@ test('malformed cyclic reporting input never hides a person', () => {
   const philippines = tree.departments[0].teams.find((team) => team.id === 'team-philippines')
   assert.deepEqual(philippines.roots.map((node) => node.person.fullName), ['Alex Rivera', 'Jordan Lee', 'Taylor Morgan'])
   assert.ok(philippines.roots.every((node) => node.reports.length === 0))
+})
+
+test('operational placement appears under the real Business Area without duplicating employment', () => {
+  const user = {
+    id: 'person-operational',
+    fullName: 'Simón',
+    status: 'active',
+    departmentId: 'department-corporate',
+    positionName: 'Team Lead',
+    primaryTeamId: 'team-asia-a',
+  }
+  const directory = {
+    departments: [{ id: 'department-corporate', name: 'Corporate' }],
+    teams: [],
+  }
+  const catalog = {
+    businessAreas: [{ id: 'area-operations', name: 'Operations' }],
+    campaigns: [{ id: 'campaign-garrett', code: 'auto_warranty_garrett', name: 'Auto Warranty Garrett' }],
+    operatingUnits: [{ id: 'unit-openers', name: 'Openers' }],
+    teams: [{ id: 'team-asia-a', businessAreaId: 'area-operations', campaignId: 'campaign-garrett', operatingUnitId: 'unit-openers', code: 'asia_team_a', name: 'Asia Team A' }],
+  }
+  const tree = buildStaffTreeV2([user], directory, {}, catalog)
+  assert.equal(tree.peopleCount, 1)
+  assert.equal(tree.departments.find((branch) => branch.name === 'Corporate').peopleCount, 0)
+  const operations = tree.departments.find((branch) => branch.name === 'Operations')
+  assert.equal(operations.kind, 'business_area')
+  assert.equal(operations.peopleCount, 1)
+  assert.equal(operations.teams[0].campaignName, 'Auto Warranty Garrett')
+  assert.equal(operations.teams[0].operatingUnitName, 'Openers')
+  assert.deepEqual(operations.teams[0].leadership.map((person) => person.fullName), ['Simón'])
+  assert.equal(tree.departments.reduce((count, branch) => count + branch.peopleCount, 0), 1)
 })

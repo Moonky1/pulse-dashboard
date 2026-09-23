@@ -37,7 +37,7 @@ test('staff profile keeps human sections and does not invent unavailable photo o
     './components/OperationalAssignments.jsx',
     '../auth/screens/WorkspacePage.jsx',
   ])
-  for (const label of ['Profile', 'Work details', 'Position', 'Pulse access', 'Account status']) assert.match(detail, new RegExp(label))
+  for (const label of ['Staff profile', 'Work details', 'Position', 'Pulse access', 'Account status']) assert.match(detail, new RegExp(label))
   assert.match(detail, /StaffAvatar/)
   assert.match(assignments, /No campaigns assigned/)
   assert.match(workspace, /Browse the directory and Staff Tree/)

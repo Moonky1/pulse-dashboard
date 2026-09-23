@@ -285,7 +285,7 @@ export default function Landing() {
         <section className="home-hero">
         <PulseBrandTitle />
 
-          <p className="home-subtitle">Performance intelligence for leaders.</p>
+          <p className="home-subtitle">Performance intelligence for leaders</p>
 
           <div className="home-actions">
             <button
@@ -316,7 +316,7 @@ export default function Landing() {
         <section className="home-section">
           <div className="home-section-head">
             <span className="home-kicker">Features</span>
-            <h2>Everything leaders need, without the noise.</h2>
+            <h2>Everything leaders need, without the noise</h2>
             <p>
               Pulse brings production, learning, performance, and team visibility into one smooth workspace.
             </p>
@@ -336,7 +336,7 @@ export default function Landing() {
         <section className="home-section">
           <div className="home-section-head">
             <span className="home-kicker">Teams</span>
-            <h2>Built for every region.</h2>
+            <h2>Built for every region</h2>
             <p>
               One platform for Kampaign Kings leaders to track, train, and support every team.
             </p>
@@ -364,7 +364,7 @@ export default function Landing() {
         <section className="home-section home-mission-section">
           <article className="home-mission-card">
             <span className="home-kicker">Mission</span>
-            <h2>Make performance easier to see, train, and improve.</h2>
+            <h2>Make performance easier to see, train, and improve</h2>
             <p>
               Pulse helps leaders move faster with cleaner data, stronger coaching, better training,
               and one shared place for the team to grow.

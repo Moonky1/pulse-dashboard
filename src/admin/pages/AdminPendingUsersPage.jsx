@@ -18,7 +18,7 @@ export function AdminPendingUsersPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>People</p><h1>Awaiting approval</h1><span>Review verified registrations and decide who can enter Pulse.</span></div>
+        <div><p>People</p><h1>Awaiting approval</h1><span>Review verified registrations and decide who can enter Pulse</span></div>
         <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--pending" aria-label="Pending user filters">
