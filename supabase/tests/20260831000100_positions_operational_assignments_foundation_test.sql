@@ -16,8 +16,8 @@ select ok(exists(select 1 from public.permissions where key='assignments.view' a
 select is((select count(*) from public.permissions where key in ('positions.manage','assignments.manage')),0::bigint,'read-only foundation adds no mutation permissions');
 select results_eq(
   $$select role.key from public.role_permissions role_permission join public.roles role on role.id=role_permission.role_id join public.permissions permission on permission.id=role_permission.permission_id where permission.key in ('positions.view','assignments.view') order by permission.key,role.key$$,
-  $$values ('super_admin'::text),('super_admin'::text)$$,
-  'new read permissions are initially granted only to Super Admin'
+  $$values ('admin'::text),('human_resources'::text),('super_admin'::text),('admin'::text),('human_resources'::text),('super_admin'::text)$$,
+  'Staff management roles receive the required Position and assignment reads'
 );
 select ok((select relrowsecurity from pg_class where oid='public.positions'::regclass),'Position RLS is enabled');
 select ok((select relrowsecurity from pg_class where oid='public.user_operational_assignments'::regclass),'assignment RLS is enabled');

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 
 import { Button } from '../../components/ui/Button.jsx'
 import { supabase } from '../../utils/supabase.js'
-import { assignManagedUserRole, removeManagedUserRole } from '../api/adminApi.js'
+import { assignManagedUserRole, removeManagedUserRole, replaceManagedUserRole } from '../api/adminApi.js'
 import { roleScopeLabel } from '../adminViewModel.js'
 import { roleCatalogMessage, roleMutationSuccessMessage } from '../roleActions.js'
 import { runRoleMutation } from '../roleMutation.js'
@@ -19,6 +19,7 @@ export function RoleAdministration({ user, directory, roleOptions, roleOptionsEr
   const catalogMessage = roleCatalogMessage({ loading, error: roleOptionsError, options: roleOptions })
   const assignmentAvailable = !catalogMessage
   const openAssignment = () => { setError(null); setNotice(null); setSelected({ type: 'assign' }) }
+  const openChange = (assignment) => { setError(null); setNotice(null); setSelected({ type: 'change', assignment }) }
   const openRemoval = (assignment) => { setError(null); setNotice(null); setSelected({ type: 'remove', assignment }) }
   const cancel = () => { setError(null); setSelected(null) }
   const confirm = async ({ type, request, role, assignment }) => {
@@ -28,7 +29,9 @@ export function RoleAdministration({ user, directory, roleOptions, roleOptionsEr
       guard,
       operation: () => type === 'assign'
         ? assignManagedUserRole(supabase, { targetUserId: user.id, ...request })
-        : removeManagedUserRole(supabase, user.id, assignment.userRoleId),
+        : type === 'change'
+          ? replaceManagedUserRole(supabase, { targetUserId: user.id, targetUserRoleId: assignment.userRoleId, ...request })
+          : removeManagedUserRole(supabase, user.id, assignment.userRoleId),
       onSuccess: onChanged,
     })
     setSubmitting(false)
@@ -36,17 +39,17 @@ export function RoleAdministration({ user, directory, roleOptions, roleOptionsEr
       setError(result.error)
       return
     }
-    const roleName = type === 'assign' ? role.name : assignment.name
-    setNotice(result.warning?.message ?? roleMutationSuccessMessage(type, result.data, roleName))
+    const roleName = type === 'assign' || type === 'change' ? role.name : assignment.name
+    setNotice(result.warning?.message ?? (type === 'change' ? `${roleName} access is up to date.` : roleMutationSuccessMessage(type, result.data, roleName)))
     setSelected(null)
   }
 
   return (
     <section id="pulse-access-management" className="admin-role-actions" aria-labelledby="role-actions-title">
-      <div className="admin-role-actions__heading"><div><p className="admin-section-label">Pulse access</p><h2 id="role-actions-title">Manage access</h2><span>Add or remove access available to this person.</span></div><Button type="button" disabled={!assignmentAvailable} onClick={openAssignment}>Add access</Button></div>
+      <div className="admin-role-actions__heading"><div><p className="admin-section-label">Pulse access</p><h2 id="role-actions-title">Manage access</h2><span>Change the roles and access areas available to this person</span></div><Button type="button" disabled={!assignmentAvailable} onClick={openAssignment}>Add access</Button></div>
       {catalogMessage && <p className={roleOptionsError ? 'admin-dialog__error' : 'admin-role-actions__catalog-state'} role={roleOptionsError ? 'alert' : 'status'}>{catalogMessage}</p>}
       <ul className="admin-role-actions__assignments">
-        {user.roles.map((assignment) => <li key={assignment.userRoleId}><div><strong>{assignment.name}</strong><span>{roleScopeLabel(assignment, directory)}</span></div><Button type="button" variant="secondary" size="sm" onClick={() => openRemoval(assignment)}>Remove</Button></li>)}
+        {user.roles.map((assignment) => <li key={assignment.userRoleId}><div><strong>{assignment.name}</strong><span>{roleScopeLabel(assignment, directory)}</span></div><div className="admin-role-actions__buttons"><Button type="button" variant="secondary" size="sm" disabled={!assignmentAvailable} onClick={() => openChange(assignment)}>Change</Button>{user.roles.length > 1 && <Button type="button" variant="ghost" size="sm" onClick={() => openRemoval(assignment)}>Remove</Button>}</div></li>)}
       </ul>
       {notice && <p className="admin-lifecycle-actions__notice" role="status">{notice}</p>}
       {selected && <RoleActionDialog action={selected} user={user} directory={directory} roleOptions={roleOptions} submitting={submitting} error={error} onCancel={cancel} onConfirm={confirm} />}

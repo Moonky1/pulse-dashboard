@@ -20,7 +20,7 @@ export function roleScopeLabel(role, directory = {}) {
   const maps = directoryMaps(directory)
   if (role.scopeType === 'department') return maps.departments.get(role.departmentId) ?? 'Unknown department'
   if (role.scopeType === 'campaign') return role.campaignName ?? role.campaignCode ?? 'Unknown campaign'
-  if (role.scopeType === 'team') return maps.teams.get(role.teamId) ?? 'Unknown team'
+  if (role.scopeType === 'team') return role.teamName ?? maps.teams.get(role.teamId) ?? 'Unknown team'
   return 'All Pulse'
 }
 
@@ -31,7 +31,7 @@ export function filterManagedUsers(users, filters = {}) {
     return (!query || identity.includes(query))
       && (!filters.status || user.status === filters.status)
       && (!filters.departmentId || user.departmentId === filters.departmentId)
-      && (!filters.teamId || user.teamId === filters.teamId)
+      && (!filters.teamId || user.primaryTeamId === filters.teamId || user.teamId === filters.teamId)
       && (!filters.roleKey || user.roles.some((role) => role.key === filters.roleKey))
   })
 }

@@ -31,8 +31,8 @@ export function WorkspacePage() {
         <div className="auth-workspace-intro">
           <Badge tone="success" dot>Ready</Badge>
           <p className="auth-eyebrow">Workspace</p>
-          <h1>Welcome back, {profile?.display_name || profile?.full_name}.</h1>
-          <p>Choose an app.</p>
+          <h1>Welcome back, {profile?.display_name || profile?.full_name}</h1>
+          <p>Choose an app</p>
         </div>
         {invitationAccepted && <p className="auth-workspace-notice auth-workspace-notice--success" role="status">Invitation accepted. Welcome to Pulse.</p>}
         {adminAccessNotice && <p className="auth-workspace-notice" role="status">{adminAccessNotice === 'denied' ? 'Your account does not have access to Administration.' : 'Pulse could not verify Administration access. Try again later.'}</p>}

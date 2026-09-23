@@ -5,6 +5,7 @@ function compareNames(left = '', right = '') {
 export function buildBusinessAreaBranches(catalog = {}) {
   const departments = catalog.departments ?? []
   const teams = catalog.teams ?? []
+  const campaignBranches = buildCampaignBranches(catalog)
   return [...(catalog.businessAreas ?? [])]
     .sort((left, right) => compareNames(left.name, right.name))
     .map((area) => ({
@@ -21,6 +22,7 @@ export function buildBusinessAreaBranches(catalog = {}) {
       directTeams: teams
         .filter((team) => team.businessAreaId === area.id && !team.departmentId && !team.campaignId)
         .sort((left, right) => compareNames(left.name, right.name)),
+      campaigns: campaignBranches.filter((campaign) => campaign.businessAreaId === area.id),
     }))
 }
 

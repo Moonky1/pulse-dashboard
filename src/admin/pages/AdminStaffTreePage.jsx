@@ -4,7 +4,10 @@ import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button.jsx'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
 import { LifecycleBadge } from '../components/LifecycleBadge.jsx'
+import { RoleBadge } from '../components/RoleBadge.jsx'
 import { StaffAvatar } from '../components/StaffAvatar.jsx'
+import { TeamBadge } from '../components/TeamBadge.jsx'
+import { useBusinessCatalog } from '../hooks/useBusinessCatalog.js'
 import { useManagedUsers } from '../hooks/useManagedUsers.js'
 import { buildStaffTreeV2, filterStaffTreeV2, staffTreeBranchIds } from '../staffTreeViewModel.js'
 
@@ -16,15 +19,22 @@ function PersonCard({ person }) {
       <span className="admin-tree-person__identity">
         <strong>{person.fullName}</strong>
         <small>{person.positionName || 'Position not assigned'}</small>
+        {person.teamName && <TeamBadge name={person.teamName} code={person.primaryTeamCode} campaignCode={person.primaryCampaignCode} linked={false} />}
+        {person.roles?.[0] && <RoleBadge role={person.roles[0]} />}
         {person.qaCoverage?.length ? (
           <span className="admin-tree-person__coverage" aria-label="Secondary quality coverage">
             {person.qaCoverage.map((coverage) => <i key={`${coverage.teamId}:${coverage.teamName}`}>QA · {coverage.teamName}</i>)}
           </span>
         ) : null}
       </span>
-      <LifecycleBadge status={person.status} />
+      <span className="admin-tree-person__status"><LifecycleBadge status={person.status} /></span>
     </Link>
   )
+}
+
+function PeopleGroup({ label, people }) {
+  if (!people.length) return null
+  return <section className="admin-tree-people-group"><h4>{label}</h4><div className="admin-tree-people" aria-label={`${label} people`}>{people.map((person) => <PersonCard key={person.id} person={person} />)}</div></section>
 }
 
 function ReportingNode({ node }) {
@@ -49,11 +59,11 @@ function BranchToggle({ expanded, label, onClick }) {
   )
 }
 
-export function StaffTreeDirectory({ users, directory, relationships }) {
+export function StaffTreeDirectory({ users, directory, relationships, catalog }) {
   const [query, setQuery] = useState('')
   const [departmentId, setDepartmentId] = useState('all')
   const [expansion, setExpansion] = useState(() => ({ mode: 'default', overrides: new Map() }))
-  const tree = useMemo(() => buildStaffTreeV2(users, directory, relationships), [directory, relationships, users])
+  const tree = useMemo(() => buildStaffTreeV2(users, directory, relationships, catalog), [catalog, directory, relationships, users])
   const branchIds = useMemo(() => staffTreeBranchIds(tree), [tree])
   const filteredTree = useMemo(() => filterStaffTreeV2(tree, { query, departmentId }), [departmentId, query, tree])
   const searchActive = Boolean(query.trim())
@@ -87,7 +97,7 @@ export function StaffTreeDirectory({ users, directory, relationships }) {
         <>
           <section className="admin-tree-toolbar" aria-label="Staff Tree controls">
             <label className="admin-search"><span>Find a person or team</span><input type="search" value={query} placeholder="Name, employee ID, position, team…" onChange={(event) => setQuery(event.target.value)} /></label>
-            <label className="admin-filter"><span>Department</span><select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="all">All departments</option>{tree.departments.map((department) => <option value={department.id} key={department.id}>{department.name}</option>)}</select></label>
+            <label className="admin-filter"><span>Organization area</span><select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="all">All areas</option>{tree.departments.map((department) => <option value={department.id} key={department.id}>{department.name}</option>)}</select></label>
             <div className="admin-tree-toolbar__actions">
               <Button type="button" variant="secondary" size="sm" onClick={() => setExpansion({ mode: 'all', overrides: new Map() })}>Expand all</Button>
               <Button type="button" variant="secondary" size="sm" onClick={() => setExpansion({ mode: 'none', overrides: new Map() })}>Collapse all</Button>
@@ -109,7 +119,7 @@ export function StaffTreeDirectory({ users, directory, relationships }) {
                     <article className="admin-tree-department" key={department.id}>
                       <header>
                         <BranchToggle expanded={departmentOpen} label={department.name} onClick={() => toggle(departmentBranch)} />
-                        <span><small>Department</small><strong>{department.name}</strong><b>{department.peopleCount} {department.peopleCount === 1 ? 'person' : 'people'}</b></span>
+                        <span><small>{department.kind === 'business_area' ? 'Business area' : 'Department'}</small><strong>{department.name}</strong><b>{department.peopleCount} {department.peopleCount === 1 ? 'person' : 'people'}</b></span>
                       </header>
                       {departmentOpen ? (
                         <div className="admin-tree-teams">
@@ -120,7 +130,7 @@ export function StaffTreeDirectory({ users, directory, relationships }) {
                               <section className="admin-tree-team" key={team.id}>
                                 <header className="admin-tree-team__heading">
                                   <BranchToggle expanded={teamOpen} label={team.name} onClick={() => toggle(teamBranch)} />
-                                  <span><small>{team.campaignName ? 'Campaign · Team' : 'Team'}</small><strong>{team.name}</strong>{team.campaignName ? <b>{team.campaignName}</b> : null}</span>
+                                  <span><small>{team.campaignName ? [team.campaignName, team.operatingUnitName].filter(Boolean).join(' · ') : 'Team'}</small><TeamBadge teamId={String(team.id).includes('unassigned') ? null : team.id} name={team.name} code={team.code} campaignCode={team.campaignCode} />{team.campaignName ? <b>Team</b> : null}</span>
                                   <em>{team.people.length}</em>
                                 </header>
                                 {teamOpen ? team.people.length ? (
@@ -129,9 +139,7 @@ export function StaffTreeDirectory({ users, directory, relationships }) {
                                       {team.roots.map((root) => <ReportingNode key={root.person.id} node={root} />)}
                                     </ul>
                                   ) : (
-                                    <div className="admin-tree-people" aria-label={`${team.name} people`}>
-                                      {team.people.map((person) => <PersonCard key={person.id} person={person} />)}
-                                    </div>
+                                    <div className="admin-tree-grouped-people"><PeopleGroup label="Leadership" people={team.leadership ?? []} /><PeopleGroup label="Staff" people={team.staff ?? []} /></div>
                                   )
                                 ) : <p className="admin-tree-empty">No people assigned yet.</p> : null}
                               </section>
@@ -145,7 +153,7 @@ export function StaffTreeDirectory({ users, directory, relationships }) {
               </div>
             )}
           </section>
-          <p className="admin-tree-note">Quality coverage is shown as secondary context. It does not change a person’s home team, reporting line or Pulse access.</p>
+          <p className="admin-tree-note">Reporting lines appear only when they are explicitly recorded. Quality coverage is shown as secondary context and does not change a person’s home team, reporting line or Pulse access.</p>
         </>
       )}
     </>
@@ -154,17 +162,20 @@ export function StaffTreeDirectory({ users, directory, relationships }) {
 
 export function AdminStaffTreePage() {
   const { users, directory, loading, error, refresh } = useManagedUsers({ includeDetails: true })
-  if (loading && !users.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading Staff Tree" body="Organizing the company directory…" /></main>
-  if (error && !users.length) return <main className="admin-content"><AdminStatePanel kind="error" title="Staff Tree unavailable" body={error.message} onRetry={refresh} /></main>
+  const catalogState = useBusinessCatalog()
+  const combinedLoading = loading || catalogState.loading
+  const combinedError = error || catalogState.error
+  if (combinedLoading && !users.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading Staff Tree" body="Organizing the company directory…" /></main>
+  if (combinedError && !users.length) return <main className="admin-content"><AdminStatePanel kind="error" title="Staff Tree unavailable" body={combinedError.message} onRetry={() => Promise.all([refresh(), catalogState.refresh()])} /></main>
 
   return (
     <main className="admin-content admin-content--staff-tree">
       <Link className="admin-back-link" to="/admin/users">← Back to people</Link>
       <div className="admin-page-heading">
-        <div><p>Company structure</p><h1>Staff Tree</h1><span>Explore the company by department and team. Reporting lines appear only when they are explicitly recorded.</span></div>
-        <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
+        <div><p>Company structure</p><h1>Staff Tree</h1><span>Explore the company by department and Team · Reporting lines appear only when explicitly recorded</span></div>
+        <Button type="button" variant="secondary" loading={combinedLoading} onClick={() => Promise.all([refresh(), catalogState.refresh()])}>Refresh</Button>
       </div>
-      <StaffTreeDirectory users={users} directory={directory} />
+      <StaffTreeDirectory users={users} directory={directory} catalog={catalogState.catalog} />
     </main>
   )
 }

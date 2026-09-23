@@ -14,6 +14,7 @@ export const ADMIN_CAMPAIGNS_MANAGE_PERMISSIONS = Object.freeze([...ADMIN_CAMPAI
 export const ADMIN_POSITIONS_VIEW_PERMISSIONS = Object.freeze(['admin.access', 'positions.view'])
 export const ADMIN_ASSIGNMENTS_VIEW_PERMISSIONS = Object.freeze(['admin.access', 'users.view', 'assignments.view'])
 export const ADMIN_STAFF_INVITE_PERMISSIONS = Object.freeze(['admin.access', 'users.invite'])
+export const ADMIN_STAFF_WORK_MANAGE_PERMISSIONS = Object.freeze(['admin.access', 'users.view', 'staff_work.manage'])
 
 function hasEvery(permissionKeys, required) {
   const keys = new Set(permissionKeys)
@@ -86,6 +87,10 @@ export function canViewOperationalAssignments(permissionKeys = []) {
 
 export function canInviteStaff(permissionKeys = []) {
   return hasEvery(permissionKeys, ADMIN_STAFF_INVITE_PERMISSIONS)
+}
+
+export function canManageStaffWork(permissionKeys = []) {
+  return hasEvery(permissionKeys, ADMIN_STAFF_WORK_MANAGE_PERMISSIONS)
 }
 
 export function hasAnyAdminSurfaceAccess(permissionKeys = []) {

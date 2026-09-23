@@ -143,6 +143,29 @@ export function normalizeRoleMutationError(error) {
   return publicError('unavailable', 'Pulse could not complete the access change. No change was applied.')
 }
 
+export function normalizeWorkDetailsMutationError(error) {
+  if (!error) return null
+  if (['42501', '28000'].includes(error.code)) {
+    return publicError('access_denied', 'You do not have permission to edit Staff work details.')
+  }
+  if (error.code === 'P0002') {
+    return publicError('not_found', 'This Pulse user could not be found.')
+  }
+  if (error.code === '55000') {
+    return publicError('account_unavailable', 'Work details can be changed only while this Staff account is active.')
+  }
+  if (error.code === '23503') {
+    return publicError('catalog_invalid', 'One of the selected work details is inactive or no longer available.')
+  }
+  if (error.code === '23514' && messageIncludes(error, 'access')) {
+    return publicError('access_conflict', 'Change the existing scoped Pulse access before moving this person to a different work area.')
+  }
+  if (['22023', '22P02', '23514'].includes(error.code)) {
+    return publicError('invalid_relationship', 'The selected Campaign, operating unit, Team, or Position combination is not valid.')
+  }
+  return publicError('unavailable', 'Pulse could not update these work details. No change was applied.')
+}
+
 export function normalizeOrganizationMutationError(error) {
   if (!error) return null
   if (['42501', '28000'].includes(error.code)) {
@@ -187,6 +210,8 @@ function normalizeRole(role = {}) {
     campaignCode: role.campaign_code ?? null,
     campaignName: role.campaign_name ?? null,
     teamId: role.team_id ?? null,
+    teamCode: role.team_code ?? null,
+    teamName: role.team_name ?? null,
   }
 }
 
@@ -203,6 +228,16 @@ export function normalizeManagedUser(row = {}) {
     positionId: row.position_id ?? null,
     positionCode: row.position_code ?? null,
     positionName: row.position_name ?? null,
+    primaryAssignmentId: row.primary_assignment_id ?? null,
+    primaryCampaignId: row.primary_campaign_id ?? null,
+    primaryCampaignCode: row.primary_campaign_code ?? null,
+    primaryCampaignName: row.primary_campaign_name ?? null,
+    primaryOperatingUnitId: row.primary_operating_unit_id ?? null,
+    primaryOperatingUnitCode: row.primary_operating_unit_code ?? null,
+    primaryOperatingUnitName: row.primary_operating_unit_name ?? null,
+    primaryTeamId: row.primary_team_id ?? null,
+    primaryTeamCode: row.primary_team_code ?? null,
+    primaryTeamName: row.primary_team_name ?? null,
     authEmailConfirmed: Boolean(row.auth_email_confirmed),
     roles: Array.isArray(row.roles) ? row.roles.map(normalizeRole) : [],
   }
@@ -477,7 +512,7 @@ async function mutateRoleAssignment(client, rpcName, args, expectedUserRoleId, r
   return { data: normalized, error: null }
 }
 
-export async function assignManagedUserRole(client, {
+function validateRoleAssignmentInput({
   targetUserId,
   requestedRoleId,
   requestedScopeType,
@@ -486,15 +521,15 @@ export async function assignManagedUserRole(client, {
   requestedTeamId = null,
 } = {}) {
   if (!UUID_PATTERN.test(targetUserId ?? '') || !UUID_PATTERN.test(requestedRoleId ?? '')) {
-    return { data: null, error: publicError('invalid_request', 'The requested user or role is not valid.') }
+    return publicError('invalid_request', 'The requested user or role is not valid.')
   }
   if (!['global', 'department', 'campaign', 'team'].includes(requestedScopeType)) {
-    return { data: null, error: publicError('invalid_request', 'The requested access area is not valid.') }
+    return publicError('invalid_request', 'The requested access area is not valid.')
   }
   if ((requestedDepartmentId && !UUID_PATTERN.test(requestedDepartmentId))
       || (requestedCampaignId && !UUID_PATTERN.test(requestedCampaignId))
       || (requestedTeamId && !UUID_PATTERN.test(requestedTeamId))) {
-    return { data: null, error: publicError('invalid_request', 'The requested work or access area is not valid.') }
+    return publicError('invalid_request', 'The requested work or access area is not valid.')
   }
   const exactScope = requestedScopeType === 'global'
     ? !requestedDepartmentId && !requestedCampaignId && !requestedTeamId
@@ -503,7 +538,20 @@ export async function assignManagedUserRole(client, {
       : requestedScopeType === 'campaign'
         ? Boolean(!requestedDepartmentId && requestedCampaignId && !requestedTeamId)
         : Boolean(!requestedDepartmentId && !requestedCampaignId && requestedTeamId)
-  if (!exactScope) return { data: null, error: publicError('invalid_request', 'Select one available access area.') }
+  return exactScope ? null : publicError('invalid_request', 'Select one available access area.')
+}
+
+export async function assignManagedUserRole(client, request = {}) {
+  const validationError = validateRoleAssignmentInput(request)
+  if (validationError) return { data: null, error: validationError }
+  const {
+    targetUserId,
+    requestedRoleId,
+    requestedScopeType,
+    requestedDepartmentId = null,
+    requestedCampaignId = null,
+    requestedTeamId = null,
+  } = request
   const { data, error } = await client.rpc('assign_user_role', {
     target_user_id: targetUserId,
     requested_role_id: requestedRoleId,
@@ -528,6 +576,106 @@ export function removeManagedUserRole(client, targetUserId, targetUserRoleId) {
     target_user_id: targetUserId,
     target_user_role_id: targetUserRoleId,
   }, targetUserRoleId, 'removed')
+}
+
+export async function replaceManagedUserRole(client, {
+  targetUserId,
+  targetUserRoleId,
+  requestedRoleId,
+  requestedScopeType,
+  requestedDepartmentId = null,
+  requestedCampaignId = null,
+  requestedTeamId = null,
+} = {}) {
+  if (!UUID_PATTERN.test(targetUserRoleId ?? '')) {
+    return { data: null, error: publicError('invalid_request', 'The current access entry is not valid.') }
+  }
+  const request = {
+    targetUserId,
+    requestedRoleId,
+    requestedScopeType,
+    requestedDepartmentId,
+    requestedCampaignId,
+    requestedTeamId,
+  }
+  const validationError = validateRoleAssignmentInput(request)
+  if (validationError) return { data: null, error: validationError }
+
+  const { data, error } = await client.rpc('replace_user_role', {
+    target_user_id: targetUserId,
+    target_user_role_id: targetUserRoleId,
+    requested_role_id: requestedRoleId,
+    requested_scope_type: requestedScopeType,
+    requested_department_id: requestedDepartmentId,
+    requested_campaign_id: requestedCampaignId,
+    requested_team_id: requestedTeamId,
+  })
+  if (error) return { data: null, error: normalizeRoleMutationError(error) }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row
+      || row.old_user_role_id !== targetUserRoleId
+      || !UUID_PATTERN.test(row.user_role_id ?? '')) {
+    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected access replacement. Refresh before trying again.') }
+  }
+  return {
+    data: {
+      oldUserRoleId: row.old_user_role_id,
+      userRoleId: row.user_role_id,
+      replaced: Boolean(row.replaced),
+      created: Boolean(row.created),
+    },
+    error: null,
+  }
+}
+
+export async function updateManagedUserWorkDetails(client, {
+  targetUserId,
+  departmentId,
+  campaignId = null,
+  operatingUnitId = null,
+  teamId = null,
+  positionId = null,
+  requestKey = globalThis.crypto?.randomUUID?.(),
+} = {}) {
+  const optionalIds = [campaignId, operatingUnitId, teamId, positionId]
+  if (!UUID_PATTERN.test(targetUserId ?? '')
+      || !UUID_PATTERN.test(departmentId ?? '')
+      || !UUID_PATTERN.test(requestKey ?? '')
+      || optionalIds.some((value) => value !== null && !UUID_PATTERN.test(value))) {
+    return { data: null, error: publicError('invalid_request', 'Review the selected work details before saving.') }
+  }
+  if ((!campaignId && (operatingUnitId || teamId))
+      || (campaignId && !positionId)
+      || (operatingUnitId && !teamId)) {
+    return { data: null, error: publicError('invalid_relationship', 'Select a valid Campaign, operating unit, Team, and Position combination.') }
+  }
+  const { data, error } = await client.rpc('update_staff_work_details', {
+    target_user_id: targetUserId,
+    requested_department_id: departmentId,
+    requested_campaign_id: campaignId,
+    requested_operating_unit_id: operatingUnitId,
+    requested_team_id: teamId,
+    requested_position_id: positionId,
+    request_key: requestKey,
+  })
+  if (error) return { data: null, error: normalizeWorkDetailsMutationError(error) }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row || row.id !== targetUserId) {
+    return { data: null, error: publicError('unexpected_result', 'Pulse did not confirm the expected work details. Refresh before trying again.') }
+  }
+  return {
+    data: {
+      id: row.id,
+      departmentId: row.department_id,
+      positionId: row.position_id ?? null,
+      primaryAssignmentId: row.primary_assignment_id ?? null,
+      campaignId: row.campaign_id ?? null,
+      operatingUnitId: row.operating_unit_id ?? null,
+      teamId: row.team_id ?? null,
+      changed: Boolean(row.changed),
+    },
+    error: null,
+  }
 }
 
 export async function loadOrganizationDirectory(client) {

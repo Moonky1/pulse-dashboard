@@ -50,9 +50,9 @@ export function GoPracticePlayer() {
   const progress = session.content ? ((questionIndex + 1) / session.content.questions.length) * 100 : 0
   if (access.state !== 'allowed') return <GoAccessState access={access} />
   if (!canPractice(access.capabilities)) return <GoAccessState access={{ state: 'denied' }} />
-  if (!destination.allowed) return <GoShell><section className="go-state"><h1>Practice isn’t available here.</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
+  if (!destination.allowed) return <GoShell><section className="go-state"><h1>Practice isn’t available here</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
   if (session.loading) return <GoShell><section className="go-state" role="status"><h1>Preparing your practice…</h1></section></GoShell>
-  if (session.error || !question) return <GoShell><section className="go-state" role="alert"><h1>We couldn’t start this practice.</h1><p>{session.error?.message}</p><Link to="/go/practice">Choose another</Link></section></GoShell>
+  if (session.error || !question) return <GoShell><section className="go-state" role="alert"><h1>We couldn’t start this practice</h1><p>{session.error?.message}</p><Link to="/go/practice">Choose another</Link></section></GoShell>
 
   async function finish() {
     setSubmitting(true)

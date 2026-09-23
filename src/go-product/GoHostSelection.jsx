@@ -29,7 +29,7 @@ export function GoHostSelection() {
 
   if (access.state !== 'allowed') return <GoAccessState access={access} />
   if (!canHost(access.capabilities)) return <GoAccessState access={{ state: 'denied' }} />
-  if (!destination.allowed) return <GoShell><section className="go-state"><h1>Hosting is not enabled here.</h1><p>No room was created.</p><Link to="/go">Back to GO</Link></section></GoShell>
+  if (!destination.allowed) return <GoShell><section className="go-state"><h1>Hosting is not enabled here</h1><p>No room was created.</p><Link to="/go">Back to GO</Link></section></GoShell>
 
   async function createRoom(contentId) {
     setCreating(contentId)
@@ -41,11 +41,11 @@ export function GoHostSelection() {
 
   return <GoShell>
     <section className="go-page-heading go-page-heading--with-art">
-      <div><p className="go-eyebrow">Host a game</p><h1>Pick what to play.</h1><p>We’ll make the room code.</p></div>
+      <div><p className="go-eyebrow">Host a game</p><h1>Pick what to play</h1><p>We’ll make the room code</p></div>
       <img src={GO_ART.certification} alt="" />
     </section>
     <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding host-ready games…' : catalog.error?.message || ''}</div>
-    {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No games are ready to host.</h2><p>Published quizzes and assessments available to you will appear here.</p></section>}
+    {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No games are ready to host</h2><p>Published quizzes and assessments available to you will appear here.</p></section>}
     <section className="go-catalog" aria-busy={catalog.loading}>
       {catalog.items.map((item, index) => {
         const language = languagePresentation(item.language)

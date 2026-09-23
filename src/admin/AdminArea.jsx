@@ -17,6 +17,7 @@ const AdminCampaignsPage = lazy(() => import('./pages/AdminCampaignsPage.jsx').t
 const AdminPositionsPage = lazy(() => import('./pages/AdminPositionsPage.jsx').then((module) => ({ default: module.AdminPositionsPage })))
 const AdminInvitationsPage = lazy(() => import('./pages/AdminInvitationsPage.jsx').then((module) => ({ default: module.AdminInvitationsPage })))
 const AdminStaffTreePage = lazy(() => import('./pages/AdminStaffTreePage.jsx').then((module) => ({ default: module.AdminStaffTreePage })))
+const AdminTeamProfilePage = lazy(() => import('./pages/AdminTeamProfilePage.jsx').then((module) => ({ default: module.AdminTeamProfilePage })))
 
 function AdminLanding() {
   const { permissionKeys } = useAdminPermissions()
@@ -76,6 +77,7 @@ export function AdminArea() {
             <Route path="pending" element={<UsersRoute><AdminPendingUsersPage /></UsersRoute>} />
             <Route path="pending/:userId" element={<UsersRoute><AdminUserDetailPage pendingOnly /></UsersRoute>} />
             <Route path="users/:userId" element={<UsersRoute><AdminUserDetailPage /></UsersRoute>} />
+            <Route path="teams/:teamId" element={<UsersRoute><AdminTeamProfilePage /></UsersRoute>} />
             <Route path="organization" element={<OrganizationRoute><AdminOrganizationPage /></OrganizationRoute>} />
             <Route path="audit" element={<AuditRoute><AdminAuditPage /></AuditRoute>} />
             <Route path="campaigns" element={<CampaignsRoute><AdminCampaignsPage /></CampaignsRoute>} />

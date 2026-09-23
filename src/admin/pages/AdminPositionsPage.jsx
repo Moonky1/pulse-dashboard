@@ -12,7 +12,7 @@ function PositionCard({ position }) {
   return (
     <article className="admin-organization-card">
       <div className="admin-organization-card__heading">
-        <div><span>{position.code}</span><h3>{position.name}</h3></div>
+        <div><span>Position</span><h3>{position.name}</h3></div>
         <PositionStatus active={position.isActive} />
       </div>
       <p>{position.description || 'No Position description has been added.'}</p>
@@ -41,11 +41,11 @@ export function AdminPositionsPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>People</p><h1>Positions</h1><span>Review what people do at work.</span></div>
+        <div><p>People</p><h1>Positions</h1><span>Review what people do at work</span></div>
         <Button type="button" variant="secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--positions" aria-label="Position filters">
-        <label className="admin-search"><span>Search Positions</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, code, or description" /></label>
+        <label className="admin-search"><span>Search Positions</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name or description" /></label>
       </section>
       <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {positions.length} positions</div>
       {!positions.length

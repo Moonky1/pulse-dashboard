@@ -3,21 +3,22 @@ import { useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button.jsx'
 import { buildCampaignBranches } from '../businessCatalog.js'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
+import { TeamBadge } from '../components/TeamBadge.jsx'
 import { useBusinessCatalog } from '../hooks/useBusinessCatalog.js'
 
 function Status({ active }) {
   return <span className={`admin-organization-status admin-organization-status--${active ? 'active' : 'inactive'}`}>{active ? 'Active' : 'Inactive'}</span>
 }
 
-function TeamPill({ team }) {
-  return <span className="admin-catalog-pill"><strong>{team.name}</strong><small>Team</small></span>
+function TeamPill({ team, campaign }) {
+  return <TeamBadge teamId={team.id} name={team.name} code={team.code} campaignCode={campaign.code} />
 }
 
 function CampaignCard({ campaign }) {
   return (
     <article className="admin-catalog-campaign">
       <header>
-        <div><span>{campaign.code}</span><h2>{campaign.name}</h2><p>{campaign.description}</p></div>
+        <div><span>Campaign</span><h2>{campaign.name}</h2><p>{campaign.description}</p></div>
         <Status active={campaign.isActive} />
       </header>
       <div className="admin-catalog-campaign__branches">
@@ -25,14 +26,14 @@ function CampaignCard({ campaign }) {
           <section className="admin-catalog-unit" key={unit.id}>
             <div><span>Operating unit</span><h3>{unit.name}</h3></div>
             {unit.teams.length
-              ? <div className="admin-catalog-pills">{unit.teams.map((team) => <TeamPill key={team.id} team={team} />)}</div>
+              ? <div className="admin-catalog-pills">{unit.teams.map((team) => <TeamPill key={team.id} team={team} campaign={campaign} />)}</div>
               : <p>No child Teams in this unit.</p>}
           </section>
         ))}
         {campaign.directTeams.length > 0 && (
           <section className="admin-catalog-unit">
             <div><span>Campaign Teams</span><h3>Direct Teams</h3></div>
-            <div className="admin-catalog-pills">{campaign.directTeams.map((team) => <TeamPill key={team.id} team={team} />)}</div>
+            <div className="admin-catalog-pills">{campaign.directTeams.map((team) => <TeamPill key={team.id} team={team} campaign={campaign} />)}</div>
           </section>
         )}
       </div>
@@ -62,7 +63,7 @@ export function AdminCampaignsPage() {
   return (
     <main className="admin-content admin-content--catalog">
       <div className="admin-page-heading">
-        <div><p>Operations</p><h1>Campaigns &amp; units</h1><span>Review the operations Pulse supports, with their operating units and Teams.</span></div>
+        <div><p>Operations</p><h1>Campaigns &amp; units</h1><span>Review the operations Pulse supports, with their operating units and Teams</span></div>
         <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--campaigns" aria-label="Campaign filters">

@@ -416,7 +416,7 @@ begin
   insert into public.positions(id,code,name,description,is_active)
   values
     ('35000000-0000-4000-8000-000000000001','supervisor','Supervisor','Operational people leader.',true),
-    ('35000000-0000-4000-8000-000000000002','team_lead','Team Lead','Team-level people leader.',true),
+    ('35000000-0000-4000-8000-000000000002','team_lead','Team Leader','Team-level people leader.',true),
     ('35000000-0000-4000-8000-000000000003','opener','Opener','Front-line opener position.',true),
     ('35000000-0000-4000-8000-000000000004','service_advisor','Service Advisor','Customer service advisor position.',true),
     ('35000000-0000-4000-8000-000000000005','junior_closer','Junior Closer','Junior closer position.',true),

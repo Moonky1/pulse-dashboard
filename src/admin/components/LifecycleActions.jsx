@@ -46,7 +46,7 @@ export function LifecycleActions({ user, allowed, onChanged }) {
 
   return (
     <section className="admin-lifecycle-actions" aria-labelledby="lifecycle-actions-title">
-      <div><p className="admin-section-label">Account status</p><h2 id="lifecycle-actions-title">Account actions</h2><span>Block, reactivate or inactivate this account.</span></div>
+      <div><p className="admin-section-label">Account status</p><h2 id="lifecycle-actions-title">Account controls</h2><span>Block, reactivate, or inactivate this account</span></div>
       <div className="admin-lifecycle-actions__buttons">{actions.map((action) => <Button key={action.key} type="button" variant={action.tone} onClick={() => open(action)}>{action.shortLabel}</Button>)}</div>
       {notice && <p className="admin-lifecycle-actions__notice" role="status">{notice}</p>}
       {selected && <LifecycleActionDialog key={selected.key} action={selected} user={user} submitting={submitting} error={error} onCancel={cancel} onConfirm={confirm} />}

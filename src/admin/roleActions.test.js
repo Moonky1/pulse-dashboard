@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assignableRoles, isSuperAdminRole, organizationForRoleOption, roleAssignmentRequest, roleCatalogMessage, roleMutationSuccessMessage, roleOptionKey, roleOptionsForRole, shouldCancelRoleDialogOnKey } from './roleActions.js'
+import { assignableRoles, isSuperAdminRole, organizationForRoleOption, roleAssignmentRequest, roleCatalogMessage, roleMutationSuccessMessage, roleOptionKey, roleOptionsForRole, roleOptionsWithCurrent, shouldCancelRoleDialogOnKey } from './roleActions.js'
 
 const ROLE_ID = '10000000-0000-0000-0000-000000000004'
 const DEPARTMENT_ID = 'd0000000-0000-0000-0000-000000000001'
@@ -43,6 +43,20 @@ test('assignment request reuses one exact server-resolved grant combination', ()
   assert.equal(roleAssignmentRequest({ ...OPTIONS[0], scopeType: 'planet' }), null)
   assert.equal(roleAssignmentRequest({ ...OPTIONS[1], teamId: null }), null)
   assert.equal(roleAssignmentRequest({ ...OPTIONS[2], campaignId: null }), null)
+})
+
+test('change access keeps the current exact assignment available and reversible', () => {
+  const current = {
+    roleId: '10000000-0000-0000-0000-000000000001',
+    key: 'employee',
+    name: 'Employee',
+    scopeType: 'global',
+  }
+  const merged = roleOptionsWithCurrent(OPTIONS, current, {})
+  assert.equal(merged[0].roleName, 'Employee')
+  assert.equal(organizationForRoleOption(merged[0]).label, 'All Pulse')
+  assert.deepEqual(assignableRoles(merged).map((role) => role.name), ['Employee', 'Supervisor'])
+  assert.equal(roleOptionsWithCurrent(merged, current, {}).filter((option) => roleOptionKey(option) === roleOptionKey(merged[0])).length, 1)
 })
 
 test('role notices distinguish idempotency and privileged Super Admin assignments', () => {

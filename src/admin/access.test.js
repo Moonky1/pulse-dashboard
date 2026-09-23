@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canInviteStaff, canManageCampaigns, canManageDepartments, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewOperationalAssignments, canViewPositions, canViewTeams, canViewUserHistory, hasAdminUsersAccess, hasAnyAdminSurfaceAccess, resolveAdminAccess } from './access.js'
+import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canInviteStaff, canManageCampaigns, canManageDepartments, canManageStaffWork, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewOperationalAssignments, canViewPositions, canViewTeams, canViewUserHistory, hasAdminUsersAccess, hasAnyAdminSurfaceAccess, resolveAdminAccess } from './access.js'
 
 test('Admin is visible only with both required canonical permissions', () => {
   assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
@@ -89,4 +89,11 @@ test('Position and operational assignment reads use distinct canonical permissio
   assert.equal(canViewOperationalAssignments(['admin.access', 'assignments.view']), false)
   assert.equal(canViewOperationalAssignments(['super_admin', 'assignments.view']), false)
   assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'positions.view'] }), 'allowed')
+})
+
+test('Staff work details require the dedicated protected permission and People access', () => {
+  assert.equal(canManageStaffWork(['admin.access', 'users.view', 'staff_work.manage']), true)
+  assert.equal(canManageStaffWork(['admin.access', 'users.view']), false)
+  assert.equal(canManageStaffWork(['staff_work.manage']), false)
+  assert.equal(canManageStaffWork(['super_admin', 'staff_work.manage']), false)
 })

@@ -7,6 +7,7 @@ import { useAdminPermissions } from '../AdminAccessContext.js'
 import { createManagedDepartment, createManagedTeam, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam } from '../api/adminApi.js'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
 import { OrganizationActionDialog } from '../components/OrganizationActionDialog.jsx'
+import { TeamBadge } from '../components/TeamBadge.jsx'
 import { useBusinessCatalog } from '../hooks/useBusinessCatalog.js'
 import { useOrganizationCatalog } from '../hooks/useOrganizationCatalog.js'
 import { filterOrganizationItems, organizationMutationMessage } from '../organizationActions.js'
@@ -32,7 +33,7 @@ function OrganizationCard({ entity, type, canManage, onAction }) {
   return (
     <article className="admin-organization-card">
       <div className="admin-organization-card__heading">
-        <div><span>{entity.code}</span><h3>{entity.name}</h3>{type === 'team' && <small>{entity.departmentName}</small>}</div>
+        <div><span>{type === 'team' ? 'Team' : 'Department'}</span><h3>{entity.name}</h3>{type === 'team' && <small>{entity.departmentName}</small>}</div>
         <Status active={entity.isActive} />
       </div>
       <p>{entity.description || `No ${type} description has been added.`}</p>
@@ -77,12 +78,19 @@ function BusinessAreaOverview({ catalog }) {
               {area.departments.map((department) => (
                 <section key={department.id}>
                   <div><span>Department</span><strong>{department.name}</strong></div>
-                  {department.teams.length > 0 && <div className="admin-catalog-pills">{department.teams.map((team) => <span className="admin-catalog-pill" key={team.id}><strong>{team.name}</strong><small>Team</small></span>)}</div>}
+                  {department.teams.length > 0 && <div className="admin-catalog-pills">{department.teams.map((team) => <TeamBadge key={team.id} teamId={team.id} name={team.name} code={team.code} />)}</div>}
                 </section>
               ))}
               {area.directTeams.length > 0 && (
-                <section><div><span>Area functions</span><strong>Direct Teams</strong></div><div className="admin-catalog-pills">{area.directTeams.map((team) => <span className="admin-catalog-pill" key={team.id}><strong>{team.name}</strong><small>Team</small></span>)}</div></section>
+                <section><div><span>Area functions</span><strong>Direct Teams</strong></div><div className="admin-catalog-pills">{area.directTeams.map((team) => <TeamBadge key={team.id} teamId={team.id} name={team.name} code={team.code} />)}</div></section>
               )}
+              {area.campaigns.map((campaign) => (
+                <section className="admin-catalog-area__campaign" key={campaign.id}>
+                  <div><span>Campaign operations</span><strong>{campaign.name}</strong></div>
+                  {campaign.units.map((unit) => <div className="admin-catalog-area__unit" key={unit.id}><small>{unit.name}</small><div className="admin-catalog-pills">{unit.teams.map((team) => <TeamBadge key={team.id} teamId={team.id} name={team.name} code={team.code} campaignCode={campaign.code} />)}</div></div>)}
+                  {campaign.directTeams.length > 0 && <div className="admin-catalog-area__unit"><small>Direct Teams</small><div className="admin-catalog-pills">{campaign.directTeams.map((team) => <TeamBadge key={team.id} teamId={team.id} name={team.name} code={team.code} campaignCode={campaign.code} />)}</div></div>}
+                </section>
+              ))}
             </div>
           </article>
         ))}
@@ -150,11 +158,11 @@ export function AdminOrganizationPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>Organization</p><h1>Departments & teams</h1><span>Keep your organization clear and up to date.</span></div>
+        <div><p>Organization</p><h1>Departments & teams</h1><span>Keep your organization clear and up to date</span></div>
         <Button type="button" variant="secondary" loading={loading || catalogLoading} onClick={() => Promise.all([refresh(), refreshCatalog()])}>Refresh</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--organization" aria-label="Organization filters">
-        <label className="admin-search"><span>Search organization</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, code, description, or department" /></label>
+        <label className="admin-search"><span>Search organization</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, description, or department" /></label>
         {teamRead && departmentRead && <label className="admin-filter"><span>Team department</span><select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}><option value="">All departments</option>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>}
       </section>
       {notice && <p className="admin-operation-notice" role="status">{notice}</p>}

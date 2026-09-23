@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '../../components/ui/Button.jsx'
-import { normalizeOrganizationForm, organizationStatusConsequence, shouldCancelOrganizationDialogOnKey, validateOrganizationForm } from '../organizationActions.js'
+import { normalizeOrganizationForm, organizationCodeFromName, organizationStatusConsequence, shouldCancelOrganizationDialogOnKey, validateOrganizationForm } from '../organizationActions.js'
 
 function EntitySummary({ action }) {
   const entity = action.entity
@@ -9,7 +9,7 @@ function EntitySummary({ action }) {
   return (
     <div className="admin-dialog__target">
       <strong>{entity.name}</strong>
-      <span>{entity.code} · {entity.isActive ? 'Active' : 'Inactive'}</span>
+      <span>{entity.isActive ? 'Active' : 'Inactive'}</span>
     </div>
   )
 }
@@ -42,7 +42,8 @@ export function OrganizationActionDialog({ action, departments, submitting, erro
       onConfirm({ action, active: action.type === 'reactivate' })
       return
     }
-    const validation = validateOrganizationForm(values)
+    const resolvedValues = { ...values, code: values.code || organizationCodeFromName(values.name) }
+    const validation = validateOrganizationForm(resolvedValues)
     if (validation.error) {
       onConfirm({ action, validationError: validation.error })
       return
@@ -51,7 +52,7 @@ export function OrganizationActionDialog({ action, departments, submitting, erro
       onConfirm({ action, validationError: 'Select one active parent department.' })
       return
     }
-    onConfirm({ action, values: { ...normalizeOrganizationForm(values), departmentId: values.departmentId } })
+    onConfirm({ action, values: { ...normalizeOrganizationForm(resolvedValues), departmentId: values.departmentId } })
   }
   const title = `${action.type[0].toUpperCase()}${action.type.slice(1)} ${entityLabel}`
   const destructive = action.type === 'deactivate'
@@ -76,8 +77,7 @@ export function OrganizationActionDialog({ action, departments, submitting, erro
         {editing ? <div className="admin-organization-form">
           {action.entityType === 'team' && action.type === 'create' && <label><span>Parent department</span><select value={values.departmentId} onChange={update('departmentId')} autoFocus><option value="">Select an active department</option>{activeDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>}
           {action.entityType === 'team' && action.type === 'update' && <div className="admin-dialog__target"><span>Department</span><strong>{action.entity.departmentName}</strong><small>This team stays with its current department.</small></div>}
-          <label><span>Code</span><input value={values.code} onChange={update('code')} autoFocus={action.entityType !== 'team' || action.type !== 'create'} placeholder="operations" maxLength={32} /></label>
-          <label><span>Name</span><input value={values.name} onChange={update('name')} placeholder="Operations" maxLength={120} /></label>
+          <label><span>Name</span><input value={values.name} onChange={update('name')} autoFocus={action.entityType !== 'team' || action.type !== 'create'} placeholder="Operations" maxLength={120} /></label>
           <label><span>Description <small>Optional</small></span><textarea value={values.description} onChange={update('description')} maxLength={500} placeholder="Purpose and ownership" /></label>
         </div> : <>
           <p id="organization-dialog-description">{organizationStatusConsequence(action.entityType, action.type === 'reactivate', action.entity)}</p>

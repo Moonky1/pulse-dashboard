@@ -43,7 +43,7 @@ export function AdminInvitationsPage() {
 
   return (
     <main className="admin-content">
-      <div className="admin-page-heading"><div><p>People</p><h1>Invitations</h1><span>Invite staff with their work details and starting Pulse access.</span></div><div className="admin-heading-actions"><Button type="button" variant="secondary" loading={invitationState.loading} onClick={invitationState.refresh}>Refresh</Button><Button type="button" onClick={() => { setMutationError(null); setDialog(true) }}>Invite Staff</Button></div></div>
+      <div className="admin-page-heading"><div><p>People</p><h1>Invitations</h1><span>Invite staff with their work details and starting Pulse access</span></div><div className="admin-heading-actions"><Button type="button" variant="secondary" loading={invitationState.loading} onClick={invitationState.refresh}>Refresh</Button><Button type="button" onClick={() => { setMutationError(null); setDialog(true) }}>Invite Staff</Button></div></div>
       <section className="admin-filter-bar admin-filter-bar--invitations" aria-label="Invitation filters">
         <label className="admin-search"><span>Search invitations</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name or email" /></label>
         <label className="admin-filter"><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value)}>{FILTERS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>

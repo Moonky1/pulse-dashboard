@@ -2,6 +2,11 @@ function compareNames(left = '', right = '') {
   return left.localeCompare(right, undefined, { sensitivity: 'base' })
 }
 
+function isLeadership(person) {
+  const position = String(person.positionName ?? '').toLowerCase()
+  return position.includes('supervisor') || position.includes('team lead') || position.includes('team leader')
+}
+
 function personSearchText(person, departmentName, teamName) {
   return [
     person.fullName,
@@ -70,7 +75,7 @@ function enrichPeople(people, department, team, coverageByPerson) {
   }))
 }
 
-export function buildStaffTreeV2(users = [], directory = {}, relationships = {}) {
+export function buildStaffTreeV2(users = [], directory = {}, relationships = {}, catalog = {}) {
   const departments = [...(directory.departments ?? [])].sort((left, right) => compareNames(left.name, right.name))
   const teams = [...(directory.teams ?? [])].sort((left, right) => compareNames(left.name, right.name))
   const sortedUsers = [...users].sort((left, right) => compareNames(left.fullName, right.fullName))
@@ -92,15 +97,27 @@ export function buildStaffTreeV2(users = [], directory = {}, relationships = {})
     return {
       id: team.id,
       name: team.name,
+      code: team.code ?? null,
       campaignId: team.campaignId ?? null,
       campaignName: team.campaignName ?? null,
+      campaignCode: team.campaignCode ?? null,
+      operatingUnitName: team.operatingUnitName ?? null,
       people: enrichedPeople,
+      leadership: enrichedPeople.filter(isLeadership),
+      staff: enrichedPeople.filter((person) => !isLeadership(person)),
       ...reportingForest(enrichedPeople, teamRelationships),
     }
   }
 
+  const operationalTeams = (catalog.teams ?? []).filter((team) => team.campaignId)
+  const operationalTeamIds = new Set(operationalTeams.map((team) => team.id))
+  const operationalUserIds = new Set(sortedUsers.filter((user) => operationalTeamIds.has(user.primaryTeamId)).map((user) => user.id))
+  const campaignById = new Map((catalog.campaigns ?? []).map((campaign) => [campaign.id, campaign]))
+  const unitById = new Map((catalog.operatingUnits ?? []).map((unit) => [unit.id, unit]))
+  const areaById = new Map((catalog.businessAreas ?? []).map((area) => [area.id, area]))
+
   const departmentNodes = departments.map((department) => {
-    const departmentUsers = sortedUsers.filter((user) => user.departmentId === department.id)
+    const departmentUsers = sortedUsers.filter((user) => user.departmentId === department.id && !operationalUserIds.has(user.id))
     const departmentTeams = teams
       .filter((team) => team.departmentId === department.id)
       .map((team) => buildTeam(team, department, departmentUsers.filter((user) => user.teamId === team.id)))
@@ -112,9 +129,34 @@ export function buildStaffTreeV2(users = [], directory = {}, relationships = {})
     return {
       id: department.id,
       name: department.name,
+      kind: 'department',
       peopleCount: departmentUsers.length,
       teams: departmentTeams,
     }
+  })
+
+  const operationalAreas = new Map()
+  operationalTeams.forEach((team) => {
+    const area = areaById.get(team.businessAreaId) ?? { id: team.businessAreaId ?? 'operations', name: 'Operations' }
+    if (!operationalAreas.has(area.id)) operationalAreas.set(area.id, { ...area, teams: [] })
+    operationalAreas.get(area.id).teams.push(team)
+  })
+  operationalAreas.forEach((area) => {
+    const teamsForArea = area.teams
+      .sort((left, right) => compareNames(left.name, right.name))
+      .map((team) => buildTeam({
+        ...team,
+        campaignName: campaignById.get(team.campaignId)?.name ?? null,
+        campaignCode: campaignById.get(team.campaignId)?.code ?? null,
+        operatingUnitName: unitById.get(team.operatingUnitId)?.name ?? null,
+      }, area, sortedUsers.filter((user) => user.primaryTeamId === team.id)))
+    departmentNodes.push({
+      id: `business-area:${area.id}`,
+      name: area.name,
+      kind: 'business_area',
+      peopleCount: teamsForArea.reduce((total, team) => total + team.people.length, 0),
+      teams: teamsForArea,
+    })
   })
 
   const knownDepartmentIds = new Set(departments.map((department) => department.id))
@@ -123,6 +165,7 @@ export function buildStaffTreeV2(users = [], directory = {}, relationships = {})
     const department = { id: 'unassigned', name: 'No department assigned' }
     departmentNodes.push({
       ...department,
+      kind: 'unassigned',
       peopleCount: unassigned.length,
       teams: [buildTeam({ id: 'unassigned-team', name: 'No team assigned' }, department, unassigned)],
     })
@@ -156,9 +199,17 @@ export function filterStaffTreeV2(tree, { query = '', departmentId = 'all' } = {
         ? team.roots.map((root) => filterReportingNode(root, normalizedQuery, branchMatches)).filter(Boolean)
         : team.roots
       if (normalizedQuery && !people.length && !roots.length) return []
-      return [{ ...team, people, roots }]
+      if (!normalizedQuery && !people.length) return []
+      const visibleIds = new Set(people.map((person) => person.id))
+      return [{
+        ...team,
+        people,
+        leadership: (team.leadership ?? []).filter((person) => visibleIds.has(person.id)),
+        staff: (team.staff ?? []).filter((person) => visibleIds.has(person.id)),
+        roots,
+      }]
     })
-    if (normalizedQuery && !teams.length) return []
+    if (!teams.length) return []
     return [{ ...department, peopleCount: teams.reduce((total, team) => total + team.people.length, 0), teams }]
   })
   return {
