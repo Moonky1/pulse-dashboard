@@ -49,3 +49,33 @@ test('role assignment carries only explicit scope values', async () => {
   assert.equal(client.calls[1].args.requested_department_id, null)
   assert.equal(client.calls[1].args.requested_team_id, null)
 })
+
+test('catalog inspect is read-only and uses the protected catalog projection', async () => {
+  const client = mockClient()
+  await executeOperatorCommand({ client, args: ['catalog', 'inspect'], confirm: async () => { throw new Error('must not confirm') } })
+  assert.deepEqual(client.calls, [{ name: 'list_business_catalog', args: undefined }])
+})
+
+test('catalog apply requires an explicit target, preflight, and exact confirmation', async () => {
+  const client = mockClient()
+  const output = []
+  const target = 'sgshbawggqapuyqzkyhs'
+  await executeOperatorCommand({
+    client,
+    args: ['catalog', 'apply', target],
+    output: (value) => output.push(value),
+    confirm: async (phrase) => phrase === `APPLY ORG-3A ${target}`,
+  })
+  assert.deepEqual(client.calls.map((call) => call.name), ['list_business_catalog', 'apply_org3a_business_catalog'])
+  assert.equal(output[0].targetProjectRef, target)
+  assert.equal(output[0].mutatesPeople, false)
+})
+
+test('cancelled catalog apply never invokes the mutation contract', async () => {
+  const client = mockClient()
+  await assert.rejects(
+    () => executeOperatorCommand({ client, args: ['catalog', 'apply', 'lhgnbcaundgjeofjrscg'], confirm: async () => false }),
+    /cancelled/,
+  )
+  assert.deepEqual(client.calls.map((call) => call.name), ['list_business_catalog'])
+})
