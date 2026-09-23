@@ -5,7 +5,8 @@ const MAX_STORED_BYTES = 1024 * 1024
 const MAX_DIMENSION = 512
 const ALLOWED_SOURCE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const localOrigins = new Set(['http://localhost:5173', 'http://127.0.0.1:5173'])
-const origins = () => new Set([...localOrigins, ...(Deno.env.get('PULSE_ALLOWED_ORIGINS') ?? '').split(',').map((value) => value.trim()).filter(Boolean)])
+const configuredOrigins = (...names: string[]) => names.flatMap((name) => (Deno.env.get(name) ?? '').split(',').map((value) => value.trim()).filter(Boolean))
+const origins = () => new Set([...localOrigins, ...configuredOrigins('PULSE_ALLOWED_ORIGINS', 'PULSE_AVATAR_ALLOWED_ORIGINS')])
 const cors = (origin: string | null) => ({
   'Access-Control-Allow-Origin': origin && origins().has(origin) ? origin : '',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
