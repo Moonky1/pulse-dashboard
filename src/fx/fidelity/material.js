@@ -1,4 +1,4 @@
-// FX-1B lab-only material. No production consumer imports this module.
+// FX-1C calibration of the FX-1B height-field model. Lab-only.
 export const PRESETS = Object.freeze({
   A: { label: 'Reference-faithful', dispersion: .22, bend: 1.04, thickness: .82, fresnel: .48, specular: .62, caustic: 1.15, noiseScale: 1.8, speed: .24, pointer: .65, absorption: .22, balance: .48, exposure: 1.15 },
   B: { label: 'Pulse-balanced', dispersion: .17, bend: .92, thickness: .77, fresnel: .40, specular: .48, caustic: .88, noiseScale: 1.8, speed: .19, pointer: .5, absorption: .30, balance: .44, exposure: .85 },
@@ -23,7 +23,37 @@ float gauss(float x,float w){return exp(-x*x/(w*w));}
 
 // Environment has spatial features; every RGB channel samples a different ray.
 // Softboxes, amber bounce, a blue/cyan bank, dark graphite gaps and narrow strips.
+vec3 ribbonEnvironment(vec2 q){
+  float t=time*speed;
+  float flow=fbm(q*vec2(.8,1.4)+vec2(t*.13,-t*.07));
+  float line=q.y+.22*q.x+.12*flow;
+  float bank=1.-smoothstep(-.5,.15,q.y);
+  vec3 cool=vec3(.005,.50,1.);
+  vec3 warm=vec3(1.,.26,.014);
+  float key=gauss(line+.55,.055);
+  float secondary=gauss(line+.79,.105);
+  float narrow=gauss(line+.09,.013)+.32*gauss(line+.17,.008);
+  float left=gauss(q.x+1.30,.75),right=gauss(q.x-1.25,1.0);
+  vec3 light=vec3(.002,.003,.005)+cool*bank*.075;
+  light+=vec3(1.12,1.13,1.16)*key*(2.6+2.3*left);
+  light+=mix(vec3(1.,.98,.88),vec3(.19,.80,1.),smoothstep(-.8,1.,q.x))*secondary*1.15;
+  // Warm bounce hugs the key softbox; no broad orange plane.
+  light+=warm*max(0.,gauss(line+.55,.098)-key)*left*.85;
+  light+=cool*right*(.65*gauss(line+.36,.024)+.30*gauss(line+.93,.035));
+  light+=vec3(1.2)*narrow*2.1;
+  // A broad transmitted softbox restores volume beneath the narrow focal seams.
+  // Its aperture is spatially bounded; exposure and saturation stay unchanged.
+  float body=(1.-smoothstep(-.85,-.40,line));
+  light+=mix(vec3(1.05,1.,.79),vec3(.12,.82,1.12),smoothstep(-.9+balance*.3,1.1,q.x))*body*1.05;
+  light*=1.-.55*gauss(line+.29,.055);
+  // Cyan side softbox: transmitted through the same primary/internal rays.
+  // A dark gap between apertures keeps the lower bank from reading as flat paint.
+  float side=right*gauss(q.y+.18,.78);
+  light+=mix(vec3(.008,.28,.95),vec3(.23,1.05,1.25),bank)*side*1.35;
+  return light;
+}
 vec3 environment(vec2 q){
+  if(shape<.5)return ribbonEnvironment(q);
   float flow=fbm(q*vec2(.8,1.4)+vec2(time*speed*.13,-time*speed*.07));
   float line=q.y+.22*q.x+.12*flow;
   float bank=smoothstep(-.28,.42,-q.y);
@@ -62,8 +92,13 @@ float heightField(vec2 p){
   float hull=sqrt(clamp(-d/.40,0.,1.));
   float depth=crest(p)-p.y;
   float meniscus=smoothstep(-.025,.115,depth)*(.58+.42*sin(clamp(depth,0.,1.4)*1.12));
-  float fold=.72+.24*fbm(p*vec2(.7,2.4)+vec2(time*speed*.17,0.));
-  return thickness*hull*meniscus*fold*(1.-press*.12);
+  float grain=fbm(p*vec2(.7,2.4)+vec2(time*speed*.17,0.));
+  float fold=.72+.24*grain;
+  float shift=(grain-.5)*.045;
+  // Two actual shallow folds in H. Their derivatives bend the sampled rays.
+  float fineFold=.016*gauss(depth-.20-shift,.050)+.007*gauss(depth-.34+shift,.034);
+  float micro=.0012*noise(p*vec2(7.,12.)+vec2(time*speed*.31,-time*speed*.23));
+  return thickness*hull*(meniscus*fold+fineFold+micro*meniscus)*(1.-press*.12);
 }
 
 vec3 refractMaterial(vec2 p,float H,vec2 gradient,float coverage,float localCurvature){
@@ -74,6 +109,7 @@ vec3 refractMaterial(vec2 p,float H,vec2 gradient,float coverage,float localCurv
   vec2 viewRay=normalize(vec3(p*.16,-1.)).xy;
   float opticalDepth=.24+H*.86;
   float split=dispersion*(.55+H)*(.85+min(localCurvature,3.)*.25);
+  if(shape<.5)split=dispersion*(.55+H)*.48;
   vec2 incident=p*vec2(.77,.68)+viewRay*H;
   vec2 g=N.xy*bend*opticalDepth;
   vec2 rRay=incident+g*(1.-split*1.6);
@@ -84,15 +120,17 @@ vec3 refractMaterial(vec2 p,float H,vec2 gradient,float coverage,float localCurv
   // Spectral fringes remain displaced environment samples, not RGB masks.
   vec2 internalRay=incident+g*1.75;
   vec3 internalLight=vec3(environment(internalRay-g*split*2.).r,environment(internalRay).g,environment(internalRay+g*split*3.).b);
-  refracted=mix(refracted,internalLight,.34*clamp(length(gradient),0.,1.));
+  float internalWeight=.34*clamp(length(gradient),0.,1.);
+  if(shape<.5)internalWeight=clamp(.12+.20*H+.07*length(gradient),.12,.46);
+  refracted=mix(refracted,internalLight,internalWeight);
   refracted*=exp(-absorption*H*vec3(.82,.4,.22));
   vec3 halfVector=normalize(vec3(-.18,.58,1.));
   float hotspot=pow(max(dot(N,halfVector),0.),42.);
   float compression=gauss(localCurvature-1.4,.65)*H;
   vec3 reflected=environment(p*.38+reflect(-V,N).xy*1.8);
   vec3 light=refracted*(.78+.22*coverage);
-  light+=reflected*F*fresnel*.60;
-  light+=vec3(1.,.96,.86)*hotspot*specular*.65;
+  light+=reflected*F*fresnel*(shape<.5?.24:.60);
+  light+=vec3(1.,.96,.86)*hotspot*specular*(shape<.5?.12:.65);
   light+=refracted*compression*caustic*.46;
   return light;
 }
@@ -106,14 +144,22 @@ vec3 ribbon(vec2 p){
   float hm=heightField(p-vec2(e,0.)),hn=heightField(p-vec2(0.,e));
   vec2 grad=vec2(hx-hm,hy-hn)/(2.*e);
   float curv=abs(hx+hm+hy+hn-4.*H)/(e*e)*.035;
+  vec2 curvature=vec2(hx+hm-2.*H,hy+hn-2.*H)/(e*e);
   float depth=crest(p)-p.y;
   float coverage=smoothstep(-.025,.025,depth);
   vec3 glass=refractMaterial(p,H,grad,coverage,curv);
   float live=.015+.985*interaction;
   vec3 graphite=vec3(.003,.0035,.004)+vec3(.003)*gauss(p.y,.7);
   float edge=exp(-abs(d)*180.);
-  float foldFocus=gauss(depth-.035,.018)+.28*gauss(depth-.13,.012);
-  vec3 col=graphite+glass*coverage*live*exposure*(.75+caustic*foldFocus*1.6);
+  // Diagonal Jacobian proxy of the local ray map: light focuses where nearby
+  // rays converge. No arbitrary colored screen-space line is drawn.
+  vec2 jacobian=vec2(1.)-curvature*bend*(.012+.020*H);
+  float compression=1./(1.+pow(abs(jacobian.x*jacobian.y)*3.2,2.));
+  float internalMask=smoothstep(.035,.11,-d)*smoothstep(.025,.10,H);
+  float foldFocus=compression*internalMask*smoothstep(.05,.28,length(grad));
+  float whiteCore=pow(foldFocus,2.)*min(max(glass.r,max(glass.g,glass.b)),2.);
+  vec3 col=graphite+glass*coverage*live*exposure*(.68+caustic*foldFocus*2.8);
+  col+=vec3(1.,.985,.955)*whiteCore*caustic*live*.75;
   col+=vec3(.07,.076,.088)*edge;
   return col*mask;
 }
@@ -156,6 +202,7 @@ void main(){
   vec2 p=(uv*2.-1.)*vec2(aspect(),1.);
   vec3 col=shape>.5?orb(p):ribbon(p);
   // Linear light to display, with controlled white clipping like the reference.
-  col=1.-exp(-col*1.5);
-  gl_FragColor=vec4(pow(col,vec3(.8)),1.);
+  if(shape>.5){col=1.-exp(-col*1.5);col=pow(col,vec3(.8));}
+  else {col=max(col-vec3(.002),vec3(0.));col=clamp(col/(1.+col*.72),0.,1.);col=pow(col,vec3(.90));}
+  gl_FragColor=vec4(col,1.);
 }`
