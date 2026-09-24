@@ -53,6 +53,7 @@ select extensions.lives_ok(
   'normal approval succeeds through the existing protected path'
 );
 reset role;
+set local role postgres;
 select extensions.is((select pulse_joined_on from public.users where id='b2400000-0000-4000-8000-000000000042'),current_date,'normal approval assigns current Joined Pulse when null');
 
 select set_config('request.jwt.claim.sub','a2400000-0000-4000-8000-000000000041',true);
@@ -67,6 +68,7 @@ select extensions.lives_ok(
   'a beta-era pending profile can follow the normal activation path'
 );
 reset role;
+set local role postgres;
 select extensions.is((select pulse_joined_on from public.users where id='b2400000-0000-4000-8000-000000000045'),'2024-02-12'::date,'activation preserves an existing historical Joined Pulse value');
 
 insert into public.staff_invitations(
@@ -82,6 +84,7 @@ select set_config('request.jwt.claim.sub','a2400000-0000-4000-8000-000000000043'
 set local role authenticated;
 select extensions.ok((select accepted from public.accept_own_staff_invitation()),'preauthorized invitation acceptance succeeds');
 reset role;
+set local role postgres;
 select extensions.is((select pulse_joined_on from public.users where id='b2400000-0000-4000-8000-000000000043'),current_date,'invitation acceptance assigns current Joined Pulse when null');
 
 select set_config('request.jwt.claim.sub','a2400000-0000-4000-8000-000000000041',true);
@@ -94,6 +97,7 @@ select extensions.throws_ok($$select * from public.set_staff_pulse_joined_on('b2
 select extensions.throws_ok($$select * from public.set_staff_pulse_joined_on('b2400000-0000-4000-8000-000000000046','2025-06-15')$$,'55000',null,'pending identity is not treated as joined Staff');
 select extensions.is((select pulse_joined_on from public.get_managed_user('b2400000-0000-4000-8000-000000000042')),'2025-06-15'::date,'protected Staff profile returns Joined Pulse');
 reset role;
+set local role postgres;
 select extensions.is((select count(*) from public.audit_events where target_id='b2400000-0000-4000-8000-000000000042' and action='account.joined_pulse_updated'),1::bigint,'manual correction writes one truthful event without retry spam');
 
 select set_config('request.jwt.claim.sub','a2400000-0000-4000-8000-000000000044',true);
@@ -101,6 +105,7 @@ set local role authenticated;
 select extensions.throws_ok($$select * from public.set_staff_pulse_joined_on('b2400000-0000-4000-8000-000000000042','2025-01-01')$$,'42501',null,'operator without users.manage is denied');
 select extensions.throws_ok($$update public.users set pulse_joined_on='2025-01-01' where id='b2400000-0000-4000-8000-000000000042'$$,'42501',null,'browser direct table mutation is denied');
 reset role;
+set local role postgres;
 
 select extensions.throws_ok($$update public.users set pulse_joined_on=current_date+1 where id='b2400000-0000-4000-8000-000000000042'$$,'22023',null,'canonical trigger rejects future dates even on a privileged path');
 
