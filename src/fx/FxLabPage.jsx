@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { PulseOrbInteractive } from './PulseOrbInteractive.jsx'
-import { PulseSpectralButton } from './PulseSpectralButton.jsx'
-import { SPECTRAL_VARIANTS } from './useSpectralMaterial.js'
+import { PulseOrbInteractive } from '../components/ui/PulseOrbInteractive.jsx'
+import { PulseSpectralButton } from '../components/ui/PulseSpectralButton.jsx'
+import { SPECTRAL_VARIANTS } from '../components/ui/useSpectralMaterial.js'
 
 const CONTROLS = [
   ['dispersion', 'Dispersion', 0, 0.03, 0.001],

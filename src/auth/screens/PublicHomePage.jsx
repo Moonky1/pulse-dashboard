@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import { PulseOrb } from '../../components/ui/PulseOrb.jsx'
+import { PulseOrbInteractive } from '../../components/ui/PulseOrbInteractive.jsx'
 import { PublicSiteShell } from '../components/PublicSiteShell.jsx'
 
 export function PublicHomePage() {
@@ -15,8 +15,8 @@ export function PublicHomePage() {
             <Link className="public-primary-action" to="/signin">Staff sign in</Link>
           </div>
         </section>
-        <div className="public-home-orb" aria-hidden="true">
-          <PulseOrb size="xl" active label="" />
+        <div className="public-home-orb">
+          <PulseOrbInteractive size="hero" variant="pulse" label="Pulse" />
         </div>
       </main>
     </PublicSiteShell>

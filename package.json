@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:maintenance": "vite build --config vite.maintenance.config.js",
     "lint": "eslint .",
-    "lint:pulse": "eslint src/auth src/admin src/training src/studio src/go-product src/profile src/fx src/components/StaffAvatar.jsx src/components/AvatarControls.jsx scripts/pulse-operator scripts/go-certification",
+    "lint:pulse": "eslint src/auth src/admin src/training src/studio src/go-product src/profile src/fx src/components/ui src/components/StaffAvatar.jsx src/components/AvatarControls.jsx scripts/pulse-operator scripts/go-certification",
     "preview": "vite preview",
     "operator": "node scripts/pulse-operator/cli.js",
     "test:operator": "node --test scripts/pulse-operator/*.test.js",

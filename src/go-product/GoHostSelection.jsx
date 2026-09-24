@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
+import { PulseSpectralButton } from '../components/ui/PulseSpectralButton.jsx'
 import { resolveGoHostedDestination } from '../training/goHostedDestination.js'
 import { createGoHostedSession, listGoHostCatalog } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
@@ -56,7 +57,7 @@ export function GoHostSelection() {
           <p>{item.description || 'Ready for your team.'}</p>
           <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{item.question_count}</strong> questions</div>
           <div className="go-topic-list">{item.topics?.map(topic => <span key={topic.id}>{topic.name}</span>)}</div>
-          <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>Create room</Button>
+          <PulseSpectralButton variant="pulse" loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>Create room</PulseSpectralButton>
         </article>
       })}
     </section>

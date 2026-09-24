@@ -185,12 +185,13 @@ function capDpr(mode) {
   return Math.min(window.devicePixelRatio || 1, cap)
 }
 
-export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning = {}, sizeMode = 'medium', disabled = false } = {}) {
+export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning = {}, sizeMode = 'medium', disabled = false, pressable = true } = {}) {
   const canvasRef = useRef(null)
   const hostRef = useRef(null)
   const wakeRef = useRef(null)
   const [fallback, setFallback] = useState(false)
   const [contextEpoch, setContextEpoch] = useState(0)
+  const [nearViewport, setNearViewport] = useState(() => !('IntersectionObserver' in window))
   const preset = SPECTRAL_VARIANTS[variant] ?? SPECTRAL_VARIANTS.pulse
   const configRef = useRef({ ...preset, ...tuning })
   configRef.current = { ...preset, ...tuning }
@@ -200,7 +201,18 @@ export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning 
   }, [variant, tuning])
 
   useEffect(() => {
-    if (disabled) return undefined
+    if (disabled || nearViewport || !('IntersectionObserver' in window)) return undefined
+    const host = hostRef.current
+    if (!host) return undefined
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setNearViewport(true)
+    }, { rootMargin: '80px' })
+    observer.observe(host)
+    return () => observer.disconnect()
+  }, [disabled, nearViewport])
+
+  useEffect(() => {
+    if (disabled || !nearViewport) return undefined
     const canvas = canvasRef.current
     const host = hostRef.current
     if (!canvas || !host) return undefined
@@ -209,7 +221,6 @@ export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning 
     let program
     let buffer
     let resizeObserver
-    let intersectionObserver
     let frameId = 0
     let idleTimer = 0
     let disposed = false
@@ -355,7 +366,7 @@ export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning 
       schedule(proximity > 0.01)
     }
 
-    const onPointerDown = () => { pointer.targetPress = 1; pointer.lastMove = performance.now(); schedule(true) }
+    const onPointerDown = () => { if (!pressable) return; pointer.targetPress = 1; pointer.lastMove = performance.now(); schedule(true) }
     const onPointerUp = () => { pointer.targetPress = 0; pointer.lastMove = performance.now(); schedule(true) }
     const onFocus = () => { pointer.focus = 0.72; schedule(true) }
     const onBlur = () => { pointer.focus = 0; schedule(true) }
@@ -382,6 +393,7 @@ export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning 
     } else {
       window.addEventListener('resize', resize)
     }
+    let intersectionObserver
     if ('IntersectionObserver' in window) {
       intersectionObserver = new IntersectionObserver(([entry]) => {
         visible = entry.isIntersecting
@@ -415,7 +427,7 @@ export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning 
       if (buffer) gl.deleteBuffer(buffer)
       if (program) gl.deleteProgram(program)
     }
-  }, [contextEpoch, disabled, shape, sizeMode])
+  }, [contextEpoch, disabled, nearViewport, pressable, shape, sizeMode])
 
-  return { canvasRef, hostRef, fallback }
+  return { canvasRef, hostRef, fallback: fallback || !nearViewport }
 }

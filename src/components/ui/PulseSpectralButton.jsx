@@ -1,4 +1,5 @@
 import { useSpectralMaterial } from './useSpectralMaterial.js'
+import './spectral.css'
 
 export function PulseSpectralButton({
   children,
@@ -6,6 +7,7 @@ export function PulseSpectralButton({
   tuning,
   className = '',
   disabled = false,
+  loading = false,
   type = 'button',
   ...buttonProps
 }) {
@@ -14,7 +16,7 @@ export function PulseSpectralButton({
     variant,
     tuning,
     sizeMode: 'medium',
-    disabled,
+    disabled: disabled || loading,
   })
 
   return (
@@ -22,10 +24,11 @@ export function PulseSpectralButton({
       {...buttonProps}
       ref={hostRef}
       type={type}
-      disabled={disabled}
-      className={`pulse-spectral-button pulse-spectral-button--${variant} ${fallback ? 'is-fallback' : ''} ${className}`.trim()}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={`pulse-spectral-button pulse-spectral-button--${variant} ${fallback ? 'is-fallback' : ''} ${loading ? 'is-loading' : ''} ${className}`.trim()}
     >
-      {!disabled && (
+      {!disabled && !loading && (
         <canvas
           ref={canvasRef}
           className="pulse-spectral-button__material"
@@ -33,7 +36,8 @@ export function PulseSpectralButton({
           tabIndex={-1}
         />
       )}
-      <span className="pulse-spectral-button__label">{children}</span>
+      {loading && <span className="pulse-spectral-button__spinner" aria-hidden="true" />}
+      <span className={`pulse-spectral-button__label ${loading ? 'pulse-spectral-button__label--loading' : ''}`}>{children}</span>
     </button>
   )
 }

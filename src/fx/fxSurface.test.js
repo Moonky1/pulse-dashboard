@@ -18,10 +18,10 @@ test('FX lab stays isolated from the production application entry', async () => 
 })
 
 test('spectral button preserves native semantics and decorative canvas isolation', async () => {
-  const source = await read('./PulseSpectralButton.jsx')
+  const source = await read('../components/ui/PulseSpectralButton.jsx')
   assert.match(source, /<button/)
   assert.match(source, /type=\{type\}/)
-  assert.match(source, /disabled=\{disabled\}/)
+  assert.match(source, /disabled=\{disabled \|\| loading\}/)
   assert.match(source, /<canvas/)
   assert.match(source, /aria-hidden="true"/)
   assert.match(source, /tabIndex=\{-1\}/)
@@ -29,9 +29,9 @@ test('spectral button preserves native semantics and decorative canvas isolation
 
 test('one material system powers all three intensity variants and both shapes', async () => {
   const [material, button, orb, lab] = await Promise.all([
-    read('./useSpectralMaterial.js'),
-    read('./PulseSpectralButton.jsx'),
-    read('./PulseOrbInteractive.jsx'),
+    read('../components/ui/useSpectralMaterial.js'),
+    read('../components/ui/PulseSpectralButton.jsx'),
+    read('../components/ui/PulseOrbInteractive.jsx'),
     read('./FxLabPage.jsx'),
   ])
 
@@ -46,7 +46,7 @@ test('one material system powers all three intensity variants and both shapes', 
 })
 
 test('shader uses channel-separated refraction rather than a painted rainbow', async () => {
-  const source = await read('./useSpectralMaterial.js')
+  const source = await read('../components/ui/useSpectralMaterial.js')
   assert.match(source, /vec3 refracted = vec3\(/)
   assert.match(source, /opticalRibbon\(p \+ vec2\(split/)
   assert.match(source, /opticalRibbon\(p - vec2\(split/)
@@ -56,8 +56,8 @@ test('shader uses channel-separated refraction rather than a painted rainbow', a
 
 test('renderer protects performance, motion preference and WebGL failure paths', async () => {
   const [source, styles] = await Promise.all([
-    read('./useSpectralMaterial.js'),
-    read('./fx.css'),
+    read('../components/ui/useSpectralMaterial.js'),
+    read('../components/ui/spectral.css'),
   ])
 
   assert.match(source, /IntersectionObserver/)
@@ -69,15 +69,18 @@ test('renderer protects performance, motion preference and WebGL failure paths',
   assert.match(source, /webglcontextrestored/)
   assert.match(source, /powerPreference: 'low-power'/)
   assert.match(source, /mode === 'hero' \? 1\.75/)
-  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/)
+  assert.match(styles, /@media\(prefers-reduced-motion:reduce\)/)
   assert.match(styles, /\.is-fallback/)
 })
 
 test('button press and responsive contracts remain restrained', async () => {
-  const styles = await read('./fx.css')
+  const [styles, labStyles] = await Promise.all([
+    read('../components/ui/spectral.css'),
+    read('./fx.css'),
+  ])
   assert.match(styles, /scale\(\.985\)/)
-  assert.match(styles, /transition-duration: 140ms/)
-  assert.match(styles, /max-width: 900px/)
-  assert.match(styles, /max-width: 560px/)
-  assert.match(styles, /width: min\(100%, 19rem\)/)
+  assert.match(styles, /transition-duration:140ms/)
+  assert.match(labStyles, /max-width: 900px/)
+  assert.match(labStyles, /max-width: 560px/)
+  assert.match(styles, /width:min\(100%,19rem\)/)
 })

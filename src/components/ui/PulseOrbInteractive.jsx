@@ -1,4 +1,5 @@
 import { useSpectralMaterial } from './useSpectralMaterial.js'
+import './spectral.css'
 
 export function PulseOrbInteractive({
   size = 'hero',
@@ -15,6 +16,7 @@ export function PulseOrbInteractive({
     tuning,
     sizeMode: size,
     disabled: simplified,
+    pressable: interactive,
   })
 
   return (
