@@ -4,6 +4,7 @@ const ACTION_LABELS = Object.freeze({
   'account.blocked': 'Account blocked',
   'account.reactivated': 'Account reactivated',
   'account.inactivated': 'Account inactivated',
+  'account.joined_pulse_updated': 'Joined Pulse date updated',
   'role.assigned': 'Role assigned',
   'staff_invitation.created': 'Staff invitation created',
   'staff_invitation.sent': 'Staff invitation sent',

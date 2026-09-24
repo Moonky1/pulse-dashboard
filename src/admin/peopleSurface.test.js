@@ -30,7 +30,7 @@ test('People and Staff Tree are shared protected directory surfaces', async () =
   assert.doesNotMatch(`${people}\n${tree}\n${hook}`, /\.from\(|managerId|supervisorId/)
 })
 
-test('staff profile keeps human sections and does not invent unavailable photo or joined fields', async () => {
+test('staff profile keeps human sections and displays only the canonical Joined Pulse field', async () => {
   const [detail, avatar, assignments, workspace] = await files([
     './pages/AdminUserDetailPage.jsx',
     './components/StaffAvatar.jsx',
@@ -39,7 +39,9 @@ test('staff profile keeps human sections and does not invent unavailable photo o
   ])
   for (const label of ['Staff profile', 'Work details', 'Position', 'Pulse access', 'Account status']) assert.match(detail, new RegExp(label))
   assert.match(detail, /StaffAvatar/)
+  assert.match(detail, /Joined Pulse/)
+  assert.match(detail, /JoinedPulseAdministration/)
   assert.match(assignments, /No campaigns assigned/)
   assert.match(workspace, /Browse the directory and Staff Tree/)
-  assert.doesNotMatch(`${detail}\n${avatar}`, /avatarUrl|photoUrl|Joined Pulse|createdAt/)
+  assert.doesNotMatch(`${detail}\n${avatar}`, /avatarUrl|photoUrl|Registered|createdAt/)
 })
