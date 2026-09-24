@@ -18,6 +18,7 @@ const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx
 const PublicHomePage = lazy(() => import('./screens/PublicHomePage.jsx').then((module) => ({ default: module.PublicHomePage })))
 const PublicLegalPage = lazy(() => import('./screens/PublicLegalPage.jsx').then((module) => ({ default: module.PublicLegalPage })))
 const RegisterPage = lazy(() => import('./screens/RegisterPage.jsx').then((module) => ({ default: module.RegisterPage })))
+const ReactiveComparisonPage = lazy(() => import('../fx/ReactiveComparisonPage.jsx').then((module) => ({ default: module.ReactiveComparisonPage })))
 const ResetPasswordPage = lazy(() => import('./screens/ResetPasswordPage.jsx').then((module) => ({ default: module.ResetPasswordPage })))
 const SignInPage = lazy(() => import('./screens/SignInPage.jsx').then((module) => ({ default: module.SignInPage })))
 const StudioPage = lazy(() => import('../studio/StudioPage.jsx').then((module) => ({ default: module.StudioPage })))
@@ -42,6 +43,7 @@ export function AuthApp() {
     <BrowserRouter>
       <Suspense fallback={<AccountStatePage kind="loading" />}><Routes>
         <Route path="/" element={<PublicHomePage />} />
+        <Route path="/fx-2b-review" element={<ReactiveComparisonPage />} />
         <Route path="/privacy" element={<PublicLegalPage kind="privacy" />} />
         <Route path="/terms" element={<PublicLegalPage kind="terms" />} />
         <Route path={AUTH_ENTRY_PATH} element={<PublicOnly><SignInPage /></PublicOnly>} />
