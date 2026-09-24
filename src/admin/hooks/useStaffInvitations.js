@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../utils/supabase.js'
 import { listStaffInvitations, loadStaffInvitationOptions } from '../api/adminApi.js'
 
-const EMPTY_OPTIONS = Object.freeze({ departments: [], teams: [], positions: [], roleOptions: [] })
+const EMPTY_OPTIONS = Object.freeze({ departments: [], campaigns: [], operatingUnits: [], teams: [], positions: [], roleOptions: [] })
 
 export function useStaffInvitations(status = null) {
   const [state, setState] = useState({ invitations: [], options: EMPTY_OPTIONS, loading: true, error: null })

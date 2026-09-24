@@ -49,10 +49,12 @@ Deno.serve(async (request) => {
   if (deliveryMode === 'supabase' && !redirectTo) return reply(origin, 503, { error: 'service_unavailable' })
   const requestKey = typeof payload.requestKey === 'string' && /^[0-9a-f-]{36}$/i.test(payload.requestKey) ? payload.requestKey : crypto.randomUUID()
   const isSend = payload.action === 'send'
-  const { data: rows, error: claimError } = await userClient.rpc(isSend ? 'claim_staff_invitation_send' : 'claim_staff_invitation_resend', isSend ? {
+  const { data: rows, error: claimError } = await userClient.rpc(isSend ? 'claim_staff_invitation_send_v2' : 'claim_staff_invitation_resend_v2', isSend ? {
     requested_email: payload.email,
     requested_full_name: payload.fullName,
     requested_department_id: payload.departmentId,
+    requested_campaign_id: payload.campaignId ?? null,
+    requested_operating_unit_id: payload.operatingUnitId ?? null,
     requested_team_id: payload.teamId ?? null,
     requested_position_id: payload.positionId ?? null,
     requested_role_id: payload.roleId,
@@ -61,6 +63,7 @@ Deno.serve(async (request) => {
     requested_scope_campaign_id: payload.scopeCampaignId ?? null,
     requested_scope_team_id: payload.scopeTeamId ?? null,
     requested_request_key: requestKey,
+    requested_previous_invitation_id: payload.previousInvitationId ?? null,
   } : { target_invitation_id: payload.invitationId, expected_updated_at: payload.expectedUpdatedAt, requested_request_key: requestKey })
   if (claimError) {
     console.error(JSON.stringify({ event: 'staff_invitation_claim_failed', action: payload.action, code: claimError.code }))
@@ -77,11 +80,18 @@ Deno.serve(async (request) => {
     return completion.error ? reply(origin, 503, { error: 'delivery_state_unavailable' }) : reply(origin, 200, { invitationId: claim.invitation_id, delivery: 'deferred' })
   }
 
-  const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(claim.email_normalized, {
-    redirectTo,
-    data: { full_name: claim.full_name, pulse_staff_invitation_id: claim.invitation_id },
-  })
-  const authUserId = inviteData?.user?.id ?? null
+  const callback = new URL(redirectTo as string)
+  callback.searchParams.set('flow', 'invitation')
+  const invitationData = { full_name: claim.full_name, pulse_staff_invitation_id: claim.invitation_id }
+  const { data: inviteData, error: inviteError } = claim.existing_auth_identity
+    ? await adminClient.auth.signInWithOtp({
+      email: claim.email_normalized,
+      options: { shouldCreateUser: false, emailRedirectTo: callback.toString(), data: invitationData },
+    })
+    : await adminClient.auth.admin.inviteUserByEmail(claim.email_normalized, {
+      redirectTo: callback.toString(), data: invitationData,
+    })
+  const authUserId = claim.existing_auth_identity ? claim.auth_user_id : inviteData?.user?.id ?? null
   const completion = await adminClient.rpc('complete_staff_invitation_delivery', {
     target_invitation_id: claim.invitation_id, claimed_delivery_id: claim.delivery_claim_id,
     delivery_succeeded: !inviteError && Boolean(authUserId), delivered_auth_user_id: authUserId,
@@ -89,5 +99,5 @@ Deno.serve(async (request) => {
   })
   if (completion.error) return reply(origin, 503, { error: 'delivery_state_unavailable' })
   if (inviteError) return reply(origin, 502, { error: publicFailureCode(inviteError), invitationId: claim.invitation_id })
-  return reply(origin, 200, { invitationId: claim.invitation_id, delivery: isSend ? 'sent' : 'resent' })
+  return reply(origin, 200, { invitationId: claim.invitation_id, delivery: isSend ? (claim.existing_auth_identity ? 'reconciled' : 'sent') : 'resent' })
 })

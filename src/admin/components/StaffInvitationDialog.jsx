@@ -4,12 +4,15 @@ import { isEmailFormatValid } from '../../auth/pulseAuthService.js'
 import { Button } from '../../components/ui/Button.jsx'
 import { invitationOptionKey, invitationRoleOptions, invitationScopeLabel, staffInvitationProposal } from '../invitationActions.js'
 
-export function StaffInvitationDialog({ options, submitting, error, onCancel, onConfirm }) {
+const EMPTY_VALUES = { email: '', fullName: '', departmentId: '', campaignId: '', operatingUnitId: '', teamId: '', positionId: '', optionKey: '', previousInvitationId: null }
+
+export function StaffInvitationDialog({ options, initialValues = null, submitting, error, onCancel, onConfirm }) {
   const dialogRef = useRef(null)
   const emailRef = useRef(null)
-  const [values, setValues] = useState({ email: '', fullName: '', departmentId: '', teamId: '', positionId: '', optionKey: '' })
-  const teams = useMemo(() => options.teams.filter((item) => item.departmentId === values.departmentId), [options.teams, values.departmentId])
-  const roleOptions = useMemo(() => invitationRoleOptions(options.roleOptions, values.departmentId, values.teamId), [options.roleOptions, values.departmentId, values.teamId])
+  const [values, setValues] = useState(() => ({ ...EMPTY_VALUES, ...initialValues }))
+  const operatingUnits = useMemo(() => options.operatingUnits.filter((item) => item.campaignId === values.campaignId), [options.operatingUnits, values.campaignId])
+  const teams = useMemo(() => options.teams.filter((item) => item.campaignId === values.campaignId && item.operatingUnitId === (values.operatingUnitId || null)), [options.teams, values.campaignId, values.operatingUnitId])
+  const roleOptions = useMemo(() => invitationRoleOptions(options.roleOptions, values.departmentId, values.campaignId, values.teamId), [options.roleOptions, values.campaignId, values.departmentId, values.teamId])
   const proposal = staffInvitationProposal(values, options)
   const valid = proposal && isEmailFormatValid(values.email) && values.fullName.trim().length >= 2
 
@@ -27,23 +30,25 @@ export function StaffInvitationDialog({ options, submitting, error, onCancel, on
   return (
     <dialog ref={dialogRef} className="admin-dialog" aria-labelledby="staff-invitation-title" aria-describedby="staff-invitation-description">
       <form method="dialog" className="admin-dialog__surface" onSubmit={(event) => { event.preventDefault(); if (valid && !submitting) void onConfirm(proposal) }}>
-        <span className="admin-dialog__eyebrow">New invitation</span>
-        <h2 id="staff-invitation-title">Invite Staff</h2>
+        <span className="admin-dialog__eyebrow">{values.previousInvitationId ? 'New invitation after a terminal record' : 'New invitation'}</span>
+        <h2 id="staff-invitation-title">{values.previousInvitationId ? 'Re-invite Staff' : 'Invite Staff'}</h2>
         <p id="staff-invitation-description">This personal invitation is valid for 72 hours.</p>
         <div className="admin-organization-form">
           <div className="admin-dialog__target"><strong>Personal details</strong><span>Enter the person’s name and email.</span></div>
-          <label><span>Email</span><input ref={emailRef} type="email" autoComplete="email" value={values.email} disabled={submitting} onChange={update('email')} placeholder="name@company.com" /></label>
-          <label><span>Full name</span><input value={values.fullName} maxLength={160} disabled={submitting} onChange={update('fullName')} /></label>
+          <label><span>Email</span><input ref={emailRef} type="email" autoComplete="email" value={values.email} disabled={submitting || Boolean(values.previousInvitationId)} onChange={update('email')} placeholder="name@company.com" /></label>
+          <label><span>Full name</span><input value={values.fullName} maxLength={160} disabled={submitting || Boolean(values.previousInvitationId)} onChange={update('fullName')} /></label>
           <div className="admin-dialog__target"><strong>Work details</strong><span>Choose where they’ll work.</span></div>
-          <label><span>Department</span><select value={values.departmentId} disabled={submitting} onChange={(event) => setValues((current) => ({ ...current, departmentId: event.target.value, teamId: '', optionKey: '' }))}><option value="">Select department</option>{options.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-          <label><span>Team <small>Optional</small></span><select value={values.teamId} disabled={submitting || !values.departmentId} onChange={(event) => setValues((current) => ({ ...current, teamId: event.target.value, optionKey: '' }))}><option value="">No team</option>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label><span>Department</span><select value={values.departmentId} disabled={submitting} onChange={(event) => setValues((current) => ({ ...current, departmentId: event.target.value, optionKey: '' }))}><option value="">Select department</option>{options.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label><span>Campaign <small>Optional</small></span><select value={values.campaignId} disabled={submitting} onChange={(event) => setValues((current) => ({ ...current, campaignId: event.target.value, operatingUnitId: '', teamId: '', optionKey: '' }))}><option value="">No campaign</option>{options.campaigns.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label><span>Operating Unit <small>Optional</small></span><select value={values.operatingUnitId} disabled={submitting || !values.campaignId} onChange={(event) => setValues((current) => ({ ...current, operatingUnitId: event.target.value, teamId: '', optionKey: '' }))}><option value="">No operating unit</option>{operatingUnits.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label><span>Team <small>Optional</small></span><select value={values.teamId} disabled={submitting || !values.campaignId} onChange={(event) => setValues((current) => ({ ...current, teamId: event.target.value, optionKey: '' }))}><option value="">No team</option>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label><span>Position <small>Optional</small></span><select value={values.positionId} disabled={submitting} onChange={update('positionId')}><option value="">No position</option>{options.positions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <div className="admin-dialog__target"><strong>Pulse access</strong><span>Choose their role and access area.</span></div>
           <label><span>Role and access area</span><select value={values.optionKey} disabled={submitting || !values.departmentId} onChange={update('optionKey')}><option value="">Select Pulse access</option>{roleOptions.map((option) => <option key={invitationOptionKey(option)} value={invitationOptionKey(option)}>{option.roleName} · {invitationScopeLabel(option, options)}</option>)}</select></label>
         </div>
         {selected && <div className="admin-dialog__target"><strong>Invitation summary</strong><span>{values.fullName || 'Invitee'} · {selected.roleName} · {invitationScopeLabel(selected, options)}</span></div>}
         {error && <p className="admin-dialog__error" role="alert">{error.message}</p>}
-        <div className="admin-dialog__actions"><Button type="button" variant="secondary" disabled={submitting} onClick={onCancel}>Cancel</Button><Button type="submit" loading={submitting} disabled={!valid}>Send invitation</Button></div>
+        <div className="admin-dialog__actions"><Button type="button" variant="secondary" disabled={submitting} onClick={onCancel}>Cancel</Button><Button type="submit" loading={submitting} disabled={!valid}>{values.previousInvitationId ? 'Send new invitation' : 'Send invitation'}</Button></div>
       </form>
     </dialog>
   )

@@ -1091,10 +1091,15 @@ export function normalizeStaffInvitationOptions(value = {}) {
   const departments = (value.departments ?? []).map(safeCatalogItem).filter(Boolean)
   const teams = (value.teams ?? []).map((item) => {
     const normalized = safeCatalogItem(item)
-    return normalized && UUID_PATTERN.test(item.department_id ?? '') ? { ...normalized, departmentId: item.department_id } : null
+    return normalized && UUID_PATTERN.test(item.campaign_id ?? '') ? { ...normalized, campaignId: item.campaign_id, operatingUnitId: UUID_PATTERN.test(item.operating_unit_id ?? '') ? item.operating_unit_id : null } : null
   }).filter(Boolean)
   return {
     departments,
+    campaigns: (value.campaigns ?? []).map(safeCatalogItem).filter(Boolean),
+    operatingUnits: (value.operating_units ?? []).map((item) => {
+      const normalized = safeCatalogItem(item)
+      return normalized && UUID_PATTERN.test(item.campaign_id ?? '') ? { ...normalized, campaignId: item.campaign_id } : null
+    }).filter(Boolean),
     teams,
     positions: (value.positions ?? []).map(safeCatalogItem).filter(Boolean),
     roleOptions: (value.role_options ?? []).map(safeRoleOption).filter(Boolean),
@@ -1115,6 +1120,8 @@ function normalizeStaffInvitation(row = {}) {
     status: row.invitation_status,
     expiresAt: row.expires_at ?? null,
     department: { id: row.department_id, name: row.department_name ?? 'Unknown department' },
+    campaign: row.campaign_id ? { id: row.campaign_id, name: row.campaign_name ?? 'Unknown campaign' } : null,
+    operatingUnit: row.operating_unit_id ? { id: row.operating_unit_id, name: row.operating_unit_name ?? 'Unknown operating unit' } : null,
     team: row.team_id ? { id: row.team_id, name: row.team_name ?? 'Unknown team' } : null,
     position: row.position_id ? { id: row.position_id, name: row.position_name ?? 'Unknown position' } : null,
     role: { id: row.role_id, name: row.role_name ?? 'Unknown role' },
@@ -1131,6 +1138,7 @@ function normalizeStaffInvitation(row = {}) {
     updatedAt: row.updated_at,
     canResend: Boolean(row.can_resend),
     canRevoke: Boolean(row.can_revoke),
+    canReinvite: Boolean(row.can_reinvite),
   }
 }
 
@@ -1142,6 +1150,10 @@ export async function listStaffInvitations(client, { status = null, limit = 50 }
 
 export function sendStaffInvitation(client, proposal) {
   return client.functions.invoke('pulse-staff-invitations', { body: { action: 'send', requestKey: crypto.randomUUID(), ...proposal } }).then(({ data, error }) => ({ data, error: error ? invitationError(error) : null }))
+}
+
+export function reinviteStaffInvitation(client, invitation, proposal) {
+  return sendStaffInvitation(client, { ...proposal, previousInvitationId: invitation.id })
 }
 
 export function resendStaffInvitation(client, invitation) {
