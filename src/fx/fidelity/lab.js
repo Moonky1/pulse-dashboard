@@ -3,11 +3,12 @@ import { PRESETS } from './material.js'
 import { createMaterial } from './renderer.js'
 
 document.querySelector('#lab').innerHTML = `
-<header><span>PULSE / FX-1C</span><span>LOCAL CAUSTIC CALIBRATION · A FIRST</span></header>
+<header><span>PULSE / FX-1D</span><span>HYBRID OPTICAL STUDY · A ONLY</span></header>
 <h1>Light through matter.</h1><p>Reference analysis · optical volume before product integration.</p>
 <nav class="lab-nav"><a href="#comparison">Compare material</a><a href="#analysis">Reference sequence</a></nav>
 <div class="toolbar" aria-label="Reproducible interaction states">${['live','idle','left','center','right','press'].map(s=>`<button data-state="${s}" aria-pressed="${s==='center'}">${s}</button>`).join('')}<label><input type="checkbox" id="freeze" checked> Freeze frame</label><button id="advance">+1.0s</button><label><input type="checkbox" id="fallback"> CSS fallback</label><output id="frame">Frame 2.6s</output><label><input type="checkbox" id="motion-study"> Motion study (lab override of OS reduced motion)</label></div>
 <div class="toolbar" aria-label="Reference comparison timestamps">${[[.46,'center','Early'],[2.13,'idle','Idle'],[3.79,'right','Late'],[4.63,'left','End']].map(([t,s,label])=>`<button data-comparison-time="${t}" data-comparison-state="${s}">${label} ${t}s</button>`).join('')}<span>Matched clock; interaction is a labeled approximation, not recovered reference input.</span></div>
+<div class="toolbar"><label><input id="hybrid" type="checkbox" checked> Hybrid lookup · A only</label><button id="reference-play">Play reference</button><button id="context-test">Test A context loss / restore</button><output id="context-result"></output></div>
 <section id="comparison" class="comparison">
   <article class="sample reference-sample"><div class="sample-title"><b>REFERENCE</b><span>03 · supplied video</span></div><div class="stage"><canvas id="reference-frame" width="960" height="340"></canvas></div><p id="reference-caption">Loading reference…</p></article>
   ${Object.entries(PRESETS).map(([id,p])=>`<article class="sample"><div class="sample-title"><b>${id}</b><span>${p.label}</span></div><div class="stage"><div class="material"><canvas id="material-${id}" aria-hidden="true"></canvas><span class="sample-label"><i>+</i> Add new</span></div></div><p id="status-${id}">Waiting for viewport</p></article>`).join('')}
@@ -15,11 +16,18 @@ document.querySelector('#lab').innerHTML = `
 <section class="orb-section"><div><h2>Radial translation · candidate B</h2><p>Same environment, refracted through a curved lens. Stationary graphite core; no rotating color map.</p></div><div class="orb-stage"><canvas id="orb" aria-label="Optical orb prototype"></canvas></div><p id="orb-status"></p></section>
 <section class="tuning"><h2>Material calibration · A only</h2><p>B/C retain legacy parameter sets, are not newly calibrated or approved. Orb is deferred.</p><div id="controls"></div><button id="reset">Reset A</button></section>
 <section id="analysis" class="references"><article><h2>Reference 03 · ribbon</h2><video id="ref3" src="/__reference/3.mp4" controls muted playsinline></video><div class="filmstrip" id="strip3"></div></article><article><h2>Reference 05 · optical ring</h2><video id="ref5" src="/__reference/5.mp4" controls muted playsinline></video><div class="filmstrip" id="strip5"></div></article></section>
-<footer>FX-1C · local only · no product routes or backend connections</footer>`
+<footer>FX-1D · local only · B/C and Orb remain FX-1C baselines · no product routes or backend connections</footer>`
 
-const renderers = Object.fromEntries(Object.entries(PRESETS).map(([id,p])=>[id,createMaterial(document.querySelector(`#material-${id}`),p,{onStatus:status=>{document.querySelector(`#status-${id}`).textContent=status}})]))
+const renderers = Object.fromEntries(Object.entries(PRESETS).map(([id,p])=>[id,createMaterial(document.querySelector(`#material-${id}`),p,{hybrid:id==='A',onStatus:status=>{document.querySelector(`#status-${id}`).textContent=status}})]))
 renderers.orb=createMaterial(document.querySelector('#orb'),PRESETS.B,{shape:1,onStatus:status=>{document.querySelector('#orb-status').textContent=status}})
 let frozenTime=2.6
+document.querySelector('#hybrid').addEventListener('change',e=>renderers.A.setHybrid(e.target.checked))
+document.querySelector('#context-test').addEventListener('click',()=>{document.querySelector('#context-result').textContent=renderers.A.testContextLoss()?'Requested local loss / restore':'Extension unavailable'})
+document.querySelector('#reference-play').addEventListener('click',async()=>{
+  const player=document.querySelector('#ref3')
+  if(player.paused){player.loop=true;await player.play()}else player.pause()
+})
+for(const event of ['play','pause'])document.querySelector('#ref3').addEventListener(event,()=>{document.querySelector('#reference-play').textContent=document.querySelector('#ref3').paused?'Play reference':'Pause reference'})
 Object.values(renderers).forEach(r=>{r.setState('center');r.setFrame(frozenTime)})
 document.querySelectorAll('[data-state]').forEach(button=>button.addEventListener('click',()=>{
   document.querySelectorAll('[data-state]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)))
@@ -44,7 +52,7 @@ document.querySelectorAll('[data-comparison-time]').forEach(button=>button.addEv
   document.querySelector(`[data-state="${button.dataset.comparisonState}"]`).click()
   Object.values(renderers).forEach(r=>r.setFrame(frozenTime))
 }))
-const statsTimer=setInterval(()=>{for(const [id,r] of Object.entries(renderers)){const s=r.stats();document.querySelector(id==='orb'?'#orb-status':`#status-${id}`).textContent=s.error?`Fallback: ${s.error}`:`${s.width}×${s.height} · ${s.draws} draws · ${s.visible?'visible':'paused offscreen'}${s.reduced?' · OS reduced motion':''}`}},800)
+const statsTimer=setInterval(()=>{for(const [id,r] of Object.entries(renderers)){const s=r.stats();document.querySelector(id==='orb'?'#orb-status':`#status-${id}`).textContent=s.error?`Fallback: ${s.error}`:`${s.width}×${s.height} · ${s.draws} draws · t=${s.time.toFixed(2)}s · ${s.visible?'visible':'paused offscreen'}${s.reduced?' · OS reduced motion':''}${id==='A'?s.hybrid?' · hybrid ready':' · procedural baseline':''}`}},800)
 window.addEventListener('pagehide',()=>{clearInterval(statsTimer);Object.values(renderers).forEach(r=>r.destroy())},{once:true})
 
 async function filmstrip(id) {
@@ -85,7 +93,8 @@ async function filmstrip(id) {
     button.addEventListener('click', () => { player.pause(); player.currentTime = time })
     strip.append(button)
   }
-  player.currentTime = id===3?.46:1.29
+  // Thumbnail generation must not overwrite a manually selected ribbon frame.
+  if(id===5)player.currentTime=1.29
   decoder.removeAttribute('src')
   decoder.load()
 }

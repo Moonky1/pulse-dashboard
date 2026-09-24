@@ -1,4 +1,4 @@
-// FX-1C calibration of the FX-1B height-field model. Lab-only.
+// FX-1D hybrid experiment over FX-1C. Only A enables the scalar optical map.
 export const PRESETS = Object.freeze({
   A: { label: 'Reference-faithful', dispersion: .22, bend: 1.04, thickness: .82, fresnel: .48, specular: .62, caustic: 1.15, noiseScale: 1.8, speed: .24, pointer: .65, absorption: .22, balance: .48, exposure: 1.15 },
   B: { label: 'Pulse-balanced', dispersion: .17, bend: .92, thickness: .77, fresnel: .40, specular: .48, caustic: .88, noiseScale: 1.8, speed: .19, pointer: .5, absorption: .30, balance: .44, exposure: .85 },
@@ -14,6 +14,8 @@ uniform vec2 pointer;
 uniform float time, interaction, press, shape;
 uniform float dispersion, bend, thickness, fresnel, specular, caustic;
 uniform float noiseScale, speed, pointerForce, absorption, balance, exposure;
+uniform sampler2D opticalMap;
+uniform float hybridStrength;
 
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
@@ -101,7 +103,7 @@ float heightField(vec2 p){
   return thickness*hull*(meniscus*fold+fineFold+micro*meniscus)*(1.-press*.12);
 }
 
-vec3 refractMaterial(vec2 p,float H,vec2 gradient,float coverage,float localCurvature){
+vec3 refractMaterial(vec2 p,float H,vec2 gradient,float coverage,float localCurvature,vec2 optical){
   vec3 N=normalize(vec3(-gradient*.32,1.));
   vec3 V=normalize(vec3(p*.055,1.));
   float facing=clamp(dot(N,V),0.,1.);
@@ -122,6 +124,7 @@ vec3 refractMaterial(vec2 p,float H,vec2 gradient,float coverage,float localCurv
   vec3 internalLight=vec3(environment(internalRay-g*split*2.).r,environment(internalRay).g,environment(internalRay+g*split*3.).b);
   float internalWeight=.34*clamp(length(gradient),0.,1.);
   if(shape<.5)internalWeight=clamp(.12+.20*H+.07*length(gradient),.12,.46);
+  if(shape<.5&&hybridStrength>.5)internalWeight=clamp(.12+.48*optical.y+.10*H,.12,.65);
   refracted=mix(refracted,internalLight,internalWeight);
   refracted*=exp(-absorption*H*vec3(.82,.4,.22));
   vec3 halfVector=normalize(vec3(-.18,.58,1.));
@@ -147,7 +150,17 @@ vec3 ribbon(vec2 p){
   vec2 curvature=vec2(hx+hm-2.*H,hy+hn-2.*H)/(e*e);
   float depth=crest(p)-p.y;
   float coverage=smoothstep(-.025,.025,depth);
-  vec3 glass=refractMaterial(p,H,grad,coverage,curv);
+  vec2 optical=vec2(0.);
+  if(hybridStrength>.5){
+    // Two paths through a scalar irradiance map. Coordinates are attached to
+    // deformed material depth, not screen UV or direct cursor translation.
+    float t=time*speed;
+    vec2 warp=vec2(sin(p.y*2.1+sin(t*.61)+p.x*.8),sin(p.x*1.7+cos(t*.47)+H*2.));
+    vec2 q=vec2(p.x*.19,depth*.67+H*.21)+warp*vec2(.065,.09)+grad*.008;
+    optical.x=texture2D(opticalMap,q).r;
+    optical.y=texture2D(opticalMap,q*vec2(.83,1.12)+vec2(.31,.17)+grad*.015+vec2(H*.09,sin(t*.37+p.x)*.043)).r;
+  }
+  vec3 glass=refractMaterial(p,H,grad,coverage,curv,optical);
   float live=.015+.985*interaction;
   vec3 graphite=vec3(.003,.0035,.004)+vec3(.003)*gauss(p.y,.7);
   float edge=exp(-abs(d)*180.);
@@ -160,6 +173,16 @@ vec3 ribbon(vec2 p){
   float whiteCore=pow(foldFocus,2.)*min(max(glass.r,max(glass.g,glass.b)),2.);
   vec3 col=graphite+glass*coverage*live*exposure*(.68+caustic*foldFocus*2.8);
   col+=vec3(1.,.985,.955)*whiteCore*caustic*live*.75;
+  if(hybridStrength>.5){
+    float concentration=pow(optical.x,1.15)*(.55+.9*optical.y);
+    float transmitted=.035+.55*optical.x+.28*optical.y;
+    float focusing=internalMask*(.3+.7*smoothstep(.08,1.5,curv));
+    col=graphite+glass*coverage*live*exposure*transmitted;
+    col+=glass*concentration*focusing*caustic*live*6.8;
+    // Hot core only where incoming light and geometric/map concentration agree.
+    float incoming=clamp(dot(glass,vec3(.21,.72,.07)),0.,1.5);
+    col+=vec3(1.,.985,.955)*pow(concentration,1.5)*incoming*focusing*live*caustic*8.;
+  }
   col+=vec3(.07,.076,.088)*edge;
   return col*mask;
 }
@@ -182,7 +205,7 @@ vec3 orb(vec2 p){
   vec2 gradient=vec2(hx-hm,hy-hn)/(2.*e);
   float curv=abs(hx+hm+hy+hn-4.*H)/(e*e)*.035;
   float rim=smoothstep(.002,.015,H);
-  vec3 glass=refractMaterial(-p*2.3+vec2(-.14,.28),H*2.7,gradient,1.,curv);
+  vec3 glass=refractMaterial(-p*2.3+vec2(-.14,.28),H*2.7,gradient,1.,curv,vec2(0.));
   float core=1.-smoothstep(.548,.554,r);
   float dome=sqrt(max(0.,1.-r*r/.31));
   float glint=exp(-dot(p-vec2(-.17,.25),p-vec2(-.17,.25))*100.);
