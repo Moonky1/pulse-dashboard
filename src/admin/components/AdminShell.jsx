@@ -1,7 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 
-import { AppNavigation, AccountMenu } from '../../auth/components/ProductNavigation.jsx'
-import { PulseOrb } from '../../components/ui/PulseOrb.jsx'
+import { AppNavigation, AccountMenu, ProductMark } from '../../auth/components/ProductNavigation.jsx'
 import { canInviteStaff, canViewAudit, canViewCampaigns, canViewDepartments, canViewPositions, canViewTeams, hasAdminUsersAccess } from '../access.js'
 import { useAdminPermissions } from '../AdminAccessContext.js'
 
@@ -16,7 +15,7 @@ export function AdminShell() {
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <NavLink className="admin-brand" to="/workspace"><PulseOrb size="sm" active /><span>Pulse</span></NavLink>
+        <NavLink className="admin-brand" to="/workspace"><ProductMark small /><span>Pulse</span></NavLink>
         <div className="admin-context"><span>Administration</span><strong>People &amp; access</strong></div>
         <nav aria-label="Administration">
           <NavLink to="/workspace">Workspace</NavLink>

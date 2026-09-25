@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { StaffAvatar } from '../../components/StaffAvatar.jsx'
-import { PulseOrb } from '../../components/ui/PulseOrb.jsx'
 import { useAuth } from '../AuthProvider.jsx'
 import './productNavigation.css'
 
@@ -12,6 +11,10 @@ const APPLICATIONS = [
   { label: 'Studio', to: '/studio', match: '/studio' },
   { label: 'Administration', to: '/admin', match: '/admin' },
 ]
+
+export function ProductMark({ small = false }) {
+  return <span className={`product-mark${small ? ' product-mark--small' : ''}`} aria-hidden="true"><i /></span>
+}
 
 export function AppNavigation({ confirmLeave = () => true }) {
   const { pathname } = useLocation()
@@ -62,7 +65,7 @@ export function AccountMenu({ confirmLeave = () => true }) {
 
 export function ProductTopbar({ confirmLeave = () => true }) {
   return <header className="product-topbar">
-    <Link className="product-topbar__brand" to="/workspace" onClick={(event) => { if (!confirmLeave()) event.preventDefault() }} aria-label="Pulse workspace"><PulseOrb size="sm" active /><span>Pulse</span></Link>
+    <Link className="product-topbar__brand" to="/workspace" onClick={(event) => { if (!confirmLeave()) event.preventDefault() }} aria-label="Pulse workspace"><ProductMark small /><span>Pulse</span></Link>
     <AppNavigation confirmLeave={confirmLeave} />
     <AccountMenu confirmLeave={confirmLeave} />
   </header>
