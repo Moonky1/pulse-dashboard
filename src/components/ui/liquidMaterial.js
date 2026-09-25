@@ -168,9 +168,9 @@ vec3 orb(vec2 p){
   float lip=gauss(r-.785,.008)+.4*gauss(r-.552,.009);
   float response=exp(-dot(p-point(),p-point())*4.2)*interaction;
   vec3 energy=orbEnergy();
-  float foundation=smoothstep(.565,.615,r)*(1.-smoothstep(.75,.81,r));
+  float foundation=smoothstep(.545,.585,r)*(1.-smoothstep(.785,.815,r));
   vec3 result=mix(backing,coreColor,core);
-  result+=(vec3(.022,.03,.04)+energy*.085)*foundation;
+  result+=(vec3(.055,.065,.08)+energy*.14)*foundation;
   vec3 waveTint=mix(vec3(1.),vec3(.62)+energy*.75,.65);
   result+=glass*rim*exposure*(1.28+response*.45)*waveTint;
   result+=energy*.045*gauss(r-.70,.085)*rim;
