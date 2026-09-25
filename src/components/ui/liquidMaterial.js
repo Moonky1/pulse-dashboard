@@ -177,9 +177,12 @@ vec3 orb(vec2 p){
   float travelingGlow=exp(-dot(p-lightCenter,p-lightCenter)*1.8);
   vec3 foundation=vec3(.035,.05,.067)+energy*(.31+.09*gauss(r-.68,.11)+.17*swell+.25*fold);
   vec3 result=mix(backing,coreColor,core)+foundation*body;
-  result+=(vec3(.17,.22,.27)+energy*.14)*body*travelingGlow;
-  result+=glass*rim*exposure*(1.05+response*.85)*mix(vec3(.8),energy+vec3(.20),.78);
+  result+=(vec3(.08,.11,.14)+energy*.16)*body*travelingGlow;
+  result+=glass*rim*exposure*(1.05+response*.85)*mix(vec3(.45),energy*.95+vec3(.05),.86);
   result+=(energy*.76+vec3(.10,.15,.20))*body*response;
+  float brightest=max(energy.r,max(energy.g,energy.b));
+  vec3 channelWeight=.22+.78*energy/brightest;
+  result*=mix(vec3(1.),channelWeight,body*.55);
   vec3 normal=normalize(vec3(-gradient*.32,1.));
   float key=pow(max(dot(normal,normalize(vec3(-.5,.7,.7))),0.),26.);
   float bounce=pow(max(dot(normal,normalize(vec3(.4,-.7,.9))),0.),32.);
