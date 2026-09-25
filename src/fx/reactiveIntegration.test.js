@@ -49,7 +49,9 @@ test('the pixel-polished Orb retains the original liquid wave deformation', asyn
   ])
   assert.match(material, /warp\+dent\*\(\.075\+\.026\*press\)/)
   assert.match(material, /vec3 glass=refractMaterial\(-p\*2\.3\+vec2\(-\.14,\.28\),H\*2\.7,gradient,1\.,curv\)/)
-  assert.doesNotMatch(material, /float body=smoothstep\(\.545,\.585,r\)/)
+  assert.match(material, /result\+=glass\*rim\*exposure\*\(1\.28\+response\*\.45\)\*waveTint/)
+  assert.match(material, /float foundation=smoothstep\(\.565,\.615,r\)/)
+  assert.match(material, /float phase=mod\(time\*speed\*1\.15,8\.\)/)
   assert.match(home, /previewMotion=\{previewMotion\}/)
 })
 

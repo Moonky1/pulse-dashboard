@@ -127,6 +127,30 @@ float radialHeight(vec2 p){
   float crossSection=sqrt(section)*smoothstep(0.,.14,section);
   return thickness*.24*crossSection*(.86+.14*fbm(p*4.+time*speed*.14));
 }
+
+// A single muted hue travels through the spectrum; the liquid lens above it
+// keeps its original shape and pointer response.
+vec3 orbEnergy(){
+  float phase=mod(time*speed*1.15,8.);
+  float blend=smoothstep(0.,1.,fract(phase));
+  vec3 cyan=vec3(.08,.64,.82);
+  vec3 violet=vec3(.49,.34,.75);
+  vec3 red=vec3(.88,.12,.16);
+  vec3 orange=vec3(.92,.38,.11);
+  vec3 yellow=vec3(.91,.70,.19);
+  vec3 green=vec3(.19,.67,.39);
+  vec3 silver=vec3(.53,.59,.66);
+  vec3 blue=vec3(.16,.37,.78);
+  vec3 cycling=phase<1.?mix(cyan,violet,blend):
+    phase<2.?mix(violet,red,blend):
+    phase<3.?mix(red,orange,blend):
+    phase<4.?mix(orange,yellow,blend):
+    phase<5.?mix(yellow,green,blend):
+    phase<6.?mix(green,silver,blend):
+    phase<7.?mix(silver,blue,blend):mix(blue,cyan,blend);
+  return mix(cycling,cyan,palette);
+}
+
 vec3 orb(vec2 p){
   float r=length(p),e=.006;
   float H=radialHeight(p);
@@ -143,8 +167,13 @@ vec3 orb(vec2 p){
   vec3 backing=vec3(.019,.026,.036)*(1.-smoothstep(.78,.815,r));
   float lip=gauss(r-.785,.008)+.4*gauss(r-.552,.009);
   float response=exp(-dot(p-point(),p-point())*4.2)*interaction;
-  vec3 result=mix(backing,coreColor,core)+glass*rim*exposure*(1.28+response*.45);
-  result+=mix(vec3(.075,.12,.17),vec3(.07,.17,.21),palette)*gauss(r-.70,.085)*rim;
+  vec3 energy=orbEnergy();
+  float foundation=smoothstep(.565,.615,r)*(1.-smoothstep(.75,.81,r));
+  vec3 result=mix(backing,coreColor,core);
+  result+=(vec3(.022,.03,.04)+energy*.085)*foundation;
+  vec3 waveTint=mix(vec3(1.),vec3(.62)+energy*.75,.65);
+  result+=glass*rim*exposure*(1.28+response*.45)*waveTint;
+  result+=energy*.045*gauss(r-.70,.085)*rim;
   vec3 normal=normalize(vec3(-gradient*.32,1.));
   float key=pow(max(dot(normal,normalize(vec3(-.5,.7,.7))),0.),26.);
   float bounce=pow(max(dot(normal,normalize(vec3(.4,-.7,.9))),0.),32.);
