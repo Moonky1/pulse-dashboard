@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { filterManagedUsers, lifecycleMeta, roleScopeLabel } from './adminViewModel.js'
+import { filterManagedUsers, formatPulseDate, lifecycleMeta, roleScopeLabel } from './adminViewModel.js'
 
 test('account states expose readable labels, not color alone', () => {
   assert.equal(lifecycleMeta('pending_approval').label, 'Awaiting approval')
@@ -20,4 +20,10 @@ test('user filtering supports identity, lifecycle, organization, and role', () =
   const users = [{ fullName: 'Ada Admin', displayName: 'Ada', employeeId: 'KK-000100', email: 'ada@example.test', status: 'active', departmentId: 'd1', teamId: null, roles: [{ key: 'admin' }] }]
   assert.equal(filterManagedUsers(users, { query: '000100', status: 'active', departmentId: 'd1', roleKey: 'admin' }).length, 1)
   assert.equal(filterManagedUsers(users, { query: 'other' }).length, 0)
+})
+
+test('Joined Pulse formats a date-only value without inventing missing history', () => {
+  assert.match(formatPulseDate('2026-03-26'), /2026/)
+  assert.equal(formatPulseDate(null), 'Not recorded')
+  assert.equal(formatPulseDate('invalid'), 'Not recorded')
 })

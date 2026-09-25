@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, getUserOperationalAssignments, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedPositions, listManagedTeams, listManagedUsers, listManagedUsersWithDetails, loadAssignableRoleOptions, loadBusinessCatalog, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, normalizeWorkDetailsMutationError, reactivateManagedUser, removeManagedUserRole, replaceManagedUserRole, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam, updateManagedUserWorkDetails } from './adminApi.js'
+import { approvePendingUser, assignManagedUserRole, blockManagedUser, blockPendingUser, createManagedDepartment, createManagedTeam, extractGlobalPermissionKeys, getManagedUser, getUserAuditHistory, getUserOperationalAssignments, inactivateManagedUser, listAuditEvents, listManagedCampaigns, listManagedDepartments, listManagedPositions, listManagedTeams, listManagedUsers, listManagedUsersWithDetails, loadAssignableRoleOptions, loadBusinessCatalog, loadOrganizationDirectory, loadOwnGlobalPermissionKeys, loadPendingApprovalOptions, normalizeAuditError, normalizeLifecycleMutationError, normalizeOrganizationMutationError, normalizePendingApprovalError, normalizePendingMutationError, normalizeRoleMutationError, normalizeWorkDetailsMutationError, reactivateManagedUser, removeManagedUserRole, replaceManagedUserRole, setManagedUserPulseJoinedOn, setManagedDepartmentActive, setManagedTeamActive, updateManagedDepartment, updateManagedTeam, updateManagedUserWorkDetails } from './adminApi.js'
 
 const USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const ROLE_ID = '10000000-0000-0000-0000-000000000009'
@@ -82,6 +82,28 @@ test('user detail rejects invalid and missing targets safely', async () => {
   assert.equal((await getManagedUser(client, 'bad-id')).error.code, 'invalid_request')
   assert.equal(calls, 0)
   assert.equal((await getManagedUser(client, USER_ID)).error.code, 'not_found')
+})
+
+test('Joined Pulse correction uses only the protected date RPC and validates its result', async () => {
+  const calls = []
+  const client = { rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: [{ id: USER_ID, pulse_joined_on: '2025-06-15', changed: true }], error: null }
+  } }
+  const result = await setManagedUserPulseJoinedOn(client, USER_ID, '2025-06-15')
+  assert.deepEqual(result.data, { id: USER_ID, pulseJoinedOn: '2025-06-15', changed: true })
+  assert.deepEqual(calls, [{ name: 'set_staff_pulse_joined_on', args: { target_user_id: USER_ID, requested_pulse_joined_on: '2025-06-15' } }])
+})
+
+test('Joined Pulse correction rejects malformed input and sanitizes server failures', async () => {
+  let calls = 0
+  const invalidClient = { rpc: async () => { calls += 1; return { data: null, error: null } } }
+  assert.equal((await setManagedUserPulseJoinedOn(invalidClient, USER_ID, 'June 15')).error.code, 'invalid_date')
+  assert.equal((await setManagedUserPulseJoinedOn(invalidClient, 'bad-id', '2025-06-15')).error.code, 'invalid_date')
+  assert.equal(calls, 0)
+  const denied = await setManagedUserPulseJoinedOn({ rpc: async () => ({ data: null, error: { code: '42501', message: 'users table details' } }) }, USER_ID, '2025-06-15')
+  assert.equal(denied.error.code, 'access_denied')
+  assert.doesNotMatch(denied.error.message, /table|SQL/i)
 })
 
 test('lifecycle operations call only their canonical RPC and normalize the result', async () => {

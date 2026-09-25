@@ -7,6 +7,7 @@ test('known audit actions have stable human labels', () => {
   assert.equal(auditActionLabel('role.assigned'), 'Role assigned')
   assert.equal(auditActionLabel('staff_invitation.accepted'), 'Staff invitation accepted')
   assert.equal(auditActionLabel('department.deactivated'), 'Department deactivated')
+  assert.equal(auditActionLabel('account.joined_pulse_updated'), 'Joined Pulse date updated')
 })
 
 test('unknown events degrade safely without hiding their action', () => {

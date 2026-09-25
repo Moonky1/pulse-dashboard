@@ -1,4 +1,5 @@
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
 const INVITATION_STATUSES = new Set(['pending_send', 'sent', 'accepted', 'revoked', 'expired', 'failed'])
 
@@ -241,6 +242,7 @@ export function normalizeManagedUser(row = {}) {
     googleAvatarUrl: row.google_avatar_url ?? null,
     customAvatarPath: row.custom_avatar_path ?? null,
     avatarUpdatedAt: row.avatar_updated_at ?? null,
+    pulseJoinedOn: row.pulse_joined_on ?? null,
     authEmailConfirmed: Boolean(row.auth_email_confirmed),
     roles: Array.isArray(row.roles) ? row.roles.map(normalizeRole) : [],
   }
@@ -302,6 +304,31 @@ export async function getManagedUser(client, userId) {
   const row = data?.[0] ?? data ?? null
   if (!row || Array.isArray(row)) return { data: null, error: publicError('not_found', 'This Pulse user could not be found.') }
   return { data: normalizeManagedUser(row), error: null }
+}
+
+export function normalizeJoinedPulseError(error) {
+  if (!error) return null
+  if (['42501', '28000'].includes(error.code)) return publicError('access_denied', 'You do not have permission to edit Joined Pulse.')
+  if (error.code === 'P0002') return publicError('not_found', 'This Pulse user could not be found.')
+  if (error.code === '55000') return publicError('not_staff', 'Joined Pulse is available after Staff activation.')
+  if (['22007', '22023', '22P02'].includes(error.code)) return publicError('invalid_date', 'Choose today or an earlier valid date.')
+  return publicError('unavailable', 'Pulse could not update Joined Pulse. No change was applied.')
+}
+
+export async function setManagedUserPulseJoinedOn(client, userId, pulseJoinedOn) {
+  if (!UUID_PATTERN.test(userId ?? '') || !DATE_PATTERN.test(pulseJoinedOn ?? '')) {
+    return { data: null, error: publicError('invalid_date', 'Choose today or an earlier valid date.') }
+  }
+  const { data, error } = await client.rpc('set_staff_pulse_joined_on', {
+    target_user_id: userId,
+    requested_pulse_joined_on: pulseJoinedOn,
+  })
+  if (error) return { data: null, error: normalizeJoinedPulseError(error) }
+  const row = data?.[0] ?? data ?? null
+  if (!row || Array.isArray(row) || row.id !== userId || !DATE_PATTERN.test(row.pulse_joined_on ?? '')) {
+    return { data: null, error: publicError('unavailable', 'Pulse could not confirm the Joined Pulse update.') }
+  }
+  return { data: { id: row.id, pulseJoinedOn: row.pulse_joined_on, changed: Boolean(row.changed) }, error: null }
 }
 
 export function normalizeOperationalAssignment(row = {}) {

@@ -9,6 +9,13 @@ export function lifecycleMeta(status) {
   return LIFECYCLE[status] ?? { label: 'Unknown', tone: 'neutral', description: 'The account status is not recognized.' }
 }
 
+export function formatPulseDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value ?? '')) return 'Not recorded'
+  const date = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return 'Not recorded'
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date)
+}
+
 export function directoryMaps(directory = {}) {
   return {
     departments: new Map((directory.departments ?? []).map((item) => [item.id, item.name])),
