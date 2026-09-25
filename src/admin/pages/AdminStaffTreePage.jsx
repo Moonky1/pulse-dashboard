@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button.jsx'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
 import { LifecycleBadge } from '../components/LifecycleBadge.jsx'
-import { RoleBadge } from '../components/RoleBadge.jsx'
 import { StaffAvatar } from '../components/StaffAvatar.jsx'
 import { TeamBadge } from '../components/TeamBadge.jsx'
 import { useBusinessCatalog } from '../hooks/useBusinessCatalog.js'
@@ -15,12 +14,11 @@ function PersonCard({ person }) {
   const destination = person.status === 'pending_approval' ? `/admin/pending/${person.id}` : `/admin/users/${person.id}`
   return (
     <Link className="admin-tree-person" to={destination} aria-label={`Open ${person.fullName}'s staff profile`}>
-      <StaffAvatar name={person.fullName} customAvatarPath={person.customAvatarPath} googleAvatarUrl={person.googleAvatarUrl} avatarUpdatedAt={person.avatarUpdatedAt} size="sm" />
+      <StaffAvatar name={person.displayName || person.fullName} customAvatarPath={person.customAvatarPath} googleAvatarUrl={person.googleAvatarUrl} avatarUpdatedAt={person.avatarUpdatedAt} size="sm" />
       <span className="admin-tree-person__identity">
-        <strong>{person.fullName}</strong>
+        <strong>{person.displayName || person.fullName}</strong>
         <small>{person.positionName || 'Position not assigned'}</small>
         {person.teamName && <TeamBadge name={person.teamName} code={person.primaryTeamCode} campaignCode={person.primaryCampaignCode} linked={false} />}
-        {person.roles?.[0] && <RoleBadge role={person.roles[0]} />}
         {person.qaCoverage?.length ? (
           <span className="admin-tree-person__coverage" aria-label="Secondary quality coverage">
             {person.qaCoverage.map((coverage) => <i key={`${coverage.teamId}:${coverage.teamName}`}>QA · {coverage.teamName}</i>)}
@@ -153,7 +151,6 @@ export function StaffTreeDirectory({ users, directory, relationships, catalog })
               </div>
             )}
           </section>
-          <p className="admin-tree-note">Reporting lines appear only when they are explicitly recorded. Quality coverage is shown as secondary context and does not change a person’s home team, reporting line or Pulse access.</p>
         </>
       )}
     </>
@@ -172,7 +169,7 @@ export function AdminStaffTreePage() {
     <main className="admin-content admin-content--staff-tree">
       <Link className="admin-back-link" to="/admin/users">← Back to people</Link>
       <div className="admin-page-heading">
-        <div><p>Company structure</p><h1>Staff Tree</h1><span>Explore the company by department and Team · Reporting lines appear only when explicitly recorded</span></div>
+        <div><p>Company structure</p><h1>Staff Tree</h1><span>Explore people by area and team</span></div>
         <Button type="button" variant="secondary" loading={combinedLoading} onClick={() => Promise.all([refresh(), catalogState.refresh()])}>Refresh</Button>
       </div>
       <StaffTreeDirectory users={users} directory={directory} catalog={catalogState.catalog} />

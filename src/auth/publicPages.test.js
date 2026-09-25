@@ -97,7 +97,7 @@ test('the browser mark uses the Pulse metallic ring identity', async () => {
 })
 
 test('the shared Pulse orb uses size-aware optical motion with a static reduced-motion state', async () => {
-  const [orb, styles, publicShell, authShell, workspace, goShell, studioShell, adminShell] = await Promise.all([
+  const [orb, styles, publicShell, authShell, workspace, goShell, studioShell, adminShell, productNavigation] = await Promise.all([
     read('../components/ui/PulseOrb.jsx'),
     read('../components/ui/ui.css'),
     read('./components/PublicSiteShell.jsx'),
@@ -106,6 +106,7 @@ test('the shared Pulse orb uses size-aware optical motion with a static reduced-
     read('../go-product/GoShell.jsx'),
     read('../studio/StudioShell.jsx'),
     read('../admin/components/AdminShell.jsx'),
+    read('./components/ProductNavigation.jsx'),
   ])
 
   assert.match(orb, /pulse-orb__rim/)
@@ -118,6 +119,7 @@ test('the shared Pulse orb uses size-aware optical motion with a static reduced-
   assert.doesNotMatch(styles, /rotate\((?:132|226|229|294|298|340|346)deg\)/)
 
   for (const surface of [publicShell, authShell, workspace, goShell, studioShell, adminShell]) {
-    assert.match(surface, /PulseOrb|<Brand/)
+    assert.match(surface, /PulseOrb|<Brand|ProductTopbar/)
   }
+  assert.match(productNavigation, /PulseOrb/)
 })

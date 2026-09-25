@@ -1,18 +1,11 @@
 import { Link } from 'react-router-dom'
 
-import { useAuth } from '../auth/AuthProvider.jsx'
-import { Button } from '../components/ui/Button.jsx'
-import { PulseOrb } from '../components/ui/PulseOrb.jsx'
+import { ProductTopbar } from '../auth/components/ProductNavigation.jsx'
 import './goProduct.css'
 
 export function GoShell({ children }) {
-  const { signOut } = useAuth()
   return <div className="go-shell">
-    <header className="go-topbar">
-      <Link className="go-brand" to="/workspace"><PulseOrb size="sm" active /><span>Pulse GO</span></Link>
-      <nav aria-label="GO navigation"><Link to="/workspace">Workspace</Link><Link to="/go">GO</Link><Link to="/studio">Studio</Link></nav>
-      <Button variant="ghost" onClick={() => void signOut()}>Sign out</Button>
-    </header>
+    <ProductTopbar />
     <main className="go-main">{children}</main>
   </div>
 }

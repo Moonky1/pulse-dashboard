@@ -8,6 +8,7 @@ const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').the
 const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => ({ default: module.AdminArea })))
 const AgentSignInPage = lazy(() => import('./screens/AgentSignInPage.jsx').then((module) => ({ default: module.AgentSignInPage })))
 const AuthCallbackPage = lazy(() => import('./screens/AuthCallbackPage.jsx').then((module) => ({ default: module.AuthCallbackPage })))
+const DashboardPage = lazy(() => import('./screens/DashboardPage.jsx').then((module) => ({ default: module.DashboardPage })))
 const ForgotPasswordPage = lazy(() => import('./screens/ForgotPasswordPage.jsx').then((module) => ({ default: module.ForgotPasswordPage })))
 const GoLandingPage = lazy(() => import('../go-product/GoLandingPage.jsx').then((module) => ({ default: module.GoLandingPage })))
 const GoHostSelection = lazy(() => import('../go-product/GoHostSelection.jsx').then((module) => ({ default: module.GoHostSelection })))
@@ -15,11 +16,13 @@ const GoHostedRoomPage = lazy(() => import('../go-product/GoHostedRoomPage.jsx')
 const GoPracticePlayer = lazy(() => import('../go-product/GoPracticePlayer.jsx').then((module) => ({ default: module.GoPracticePlayer })))
 const GoPracticeSelection = lazy(() => import('../go-product/GoPracticeSelection.jsx').then((module) => ({ default: module.GoPracticeSelection })))
 const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx').then((module) => ({ default: module.PendingApprovalPage })))
+const ProfilePage = lazy(() => import('./screens/ProfilePage.jsx').then((module) => ({ default: module.ProfilePage })))
 const PublicHomePage = lazy(() => import('./screens/PublicHomePage.jsx').then((module) => ({ default: module.PublicHomePage })))
 const PublicLegalPage = lazy(() => import('./screens/PublicLegalPage.jsx').then((module) => ({ default: module.PublicLegalPage })))
 const RegisterPage = lazy(() => import('./screens/RegisterPage.jsx').then((module) => ({ default: module.RegisterPage })))
 const ResetPasswordPage = lazy(() => import('./screens/ResetPasswordPage.jsx').then((module) => ({ default: module.ResetPasswordPage })))
 const SignInPage = lazy(() => import('./screens/SignInPage.jsx').then((module) => ({ default: module.SignInPage })))
+const SettingsPage = lazy(() => import('./screens/SettingsPage.jsx').then((module) => ({ default: module.SettingsPage })))
 const StudioPage = lazy(() => import('../studio/StudioPage.jsx').then((module) => ({ default: module.StudioPage })))
 const StudioBuilder = lazy(() => import('../studio/StudioBuilder.jsx').then((module) => ({ default: module.StudioBuilder })))
 const VerifyEmailPage = lazy(() => import('./screens/VerifyEmailPage.jsx').then((module) => ({ default: module.VerifyEmailPage })))
@@ -56,6 +59,9 @@ export function AuthApp() {
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/pending-approval" element={<RouteGate allow={[AUTH_STATES.PENDING]}><PendingApprovalPage /></RouteGate>} />
         <Route path="/workspace" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><WorkspacePage /></RouteGate>} />
+        <Route path="/dashboard" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><DashboardPage /></RouteGate>} />
+        <Route path="/profile" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><ProfilePage /></RouteGate>} />
+        <Route path="/settings" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><SettingsPage /></RouteGate>} />
         <Route path="/go" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoLandingPage /></RouteGate>} />
         <Route path="/go/host" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostSelection /></RouteGate>} />
         <Route path="/go/host/:sessionId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostedRoomPage expectedViewer="host" /></RouteGate>} />

@@ -4,16 +4,16 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8')
 
-test('one shared avatar resolver serves People, Profile, Staff Tree, Team Profile, and Workspace', async () => {
-  const [people, profile, tree, team, workspace, avatar] = await Promise.all([
+test('one shared avatar resolver serves People, Profile, Staff Tree, Team Profile, and the app account menu', async () => {
+  const [people, profile, tree, team, navigation, avatar] = await Promise.all([
     read('../admin/pages/AdminUsersPage.jsx'),
     read('../admin/pages/AdminUserDetailPage.jsx'),
     read('../admin/pages/AdminStaffTreePage.jsx'),
     read('../admin/pages/AdminTeamProfilePage.jsx'),
-    read('../auth/screens/WorkspacePage.jsx'),
+    read('../auth/components/ProductNavigation.jsx'),
     read('../components/StaffAvatar.jsx'),
   ])
-  for (const surface of [people, profile, tree, team, workspace]) assert.match(surface, /StaffAvatar/)
+  for (const surface of [people, profile, tree, team, navigation]) assert.match(surface, /StaffAvatar/)
   assert.match(avatar, /avatarCandidates/)
   assert.match(avatar, /getSignedAvatarUrl/)
   assert.match(avatar, /onError/)

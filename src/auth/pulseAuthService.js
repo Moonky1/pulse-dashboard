@@ -1,6 +1,6 @@
 import { STAFF_OAUTH_PROVIDER } from './staffOAuth.js'
 
-const PROFILE_FIELDS = 'id, auth_user_id, email, full_name, display_name, employee_id, department_id, team_id, status, approved_at, google_avatar_url, custom_avatar_path, avatar_updated_at, created_at, updated_at'
+const PROFILE_FIELDS = 'id, auth_user_id, email, full_name, display_name, employee_id, department_id, team_id, status, approved_at, pulse_joined_on, google_avatar_url, custom_avatar_path, avatar_updated_at, created_at, updated_at'
 
 export function normalizeEmail(value) {
   return String(value ?? '').trim().toLowerCase()
