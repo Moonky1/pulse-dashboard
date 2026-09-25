@@ -42,17 +42,14 @@ test('FX-1B material is shared by Orb and ribbon without the later texture assis
   assert.doesNotMatch(material + renderer, /sampler2D|texture2D|three|@react-three|drei/)
 })
 
-test('the reactive Orb keeps a continuous body under a slow color cycle', async () => {
+test('the pixel-polished Orb retains the original liquid wave deformation', async () => {
   const [material, home] = await Promise.all([
     read('../components/ui/liquidMaterial.js'),
     read('../auth/screens/PublicHomePage.jsx'),
   ])
-  assert.match(material, /float body=smoothstep\(\.545,\.585,r\)/)
-  assert.match(material, /float cycle=\.5\+\.5\*sin\(time\*speed\*2\.6\)/)
-  assert.match(material, /vec2 lightDrift=vec2\(\.24\*sin\(drift\),\.18\*cos\(drift\*\.72\)\)/)
-  assert.match(material, /float travelingGlow=exp\(-dot\(p-lightCenter,p-lightCenter\)\*2\.\)/)
-  assert.match(material, /response=exp\(-dot\(p-point\(\),p-point\(\)\)\*1\.5\)\*interaction/)
-  assert.match(material, /dent\*\(\.02\+\.012\*press\)/)
+  assert.match(material, /warp\+dent\*\(\.075\+\.026\*press\)/)
+  assert.match(material, /vec3 glass=refractMaterial\(-p\*2\.3\+vec2\(-\.14,\.28\),H\*2\.7,gradient,1\.,curv\)/)
+  assert.doesNotMatch(material, /float body=smoothstep\(\.545,\.585,r\)/)
   assert.match(home, /previewMotion=\{previewMotion\}/)
 })
 
