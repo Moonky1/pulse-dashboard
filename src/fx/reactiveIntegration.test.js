@@ -49,6 +49,8 @@ test('the reactive Orb keeps a continuous body under a slow color cycle', async 
   ])
   assert.match(material, /float body=smoothstep\(\.545,\.585,r\)/)
   assert.match(material, /float cycle=\.5\+\.5\*sin\(time\*speed\*2\.6\)/)
+  assert.match(material, /vec2 lightDrift=vec2\(\.24\*sin\(drift\),\.18\*cos\(drift\*\.72\)\)/)
+  assert.match(material, /float travelingGlow=exp\(-dot\(p-lightCenter,p-lightCenter\)\*2\.\)/)
   assert.match(material, /response=exp\(-dot\(p-point\(\),p-point\(\)\)\*1\.5\)\*interaction/)
   assert.match(material, /dent\*\(\.02\+\.012\*press\)/)
   assert.match(home, /previewMotion=\{previewMotion\}/)
