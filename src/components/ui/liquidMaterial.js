@@ -141,17 +141,18 @@ vec3 orb(vec2 p){
   vec3 coreColor=vec3(.009,.013,.019)+vec3(.025,.031,.039)*dome+vec3(.06,.075,.10)*glint;
   vec3 backing=vec3(.019,.026,.036)*(1.-smoothstep(.78,.815,r));
   float lip=gauss(r-.785,.008)+.4*gauss(r-.552,.009);
-  float response=exp(-dot(p-point(),p-point())*4.2)*interaction;
+  float response=exp(-dot(p-point(),p-point())*1.5)*interaction;
   // A continuous illuminated body remains visible beneath the moving refraction.
   // The palette breathes between restrained cyan and lavender, even at rest.
-  float cycle=.5+.5*sin(time*speed*1.3);
-  vec3 cyan=mix(vec3(.08,.43,.56),vec3(.06,.51,.58),palette);
-  vec3 lavender=mix(vec3(.32,.30,.52),vec3(.39,.44,.62),palette);
+  float cycle=.5+.5*sin(time*speed*2.6);
+  vec3 cyan=mix(vec3(.025,.52,.72),vec3(.02,.60,.70),palette);
+  vec3 lavender=mix(vec3(.48,.20,.74),vec3(.45,.34,.72),palette);
   vec3 energy=mix(cyan,lavender,cycle);
   float body=smoothstep(.545,.585,r)*(1.-smoothstep(.775,.81,r));
-  vec3 foundation=vec3(.035,.05,.067)+energy*(.22+.08*gauss(r-.68,.11));
+  vec3 foundation=vec3(.035,.05,.067)+energy*(.34+.08*gauss(r-.68,.11));
   vec3 result=mix(backing,coreColor,core)+foundation*body;
-  result+=glass*rim*exposure*(1.02+response*.24)*mix(vec3(1.),energy+vec3(.75),.26);
+  result+=glass*rim*exposure*(1.02+response*.45)*mix(vec3(1.),energy+vec3(.75),.56);
+  result+=(energy*.38+vec3(.07,.12,.18))*body*response;
   vec3 normal=normalize(vec3(-gradient*.32,1.));
   float key=pow(max(dot(normal,normalize(vec3(-.5,.7,.7))),0.),26.);
   float bounce=pow(max(dot(normal,normalize(vec3(.4,-.7,.9))),0.),32.);

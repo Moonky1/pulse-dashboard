@@ -48,7 +48,8 @@ test('the reactive Orb keeps a continuous body under a slow color cycle', async 
     read('../auth/screens/PublicHomePage.jsx'),
   ])
   assert.match(material, /float body=smoothstep\(\.545,\.585,r\)/)
-  assert.match(material, /float cycle=\.5\+\.5\*sin\(time\*speed\*1\.3\)/)
+  assert.match(material, /float cycle=\.5\+\.5\*sin\(time\*speed\*2\.6\)/)
+  assert.match(material, /response=exp\(-dot\(p-point\(\),p-point\(\)\)\*1\.5\)\*interaction/)
   assert.match(material, /dent\*\(\.02\+\.012\*press\)/)
   assert.match(home, /previewMotion=\{previewMotion\}/)
 })
