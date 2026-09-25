@@ -212,7 +212,7 @@ export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', colorwa
           draw(time)
           schedule(false)
         })
-      }, finePointer ? 190 : 460)
+      }, shape === 'orb' && sizeMode === 'hero' ? (finePointer ? 60 : 150) : (finePointer ? 190 : 460))
     }
 
     wakeRef.current = schedule

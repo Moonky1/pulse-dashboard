@@ -42,16 +42,19 @@ test('FX-1B material is shared by Orb and ribbon without the later texture assis
   assert.doesNotMatch(material + renderer, /sampler2D|texture2D|three|@react-three|drei/)
 })
 
-test('the reactive Orb keeps a continuous body under a slow color cycle', async () => {
+test('the reactive Orb keeps a continuous body beneath its full color spectrum and moving light', async () => {
   const [material, home] = await Promise.all([
     read('../components/ui/liquidMaterial.js'),
     read('../auth/screens/PublicHomePage.jsx'),
   ])
   assert.match(material, /float body=smoothstep\(\.545,\.585,r\)/)
-  assert.match(material, /float cycle=\.5\+\.5\*sin\(time\*speed\*2\.6\)/)
-  assert.match(material, /vec2 lightDrift=vec2\(\.24\*sin\(drift\),\.18\*cos\(drift\*\.72\)\)/)
-  assert.match(material, /float travelingGlow=exp\(-dot\(p-lightCenter,p-lightCenter\)\*2\.\)/)
-  assert.match(material, /response=exp\(-dot\(p-point\(\),p-point\(\)\)\*1\.5\)\*interaction/)
+  for (const color of ['red', 'orange', 'yellow', 'lime', 'green', 'cyan', 'violet', 'silver']) assert.match(material, new RegExp(`\\b${color}=`))
+  assert.match(material, /vec3 energy=orbEnergy\(time\*speed\*3\.0/)
+  assert.match(material, /vec2 lightDrift=vec2\(\.80\*sin\(drift\),\.62\*cos\(drift\*\.72\)\)\+point\(\)\*interaction\*\.50/)
+  assert.match(material, /float travelingGlow=exp\(-dot\(p-lightCenter,p-lightCenter\)\*1\.8\)/)
+  assert.match(material, /float fold=\.5\+\.25\*sin\(angle\*2\.2-drift\*1\.3/)
+  assert.match(material, /response=exp\(-dot\(p-point\(\),p-point\(\)\)\*1\.1\)\*interaction/)
+  assert.match(material, /vec2 coreLight=/)
   assert.match(material, /dent\*\(\.02\+\.012\*press\)/)
   assert.match(home, /previewMotion=\{previewMotion\}/)
 })
@@ -66,6 +69,7 @@ test('renderer preserves performance and accessibility guards', async () => {
   assert.match(renderer, /canvas\.clientWidth \* dpr/)
   assert.match(renderer, /mode === 'small' \? 1\.5 : 2/)
   assert.match(renderer, /reducedQuery\.matches && !previewMotion/)
+  assert.match(renderer, /finePointer \? 60 : 150/)
   assert.match(button, /<button/)
   assert.match(button, /aria-hidden="true"/)
   assert.match(button, /disabled=\{disabled \|\| loading\}/)

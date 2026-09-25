@@ -17,6 +17,24 @@ float fbm(vec2 p){return .62*noise(p)+.30*noise(p*2.07+3.7)+.08*noise(p*4.13+9.1
 float box(vec2 p,vec2 b,float r){vec2 q=abs(p)-b+r;return min(max(q.x,q.y),0.)+length(max(q,0.))-r;}
 float gauss(float x,float w){return exp(-x*x/(w*w));}
 
+// Broad, smoothly blended color stops keep the material luminous, not striped.
+vec3 orbEnergy(float phase){
+  float band=mod(phase,8.);
+  float blend=smoothstep(.08,.92,fract(band));
+  vec3 red=vec3(1.,.012,.025), orange=vec3(.96,.30,.045);
+  vec3 yellow=vec3(.92,.76,.065), lime=vec3(.46,.79,.07);
+  vec3 green=vec3(.035,.67,.31), cyan=vec3(.025,.58,.79);
+  vec3 violet=vec3(.53,.29,.78), silver=vec3(.54,.61,.68);
+  if(band<1.) return mix(red,orange,blend);
+  if(band<2.) return mix(orange,yellow,blend);
+  if(band<3.) return mix(yellow,lime,blend);
+  if(band<4.) return mix(lime,green,blend);
+  if(band<5.) return mix(green,cyan,blend);
+  if(band<6.) return mix(cyan,violet,blend);
+  if(band<7.) return mix(violet,silver,blend);
+  return mix(silver,red,blend);
+}
+
 // Environment has spatial features; every RGB channel samples a different ray.
 // Softboxes, amber bounce, a blue/cyan bank, dark graphite gaps and narrow strips.
 vec3 environment(vec2 q){
@@ -134,31 +152,34 @@ vec3 orb(vec2 p){
   vec2 gradient=vec2(hx-hm,hy-hn)/(2.*e);
   float curv=min(3.,abs(hx+hm+hy+hn-4.*H)/(e*e)*.035);
   float rim=smoothstep(.003,.021,H);
-  float drift=time*speed*1.7;
-  vec2 lightDrift=vec2(.24*sin(drift),.18*cos(drift*.72));
+  float drift=time*speed*4.3;
+  vec2 lightDrift=vec2(.80*sin(drift),.62*cos(drift*.72))+point()*interaction*.50;
   vec3 glass=refractMaterial(-p*2.3+vec2(-.14,.28)+lightDrift,H*2.7,gradient,1.,curv);
   float core=1.-smoothstep(.536,.566,r);
   float dome=sqrt(max(0.,1.-r*r/.31));
-  float glint=exp(-dot(p-vec2(-.17,.25),p-vec2(-.17,.25))*100.);
-  vec3 coreColor=vec3(.009,.013,.019)+vec3(.025,.031,.039)*dome+vec3(.06,.075,.10)*glint;
+  vec2 coreLight=vec2(-.17+.18*sin(drift*.68),.25+.15*cos(drift*.54));
+  float glint=exp(-dot(p-coreLight,p-coreLight)*80.);
+  vec2 sheenPoint=vec2(.10*sin(drift*.57),.08*cos(drift*.46));
+  vec2 sheenDistance=(p-sheenPoint)*vec2(.9,1.3);
+  float coreSheen=exp(-dot(sheenDistance,sheenDistance)*12.);
+  vec3 coreColor=vec3(.009,.013,.019)+vec3(.025,.031,.039)*dome+vec3(.075,.086,.105)*glint+vec3(.010,.015,.022)*coreSheen;
   vec3 backing=vec3(.019,.026,.036)*(1.-smoothstep(.78,.815,r));
   float lip=gauss(r-.785,.008)+.4*gauss(r-.552,.009);
-  float response=exp(-dot(p-point(),p-point())*1.5)*interaction;
+  float response=exp(-dot(p-point(),p-point())*1.1)*interaction;
   // A continuous illuminated body remains visible beneath the moving refraction.
-  // The palette breathes between restrained cyan and lavender, even at rest.
-  float cycle=.5+.5*sin(time*speed*2.6);
-  vec3 cyan=mix(vec3(.025,.52,.72),vec3(.02,.60,.70),palette);
-  vec3 lavender=mix(vec3(.48,.20,.74),vec3(.45,.34,.72),palette);
-  vec3 energy=mix(cyan,lavender,cycle);
+  // The palette travels through eight colors without gaps in the graphite body.
+  vec3 energy=orbEnergy(time*speed*3.0+.25+palette*.35);
   float body=smoothstep(.545,.585,r)*(1.-smoothstep(.775,.81,r));
-  float swell=.5+.5*sin(p.x*3.+p.y*1.4+drift*2.);
-  vec2 lightCenter=vec2(.48*sin(drift*.85),.42*cos(drift*.72));
-  float travelingGlow=exp(-dot(p-lightCenter,p-lightCenter)*2.);
-  vec3 foundation=vec3(.035,.05,.067)+energy*(.31+.08*gauss(r-.68,.11)+.15*swell);
+  float swell=.5+.5*sin(p.x*2.8+p.y*1.5+drift*1.25);
+  float angle=atan(p.y,p.x);
+  float fold=.5+.25*sin(angle*2.2-drift*1.3+.55*sin(angle*1.7+drift*.57))+.25*sin(angle*3.1+drift*.71);
+  vec2 lightCenter=vec2(.54*sin(drift*.92),.48*cos(drift*.74));
+  float travelingGlow=exp(-dot(p-lightCenter,p-lightCenter)*1.8);
+  vec3 foundation=vec3(.035,.05,.067)+energy*(.31+.09*gauss(r-.68,.11)+.17*swell+.25*fold);
   vec3 result=mix(backing,coreColor,core)+foundation*body;
-  result+=vec3(.21,.28,.35)*body*travelingGlow;
-  result+=glass*rim*exposure*(1.02+response*.65)*mix(vec3(1.),energy+vec3(.75),.56);
-  result+=(energy*.55+vec3(.09,.15,.20))*body*response;
+  result+=(vec3(.17,.22,.27)+energy*.14)*body*travelingGlow;
+  result+=glass*rim*exposure*(1.05+response*.85)*mix(vec3(.8),energy+vec3(.20),.78);
+  result+=(energy*.76+vec3(.10,.15,.20))*body*response;
   vec3 normal=normalize(vec3(-gradient*.32,1.));
   float key=pow(max(dot(normal,normalize(vec3(-.5,.7,.7))),0.),26.);
   float bounce=pow(max(dot(normal,normalize(vec3(.4,-.7,.9))),0.),32.);
