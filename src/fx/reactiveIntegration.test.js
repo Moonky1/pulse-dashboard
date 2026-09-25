@@ -49,7 +49,8 @@ test('renderer preserves performance and accessibility guards', async () => {
     read('../components/ui/spectral.css'),
   ])
   for (const guard of ['IntersectionObserver', 'visibilitychange', 'prefers-reduced-motion: reduce', 'pointer: fine', 'webglcontextlost', 'webglcontextrestored']) assert.match(renderer, new RegExp(guard))
-  assert.match(renderer, /mode === 'hero' \? 1\.75/)
+  assert.match(renderer, /canvas\.clientWidth \* dpr/)
+  assert.match(renderer, /mode === 'small' \? 1\.5 : 2/)
   assert.match(renderer, /reducedQuery\.matches && !previewMotion/)
   assert.match(button, /<button/)
   assert.match(button, /aria-hidden="true"/)

@@ -1,9 +1,11 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 
 import { PulseOrbInteractive } from '../../components/ui/PulseOrbInteractive.jsx'
 import { PublicSiteShell } from '../components/PublicSiteShell.jsx'
 
 export function PublicHomePage() {
+  const [searchParams] = useSearchParams()
+  const colorway = searchParams.get('fx') === 'ice' ? 'ice' : 'soft'
   return (
     <PublicSiteShell>
       <main className="public-home">
@@ -16,7 +18,7 @@ export function PublicHomePage() {
           </div>
         </section>
         <div className="public-home-orb" aria-hidden="true">
-          <PulseOrbInteractive size="hero" label="" />
+          <PulseOrbInteractive size="hero" colorway={colorway} label="" />
         </div>
       </main>
     </PublicSiteShell>

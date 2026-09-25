@@ -40,16 +40,18 @@ function uniformMap(gl, program) {
   return Object.fromEntries([
     'resolution', 'pointer', 'time', 'shape', 'interaction', 'press',
     'dispersion', 'bend', 'thickness', 'fresnel', 'specular', 'caustic',
-    'noiseScale', 'speed', 'pointerForce', 'absorption', 'balance', 'exposure',
+    'noiseScale', 'speed', 'pointerForce', 'absorption', 'balance', 'exposure', 'palette',
   ].map((name) => [name, gl.getUniformLocation(program, name)]))
 }
 
 function capDpr(mode) {
-  const cap = mode === 'hero' ? 1.75 : mode === 'medium' ? 1.5 : 1.2
-  return Math.min(window.devicePixelRatio || 1, cap)
+  const finePointer = window.matchMedia('(pointer: fine)').matches
+  const cap = finePointer ? (mode === 'small' ? 1.5 : 2) : 1.5
+  const deviceDpr = window.devicePixelRatio || 1
+  return finePointer ? Math.max(1.5, Math.min(deviceDpr, cap)) : Math.min(deviceDpr, cap)
 }
 
-export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning = {}, sizeMode = 'medium', disabled = false, pressable = true, previewMotion = false } = {}) {
+export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', colorway = 'soft', tuning = {}, sizeMode = 'medium', disabled = false, pressable = true, previewMotion = false } = {}) {
   const canvasRef = useRef(null)
   const hostRef = useRef(null)
   const wakeRef = useRef(null)
@@ -58,11 +60,11 @@ export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning 
   const [nearViewport, setNearViewport] = useState(() => !('IntersectionObserver' in window))
   const preset = SPECTRAL_VARIANTS[variant] ?? SPECTRAL_VARIANTS.pulse
   const configRef = useRef({ ...preset, ...tuning })
-  configRef.current = { ...preset, ...tuning }
+  configRef.current = { ...preset, ...tuning, palette: colorway === 'ice' ? 1 : 0 }
 
   useEffect(() => {
     wakeRef.current?.(true)
-  }, [variant, tuning])
+  }, [variant, colorway, tuning])
 
   useEffect(() => {
     if (disabled || nearViewport || !('IntersectionObserver' in window)) return undefined
@@ -137,10 +139,11 @@ export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning 
     const uniforms = uniformMap(gl, program)
 
     const resize = () => {
-      const rect = host.getBoundingClientRect()
       const dpr = capDpr(sizeMode)
-      const width = Math.max(2, Math.round(rect.width * dpr))
-      const height = Math.max(2, Math.round(rect.height * dpr))
+      // The material extends beyond its host; size the framebuffer to the
+      // displayed canvas, not the smaller Orb/button box beneath it.
+      const width = Math.max(2, Math.round(canvas.clientWidth * dpr))
+      const height = Math.max(2, Math.round(canvas.clientHeight * dpr))
       if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width
         canvas.height = height
@@ -176,6 +179,7 @@ export function useSpectralMaterial({ shape = 'pill', variant = 'pulse', tuning 
       gl.uniform1f(uniforms.absorption, config.absorption)
       gl.uniform1f(uniforms.balance, config.balance)
       gl.uniform1f(uniforms.exposure, config.exposure)
+      gl.uniform1f(uniforms.palette, config.palette)
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)

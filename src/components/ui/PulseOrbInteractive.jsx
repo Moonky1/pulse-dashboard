@@ -4,6 +4,7 @@ import './spectral.css'
 export function PulseOrbInteractive({
   size = 'hero',
   variant = 'pulse',
+  colorway = 'soft',
   tuning,
   interactive = false,
   previewMotion = false,
@@ -14,6 +15,7 @@ export function PulseOrbInteractive({
   const { canvasRef, hostRef, fallback } = useSpectralMaterial({
     shape: 'orb',
     variant,
+    colorway,
     tuning,
     sizeMode: size,
     disabled: simplified,

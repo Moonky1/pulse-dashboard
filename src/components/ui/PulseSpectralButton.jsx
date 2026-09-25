@@ -4,6 +4,7 @@ import './spectral.css'
 export function PulseSpectralButton({
   children,
   variant = 'pulse',
+  colorway = 'soft',
   tuning,
   className = '',
   disabled = false,
@@ -15,6 +16,7 @@ export function PulseSpectralButton({
   const { canvasRef, hostRef, fallback } = useSpectralMaterial({
     shape: 'pill',
     variant,
+    colorway,
     tuning,
     sizeMode: 'medium',
     disabled: disabled || loading,
