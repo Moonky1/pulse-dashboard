@@ -52,7 +52,10 @@ export function AccountMenu({ confirmLeave = () => true }) {
   return <div className="product-account" ref={menuRef}>
     <button className="product-account__trigger" type="button" aria-label={`Account menu for ${name}`} aria-expanded={open} aria-controls="pulse-account-menu" onClick={() => setOpenedAt((current) => current === pathname ? null : pathname)}>
       <StaffAvatar name={name} customAvatarPath={profile?.custom_avatar_path} googleAvatarUrl={profile?.google_avatar_url} avatarUpdatedAt={profile?.avatar_updated_at} size="sm" eager />
-      <span>{name}</span><span aria-hidden="true">⌄</span>
+      <span>{name}</span>
+      <svg className="product-account__chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="m4 6 4 4 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </button>
     {open && <nav className="product-account__menu" id="pulse-account-menu" aria-label="Account">
       <div className="product-account__identity"><strong>{name}</strong><small>{profile?.email}</small></div>
