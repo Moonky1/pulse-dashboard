@@ -42,6 +42,17 @@ test('FX-1B material is shared by Orb and ribbon without the later texture assis
   assert.doesNotMatch(material + renderer, /sampler2D|texture2D|three|@react-three|drei/)
 })
 
+test('the reactive Orb keeps a continuous body under a slow color cycle', async () => {
+  const [material, home] = await Promise.all([
+    read('../components/ui/liquidMaterial.js'),
+    read('../auth/screens/PublicHomePage.jsx'),
+  ])
+  assert.match(material, /float body=smoothstep\(\.545,\.585,r\)/)
+  assert.match(material, /float cycle=\.5\+\.5\*sin\(time\*speed\*1\.3\)/)
+  assert.match(material, /dent\*\(\.02\+\.012\*press\)/)
+  assert.match(home, /previewMotion=\{previewMotion\}/)
+})
+
 test('renderer preserves performance and accessibility guards', async () => {
   const [renderer, button, styles] = await Promise.all([
     read('../components/ui/useSpectralMaterial.js'),

@@ -28,13 +28,13 @@ export function ReactiveComparisonPage() {
         <p>A · Clean soft</p>
         <div className="fx-2b-orb"><PulseOrbInteractive size="hero" colorway="soft" previewMotion={previewMotion} /></div>
         <PulseSpectralButton colorway="soft" previewMotion={previewMotion} onClick={() => setActivated(true)}>Open Dashboard</PulseSpectralButton>
-        <Link className="fx-2b-home-link" to="/?fx=soft">See on homepage</Link>
+        <Link className="fx-2b-home-link" to="/?fx=soft&motion=1">See motion on homepage</Link>
       </section>
       <section className="fx-2b-card fx-2b-card--new fx-2b-card--ice">
         <p>B · Clean soft + icy cyan</p>
         <div className="fx-2b-orb"><PulseOrbInteractive size="hero" colorway="ice" previewMotion={previewMotion} /></div>
         <PulseSpectralButton colorway="ice" previewMotion={previewMotion} onClick={() => setActivated(true)}>Open Dashboard</PulseSpectralButton>
-        <Link className="fx-2b-home-link" to="/?fx=ice">See on homepage</Link>
+        <Link className="fx-2b-home-link" to="/?fx=ice&motion=1">See motion on homepage</Link>
       </section>
     </div>
     <p className="fx-2b-feedback" role="status">{activated ? 'Preview action activated.' : 'Both actions are clickable; neither changes product data.'}</p>

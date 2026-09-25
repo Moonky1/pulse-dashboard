@@ -116,13 +116,12 @@ vec3 ribbon(vec2 p){
   return col*mask;
 }
 
-// Radial lens translates the height-field model; illumination stays in world XY.
-// It is not an angular color band and no uniform rotates the ring.
+// The radial lens bends light without rotating or pulling the whole ring.
 float radialHeight(vec2 p){
   vec2 dp=p-point();
   float dent=exp(-dot(dp,dp)*4.8)*interaction*pointerForce;
-  float warp=(fbm(p*3.+vec2(time*speed*.16,time*speed*.10))-.5)*.017;
-  float r=length(p)+warp+dent*(.075+.026*press);
+  float warp=(fbm(p*3.+vec2(time*speed*.16,time*speed*.10))-.5)*.008;
+  float r=length(p)+warp+dent*(.02+.012*press);
   float section=clamp(1.-pow((r-.675)/.083,2.),0.,1.);
   float crossSection=sqrt(section)*smoothstep(0.,.14,section);
   return thickness*.24*crossSection*(.86+.14*fbm(p*4.+time*speed*.14));
@@ -143,8 +142,16 @@ vec3 orb(vec2 p){
   vec3 backing=vec3(.019,.026,.036)*(1.-smoothstep(.78,.815,r));
   float lip=gauss(r-.785,.008)+.4*gauss(r-.552,.009);
   float response=exp(-dot(p-point(),p-point())*4.2)*interaction;
-  vec3 result=mix(backing,coreColor,core)+glass*rim*exposure*(1.28+response*.45);
-  result+=mix(vec3(.075,.12,.17),vec3(.07,.17,.21),palette)*gauss(r-.70,.085)*rim;
+  // A continuous illuminated body remains visible beneath the moving refraction.
+  // The palette breathes between restrained cyan and lavender, even at rest.
+  float cycle=.5+.5*sin(time*speed*1.3);
+  vec3 cyan=mix(vec3(.08,.43,.56),vec3(.06,.51,.58),palette);
+  vec3 lavender=mix(vec3(.32,.30,.52),vec3(.39,.44,.62),palette);
+  vec3 energy=mix(cyan,lavender,cycle);
+  float body=smoothstep(.545,.585,r)*(1.-smoothstep(.775,.81,r));
+  vec3 foundation=vec3(.035,.05,.067)+energy*(.22+.08*gauss(r-.68,.11));
+  vec3 result=mix(backing,coreColor,core)+foundation*body;
+  result+=glass*rim*exposure*(1.02+response*.24)*mix(vec3(1.),energy+vec3(.75),.26);
   vec3 normal=normalize(vec3(-gradient*.32,1.));
   float key=pow(max(dot(normal,normalize(vec3(-.5,.7,.7))),0.),26.);
   float bounce=pow(max(dot(normal,normalize(vec3(.4,-.7,.9))),0.),32.);

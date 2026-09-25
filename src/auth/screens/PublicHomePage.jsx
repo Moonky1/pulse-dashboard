@@ -6,6 +6,7 @@ import { PublicSiteShell } from '../components/PublicSiteShell.jsx'
 export function PublicHomePage() {
   const [searchParams] = useSearchParams()
   const colorway = searchParams.get('fx') === 'ice' ? 'ice' : 'soft'
+  const previewMotion = searchParams.get('motion') === '1'
   return (
     <PublicSiteShell>
       <main className="public-home">
@@ -18,7 +19,7 @@ export function PublicHomePage() {
           </div>
         </section>
         <div className="public-home-orb" aria-hidden="true">
-          <PulseOrbInteractive size="hero" colorway={colorway} label="" />
+          <PulseOrbInteractive size="hero" colorway={colorway} previewMotion={previewMotion} label="" />
         </div>
       </main>
     </PublicSiteShell>
