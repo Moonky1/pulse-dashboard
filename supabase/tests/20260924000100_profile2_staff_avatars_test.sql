@@ -18,7 +18,7 @@ select extensions.ok(has_function_privilege('authenticated','public.refresh_own_
 select extensions.ok(not has_function_privilege('anon','public.refresh_own_google_avatar()','EXECUTE'),'anonymous Google refresh is denied');
 select extensions.ok(not has_function_privilege('authenticated','public.set_staff_custom_avatar(uuid)','EXECUTE'),'browser cannot set a custom avatar path');
 select extensions.ok(has_function_privilege('service_role','public.set_staff_custom_avatar(uuid)','EXECUTE'),'trusted avatar boundary may confirm a validated upload');
-select extensions.ok(not exists(select 1 from pg_policies where schemaname='storage' and tablename='objects' and cmd in ('INSERT','UPDATE','DELETE') and (roles::text like '%authenticated%' or roles::text like '%anon%')),'no browser Storage write policy exists');
+select extensions.ok(not exists(select 1 from pg_policies where schemaname='storage' and tablename='objects' and permissive='PERMISSIVE' and cmd in ('INSERT','UPDATE','DELETE') and (roles::text like '%authenticated%' or roles::text like '%anon%')),'no permissive browser Storage write policy exists');
 
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values

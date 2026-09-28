@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button.jsx'
 import { supabase } from '../utils/supabase.js'
-import { createTrainingContentDraft, updateTrainingContentDraft, replaceTrainingQuestions, getTrainingContentAuthoringDetails, getTrainingFilterOptions, publishTrainingContent, archiveTrainingContent } from '../training/trainingApi.js'
+import { createTrainingContentDraft, updateTrainingContentDraft, replaceTrainingQuestions, getTrainingContentAuthoringDetails, getTrainingContentMedia, getTrainingFilterOptions, publishTrainingContent, archiveTrainingContent, setTrainingContentMedia } from '../training/trainingApi.js'
+import { uploadTrainingMedia, removeTrainingMedia } from '../training/trainingMedia.js'
 import { validateQuestions } from '../training/questionValidation.js'
 import { resolveTrainingAuthoringDestination } from '../training/authoringDestination.js'
 import { useStudioAccess } from './hooks/useStudioAccess.js'
@@ -11,6 +12,7 @@ import { StudioShell, StudioAccessState } from './StudioShell.jsx'
 import { QuestionEditor } from './QuestionEditor.jsx'
 import { StudioPreview } from './StudioPreview.jsx'
 import { StudioReview } from './StudioReview.jsx'
+import { StudioMediaFields } from './StudioMediaFields.jsx'
 import { draftFromDetails, questionsFromDetails, emptyDraft, validateBasics, validateAudience, typeLabel } from './builderModel.js'
 import './studio.css'
 
@@ -23,6 +25,7 @@ export function StudioBuilder() {
   const [draft, setDraft] = useState(emptyDraft)
   const [questions, setQuestions] = useState([])
   const [details, setDetails] = useState(null)
+  const [media, setMedia] = useState(null)
   const [options, setOptions] = useState(null)
   const [step, setStep] = useState(location.state?.step ?? 0)
   const [loading, setLoading] = useState(true)
@@ -51,11 +54,12 @@ export function StudioBuilder() {
     let current = true
     const timer = setTimeout(async () => {
       setLoading(true)
-      const [filters, read] = await Promise.all([getTrainingFilterOptions(supabase, 'studio'), contentId ? getTrainingContentAuthoringDetails(supabase, contentId) : Promise.resolve({ data: null })])
+      const [filters, read, mediaRead] = await Promise.all([getTrainingFilterOptions(supabase, 'studio'), contentId ? getTrainingContentAuthoringDetails(supabase, contentId) : Promise.resolve({ data: null }), contentId ? getTrainingContentMedia(supabase, contentId) : Promise.resolve({ data: null })])
       if (!current) return
       setOptions(filters.data)
-      setError(read.error || filters.error || null)
+      setError(read.error || filters.error || mediaRead.error || null)
       setDetails(read.data)
+      setMedia(mediaRead.data)
       setDraft(read.data ? draftFromDetails(read.data) : emptyDraft())
       setQuestions(read.data ? questionsFromDetails(read.data) : [])
       setReview(null)
@@ -74,14 +78,40 @@ export function StudioBuilder() {
     finally { lock.current = false; setBusy(false) }
   }
   async function readAfterSave(id, section) {
-    const read = await getTrainingContentAuthoringDetails(supabase, id)
-    if (read.error) { setError({ code: 'reload_required', message: 'The save succeeded, but we couldn’t reload it. Reload before continuing.' }); return null }
+    const [read, mediaRead] = await Promise.all([getTrainingContentAuthoringDetails(supabase, id), getTrainingContentMedia(supabase, id)])
+    if (read.error || mediaRead.error) { setError({ code: 'reload_required', message: 'The save succeeded, but we couldn’t reload it. Reload before continuing.' }); return null }
     setDetails(read.data)
+    setMedia(mediaRead.data)
     if (section === 'basics') setDraft(draftFromDetails(read.data))
     if (section === 'questions') setQuestions(questionsFromDetails(read.data))
     setReview(null)
-    setNotice(section === 'basics' ? 'Basics & Audience saved.' : 'Questions saved.')
+    setNotice(section === 'basics' ? 'Basics & Audience saved.' : section === 'media' ? 'Game media saved.' : 'Questions saved.')
     return read.data
+  }
+  async function changeMedia(kind, file) {
+    if (!editable || !contentId || dirty) return fail('Save your other changes before updating game media.')
+    await run(async () => {
+      const previousId = kind === 'game_cover' ? media?.cover_media_id : media?.lobby_audio_media_id
+      let nextId = null
+      try {
+        if (file) nextId = await uploadTrainingMedia(supabase, contentId, kind, file)
+        const coverId = kind === 'game_cover' ? nextId : media?.cover_media_id
+        const audioId = kind === 'lobby_audio' ? nextId : media?.lobby_audio_media_id
+        const changed = await setTrainingContentMedia(supabase, contentId, coverId, audioId, details.content.updated_at)
+        if (changed.error) throw new Error(changed.error.message)
+        await readAfterSave(contentId, 'media')
+        if (previousId && previousId !== nextId) {
+          try { await removeTrainingMedia(supabase, previousId) } catch {
+            setNotice('The draft was updated, but the unused file needs cleanup.')
+          }
+        }
+      } catch (cause) {
+        if (nextId && nextId !== previousId) {
+          try { await removeTrainingMedia(supabase, nextId) } catch { /* The pending claim remains unavailable for attachment. */ }
+        }
+        setError({ code: 'media', message: cause.message || 'Pulse could not update this file.' })
+      }
+    })
   }
   async function saveBasics() {
     if (!editable) return
@@ -141,7 +171,7 @@ export function StudioBuilder() {
       {(!contentId || details) && <>
         {!draft.contentType ? <section className="studio-type-choice"><h2>What do you want to create?</h2><div>{[['quiz','Quiz','Interactive questions for learning and practice.'],['assessment','Assessment','Check knowledge and understanding.']].map(([value,label,description]) => <button key={value} disabled={!editable} onClick={() => changeDraft({ contentType: value })}><span aria-hidden="true">{value === 'quiz' ? '✦' : '✓'}</span><h3>{label}</h3><p>{description}</p><strong>Start {label.toLowerCase()} →</strong></button>)}</div></section> : <>
           <nav className="studio-steps" aria-label="Builder steps">{['Basics','Audience','Questions','Review'].map((name,i) => <button key={name} aria-current={step === i ? 'step' : undefined} disabled={busy || (i >= 2 && !contentId) || (!editable && i !== 3)} onClick={() => i === 3 ? void openReview() : setStep(i)}><span>{i + 1}</span>{name}</button>)}</nav>
-          {step === 0 && <section className="studio-editor-panel"><h2>The essentials</h2><fieldset disabled={!editable || blocked} className="studio-fields"><label>Title<input maxLength={180} value={draft.title} onChange={e => changeDraft({ title: e.target.value })} placeholder="Give it a good name" /></label><label>Description <small>Optional</small><textarea aria-label="Description" rows={3} maxLength={2000} value={draft.description} onChange={e => changeDraft({ description: e.target.value })} placeholder="A little context goes a long way." /></label><div className="studio-two-columns"><label>Type<select disabled={!!contentId} value={draft.contentType} onChange={e => changeDraft({ contentType: e.target.value })}><option value="quiz">Quiz</option><option value="assessment">Assessment</option></select></label><label>Language<select aria-label="Language" value={draft.language} onChange={e => changeDraft({ language: e.target.value })}><option value="en">English</option><option value="es">Español</option></select></label></div><fieldset className="studio-checks"><legend>Topics</legend>{options?.topics?.map(t => <label key={t.id}><input type="checkbox" checked={draft.topicIds.includes(t.id)} onChange={e => changeDraft({ topicIds: e.target.checked ? [...draft.topicIds, t.id] : draft.topicIds.filter(id => id !== t.id) })} />{t.name}</label>)}{!options?.topics?.length && <p>No topics are available yet.</p>}</fieldset></fieldset><div className="studio-savebar"><span>{contentId ? basicsDirty ? 'Basics & Audience: unsaved' : 'Basics & Audience: saved' : 'Choose an audience next to save your first draft.'}</span><Button disabled={!editable || blocked} onClick={() => { const invalid = validateBasics(draft); if (invalid) fail(invalid); else { setError(null); setStep(1) } }}>Continue to Audience</Button></div></section>}
+          {step === 0 && <section className="studio-editor-panel"><h2>The essentials</h2><fieldset disabled={!editable || blocked} className="studio-fields"><label>Title<input maxLength={180} value={draft.title} onChange={e => changeDraft({ title: e.target.value })} placeholder="Give it a good name" /></label><label>Description <small>Optional</small><textarea aria-label="Description" rows={3} maxLength={2000} value={draft.description} onChange={e => changeDraft({ description: e.target.value })} placeholder="A little context goes a long way." /></label><div className="studio-two-columns"><label>Type<select disabled={!!contentId} value={draft.contentType} onChange={e => changeDraft({ contentType: e.target.value })}><option value="quiz">Quiz</option><option value="assessment">Assessment</option></select></label><label>Language<select aria-label="Language" value={draft.language} onChange={e => changeDraft({ language: e.target.value })}><option value="en">English</option><option value="es">Español</option></select></label></div><fieldset className="studio-checks"><legend>Topics</legend>{options?.topics?.map(t => <label key={t.id}><input type="checkbox" checked={draft.topicIds.includes(t.id)} onChange={e => changeDraft({ topicIds: e.target.checked ? [...draft.topicIds, t.id] : draft.topicIds.filter(id => id !== t.id) })} />{t.name}</label>)}{!options?.topics?.length && <p>No topics are available yet.</p>}</fieldset></fieldset><StudioMediaFields contentId={contentId} media={media} disabled={!editable || blocked || dirty} onChange={changeMedia} /><div className="studio-savebar"><span>{contentId ? basicsDirty ? 'Basics & Audience: unsaved' : 'Basics & Audience: saved' : 'Choose an audience next to save your first draft.'}</span><Button disabled={!editable || blocked} onClick={() => { const invalid = validateBasics(draft); if (invalid) fail(invalid); else { setError(null); setStep(1) } }}>Continue to Audience</Button></div></section>}
           {step === 1 && <section className="studio-editor-panel"><h2>Who is this for?</h2><fieldset disabled={!editable || blocked} className="studio-fields"><label>Audience<select aria-label="Audience" value={draft.scopeType} onChange={e => changeDraft({ scopeType: e.target.value, campaignId: '', teamId: '' })}><option value="">Choose an audience</option>{capabilities?.can_create_global && <option value="global">Everyone</option>}{!!options?.campaigns?.length && <option value="campaign">A campaign</option>}{!!options?.teams?.length && <option value="team">A team</option>}</select></label>{draft.scopeType === 'campaign' && <label>Campaign<select aria-label="Campaign" value={draft.campaignId} onChange={e => changeDraft({ campaignId: e.target.value })}><option value="">Choose a campaign</option>{options?.campaigns?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}{draft.scopeType === 'team' && <label>Team<select aria-label="Team" value={draft.teamId} onChange={e => changeDraft({ teamId: e.target.value })}><option value="">Choose a team</option>{options?.teams?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}<fieldset className="studio-checks"><legend>Job positions <small>Optional · leave empty for all positions</small></legend>{options?.positions?.map(p => <label key={p.id}><input type="checkbox" checked={draft.positionIds.includes(p.id)} onChange={e => changeDraft({ positionIds: e.target.checked ? [...draft.positionIds, p.id] : draft.positionIds.filter(id => id !== p.id) })} />{p.name}</label>)}</fieldset></fieldset><div className="studio-savebar"><span>{basicsDirty ? 'Basics & Audience: unsaved' : 'Basics & Audience: saved'}</span><Button disabled={!editable || blocked || (contentId && !basicsDirty)} onClick={() => void saveBasics()}>{contentId ? 'Save Basics & Audience' : 'Save draft & add questions'}</Button></div></section>}
           {step === 2 && <section className="studio-editor-panel"><div className="studio-section-heading"><div><h2>Make every question count</h2><p>Clear questions · Useful explanations · A little curiosity</p></div><Button variant="secondary" disabled={busy || !questions.length} onClick={() => setPreview({ content: { title: draft.title }, questions })}>Preview</Button></div>{basicsDirty && <p className="studio-notice">Basics & Audience have unsaved changes. Questions save against the last saved topics.</p>}<QuestionEditor questions={questions} onChange={changeQuestions} topics={basicsDirty ? details.topics : topics} disabled={!editable || blocked} /><div className="studio-savebar"><span>{questionsDirty ? 'Questions: unsaved' : 'Questions: saved'}</span><Button disabled={!editable || blocked || !questionsDirty} onClick={() => void saveQuestions()}>Save Questions</Button><Button variant="secondary" disabled={blocked || dirty} onClick={() => void openReview()}>Review</Button></div></section>}
           {step === 3 && <section className="studio-editor-panel"><div className="studio-section-heading"><div><h2>{details?.content.status === 'draft' ? 'One last look' : typeLabel(draft.contentType) + ' details'}</h2><p>{details?.content.status === 'draft' ? 'Review the saved version before it reaches your learners' : 'This item is read-only'}</p></div><Button variant="secondary" disabled={!review || busy} onClick={() => setPreview(review)}>Preview</Button></div>{review ? <StudioReview details={review} /> : <Button onClick={() => void openReview()} disabled={blocked || dirty}>Load latest review</Button>}<div className="studio-savebar">{supported && review?.capabilities.can_publish && <Button disabled={blocked || dirty || !review.questions.length} onClick={() => setConfirmation('publish')}>Publish</Button>}{supported && review?.capabilities.can_archive && <Button variant="secondary" disabled={blocked} onClick={() => setConfirmation('archive')}>Archive</Button>}</div></section>}

@@ -52,10 +52,10 @@ insert into public.training_topics(id,code,name,is_active) values
  ('2a000000-0000-4000-8000-000000000002','train1_inactive_topic','TRAIN-1 Inactive Topic',false);
 select throws_ok($$insert into public.training_topics(code,name) values ('Bad Code','Invalid')$$,'23514',null,'Topic codes are normalized');
 
-insert into public.training_media(id,media_type,storage_bucket,storage_path,mime_type,created_by_user_id)
-values ('3a000000-0000-4000-8000-000000000001','image','training-media','train1/questions/example.png','image/png','ba000000-0000-4000-8000-000000000001');
-select throws_ok($$insert into public.training_media(media_type,storage_bucket,storage_path,mime_type,created_by_user_id) values ('audio','training-media','../escape.mp3','audio/mpeg','ba000000-0000-4000-8000-000000000001')$$,'23514',null,'unsafe media paths are rejected');
-select throws_ok($$insert into public.training_media(media_type,storage_bucket,storage_path,mime_type,created_by_user_id) values ('image','training-media','train1/wrong.mp3','audio/mpeg','ba000000-0000-4000-8000-000000000001')$$,'23514',null,'media MIME must match the canonical media type');
+insert into public.training_media(id,media_type,storage_bucket,storage_path,mime_type,created_by_user_id,status)
+values ('3a000000-0000-4000-8000-000000000001','image','training-media','train1/questions/example.png','image/png','ba000000-0000-4000-8000-000000000001','legacy');
+select throws_ok($$insert into public.training_media(media_type,storage_bucket,storage_path,mime_type,created_by_user_id,status) values ('audio','training-media','../escape.mp3','audio/mpeg','ba000000-0000-4000-8000-000000000001','legacy')$$,'23514',null,'unsafe media paths are rejected');
+select throws_ok($$insert into public.training_media(media_type,storage_bucket,storage_path,mime_type,created_by_user_id,status) values ('image','training-media','train1/wrong.mp3','audio/mpeg','ba000000-0000-4000-8000-000000000001','legacy')$$,'23514',null,'media MIME must match the canonical media type');
 
 insert into public.training_content(id,content_type,title,language,created_by_user_id)
 values

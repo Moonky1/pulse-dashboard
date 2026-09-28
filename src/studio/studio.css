@@ -72,6 +72,19 @@
 .studio-editor-panel { padding:36px; border:1px solid #ffffff14; border-radius:22px; background:linear-gradient(130deg,#131925,#0d121c); }
 .studio-editor-panel h2 { margin:0 0 28px; letter-spacing:-.03em; font-size:27px; }
 .studio-fields { display:grid; gap:25px; border:0; margin:0; padding:0; }
+.studio-media-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:28px; }
+.studio-media-field { min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:14px; padding:18px; border:1px solid #ffffff19; border-radius:16px; background:#080e1880; }
+.studio-media-field strong { color:#edf3ff; font-size:14px; }
+.studio-media-field p { margin:5px 0 0; color:#9baccc; font-size:12px; line-height:1.5; }
+.studio-media-field img { width:100%; max-height:190px; object-fit:cover; border-radius:10px; }
+.studio-media-field audio { width:100%; max-width:100%; }
+.studio-media-actions { display:flex; align-items:center; gap:12px; margin-top:auto; }
+.studio-media-actions button,.studio-media-upload { color:#d5e4ff; background:#ffffff0a; border:1px solid #ffffff2a; border-radius:9px; padding:9px 12px; font:inherit; font-size:12px; cursor:pointer; }
+.studio-media-actions button:hover,.studio-media-upload:hover { background:#ffffff18; }
+.studio-media-actions button:focus-visible,.studio-media-upload:focus-within { outline:2px solid #92b7ff; outline-offset:3px; }
+.studio-media-actions button:disabled { opacity:.45; cursor:not-allowed; }
+.studio-media-upload { position:relative; overflow:hidden; }
+.studio-media-upload input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
 .studio-two-columns { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
 .studio-checks { border:1px solid #ffffff12; border-radius:12px; padding:18px; display:flex; flex-wrap:wrap; gap:18px; }
 .studio-checks legend { font-size:13px; padding:0 6px; color:#bdc9df; }
@@ -123,7 +136,7 @@
  .studio-topbar { padding:16px 18px; gap:12px; min-height:76px; flex-wrap:wrap; }
  .studio-topbar nav { gap:16px; font-size:12px; }
  .studio-topbar>.pulse-button { margin-left:auto; }
- .studio-grid,.studio-type-choice>div,.studio-two-columns,.studio-review dl { grid-template-columns:1fr; }
+ .studio-grid,.studio-type-choice>div,.studio-two-columns,.studio-review dl,.studio-media-fields { grid-template-columns:1fr; }
  .studio-heading { align-items:flex-start; flex-wrap:wrap; margin-bottom:30px; }
  .studio-primary { width:100%; }
  .studio-library-bar { align-items:flex-start; gap:6px; }

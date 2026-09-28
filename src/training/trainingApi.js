@@ -181,6 +181,21 @@ export function publishTrainingContent(client, contentId, expectedUpdatedAt) {
   return rpc(client, 'publish_training_content', { requested_content_id: contentId, expected_updated_at: expectedUpdatedAt })
 }
 export const archiveTrainingContent = (client, contentId) => contentAction(client, 'archive_training_content', contentId)
+export function setTrainingContentMedia(client, contentId, coverMediaId, lobbyAudioMediaId, expectedUpdatedAt) {
+  if (!validUuid(contentId) || (coverMediaId && !validUuid(coverMediaId)) ||
+      (lobbyAudioMediaId && !validUuid(lobbyAudioMediaId)) || !expectedUpdatedAt) return Promise.resolve(invalidRequest())
+  return rpc(client, 'set_training_content_media', {
+    requested_content_id: contentId,
+    requested_cover_media_id: coverMediaId || null,
+    requested_lobby_audio_media_id: lobbyAudioMediaId || null,
+    expected_updated_at: expectedUpdatedAt,
+  })
+}
+
+export function getTrainingContentMedia(client, contentId) {
+  if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'get_training_content_media', { requested_content_id: contentId })
+}
 export const getGoPracticeContent = (client, contentId) => contentAction(client, 'get_go_practice_content', contentId)
 
 export function getGoCapabilities(client) {
