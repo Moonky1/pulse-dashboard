@@ -28,7 +28,7 @@ export async function uploadTrainingMedia(client, contentId, kind, file, uploadK
     body: file,
     headers: {
       'x-pulse-action': 'upload', 'x-pulse-content-id': contentId,
-      'x-pulse-kind': kind, 'x-pulse-upload-key': uploadKey, 'content-type': file.type,
+      'x-pulse-kind': kind, 'x-pulse-upload-key': uploadKey, 'Content-Type': file.type,
     },
   })
   if (error || !UUID.test(data?.mediaId)) throw new Error('Pulse could not upload that file. Try again.')

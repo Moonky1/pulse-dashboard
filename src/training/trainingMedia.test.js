@@ -36,7 +36,7 @@ test('upload delegates binary to a single protected Edge boundary without choosi
   assert.equal(await uploadTrainingMedia(connection, CONTENT, 'game_cover', file, KEY), MEDIA)
   assert.deepEqual(connection.calls, [{ name: 'pulse-training-media', options: {
     body: file, headers: { 'x-pulse-action': 'upload', 'x-pulse-content-id': CONTENT,
-      'x-pulse-kind': 'game_cover', 'x-pulse-upload-key': KEY, 'content-type': 'image/png' },
+      'x-pulse-kind': 'game_cover', 'x-pulse-upload-key': KEY, 'Content-Type': 'image/png' },
   } }])
 })
 
