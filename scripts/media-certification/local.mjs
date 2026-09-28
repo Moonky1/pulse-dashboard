@@ -6,8 +6,9 @@ import { createClient } from '@supabase/supabase-js'
 const url = process.env.PULSE_TEST_API_URL
 const anonKey = process.env.PULSE_TEST_ANON_KEY
 const serviceKey = process.env.PULSE_TEST_SERVICE_KEY
-if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(url || '') || !anonKey || !serviceKey) {
-  throw new Error('Local Supabase API URL and local test keys are required.')
+const localTarget = /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(url || '')
+if (!localTarget || !anonKey || !serviceKey) {
+  throw new Error('Only the isolated local Supabase stack is allowed.')
 }
 const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
 const publicClient = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -77,7 +78,7 @@ async function createStaff(label, role) {
 }
 async function invoke(action, token, body, headers = {}) {
   const response = await fetch(endpoint, { method: 'POST', signal: AbortSignal.timeout(15000), headers: {
-    apikey: anonKey, Origin: 'http://localhost:5173', 'x-pulse-action': action,
+    apikey: anonKey, ...(localTarget ? { Origin: 'http://localhost:5173' } : {}), 'x-pulse-action': action,
     ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers,
   }, body })
   const data = await response.json().catch(() => ({}))
@@ -98,6 +99,7 @@ function browserReachableSignedUrl(value) {
   return signed.toString()
 }
 
+async function run() {
 const owner = await createStaff('Owner', true)
 const outsider = await createStaff('Other', false)
 const ownerClient = createClient(url, anonKey, { global: { headers: { Authorization: `Bearer ${owner.token}` } },
@@ -173,3 +175,5 @@ for (const mediaId of samples) {
   assert.equal(result.status, 200, 'delete retry is idempotent')
 }
 console.log('Local media E2E PASS: image, audio, signed reads, draft detach/delete, and negative security cases.')
+}
+await run()
