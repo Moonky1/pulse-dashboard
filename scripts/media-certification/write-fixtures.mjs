@@ -1,5 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
+import { execFile } from 'node:child_process'
 import { resolve } from 'node:path'
+import { promisify } from 'node:util'
 import { deflateSync } from 'node:zlib'
 
 const target = process.argv[2]
@@ -50,15 +52,15 @@ function syntheticCover() {
   ])
 }
 
-function silentMp3() {
-  // Synthetic MPEG-1 Layer III silent frames; no sampled or third-party music.
-  const frame = Buffer.alloc(417)
-  frame.set([0xff, 0xfb, 0x90, 0x64])
-  return Buffer.concat(Array.from({ length: 40 }, () => frame))
-}
-
 const directory = resolve(target)
 await mkdir(directory, { recursive: true })
 await writeFile(resolve(directory, 'go-2-qa-cover.png'), syntheticCover())
-await writeFile(resolve(directory, 'go-2-qa-lobby.mp3'), silentMp3())
+const encode = promisify(execFile)
+const ffmpeg = process.argv[3] || 'ffmpeg'
+await encode(ffmpeg, [
+  '-hide_banner', '-loglevel', 'error', '-y',
+  '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=44100:duration=1',
+  '-filter:a', 'volume=0.04', '-codec:a', 'libmp3lame', '-b:a', '64k',
+  resolve(directory, 'go-2-qa-lobby.mp3'),
+])
 console.log(`Synthetic media fixtures ready in ${directory}`)
