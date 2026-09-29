@@ -163,3 +163,15 @@
  .studio-type-choice button { padding:28px; }
 }
 @media(prefers-reduced-motion:reduce) { .studio-primary,.studio-card { transition:none; transform:none; } }
+.studio-card__cover{display:block;height:136px;overflow:hidden;border-radius:12px;background:linear-gradient(130deg,#1a2740,#0b1019);margin-bottom:18px}
+.studio-card__cover img{display:block;width:100%;height:100%;object-fit:cover;image-rendering:auto}
+.studio-card__cover .training-cover__placeholder{display:grid;height:100%;place-items:center;color:#9baed7;font-size:32px}
+.studio-card__creator,.studio-creator{display:block;color:#9aacca;font-size:12px}
+.studio-card__actions{position:relative;z-index:2;display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.studio-card__actions a{color:#d5e3ff;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.studio-card__actions button{padding:0;border:0;background:transparent;color:#d5e3ff;font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.studio-card__actions a:focus-visible,.studio-card__actions button:focus-visible{outline:2px solid #9ebcff;outline-offset:4px}
+.studio-game-settings{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin-top:24px;padding:17px;border:1px solid #ffffff17;border-radius:12px;background:#080e1880}
+.studio-game-settings label{display:grid;gap:6px;min-width:190px;color:#d6e5ff;font-size:12px}
+.studio-game-settings select{padding:9px;border:1px solid #ffffff25;border-radius:8px;background:#0a111d;color:#f2f6ff}
+.studio-game-settings small{color:#99a9c3;font-size:11px;line-height:1.45}

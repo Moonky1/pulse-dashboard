@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
 import { resolveGoPracticeDestination } from '../training/goPracticeDestination.js'
-import { listGoPracticeCatalog } from '../training/trainingApi.js'
+import { enrichGameItems, listGoPracticeCatalog } from '../training/trainingApi.js'
+import { TrainingCover } from '../training/TrainingCover.jsx'
 import { supabase } from '../utils/supabase.js'
 import { canPractice } from './goAccess.js'
 import { languagePresentation } from './goHostedModel.js'
@@ -28,8 +29,9 @@ export function GoPracticeSelection() {
       void listGoPracticeCatalog(supabase, {
         language: filters.language || null,
         topicId: filters.topicId || null,
-      }).then(({ data, error }) => {
-        if (current) setCatalog({ items: normalizeCatalog(data || []), loading: false, error })
+      }).then(async ({ data, error }) => {
+        const items = error ? [] : await enrichGameItems(supabase, normalizeCatalog(data || []))
+        if (current) setCatalog({ items, loading: false, error })
       })
     }, 0)
     return () => { current = false; clearTimeout(timer) }
@@ -53,9 +55,11 @@ export function GoPracticeSelection() {
       {!catalog.loading && catalog.items.map((item, index) => {
         const language = languagePresentation(item.language)
         return <article className="go-content-card" key={item.id}>
-        <div className="go-card-visual"><span className="go-card-art"><img src={PRACTICE_ART[index % PRACTICE_ART.length]} alt="" /><i aria-hidden="true">{String(index + 1).padStart(2, '0')}</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
+        <div className="go-card-visual"><span className="go-card-art"><TrainingCover contentId={item.id} mediaId={item.cover_media_id} fallback={PRACTICE_ART[index % PRACTICE_ART.length]} /><i aria-hidden="true">{String(index + 1).padStart(2, '0')}</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
         <div className="go-card-meta"><span>{item.content_type}</span><span>Ready to play</span></div>
         <h2>{item.title}</h2><p>{item.description || 'A quick way to sharpen what you know.'}</p>
+        {item.creator_label && <p className="go-creator">{item.creator_label}</p>}
+        <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{item.question_count}</strong> questions</div>
         <div className="go-topic-list">{item.topics?.map(topic => <span key={topic.id}>{topic.name}</span>)}</div>
         <Link to={`/go/practice/${item.id}`}>Play</Link>
       </article>})}

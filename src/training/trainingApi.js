@@ -50,7 +50,7 @@ function hostedRpc(client, name, args) {
   try { assertGoHostedDestination(client.supabaseUrl) } catch {
     return Promise.resolve({ data: null, error: publicError('hosted_blocked', 'Live games are not enabled for this Pulse destination.') })
   }
-  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog' && name !== 'get_go_hosted_session') {
+  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog' && name !== 'get_go_hosted_experience') {
     return Promise.resolve(invalidRequest())
   }
   return rpc(client, name, args)
@@ -197,6 +197,40 @@ export function getTrainingGameVersions(client, contentId) {
   return rpc(client, 'get_training_game_versions', { requested_content_id: contentId })
 }
 
+export function getGoGameIdentity(client, contentIds) {
+  if (!validUuidList(contentIds) || contentIds.length > 100) return Promise.resolve(invalidRequest())
+  return rpc(client, 'get_go_game_identity', { requested_content_ids: contentIds })
+}
+
+export async function enrichGameItems(client, items) {
+  if (!items?.length) return items || []
+  const { data } = await getGoGameIdentity(client, items.map(item => item.id))
+  const identity = new Map((Array.isArray(data) ? data : []).map(item => [item.id, item]))
+  return items.map(item => ({ ...item, ...identity.get(item.id) }))
+}
+
+export function setTrainingGameTimer(client, contentId, timerSeconds, expectedUpdatedAt) {
+  if (!validUuid(contentId) || (timerSeconds !== null && ![15, 30, 45, 60].includes(timerSeconds)) || !expectedUpdatedAt) {
+    return Promise.resolve(invalidRequest())
+  }
+  return rpc(client, 'set_training_game_timer', {
+    requested_content_id: contentId, requested_timer_seconds: timerSeconds,
+    expected_updated_at: expectedUpdatedAt,
+  })
+}
+
+export function markTrainingGameCanonical(client, contentId) {
+  if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'mark_training_game_canonical', { requested_content_id: contentId })
+}
+
+export function createTrainingLanguageVariant(client, contentId, language) {
+  if (!validUuid(contentId) || !LANGUAGES.has(language)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'create_training_language_variant', {
+    requested_content_id: contentId, requested_language: language,
+  })
+}
+
 export function createTrainingContentRevision(client, contentId) {
   if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
   return rpc(client, 'create_training_content_revision', { requested_content_id: contentId })
@@ -248,7 +282,7 @@ export function joinGoHostedSession(client, roomCode) {
 
 export function getGoHostedSession(client, sessionId) {
   if (!validUuid(sessionId)) return Promise.resolve(invalidRequest())
-  return hostedRpc(client, 'get_go_hosted_session', { requested_session_id: sessionId })
+  return hostedRpc(client, 'get_go_hosted_experience', { requested_session_id: sessionId })
 }
 
 function hostedVersionAction(client, name, sessionId, expectedVersion) {

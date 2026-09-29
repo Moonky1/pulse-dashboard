@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
 import { resolveGoHostedDestination } from '../training/goHostedDestination.js'
-import { createGoHostedSession, listGoHostCatalog } from '../training/trainingApi.js'
+import { createGoHostedSession, enrichGameItems, listGoHostCatalog } from '../training/trainingApi.js'
+import { TrainingCover } from '../training/TrainingCover.jsx'
 import { supabase } from '../utils/supabase.js'
 import { canHost } from './goAccess.js'
 import { languagePresentation, roomPath } from './goHostedModel.js'
@@ -21,8 +22,9 @@ export function GoHostSelection() {
   useEffect(() => {
     if (access.state !== 'allowed' || !canHost(access.capabilities) || !destination.allowed) return
     let current = true
-    void listGoHostCatalog(supabase).then(({ data, error }) => {
-      if (current) setCatalog({ items: data || [], loading: false, error })
+    void listGoHostCatalog(supabase).then(async ({ data, error }) => {
+      const items = error ? [] : await enrichGameItems(supabase, data || [])
+      if (current) setCatalog({ items, loading: false, error })
     })
     return () => { current = false }
   }, [access.capabilities, access.state, destination.allowed])
@@ -50,10 +52,11 @@ export function GoHostSelection() {
       {catalog.items.map((item, index) => {
         const language = languagePresentation(item.language)
         return <article className="go-content-card go-content-card--host" key={item.id}>
-          <div className="go-card-visual"><span className="go-card-art"><img src={index % 2 ? GO_ART.classic : GO_ART.certification} alt="" /><i aria-hidden="true">LIVE</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
+          <div className="go-card-visual"><span className="go-card-art"><TrainingCover contentId={item.id} mediaId={item.cover_media_id} fallback={index % 2 ? GO_ART.classic : GO_ART.certification} /><i aria-hidden="true">LIVE</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
           <div className="go-card-meta"><span>{item.content_type}</span><span>Team game</span></div>
           <h2>{item.title}</h2>
           <p>{item.description || 'Ready for your team.'}</p>
+          {item.creator_label && <p className="go-creator">{item.creator_label}</p>}
           <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{item.question_count}</strong> questions</div>
           <div className="go-topic-list">{item.topics?.map(topic => <span key={topic.id}>{topic.name}</span>)}</div>
           <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>Create room</Button>

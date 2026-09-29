@@ -25,7 +25,7 @@ function pngChunk(type, data) {
   return Buffer.concat([length, name, data, checksum])
 }
 
-function syntheticCover() {
+function syntheticCover(variant) {
   const size = 64
   const header = Buffer.alloc(13)
   header.writeUInt32BE(size, 0)
@@ -37,9 +37,9 @@ function syntheticCover() {
     const row = Buffer.alloc(1 + size * 4)
     for (let x = 0; x < size; x++) {
       const offset = 1 + x * 4
-      row[offset] = 20 + x * 2
-      row[offset + 1] = 65 + y * 2
-      row[offset + 2] = 150 + Math.floor((x + y) / 4)
+      row[offset] = variant === 'v2' ? 115 + x : 20 + x * 2
+      row[offset + 1] = variant === 'v2' ? 35 + y * 2 : 65 + y * 2
+      row[offset + 2] = variant === 'v2' ? 110 + Math.floor((x + y) / 3) : 150 + Math.floor((x + y) / 4)
       row[offset + 3] = 255
     }
     rows.push(row)
@@ -53,13 +53,14 @@ function syntheticCover() {
 }
 
 const directory = resolve(target)
+const variant = process.argv[4] === 'v2' ? 'v2' : 'v1'
 await mkdir(directory, { recursive: true })
-await writeFile(resolve(directory, 'go-2-qa-cover.png'), syntheticCover())
+await writeFile(resolve(directory, 'go-2-qa-cover.png'), syntheticCover(variant))
 const encode = promisify(execFile)
 const ffmpeg = process.argv[3] || 'ffmpeg'
 await encode(ffmpeg, [
   '-hide_banner', '-loglevel', 'error', '-y',
-  '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=44100:duration=1',
+  '-f', 'lavfi', '-i', `sine=frequency=${variant === 'v2' ? 660 : 440}:sample_rate=44100:duration=${variant === 'v2' ? 4 : 1}`,
   '-filter:a', 'volume=0.04', '-codec:a', 'libmp3lame', '-b:a', '64k',
   resolve(directory, 'go-2-qa-lobby.mp3'),
 ])

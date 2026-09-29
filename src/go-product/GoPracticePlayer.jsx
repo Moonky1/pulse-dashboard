@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
+import { TrainingCover } from '../training/TrainingCover.jsx'
 import { resolveGoPracticeDestination } from '../training/goPracticeDestination.js'
-import { completeTrainingAttempt, getGoPracticeContent, startTrainingAttempt } from '../training/trainingApi.js'
+import { completeTrainingAttempt, getGoGameIdentity, getGoPracticeContent, startTrainingAttempt } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canPractice } from './goAccess.js'
-import { resultMedal } from './goHostedModel.js'
+import { languagePresentation, resultMedal } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { buildAnswerSubmission, isAnswerReady, isSafePracticePayload, normalizePracticeContent, normalizeResult } from './goPracticeModel.js'
 import { GO_ART, resolveGoArt } from './goVisualAssets.js'
@@ -26,17 +27,20 @@ export function GoPracticePlayer() {
   const [answers, setAnswers] = useState({})
   const [questionIndex, setQuestionIndex] = useState(0)
   const [result, setResult] = useState(null)
+  const [identity, setIdentity] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
   const openAttempt = useCallback(async () => {
     setSession(previous => ({ ...previous, loading: true, error: null }))
-    const [contentResponse, attemptResponse] = await Promise.all([
+    const [contentResponse, attemptResponse, identityResponse] = await Promise.all([
       getGoPracticeContent(supabase, contentId),
       startTrainingAttempt(supabase, contentId, 'go_practice'),
+      getGoGameIdentity(supabase, [contentId]),
     ])
     const content = normalizePracticeContent(contentResponse.data)
     const attempt = normalizeResult(attemptResponse.data)
     const error = contentResponse.error || attemptResponse.error || (!content || !isSafePracticePayload(content) ? { message: 'This practice item is unavailable.' } : null)
+    setIdentity(identityResponse.data?.[0] || null)
     setSession({ content: error ? null : content, attempt: error ? null : attempt, loading: false, error })
   }, [contentId])
 
@@ -74,7 +78,7 @@ export function GoPracticePlayer() {
     const resultAccent = Number(result.score_percent) >= 65 ? GO_ART.valid : GO_ART.zero2
     return <GoShell><section className="go-result" role="status">
     <div className="go-result-art" aria-hidden="true"><img src={resolveGoArt(medal.image)} alt="" /><img src={resultAccent} alt="" /><img src={GO_ART.points} alt="" /></div>
-    <p className="go-eyebrow">Practice complete</p><h2>{medal.label}</h2><h1>{Math.round(Number(result.score_percent))}%</h1>
+    <p className="go-eyebrow">Practice complete · {session.content.title}</p><h2>{medal.label}</h2><h1>{Math.round(Number(result.score_percent))}%</h1>
     <p>{result.correct_answers} of {result.total_questions} correct</p>
     {!!result.topic_breakdown?.length && <div className="go-result-topics">{result.topic_breakdown.map(topic => <div key={topic.topic_id}><strong>{topic.topic_name}</strong><span>{topic.correct_answers}/{topic.total_questions}</span></div>)}</div>}
     <div className="go-result-actions"><Button onClick={() => void practiceAgain()}>Practice Again</Button><Link to="/go/practice">Choose another</Link></div>
@@ -84,7 +88,7 @@ export function GoPracticePlayer() {
   const ready = isAnswerReady(question, answers[question.id])
   const last = questionIndex === session.content.questions.length - 1
   return <GoShell><section className="go-player">
-    <header><div className="go-player-identity"><img src={GO_ART.goal} alt="" /><div><p className="go-eyebrow">{session.content.title}</p><span>Question {questionIndex + 1} of {session.content.questions.length}</span></div></div><Link to="/go/practice">Exit</Link></header>
+    <header><div className="go-player-identity"><TrainingCover contentId={contentId} mediaId={identity?.cover_media_id} fallback={GO_ART.goal} eager /><div><p className="go-eyebrow">{session.content.title}</p><span>{languagePresentation(session.content.language).label} · Question {questionIndex + 1} of {session.content.questions.length}</span>{identity?.creator_label && <small className="go-creator">{identity.creator_label}</small>}</div></div><Link to="/go/practice">Exit</Link></header>
     <div className="go-progress" role="progressbar" aria-valuemin="1" aria-valuemax={session.content.questions.length} aria-valuenow={questionIndex + 1}><span style={{ width: `${progress}%` }} /></div>
     <article><span className="go-question-number" aria-hidden="true">{String(questionIndex + 1).padStart(2, '0')}</span><h1>{question.prompt}</h1><AnswerControl question={question} answer={answers[question.id]} onChange={answer => setAnswers(value => ({ ...value, [question.id]: answer }))} /></article>
     <footer><span aria-live="polite">{ready ? 'Answer saved.' : 'Choose an answer to continue.'}</span><Button disabled={!ready || submitting} onClick={() => last ? void finish() : setQuestionIndex(value => value + 1)}>{submitting ? 'Scoring…' : last ? 'See result' : 'Next'}</Button></footer>

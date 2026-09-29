@@ -34,3 +34,8 @@ export function resultMedal(score) {
   if (value >= 65) return { image: '/emojis/medal2.webp', label: 'Strong finish' }
   return { image: '/emojis/medal3.webp', label: 'Keep building' }
 }
+
+export function secondsRemaining(deadline, now = Date.now()) {
+  const end = Date.parse(deadline || '')
+  return Number.isFinite(end) ? Math.max(0, Math.ceil((end - now) / 1000)) : null
+}

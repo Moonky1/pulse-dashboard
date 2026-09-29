@@ -7,9 +7,11 @@ import {
   completeTrainingAttempt,
   createTrainingContentDraft,
   createTrainingContentRevision,
+  createTrainingLanguageVariant,
   createGoHostedSession,
   joinGoHostedSession,
   getGoHostedSession,
+  getGoGameIdentity,
   listGoHostCatalog,
   startGoHostedSession,
   submitGoHostedAnswer,
@@ -19,6 +21,8 @@ import {
   getGoPracticeContent,
   getTrainingContentAuthoringDetails,
   getTrainingGameVersions,
+  markTrainingGameCanonical,
+  setTrainingGameTimer,
   getTrainingFilterOptions,
   listAcademyModules,
   listMyTrainingResults,
@@ -82,7 +86,7 @@ test('Hosted GO client sends only canonical room, version, question, and answer 
     { name: 'list_go_host_catalog', args: { requested_language: 'es', requested_limit: 20, requested_offset: 2 } },
     { name: 'create_go_hosted_session', args: { requested_content_id: CONTENT_ID } },
     { name: 'join_go_hosted_session', args: { requested_room_code: 'KK 1234' } },
-    { name: 'get_go_hosted_session', args: { requested_session_id: SESSION_ID } },
+    { name: 'get_go_hosted_experience', args: { requested_session_id: SESSION_ID } },
     { name: 'start_go_hosted_session', args: { requested_session_id: SESSION_ID, expected_version: 3 } },
     { name: 'submit_go_hosted_answer', args: { requested_session_id: SESSION_ID, requested_question_id: TOPIC_ID, requested_answer: 1, expected_question_position: 2 } },
     { name: 'advance_go_hosted_session', args: { requested_session_id: SESSION_ID, expected_version: 4 } },
@@ -122,6 +126,27 @@ test('published Edit reads server version state and creates only an authorized r
   const remote = { ...client, supabaseUrl: 'https://unapproved.supabase.co' }
   assert.equal((await createTrainingContentRevision(remote, CONTENT_ID)).error.code, 'authoring_blocked')
   assert.equal(calls.length, 2)
+})
+
+test('GO identity, timer, canonical label, and manual language use protected RPCs only', async () => {
+  const { client, calls } = recorder()
+  await getGoGameIdentity(client, [CONTENT_ID])
+  await setTrainingGameTimer(client, CONTENT_ID, 30, UPDATED_AT)
+  await markTrainingGameCanonical(client, CONTENT_ID)
+  await createTrainingLanguageVariant(client, CONTENT_ID, 'es')
+  assert.deepEqual(calls, [
+    { name: 'get_go_game_identity', args: { requested_content_ids: [CONTENT_ID] } },
+    { name: 'set_training_game_timer', args: { requested_content_id: CONTENT_ID, requested_timer_seconds: 30, expected_updated_at: UPDATED_AT } },
+    { name: 'mark_training_game_canonical', args: { requested_content_id: CONTENT_ID } },
+    { name: 'create_training_language_variant', args: { requested_content_id: CONTENT_ID, requested_language: 'es' } },
+  ])
+  assert.equal((await setTrainingGameTimer(client, CONTENT_ID, 14, UPDATED_AT)).error.code, 'invalid_request')
+  assert.equal((await createTrainingLanguageVariant(client, CONTENT_ID, 'fr')).error.code, 'invalid_request')
+  const remote = { ...client, supabaseUrl: 'https://unapproved.supabase.co' }
+  assert.equal((await setTrainingGameTimer(remote, CONTENT_ID, 30, UPDATED_AT)).error.code, 'authoring_blocked')
+  assert.equal((await markTrainingGameCanonical(remote, CONTENT_ID)).error.code, 'authoring_blocked')
+  assert.equal((await createTrainingLanguageVariant(remote, CONTENT_ID, 'es')).error.code, 'authoring_blocked')
+  assert.equal(calls.length, 4)
 })
 
 test('draft creation sends business fields but never creator identity or lifecycle', async () => {
@@ -222,7 +247,7 @@ test('Training client has no direct tables, role-name gates, localStorage, or le
     'get_go_capabilities', 'list_go_practice_catalog', 'start_training_attempt',
     'complete_training_attempt', 'list_my_training_results',
     'list_go_host_catalog', 'create_go_hosted_session', 'join_go_hosted_session',
-    'get_go_hosted_session', 'start_go_hosted_session', 'submit_go_hosted_answer',
+    'get_go_hosted_experience', 'start_go_hosted_session', 'submit_go_hosted_answer',
     'advance_go_hosted_session', 'cancel_go_hosted_session',
   ]) assert.match(source, new RegExp(rpcName))
 })

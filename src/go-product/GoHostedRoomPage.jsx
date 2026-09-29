@@ -1,21 +1,34 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
+import { TrainingCover } from '../training/TrainingCover.jsx'
 import { advanceGoHostedSession, cancelGoHostedSession, startGoHostedSession, submitGoHostedAnswer } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
-import { hostedAnswerReady, languagePresentation, resultMedal } from './goHostedModel.js'
+import { hostedAnswerReady, languagePresentation, resultMedal, secondsRemaining } from './goHostedModel.js'
 import { GoShell } from './GoShell.jsx'
 import { GO_ART, resolveGoArt } from './goVisualAssets.js'
 import { HostedAnswerControl } from './HostedAnswerControl.jsx'
+import { LobbyMusic } from './LobbyMusic.jsx'
 import { useHostedRoom } from './useHostedRoom.js'
 
 function RoomHeader({ room }) {
   const language = languagePresentation(room.content.language)
   return <header className="go-room-heading">
-    <div><p className="go-eyebrow">{room.viewer_role === 'host' ? 'Hosting live' : 'Live game'}</p><h1>{room.content.title}</h1><p><span aria-hidden="true">{language.flag}</span> {language.label} · {room.question_count} questions</p></div>
-    <div className="go-room-code"><img src={GO_ART.classic} alt="" /><div><span>Join with</span><strong>{room.room_code}</strong></div></div>
+    <div><p className="go-eyebrow">{room.viewer_role === 'host' ? 'Hosting live' : 'Live game'}</p><h1>{room.content.title}</h1><p><span aria-hidden="true">{language.flag}</span> {language.label} · {room.question_count} questions</p>{room.content.creator_label && <p className="go-creator">{room.content.creator_label}</p>}</div>
+    <div className="go-room-code"><TrainingCover contentId={room.content.id} mediaId={room.content.cover_media_id} fallback={GO_ART.classic} sessionId={room.session_id} eager /><div><span>Join with</span><strong>{room.room_code}</strong></div></div>
   </header>
+}
+
+function HostedCountdown({ deadline }) {
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(interval)
+  }, [])
+  const remaining = secondsRemaining(deadline, now)
+  if (remaining === null) return null
+  return <span className={`go-countdown${remaining <= 5 ? ' go-countdown--urgent' : ''}`} role="timer" aria-label={`Time remaining: ${remaining} seconds`}>{remaining ? `${remaining}s left` : 'Time’s up'}</span>
 }
 
 function Lobby({ room, action, busy, error }) {
@@ -27,6 +40,7 @@ function Lobby({ room, action, busy, error }) {
         <div className="go-panel-title"><span className="go-pixel-symbol" aria-hidden="true">🛡️</span><div><p className="go-eyebrow">Lobby</p><h2>{room.participant_count} {room.participant_count === 1 ? 'player' : 'players'} ready</h2></div></div>
         <div className="go-player-roster" aria-live="polite">{room.participants.map(player => <div key={player.seat}><span className={`go-player-marker go-player-marker--${(Number(player.seat) || 0) % 4}`}>{player.name.slice(0, 1).toUpperCase()}</span><strong>{player.name}</strong><small>Ready ✓</small></div>)}</div>
         {!room.participant_count && <p className="go-room-empty">Share the game code. Players will appear here automatically.</p>}
+        <LobbyMusic room={room} />
       </article>
       <aside className="go-room-panel go-room-panel--action">
         <img src={GO_ART.classic} alt="" />
@@ -44,7 +58,7 @@ function HostQuestion({ room, action, busy, error }) {
   return <>
     <RoomHeader room={room} />
     <section className="go-live-question go-live-question--host">
-      <div className="go-question-counter"><span>Question {question.position} of {room.question_count}</span><strong>{room.answered_count}/{room.participant_count} answered</strong></div>
+      <div className="go-question-counter"><span>Question {question.position} of {room.question_count}</span><HostedCountdown deadline={room.question_deadline_at} /><strong>{room.answered_count}/{room.participant_count} answered</strong></div>
       <article><p className="go-question-type">{question.question_type.replaceAll('_', ' ')}</p><h2>{question.prompt}</h2>{question.question_type !== 'text' && <div className="go-host-options">{question.answer_options.length ? question.answer_options.map((option, index) => <span key={index}>{String.fromCharCode(65 + index)}. {option}</span>) : <><span>True</span><span>False</span></>}</div>}</article>
       <div className="go-answer-meter" aria-label={`${room.answered_count} of ${room.participant_count} answered`}><span style={{ width: `${room.participant_count ? room.answered_count / room.participant_count * 100 : 0}%` }} /></div>
       {error && <p className="go-inline-error" role="alert">{error}</p>}
@@ -56,13 +70,19 @@ function HostQuestion({ room, action, busy, error }) {
 function PlayerQuestion({ room, submit, busy, error }) {
   const [answer, setAnswer] = useState(undefined)
   const question = room.current_question
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(interval)
+  }, [])
+  const expired = secondsRemaining(room.question_deadline_at, now) === 0
   return <>
     <RoomHeader room={room} />
     <section className="go-live-question">
-      <div className="go-question-counter"><span>Question {question.position} of {room.question_count}</span><strong>{room.my_answered ? 'Answer locked ✓' : 'Choose your answer'}</strong></div>
-      <article><h2>{question.prompt}</h2><HostedAnswerControl question={question} answer={answer} onChange={setAnswer} disabled={room.my_answered || busy} /></article>
+      <div className="go-question-counter"><span>Question {question.position} of {room.question_count}</span><HostedCountdown deadline={room.question_deadline_at} /><strong>{room.my_answered ? 'Answer locked ✓' : expired ? 'Time’s up' : 'Choose your answer'}</strong></div>
+      <article><h2>{question.prompt}</h2><HostedAnswerControl question={question} answer={answer} onChange={setAnswer} disabled={room.my_answered || expired || busy} /></article>
       {error && <p className="go-inline-error" role="alert">{error}</p>}
-      <footer><span>{room.my_answered ? 'Waiting for the host…' : 'Your answer is final once sent.'}</span><Button loading={busy} disabled={room.my_answered || busy || !hostedAnswerReady(question, answer)} onClick={() => void submit(answer)}>Submit answer</Button></footer>
+      <footer><span>{room.my_answered || expired ? 'Waiting for the host…' : 'Your answer is final once sent.'}</span><Button loading={busy} disabled={room.my_answered || expired || busy || !hostedAnswerReady(question, answer)} onClick={() => void submit(answer)}>Submit answer</Button></footer>
     </section>
   </>
 }
@@ -73,7 +93,7 @@ function Results({ room }) {
   const medal = resultMedal(score)
   return <section className="go-hosted-result" role="status">
     <div className="go-result-art" aria-hidden="true"><img src={resolveGoArt(medal.image)} alt="" /><img src={GO_ART.points} alt="" /><img src={GO_ART.valid} alt="" /></div>
-    <p className="go-eyebrow">Game complete</p><h1>{room.viewer_role === 'host' ? 'That’s a wrap!' : medal.label}</h1>
+    <p className="go-eyebrow">Game complete · {room.content.title}</p><h1>{room.viewer_role === 'host' ? 'That’s a wrap!' : medal.label}</h1>
     {personal ? <><strong className="go-result-score">{Math.round(Number(personal.score_percent))}%</strong><p>{personal.correct_answers} of {personal.total_questions} correct</p>{!!personal.topic_breakdown?.length && <div className="go-result-topics">{personal.topic_breakdown.map(topic => <div key={topic.topic_id}><strong>{topic.topic_name}</strong><span>{topic.correct_answers}/{topic.total_questions}</span></div>)}</div>}</> : <div className="go-host-summary"><div><strong>{room.host_summary.players}</strong><span>Players</span></div><div><strong>{Math.round(Number(room.host_summary.average_score))}%</strong><span>Average</span></div><div><strong>{room.host_summary.completed_results}</strong><span>Results saved</span></div></div>}
     <Link className="go-primary" to="/go">Back to GO</Link>
   </section>
