@@ -202,11 +202,20 @@ export function getGoGameIdentity(client, contentIds) {
   return rpc(client, 'get_go_game_identity', { requested_content_ids: contentIds })
 }
 
+export function getGoQuestionBankGroups(client, contentIds) {
+  if (!validUuidList(contentIds) || contentIds.length > 100) return Promise.resolve(invalidRequest())
+  return rpc(client, 'get_go_question_bank_groups', { requested_content_ids: contentIds })
+}
+
 export async function enrichGameItems(client, items) {
   if (!items?.length) return items || []
-  const { data } = await getGoGameIdentity(client, items.map(item => item.id))
+  const ids = items.map(item => item.id)
+  const [{ data }, bankResult] = await Promise.all([
+    getGoGameIdentity(client, ids), getGoQuestionBankGroups(client, ids),
+  ])
   const identity = new Map((Array.isArray(data) ? data : []).map(item => [item.id, item]))
-  return items.map(item => ({ ...item, ...identity.get(item.id) }))
+  const bank = new Map((Array.isArray(bankResult.data) ? bankResult.data : []).map(item => [item.id, item]))
+  return items.map(item => ({ ...item, ...identity.get(item.id), question_bank: bank.get(item.id) || null }))
 }
 
 export function setTrainingGameTimer(client, contentId, timerSeconds, expectedUpdatedAt) {

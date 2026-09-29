@@ -12,6 +12,8 @@ import {
   joinGoHostedSession,
   getGoHostedSession,
   getGoGameIdentity,
+  getGoQuestionBankGroups,
+  enrichGameItems,
   listGoHostCatalog,
   startGoHostedSession,
   submitGoHostedAnswer,
@@ -112,6 +114,22 @@ test('authoring details reject malformed identifiers without reaching Supabase',
   const result = await getTrainingContentAuthoringDetails(client, 'not-a-uuid')
   assert.equal(result.error.code, 'invalid_request')
   assert.deepEqual(calls, [])
+})
+
+test('Studio enrichment labels only server-classified question bank drafts', async () => {
+  const calls = []
+  const client = { supabaseUrl: 'http://127.0.0.1:54321', rpc: async (name, args) => {
+    calls.push({ name, args })
+    return { data: name === 'get_go_question_bank_groups' ?
+      [{ id: CONTENT_ID, game_mode: 'classic', difficulty: 'easy', review_required: true }] :
+      [{ id: CONTENT_ID, question_count: 40 }], error: null }
+  } }
+  const [item] = await enrichGameItems(client, [{ id: CONTENT_ID, title: 'GO Bank', status: 'draft' }])
+  assert.equal(item.question_count, 40)
+  assert.equal(item.question_bank.review_required, true)
+  assert.deepEqual(calls.map(call => call.name), ['get_go_game_identity', 'get_go_question_bank_groups'])
+  assert.deepEqual(calls[1].args, { requested_content_ids: [CONTENT_ID] })
+  assert.equal((await getGoQuestionBankGroups(client, ['invalid'])).error.code, 'invalid_request')
 })
 
 test('published Edit reads server version state and creates only an authorized revision', async () => {
