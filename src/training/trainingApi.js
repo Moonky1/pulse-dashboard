@@ -192,6 +192,16 @@ export function setTrainingContentMedia(client, contentId, coverMediaId, lobbyAu
   })
 }
 
+export function getTrainingGameVersions(client, contentId) {
+  if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'get_training_game_versions', { requested_content_id: contentId })
+}
+
+export function createTrainingContentRevision(client, contentId) {
+  if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'create_training_content_revision', { requested_content_id: contentId })
+}
+
 export function getTrainingContentMedia(client, contentId) {
   if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
   return rpc(client, 'get_training_content_media', { requested_content_id: contentId })

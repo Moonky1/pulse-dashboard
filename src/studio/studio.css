@@ -122,6 +122,10 @@
 .studio-error,.studio-notice { border-radius:12px; padding:16px 20px; margin-bottom:24px; font-size:14px; line-height:1.6; }
 .studio-error { color:#f4bdc4; background:#6a263125; border:1px solid #f596a32b; }
 .studio-notice { color:#c0d6f6; background:#7393bd0a; border:1px solid #8bb8f120; }
+.studio-version-history { display:grid; gap:10px; }
+.studio-version-history>div { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:13px 16px; border:1px solid #ffffff14; border-radius:11px; }
+.studio-version-history a { color:#eaf0ff; }
+.studio-version-history span { color:#a9bbd8; font-size:12px; }
 .studio-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @media(max-width:1000px) {
  .studio-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }

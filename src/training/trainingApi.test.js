@@ -6,6 +6,7 @@ import {
   archiveTrainingContent,
   completeTrainingAttempt,
   createTrainingContentDraft,
+  createTrainingContentRevision,
   createGoHostedSession,
   joinGoHostedSession,
   getGoHostedSession,
@@ -17,6 +18,7 @@ import {
   getGoCapabilities,
   getGoPracticeContent,
   getTrainingContentAuthoringDetails,
+  getTrainingGameVersions,
   getTrainingFilterOptions,
   listAcademyModules,
   listMyTrainingResults,
@@ -106,6 +108,20 @@ test('authoring details reject malformed identifiers without reaching Supabase',
   const result = await getTrainingContentAuthoringDetails(client, 'not-a-uuid')
   assert.equal(result.error.code, 'invalid_request')
   assert.deepEqual(calls, [])
+})
+
+test('published Edit reads server version state and creates only an authorized revision', async () => {
+  const { client, calls } = recorder()
+  await getTrainingGameVersions(client, CONTENT_ID)
+  await createTrainingContentRevision(client, CONTENT_ID)
+  assert.deepEqual(calls, [
+    { name: 'get_training_game_versions', args: { requested_content_id: CONTENT_ID } },
+    { name: 'create_training_content_revision', args: { requested_content_id: CONTENT_ID } },
+  ])
+  assert.equal((await createTrainingContentRevision(client, 'bad-id')).error.code, 'invalid_request')
+  const remote = { ...client, supabaseUrl: 'https://unapproved.supabase.co' }
+  assert.equal((await createTrainingContentRevision(remote, CONTENT_ID)).error.code, 'authoring_blocked')
+  assert.equal(calls.length, 2)
 })
 
 test('draft creation sends business fields but never creator identity or lifecycle', async () => {

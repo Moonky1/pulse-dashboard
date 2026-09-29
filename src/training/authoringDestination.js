@@ -49,5 +49,5 @@ export function assertTrainingAuthoringDestination(destination, options) {
 export const AUTHORING_MUTATIONS = new Set([
   'create_training_content_draft', 'update_training_content_draft',
   'replace_training_questions', 'publish_training_content', 'archive_training_content',
-  'set_training_content_media',
+  'set_training_content_media', 'create_training_content_revision',
 ])
