@@ -17,8 +17,11 @@ export function questionBankTitle(bank) {
   return difficulty ? `${mode} · ${difficulty}` : mode
 }
 
-export function questionBankDifficulty(bank) {
-  return DIFFICULTY_LABELS[bank?.difficulty] || null
+export function questionBankDifficulty(bank, language = 'en') {
+  const labels = language === 'es'
+    ? { easy: 'Fácil', medium: 'Medio', advanced: 'Avanzado' }
+    : DIFFICULTY_LABELS
+  return labels[bank?.difficulty] || null
 }
 
 export function questionBankModeOptions(items) {
@@ -27,5 +30,16 @@ export function questionBankModeOptions(items) {
 }
 
 export function hostedQuestionCount(item) {
-  return item.question_bank?.game_mode === 'classic' ? 10 : item.question_count
+  return item.question_count
+}
+
+const CLASSIC_LEVELS = ['easy', 'medium', 'advanced']
+
+export function classicHostLevels(items, language) {
+  if (!['en', 'es'].includes(language)) return []
+  return CLASSIC_LEVELS.map(level => items.find(item =>
+    item.question_bank?.game_mode === 'classic' &&
+    item.question_bank.difficulty === level &&
+    item.language === language
+  )).filter(Boolean)
 }

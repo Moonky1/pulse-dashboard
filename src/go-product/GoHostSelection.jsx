@@ -11,7 +11,7 @@ import { languagePresentation, roomPath } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
-import { hostedQuestionCount, questionBankModeOptions, questionBankTitle } from './goQuestionBankPresentation.js'
+import { classicHostLevels, hostedQuestionCount, questionBankDifficulty } from './goQuestionBankPresentation.js'
 
 export function GoHostSelection() {
   const access = useGoAccess()
@@ -19,9 +19,7 @@ export function GoHostSelection() {
   const destination = resolveGoHostedDestination(supabase.supabaseUrl)
   const [catalog, setCatalog] = useState({ items: [], loading: true, error: null })
   const [creating, setCreating] = useState(null)
-  const [mode, setMode] = useState('')
-  const [languageFilter, setLanguageFilter] = useState('')
-  const [difficulty, setDifficulty] = useState('')
+  const [language, setLanguage] = useState('')
 
   useEffect(() => {
     if (access.state !== 'allowed' || !canHost(access.capabilities) || !destination.allowed) return
@@ -45,32 +43,38 @@ export function GoHostSelection() {
     navigate(roomPath(data))
   }
 
+  const hasClassicBank = catalog.items.some(item => item.question_bank?.game_mode === 'classic')
+  const visibleItems = hasClassicBank ? classicHostLevels(catalog.items, language) : catalog.items
+
   return <GoShell>
     <section className="go-page-heading go-page-heading--with-art">
-      <div><p className="go-eyebrow">Host a game</p><h1>Pick what to play</h1><p>We’ll make the room code</p></div>
+      <div><p className="go-eyebrow">Host a game</p><h1>{hasClassicBank ? language ? language === 'es' ? 'Elige la dificultad' : 'Choose difficulty' : 'Choose language' : 'Pick what to play'}</h1><p>{hasClassicBank ? language ? language === 'es' ? 'Tres niveles de Classic Quiz · 40 preguntas cada uno' : 'Three Classic Quiz levels · 40 questions each' : 'First, choose the language for your game.' : 'We’ll make the room code'}</p></div>
       <img src={GO_ART.certification} alt="" />
     </section>
     <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding host-ready games…' : catalog.error?.message || ''}</div>
-    {!!catalog.items.some(item => item.question_bank) && <section className="go-filterbar" aria-label="Choose your GO game">
-      <label>Game mode<select value={mode} onChange={event => { setMode(event.target.value); setDifficulty('') }}><option value="">All modes</option>{questionBankModeOptions(catalog.items).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-      <label>Language<select value={languageFilter} onChange={event => setLanguageFilter(event.target.value)}><option value="">Both languages</option><option value="en">English</option><option value="es">Español</option></select></label>
-      <label>Difficulty<select value={difficulty} onChange={event => setDifficulty(event.target.value)}><option value="">All levels</option>{['easy','medium','advanced'].map(value => <option key={value} value={value}>{value[0].toUpperCase() + value.slice(1)}</option>)}</select></label>
-    </section>}
     {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No games are ready to host</h2><p>Published quizzes and assessments available to you will appear here.</p></section>}
-    <section className="go-catalog" aria-busy={catalog.loading}>
-      {catalog.items.filter(item => (!mode || item.question_bank?.game_mode === mode) && (!languageFilter || item.language === languageFilter) && (!difficulty || item.question_bank?.difficulty === difficulty)).map((item, index) => {
+    {hasClassicBank && !language && <section className="go-language-choices" aria-label="Choose game language">
+      {[{ code: 'en', name: 'English', note: 'Easy, Medium and Advanced' }, { code: 'es', name: 'Español', note: 'Fácil, Medio y Avanzado' }].map(choice => <button className="go-language-choice" type="button" key={choice.code} onClick={() => setLanguage(choice.code)}>
+        <span className="go-language-choice__flag" aria-hidden="true">{languagePresentation(choice.code).flag}</span>
+        <strong>{choice.name}</strong><span>{choice.note}</span><span className="go-language-choice__arrow" aria-hidden="true">→</span>
+      </button>)}
+    </section>}
+    {hasClassicBank && language && <div className="go-language-return"><button type="button" onClick={() => setLanguage('')}>← {language === 'es' ? 'Cambiar idioma' : 'Change language'}</button><span>{languagePresentation(language).flag} {language === 'es' ? 'Español' : 'English'}</span></div>}
+    {hasClassicBank && language && visibleItems.length !== 3 && <p className="go-catalog-warning" role="status">Only {visibleItems.length} of 3 levels are ready in this language.</p>}
+    {(!hasClassicBank || language) && <section className="go-catalog" aria-busy={catalog.loading}>
+      {visibleItems.map((item, index) => {
         const language = languagePresentation(item.language)
         return <article className="go-content-card go-content-card--host" key={item.id}>
           <div className="go-card-visual"><span className="go-card-art"><TrainingCover contentId={item.id} mediaId={item.cover_media_id} fallback={index % 2 ? GO_ART.classic : GO_ART.certification} /><i aria-hidden="true">LIVE</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
-          <div className="go-card-meta"><span>{item.content_type}</span><span>{item.question_bank ? 'Preview beta' : 'Team game'}</span></div>
-          <h2>{questionBankTitle(item.question_bank) || item.title}</h2>
-          <p>{item.question_bank ? 'Bring your team together for a Pulse GO challenge.' : item.description || 'Ready for your team.'}</p>
+          <div className="go-card-meta"><span>{item.question_bank ? 'Classic Quiz' : item.content_type}</span><span>Team game</span></div>
+          <h2>{questionBankDifficulty(item.question_bank, item.language) || item.title}</h2>
+          <p>{item.question_bank ? item.language === 'es' ? 'Reúne a tu equipo para un reto de Pulse GO.' : 'Bring your team together for a Pulse GO challenge.' : item.description || 'Ready for your team.'}</p>
           {item.creator_label && <p className="go-creator">{item.creator_label}</p>}
-          <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{hostedQuestionCount(item)}</strong> questions</div>
+          <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{hostedQuestionCount(item)}</strong> {item.language === 'es' ? 'preguntas' : 'questions'}</div>
           <div className="go-topic-list">{item.topics?.map(topic => <span key={topic.id}>{topic.name}</span>)}</div>
-          <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>Create room</Button>
+          <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>{item.language === 'es' ? 'Crear sala' : 'Create room'}</Button>
         </article>
       })}
-    </section>
+    </section>}
   </GoShell>
 }

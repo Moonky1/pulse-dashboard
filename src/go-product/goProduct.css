@@ -34,3 +34,14 @@
 .go-lobby-music button:focus-visible{outline:2px solid #9abaff;outline-offset:2px}
 .go-countdown{display:inline-flex;align-items:center;min-width:72px;justify-content:center;padding:5px 9px;border-radius:999px;background:rgba(124,164,255,.13);color:#d9e8ff;font-variant-numeric:tabular-nums;font-weight:800}
 .go-countdown--urgent{background:rgba(255,124,124,.13);color:#ffc5c5}
+.go-language-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.go-language-choice{position:relative;display:flex;min-height:210px;flex-direction:column;align-items:flex-start;gap:12px;padding:26px;border:1px solid rgba(255,255,255,.12);border-radius:20px;background:linear-gradient(145deg,rgba(23,33,54,.96),rgba(8,13,24,.98));color:#f6f8ff;text-align:left;cursor:pointer;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.go-language-choice:hover,.go-language-choice:focus-visible{transform:translateY(-3px);border-color:rgba(155,184,255,.65);box-shadow:0 20px 48px rgba(3,8,22,.35)}
+.go-language-choice:focus-visible,.go-language-return button:focus-visible{outline:2px solid #a3baff;outline-offset:3px}
+.go-language-choice__flag{font-size:31px}.go-language-choice strong{font-size:30px;letter-spacing:-.045em}
+.go-language-choice>span:not(.go-language-choice__flag):not(.go-language-choice__arrow){color:#aebbd1;font-size:14px}
+.go-language-choice__arrow{position:absolute;right:25px;bottom:23px;font-size:23px}
+.go-language-return{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;color:#bdcbed;font-size:13px}
+.go-language-return button{padding:8px 0;border:0;background:none;color:#b8c8ff;font:inherit;cursor:pointer}
+.go-catalog-warning{margin:0 0 16px;color:#f6c781;font-size:13px}
+@media(max-width:620px){.go-language-choices{grid-template-columns:1fr}.go-language-choice{min-height:155px;padding:21px}.go-language-choice strong{font-size:26px}}

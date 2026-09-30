@@ -124,11 +124,11 @@ select (room->>'session_id')::uuid id,room->>'room_code' code
 from (select public.create_go_hosted_session(
   'd2840000-0000-4000-8000-000000000001') room) created;
 select extensions.is((select question_count from public.go_sessions
-  where id=(select id from classic_room)),10,
-  'Classic rooms play ten questions, not the full forty');
-select extensions.ok((select question_start_position in (1,11,21,31)
+  where id=(select id from classic_room)),40,
+  'Classic rooms play all forty questions in the selected level');
+select extensions.ok((select question_start_position=1
   from public.go_sessions where id=(select id from classic_room)),
-  'one full ten-question block is selected on the server');
+  'Classic rooms begin with the first question in the level');
 
 select set_config('request.jwt.claim.sub','a2840000-0000-4000-8000-000000000002',true);
 select extensions.is((public.get_go_question_bank_groups(
@@ -140,29 +140,27 @@ select public.start_go_hosted_session((select id from classic_room),
   (select version from public.go_sessions where id=(select id from classic_room)));
 select extensions.is((public.get_go_hosted_session((select id from classic_room))
   ->'current_question'->>'position')::integer,1,
-  'the selected question is presented as question one of ten');
+  'the first question is presented as question one of forty');
 select extensions.is((public.get_go_hosted_session((select id from classic_room))
   ->'current_question'->>'id')::uuid,
   (select question.id from public.training_questions question
     join public.go_sessions room on room.content_id=question.content_id
     where room.id=(select id from classic_room)
       and question.position=room.question_start_position),
-  'snapshot reads the selected block, not the first source question');
+  'snapshot reads the first source question');
 select set_config('request.jwt.claim.sub','a2840000-0000-4000-8000-000000000002',true);
 select extensions.throws_ok(format($sql$select public.submit_go_hosted_answer(%L::uuid,
-  (select id from public.training_questions where content_id=%L::uuid and position=case
-    when (select question_start_position from public.go_sessions where id=%L::uuid)=1
-      then 11 else 1 end),'0'::jsonb,1)$sql$,
-  (select id from classic_room),'d2840000-0000-4000-8000-000000000001',
-  (select id from classic_room)), 'P0002',null,
-  'a player cannot submit a question from another ten-question block');
+  (select id from public.training_questions where content_id=%L::uuid and position=11),
+  '0'::jsonb,1)$sql$,
+  (select id from classic_room),'d2840000-0000-4000-8000-000000000001'), 'P0002',null,
+  'a player cannot skip to a later question');
 
 do $play$
 declare room_id uuid := (select id from classic_room);
   question_id uuid;
   step integer;
 begin
-  for step in 1..10 loop
+  for step in 1..40 loop
     perform set_config('request.jwt.claim.sub',
       'a2840000-0000-4000-8000-000000000002',true);
     question_id := (public.get_go_hosted_session(room_id)->'current_question'->>'id')::uuid;
@@ -175,16 +173,16 @@ begin
 end $play$;
 select extensions.is((select status from public.go_sessions
   where id=(select id from classic_room)),'completed',
-  'the tenth answer completes the hosted Classic room');
+  'the fortieth answer completes the hosted Classic room');
 select extensions.is((select result.total_questions from public.training_results result
   join public.go_session_memberships membership on membership.attempt_id=result.attempt_id
-  where membership.session_id=(select id from classic_room)),10,
-  'the canonical result denominator is ten');
+  where membership.session_id=(select id from classic_room)),40,
+  'the canonical result denominator is forty');
 select extensions.is((select sum(total_questions)::integer from public.training_result_topics
   where result_id=(select result.id from public.training_results result
     join public.go_session_memberships membership on membership.attempt_id=result.attempt_id
-    where membership.session_id=(select id from classic_room))),10,
-  'topic breakdown counts only the selected ten questions');
+    where membership.session_id=(select id from classic_room))),40,
+  'topic breakdown counts all forty questions');
 
 select * from extensions.finish();
 rollback;
