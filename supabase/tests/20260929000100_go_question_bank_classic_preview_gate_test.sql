@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local role postgres;
 select set_config('search_path','extensions,public',true);
-select extensions.plan(16);
+select extensions.plan(19);
 
 select extensions.has_column('public','go_question_bank_groups','reviewed_at',
   'review checkpoint is stored server-side');
@@ -113,6 +113,12 @@ select extensions.throws_ok($$update public.go_question_bank_groups set difficul
   '55000',null,'published Classic classification is immutable');
 
 select set_config('request.jwt.claim.sub','a2840000-0000-4000-8000-000000000001',true);
+select extensions.is((public.get_go_question_bank_groups(
+  array['d2840000-0000-4000-8000-000000000001'::uuid])->0->>'game_mode'),
+  'classic','an authorized host can read published Classic classification');
+select extensions.is(public.get_go_question_bank_groups(
+  array['d2840000-0000-4000-8000-000000000002'::uuid]),'[]'::jsonb,
+  'an authorized host cannot read a draft special mode');
 create temporary table classic_room as
 select (room->>'session_id')::uuid id,room->>'room_code' code
 from (select public.create_go_hosted_session(
@@ -125,6 +131,9 @@ select extensions.ok((select question_start_position in (1,11,21,31)
   'one full ten-question block is selected on the server');
 
 select set_config('request.jwt.claim.sub','a2840000-0000-4000-8000-000000000002',true);
+select extensions.is((public.get_go_question_bank_groups(
+  array['d2840000-0000-4000-8000-000000000001'::uuid])->0->>'difficulty'),
+  'easy','an authorized player can read published Classic classification');
 select public.join_go_hosted_session((select code from classic_room));
 select set_config('request.jwt.claim.sub','a2840000-0000-4000-8000-000000000001',true);
 select public.start_go_hosted_session((select id from classic_room),
