@@ -25,3 +25,7 @@ export function questionBankModeOptions(items) {
   return [...new Set(items.map(item => item.question_bank?.game_mode).filter(Boolean))]
     .map(value => ({ value, label: MODE_LABELS[value] || value }))
 }
+
+export function hostedQuestionCount(item) {
+  return item.question_bank?.game_mode === 'classic' ? 10 : item.question_count
+}

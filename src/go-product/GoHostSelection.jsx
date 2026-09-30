@@ -11,7 +11,7 @@ import { languagePresentation, roomPath } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
-import { questionBankModeOptions, questionBankTitle } from './goQuestionBankPresentation.js'
+import { hostedQuestionCount, questionBankModeOptions, questionBankTitle } from './goQuestionBankPresentation.js'
 
 export function GoHostSelection() {
   const access = useGoAccess()
@@ -62,11 +62,11 @@ export function GoHostSelection() {
         const language = languagePresentation(item.language)
         return <article className="go-content-card go-content-card--host" key={item.id}>
           <div className="go-card-visual"><span className="go-card-art"><TrainingCover contentId={item.id} mediaId={item.cover_media_id} fallback={index % 2 ? GO_ART.classic : GO_ART.certification} /><i aria-hidden="true">LIVE</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
-          <div className="go-card-meta"><span>{item.content_type}</span><span>Team game</span></div>
+          <div className="go-card-meta"><span>{item.content_type}</span><span>{item.question_bank ? 'Preview beta' : 'Team game'}</span></div>
           <h2>{questionBankTitle(item.question_bank) || item.title}</h2>
           <p>{item.question_bank ? 'Bring your team together for a Pulse GO challenge.' : item.description || 'Ready for your team.'}</p>
           {item.creator_label && <p className="go-creator">{item.creator_label}</p>}
-          <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{item.question_count}</strong> questions</div>
+          <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{hostedQuestionCount(item)}</strong> questions</div>
           <div className="go-topic-list">{item.topics?.map(topic => <span key={topic.id}>{topic.name}</span>)}</div>
           <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>Create room</Button>
         </article>
