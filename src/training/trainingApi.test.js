@@ -9,6 +9,7 @@ import {
   createGoHostedSession,
   joinGoHostedSession,
   getGoHostedSession,
+  getGoHostedResults,
   listGoHostCatalog,
   startGoHostedSession,
   submitGoHostedAnswer,
@@ -72,6 +73,7 @@ test('Hosted GO client sends only canonical room, version, question, and answer 
   await createGoHostedSession(client, CONTENT_ID)
   await joinGoHostedSession(client, 'KK 1234')
   await getGoHostedSession(client, SESSION_ID)
+  await getGoHostedResults(client, SESSION_ID)
   await startGoHostedSession(client, SESSION_ID, 3)
   await submitGoHostedAnswer(client, SESSION_ID, TOPIC_ID, 1, 2)
   await advanceGoHostedSession(client, SESSION_ID, 4)
@@ -81,6 +83,7 @@ test('Hosted GO client sends only canonical room, version, question, and answer 
     { name: 'create_go_hosted_session', args: { requested_content_id: CONTENT_ID } },
     { name: 'join_go_hosted_session', args: { requested_room_code: 'KK 1234' } },
     { name: 'get_go_hosted_session', args: { requested_session_id: SESSION_ID } },
+    { name: 'get_go_hosted_results', args: { requested_session_id: SESSION_ID } },
     { name: 'start_go_hosted_session', args: { requested_session_id: SESSION_ID, expected_version: 3 } },
     { name: 'submit_go_hosted_answer', args: { requested_session_id: SESSION_ID, requested_question_id: TOPIC_ID, requested_answer: 1, expected_question_position: 2 } },
     { name: 'advance_go_hosted_session', args: { requested_session_id: SESSION_ID, expected_version: 4 } },

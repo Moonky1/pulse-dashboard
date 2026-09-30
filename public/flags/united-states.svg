@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 741 390" role="img" aria-label="United States flag">
+  <path fill="#fff" d="M0 0h741v390H0z"/>
+  <path fill="#b31942" d="M0 0h741v30H0zm0 60h741v30H0zm0 60h741v30H0zm0 60h741v30H0zm0 60h741v30H0zm0 60h741v30H0zm0 60h741v30H0z"/>
+  <path fill="#0a3161" d="M0 0h296.4v210H0z"/>
+  <defs><g id="s" fill="#fff"><path d="m0-10 2.3 7.1h7.5L3.7 1.5 6 8.6 0 4.2l-6 4.4 2.3-7.1-6.1-4.4h7.5z"/></g></defs>
+  <g id="row6"><use href="#s" x="24" y="17"/><use href="#s" x="73" y="17"/><use href="#s" x="122" y="17"/><use href="#s" x="171" y="17"/><use href="#s" x="220" y="17"/><use href="#s" x="269" y="17"/></g>
+  <g id="row5"><use href="#s" x="48.5" y="38"/><use href="#s" x="97.5" y="38"/><use href="#s" x="146.5" y="38"/><use href="#s" x="195.5" y="38"/><use href="#s" x="244.5" y="38"/></g>
+  <use href="#row6" y="42"/><use href="#row6" y="84"/><use href="#row6" y="126"/><use href="#row6" y="168"/>
+  <use href="#row5" y="42"/><use href="#row5" y="84"/><use href="#row5" y="126"/><use href="#row5" y="168"/>
+</svg>

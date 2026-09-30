@@ -50,7 +50,7 @@ function hostedRpc(client, name, args) {
   try { assertGoHostedDestination(client.supabaseUrl) } catch {
     return Promise.resolve({ data: null, error: publicError('hosted_blocked', 'Live games are not enabled for this Pulse destination.') })
   }
-  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog' && name !== 'get_go_hosted_session') {
+  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog' && name !== 'get_go_hosted_session' && name !== 'get_go_hosted_results') {
     return Promise.resolve(invalidRequest())
   }
   return rpc(client, name, args)
@@ -224,6 +224,11 @@ export function joinGoHostedSession(client, roomCode) {
 export function getGoHostedSession(client, sessionId) {
   if (!validUuid(sessionId)) return Promise.resolve(invalidRequest())
   return hostedRpc(client, 'get_go_hosted_session', { requested_session_id: sessionId })
+}
+
+export function getGoHostedResults(client, sessionId) {
+  if (!validUuid(sessionId)) return Promise.resolve(invalidRequest())
+  return hostedRpc(client, 'get_go_hosted_results', { requested_session_id: sessionId })
 }
 
 function hostedVersionAction(client, name, sessionId, expectedVersion) {
