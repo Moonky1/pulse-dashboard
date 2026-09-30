@@ -6,16 +6,12 @@ import { getStudioFilterOptions, listStudioCatalog } from './studioApi.js'
 import { createTrainingContentRevision, enrichGameItems } from '../training/trainingApi.js'
 import { TrainingCover } from '../training/TrainingCover.jsx'
 import { useStudioAccess } from './hooks/useStudioAccess.js'
+import { questionBankDifficulty, questionBankTitle } from '../go-product/goQuestionBankPresentation.js'
 import { StudioShell, StudioAccessState } from './StudioShell.jsx'
 import { audienceLabel, languageLabel, typeLabel } from './builderModel.js'
 import './studio.css'
 
 const PAGE_SIZE = 24
-const BANK_MODE_LABELS = {
-  classic: 'Classic Quiz', 'valid-invalid': 'Valid or Invalid XFER',
-  'disposition-trainer': 'Dispose It', eligible: 'Eligible or Not Eligible',
-  'objection-battle': 'Objection Battle', certification: 'Certification Mode',
-}
 export function StudioPage() {
   const access = useStudioAccess()
   const navigate = useNavigate()
@@ -85,12 +81,9 @@ export function StudioPage() {
         {!catalog.loading && !catalog.error && catalog.items.map(item => <article className="studio-card" key={item.id}>
           {item.cover_media_id && <TrainingCover contentId={item.id} mediaId={item.cover_media_id} className="studio-card__cover" />}
           <div className="studio-card__meta"><span>{typeLabel(item.content_type)}</span><span>{languageLabel(item.language)}</span></div>
-          {item.question_bank && <div className="studio-card__bank" aria-label="GO question bank draft awaiting review">
-            <span>GO question bank · Review required</span>
-            <span>{BANK_MODE_LABELS[item.question_bank.game_mode] || item.question_bank.game_mode}{item.question_bank.difficulty ? ' · ' + item.question_bank.difficulty : ''}</span>
-          </div>}
-          <h2>{item.can_open ? <Link to={'/studio/content/' + item.id}>{item.title}</Link> : item.title}</h2>
-          <p>{item.description || 'A little knowledge goes a long way.'}</p>
+          {item.question_bank && <div className="studio-card__bank"><span>Pulse GO</span><span>{questionBankDifficulty(item.question_bank) || 'Training game'}</span></div>}
+          <h2>{item.can_open ? <Link to={'/studio/content/' + item.id}>{questionBankTitle(item.question_bank) || item.title}</Link> : questionBankTitle(item.question_bank) || item.title}</h2>
+          <p>{item.question_bank ? item.status === 'published' ? 'Ready to play with your team.' : 'From the original Pulse GO collection. Not live yet.' : item.description || 'A little knowledge goes a long way.'}</p>
           {item.creator_label && <span className="studio-card__creator">{item.creator_label}</span>}
           {['quiz','assessment'].includes(item.content_type) && <small>{item.question_count} questions</small>}
           <div className="studio-card__topics">{item.topics?.map(t => <span key={t.id}>{t.name}</span>)}</div>
