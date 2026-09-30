@@ -7,6 +7,7 @@ import { listGoPracticeCatalog } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canPractice } from './goAccess.js'
 import { languagePresentation } from './goHostedModel.js'
+import { GoFlag } from './GoFlag.jsx'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { catalogOptions, normalizeCatalog } from './goPracticeModel.js'
 import { GO_ART } from './goVisualAssets.js'
@@ -53,7 +54,7 @@ export function GoPracticeSelection() {
       {!catalog.loading && catalog.items.map((item, index) => {
         const language = languagePresentation(item.language)
         return <article className="go-content-card" key={item.id}>
-        <div className="go-card-visual"><span className="go-card-art"><img src={PRACTICE_ART[index % PRACTICE_ART.length]} alt="" /><i aria-hidden="true">{String(index + 1).padStart(2, '0')}</i></span><span className="go-language"><b aria-hidden="true">{language.flag}</b>{language.label}</span></div>
+        <div className="go-card-visual"><span className="go-card-art"><img src={PRACTICE_ART[index % PRACTICE_ART.length]} alt="" /><i aria-hidden="true">{String(index + 1).padStart(2, '0')}</i></span><span className="go-language"><GoFlag language={item.language} />{language.label}</span></div>
         <div className="go-card-meta"><span>{item.content_type}</span><span>Ready to play</span></div>
         <h2>{item.title}</h2><p>{item.description || 'A quick way to sharpen what you know.'}</p>
         <div className="go-topic-list">{item.topics?.map(topic => <span key={topic.id}>{topic.name}</span>)}</div>

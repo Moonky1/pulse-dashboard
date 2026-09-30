@@ -62,6 +62,7 @@ test('Classic hosting uses real flags and distinct level art without repeated ca
   assert.match(host, /GO_ART\[item\.level\]/)
   assert.match(host, /<GoFlag language=\{choice\.code\}/)
   assert.match(room, /<GoFlag language=\{room\.content\.language\}/)
+  assert.match(await read('GoPracticeSelection.jsx'), /<GoFlag language=\{item\.language\}/)
   assert.match(flag, /\/flags\/mexico\.png/)
   assert.match(flag, /\/flags\/united-states\.svg/)
   assert.match(usFlag, /viewBox="0 0 741 390"/)
