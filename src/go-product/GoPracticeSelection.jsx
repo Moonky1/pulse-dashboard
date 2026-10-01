@@ -50,13 +50,12 @@ export function GoPracticeSelection() {
     {selectedLanguage && <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding challenges…' : catalog.error?.message || ''}</div>}
     {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <>
       <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'} description={isSpanish ? 'Los juegos originales, organizados por modo.' : 'Original games, organized by mode.'}><GoPulseModeChoices language={selectedLanguage} classicReady={classicLevels.length === 3} onClassic={() => setSelectedMode('classic')} /></GoCatalogSection>
-      {!!otherGames.length && <GoCatalogSection title={isSpanish ? 'De nuestros creadores' : 'From our creators'} description={isSpanish ? 'Juegos creados y publicados por personas del equipo.' : 'Games created and published by people on the team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
+      <GoCatalogSection title={isSpanish ? 'De nuestros creadores' : 'From our creators'} description={isSpanish ? 'Juegos creados y publicados por personas del equipo.' : 'Games created and published by people on the team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
         <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART.classic} alt="" /></span></div>
         <h2>{item.title}</h2><p>{item.description || 'A quick way to sharpen what you know.'}</p>
         <GoCreator item={item} />
         <Link to={`/go/practice/${item.id}`}>{isSpanish ? 'Jugar' : 'Play'}</Link>
-      </article>)}</GoCatalogSection>}
-      {!classicLevels.length && !otherGames.length && <p className="go-catalog-warning" role="status">{isSpanish ? 'Todavía no hay juegos disponibles en español.' : 'No games are ready in English yet.'}</p>}
+      </article>)}{!otherGames.length && <p className="go-catalog-warning" role="status">{isSpanish ? 'Los juegos publicados por el equipo aparecerán aquí cuando tengan al menos 10 preguntas.' : 'Published team games will appear here once they have at least 10 questions.'}</p>}</GoCatalogSection>
     </>}
     {selectedMode === 'classic' && !catalog.loading && !catalog.error && <>
       <GoSelectionBack onClick={() => setSelectedMode('')}>{isSpanish ? 'Cambiar juego' : 'Change game'}</GoSelectionBack>

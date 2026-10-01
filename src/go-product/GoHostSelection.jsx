@@ -59,14 +59,13 @@ export function GoHostSelection() {
     {selectedLanguage && !selectedMode && <GoSelectionBack onClick={() => { setSelectedLanguage(''); setSelectedMode('') }}>{isSpanish ? 'Cambiar idioma' : 'Change language'}</GoSelectionBack>}
     {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <>
       <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'} description={isSpanish ? 'Los juegos originales, organizados por modo.' : 'Original games, organized by mode.'}><GoPulseModeChoices language={selectedLanguage} classicReady={classicLevels.length === 3} onClassic={() => setSelectedMode('classic')} /></GoCatalogSection>
-      {!!otherGames.length && <GoCatalogSection title={isSpanish ? 'De nuestros creadores' : 'From our creators'} description={isSpanish ? 'Juegos creados y publicados por personas del equipo.' : 'Games created and published by people on the team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
+      <GoCatalogSection title={isSpanish ? 'De nuestros creadores' : 'From our creators'} description={isSpanish ? 'Juegos creados y publicados por personas del equipo.' : 'Games created and published by people on the team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
         <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART.classic} alt="" /></span></div>
         <h2>{item.title}</h2><p>{item.description || 'Ready for your team.'}</p>
         <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>10</strong> {isSpanish ? 'por ronda' : 'per round'}</div>
         <GoCreator item={item} />
         <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>{isSpanish ? 'Crear sala' : 'Create room'}</Button>
-      </article>)}</GoCatalogSection>}
-      {!classicLevels.length && !otherGames.length && <p className="go-catalog-warning" role="status">{isSpanish ? 'Todavía no hay juegos disponibles en español.' : 'No games are ready in English yet.'}</p>}
+      </article>)}{!otherGames.length && <p className="go-catalog-warning" role="status">{isSpanish ? 'Los juegos publicados por el equipo aparecerán aquí cuando tengan al menos 10 preguntas.' : 'Published team games will appear here once they have at least 10 questions.'}</p>}</GoCatalogSection>
     </>}
     {selectedMode === 'classic' && <>
       <GoSelectionBack onClick={() => setSelectedMode('')}>{isSpanish ? 'Cambiar juego' : 'Change game'}</GoSelectionBack>
