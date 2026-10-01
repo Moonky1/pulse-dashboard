@@ -18,6 +18,7 @@ import {
   cancelGoHostedSession,
   getGoCapabilities,
   getGoPracticeContent,
+  getGoPracticeCompletedReview,
   getGoPracticeTiming,
   getTrainingContentAuthoringDetails,
   getTrainingFilterOptions,
@@ -168,9 +169,11 @@ test('timed GO Practice uses only own attempt and selected question IDs', async 
   const { client, calls } = recorder()
   await getGoPracticeTiming(client, ATTEMPT_ID)
   await submitGoPracticeAnswer(client, ATTEMPT_ID, TOPIC_ID, null)
+  await getGoPracticeCompletedReview(client, ATTEMPT_ID)
   assert.deepEqual(calls, [
     { name: 'get_go_practice_timing', args: { requested_attempt_id: ATTEMPT_ID } },
     { name: 'submit_go_practice_answer', args: { requested_attempt_id: ATTEMPT_ID, requested_question_id: TOPIC_ID, requested_answer: null } },
+    { name: 'get_go_practice_completed_review', args: { requested_attempt_id: ATTEMPT_ID } },
   ])
 })
 

@@ -3,12 +3,14 @@ import { Link, useParams } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
 import { resolveGoPracticeDestination } from '../training/goPracticeDestination.js'
-import { getGoPracticeContent, getGoPracticeTiming, startTrainingAttempt, submitGoPracticeAnswer } from '../training/trainingApi.js'
+import { getGoPracticeCompletedReview, getGoPracticeContent, getGoPracticeTiming, startTrainingAttempt, submitGoPracticeAnswer } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canPractice } from './goAccess.js'
 import { resultMedal } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { isAnswerReady, isSafePracticePayload, normalizePracticeContent, normalizeResult } from './goPracticeModel.js'
+import { normalizePracticeReview } from './goPracticeReview.js'
+import { GoPracticeReview } from './GoPracticeReview.jsx'
 import { GoQuestionCountdown } from './GoQuestionCountdown.jsx'
 import { GO_ART, resolveGoArt } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
@@ -28,6 +30,8 @@ export function GoPracticePlayer() {
   const [answer, setAnswer] = useState(undefined)
   const [timing, setTiming] = useState(null)
   const [result, setResult] = useState(null)
+  const [review, setReview] = useState({ questions: null, loading: false, error: null })
+  const [reviewRetry, setReviewRetry] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
   const { remainingMs, secondsLeft, expired } = useQuestionCountdown(timing)
@@ -83,6 +87,20 @@ export function GoPracticePlayer() {
     return () => clearTimeout(timer)
   }, [expired, question, result, submitCurrent])
 
+  useEffect(() => {
+    if (!result?.attempt_id) return
+    let current = true
+    const timer = setTimeout(() => {
+      setReview({ questions: null, loading: true, error: null })
+      void getGoPracticeCompletedReview(supabase, result.attempt_id).then(({ data, error }) => {
+        if (!current) return
+        const questions = error ? null : normalizePracticeReview(data, result.attempt_id)
+        setReview({ questions, loading: false, error: error || (!questions ? { message: 'Review unavailable.' } : null) })
+      })
+    }, 0)
+    return () => { current = false; clearTimeout(timer) }
+  }, [result?.attempt_id, reviewRetry])
+
   if (access.state !== 'allowed') return <GoAccessState access={access} />
   if (!canPractice(access.capabilities)) return <GoAccessState access={{ state: 'denied' }} />
   if (!destination.allowed) return <GoShell><section className="go-state"><h1>Practice isn’t available here</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
@@ -91,6 +109,7 @@ export function GoPracticePlayer() {
 
   async function practiceAgain() {
     setAnswer(undefined); setTiming(null); setResult(null)
+    setReview({ questions: null, loading: false, error: null })
     await openAttempt()
   }
 
@@ -103,7 +122,7 @@ export function GoPracticePlayer() {
     <p>{result.correct_answers} of {result.total_questions} correct</p>
     {!!result.topic_breakdown?.length && <div className="go-result-topics">{result.topic_breakdown.map(topic => <div key={topic.topic_id}><strong>{topic.topic_name}</strong><span>{topic.correct_answers}/{topic.total_questions}</span></div>)}</div>}
     <div className="go-result-actions"><Button onClick={() => void practiceAgain()}>Practice Again</Button><Link to="/go/practice">Choose another</Link></div>
-  </section></GoShell>
+  </section><GoPracticeReview questions={review.questions} loading={review.loading} error={review.error} onRetry={() => setReviewRetry(value => value + 1)} language={session.content.language} /></GoShell>
   }
 
   const ready = isAnswerReady(question, answer)

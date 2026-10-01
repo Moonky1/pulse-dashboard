@@ -286,6 +286,14 @@ export function getGoPracticeTiming(client, attemptId) {
   return rpc(client, 'get_go_practice_timing', { requested_attempt_id: attemptId })
 }
 
+export function getGoPracticeCompletedReview(client, attemptId) {
+  if (!validUuid(attemptId)) return Promise.resolve(invalidRequest())
+  try { assertGoPracticeDestination(client.supabaseUrl) } catch {
+    return Promise.resolve({ data: null, error: publicError('practice_blocked', 'Practice is not enabled here.') })
+  }
+  return rpc(client, 'get_go_practice_completed_review', { requested_attempt_id: attemptId })
+}
+
 export function submitGoPracticeAnswer(client, attemptId, questionId, answer) {
   if (!validUuid(attemptId) || !validUuid(questionId) || answer === undefined) {
     return Promise.resolve(invalidRequest())

@@ -12,6 +12,8 @@ import medal3 from '../../public/emojis/medal3.webp'
 import points from '../../public/emojis/points.webp'
 import valid from '../../public/emojis/valid.webp'
 import zero2 from '../../public/emojis/zero2.webp'
+import objection from '../../public/emojis/objection.webp'
+import disposeit from '../../public/emojis/disposeit.webp'
 
 export const GO_ART = Object.freeze({
   certification,
@@ -28,6 +30,8 @@ export const GO_ART = Object.freeze({
   points,
   valid,
   zero2,
+  objection,
+  disposeit,
 })
 
 export function resolveGoArt(path) {

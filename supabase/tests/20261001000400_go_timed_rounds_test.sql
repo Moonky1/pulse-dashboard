@@ -55,6 +55,7 @@ select * from public.replace_training_questions_v2(
     'prompt','Question ' || number,
     'answer_options',jsonb_build_array('No','Yes'),
     'correct_answer',1,
+    'explanation','Explanation for question ' || number,
     'time_limit_seconds',case when number=1 then 10 when number=2 then 20 else 30 end,
     'topic_ids',jsonb_build_array('2a610000-0000-4000-8000-000000000001')
   ) order by number) from generate_series(1,40) number),
@@ -73,10 +74,16 @@ declare
   timing jsonb;
   practice_timing jsonb;
   practice_response jsonb;
+  practice_review jsonb;
   selected_id uuid;
   practice_id uuid;
   n integer;
 begin
+  if has_function_privilege('anon','public.get_go_practice_completed_review(uuid)','EXECUTE') or
+    has_function_privilege('service_role','public.get_go_practice_completed_review(uuid)','EXECUTE') or
+    not has_function_privilege('authenticated','public.get_go_practice_completed_review(uuid)','EXECUTE') then
+    raise exception 'completed review has an unexpected EXECUTE grant';
+  end if;
   if (select count(*) from public.list_go_host_catalog_v2('en',100,0)
       where id=content_id and creator_display='Fictitious Host')<>1 then
     raise exception 'creator credit missing from hosted catalog';
@@ -136,6 +143,11 @@ begin
   perform set_config('request.jwt.claim.sub','aa610000-0000-4000-8000-000000000002',true);
   select attempt_id into practice_id from public.start_training_attempt(content_id,'go_practice');
   update go_timed_fixture set attempt_id=practice_id;
+  begin
+    perform public.get_go_practice_completed_review(practice_id);
+    raise exception 'answer key exposed before practice completion';
+  exception when sqlstate 'P0002' then null;
+  end;
   practice_timing := public.get_go_practice_timing(practice_id);
   if jsonb_array_length(practice_timing->'question_ids')<>10 then
     raise exception 'practice round did not select exactly ten questions';
@@ -156,5 +168,18 @@ begin
     (practice_response->'result'->>'correct_answers')::integer<>9 then
     raise exception 'practice scoring or timeout is wrong: %',practice_response;
   end if;
+  practice_review := public.get_go_practice_completed_review(practice_id);
+  if jsonb_array_length(practice_review->'questions')<>10 or
+    (practice_review->'questions'->0->>'explanation') not like 'Explanation for question %' or
+    (practice_review->'questions'->1->>'is_correct')<>'false' or
+    practice_review->'questions'->1->'submitted_answer'<>'null'::jsonb then
+    raise exception 'completed practice review is missing answers or explanations';
+  end if;
+  perform set_config('request.jwt.claim.sub','aa610000-0000-4000-8000-000000000001',true);
+  begin
+    perform public.get_go_practice_completed_review(practice_id);
+    raise exception 'another Staff member read the practice review';
+  exception when sqlstate 'P0002' then null;
+  end;
 end
 $test$;

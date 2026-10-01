@@ -91,10 +91,21 @@ test('GO landing stays compact, action-led, and reuses legacy visual personality
   assert.match(visuals, /classic\.webp/)
   assert.match(visuals, /medal1\.webp/)
   assert.match(practice, /GoLanguageChoices/)
-  assert.match(practice, /GoClassicModeChoice/)
+  assert.match(practice, /GoPulseModeChoices/)
+  assert.match(practice, /From our creators/)
   assert.match(practice, /classicPracticeLevels/)
   assert.match(player, /resultMedal/)
   assert.doesNotMatch(`${landing}\n${practice}\n${player}`, /Train\. Practice\. Play\.|checkpoint/i)
+})
+
+test('GO lists all six source modes without treating unfinished mechanics as playable', async () => {
+  const modes = await read('goPulseModes.js')
+  const cards = await read('GoSelectionCards.jsx')
+  for (const title of ['Classic Quiz', 'Valid or Invalid XFER', 'Dispose It', 'Eligible or Not Eligible', 'Objection Battle', 'Certification Mode']) {
+    assert.ok(modes.includes(title), `${title} should be represented`)
+  }
+  assert.match(cards, /mode\.playable && classicReady/)
+  assert.doesNotMatch(cards, /40 in the bank|banco de 40/)
 })
 
 test('VISUAL-2 keeps GO playful, responsive, and dependency-free', async () => {

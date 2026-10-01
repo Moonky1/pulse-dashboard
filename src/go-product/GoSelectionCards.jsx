@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/Button.jsx'
 import { classicLevelDescription } from './goClassicCatalog.js'
 import { GoFlag } from './GoFlag.jsx'
+import { PULSE_MODES } from './goPulseModes.js'
 import { GO_ART } from './goVisualAssets.js'
 
 const LANGUAGES = [
@@ -46,14 +47,22 @@ export function GoCreator({ item, system = false }) {
   return <p className="go-card-creator">{item.language === 'es' ? 'Creado por' : 'Created by'} <strong>{item.creator_display}</strong></p>
 }
 
-export function GoClassicModeChoice({ language, onClick }) {
-  return <button className="go-game-choice" type="button" onClick={onClick}>
-    <img src={GO_ART.classic} alt="" />
-    <h2>Classic Quiz</h2>
-    <p>{language === 'es' ? 'Elige tu nivel y juega a tu ritmo.' : 'Choose your level and play at your pace.'}</p>
-    <GoCreator system />
-    <span className="go-game-choice__action">{language === 'es' ? 'Elegir nivel' : 'Choose level'} →</span>
-  </button>
+export function GoPulseModeChoices({ language, classicReady, onClassic }) {
+  return PULSE_MODES.map(mode => {
+    const playable = mode.playable && classicReady
+    const content = <>
+      <img src={GO_ART[mode.art]} alt="" />
+      <h2>{mode.title}</h2>
+      <p>{mode.description[language] || mode.description.en}</p>
+      <GoCreator system />
+      <span className={`go-game-choice__action${playable ? '' : ' go-game-choice__action--pending'}`}>
+        {playable ? (language === 'es' ? 'Elegir nivel' : 'Choose level') : (language === 'es' ? 'En desarrollo' : 'In development')}{playable && ' →'}
+      </span>
+    </>
+    return playable
+      ? <button className="go-game-choice" type="button" onClick={onClassic} key={mode.key}>{content}</button>
+      : <article className="go-game-choice go-game-choice--pending" key={mode.key}>{content}</article>
+  })
 }
 
 export function GoClassicLevelCard({ item, onCreate, creating }) {
@@ -62,7 +71,7 @@ export function GoClassicLevelCard({ item, onCreate, creating }) {
     <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART[item.level]} alt="" /></span></div>
     <h2>{item.levelLabel}</h2>
     <p>{classicLevelDescription(item.language, item.level)}</p>
-    <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>10</strong> {item.language === 'es' ? 'por ronda · banco de 40' : 'per round · 40 in the bank'}</div>
+    <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>10</strong> {item.language === 'es' ? 'por ronda' : 'per round'}</div>
     <GoCreator item={item} />
     {host
       ? <Button loading={creating === item.id} disabled={creating !== null} onClick={() => onCreate(item.id)}>{item.language === 'es' ? 'Crear sala' : 'Create room'}</Button>
