@@ -33,10 +33,19 @@ export function GoSelectionBack({ onClick, children }) {
   return <div className="go-selection-back"><button type="button" onClick={onClick}>← {children}</button></div>
 }
 
+export function GoCatalogSection({ title, description, children }) {
+  return <section className="go-catalog-section" aria-label={title}>
+    <header><h2>{title}</h2><p>{description}</p></header>
+    <div className="go-game-choices">{children}</div>
+  </section>
+}
+
 export function GoCreator({ item, system = false }) {
   const creator = system ? 'Pulse' : item?.creator_display
   if (!creator) return null
-  return <p className="go-card-creator">Created by <strong className={system ? 'go-card-creator--pulse' : ''}>{creator}</strong></p>
+  return system
+    ? <p className="go-card-creator go-card-creator--pulse">Pulse original</p>
+    : <p className="go-card-creator">Created by <strong>{creator}</strong></p>
 }
 
 export function GoClassicModeChoice({ language, onClick }) {
@@ -55,7 +64,7 @@ export function GoClassicLevelCard({ item, onCreate, creating }) {
     <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART[item.level]} alt="" /></span></div>
     <h2>{item.levelLabel}</h2>
     <p>{classicLevelDescription(item.language, item.level)}</p>
-    <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>40</strong> {item.language === 'es' ? 'preguntas' : 'questions'}</div>
+    <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>10</strong> {item.language === 'es' ? 'por ronda · banco de 40' : 'per round · 40 in the bank'}</div>
     <GoCreator system />
     {host
       ? <Button loading={creating === item.id} disabled={creating !== null} onClick={() => onCreate(item.id)}>{item.language === 'es' ? 'Crear sala' : 'Create room'}</Button>

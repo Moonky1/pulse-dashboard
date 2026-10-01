@@ -50,7 +50,7 @@ function hostedRpc(client, name, args) {
   try { assertGoHostedDestination(client.supabaseUrl) } catch {
     return Promise.resolve({ data: null, error: publicError('hosted_blocked', 'Live games are not enabled for this Pulse destination.') })
   }
-  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog' && name !== 'get_go_hosted_session' && name !== 'get_go_hosted_results') {
+  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog_v2' && name !== 'get_go_hosted_session' && name !== 'get_go_hosted_timing' && name !== 'get_go_hosted_results') {
     return Promise.resolve(invalidRequest())
   }
   return rpc(client, name, args)
@@ -107,7 +107,7 @@ export function listStudioContent(client, { status = null, language = null, topi
 
 export function getTrainingContentAuthoringDetails(client, contentId) {
   if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
-  return rpc(client, 'get_training_content_authoring_details', {
+  return rpc(client, 'get_training_content_authoring_details_v2', {
     requested_content_id: contentId,
   })
 }
@@ -164,7 +164,7 @@ export function replaceTrainingQuestions(client, contentId, questions, expectedU
   if (!validUuid(contentId) || validateQuestions(questions) || !expectedUpdatedAt) {
     return Promise.resolve(invalidRequest())
   }
-  return rpc(client, 'replace_training_questions', {
+  return rpc(client, 'replace_training_questions_v2', {
     requested_content_id: contentId,
     requested_questions: questions,
     expected_updated_at: expectedUpdatedAt,
@@ -181,7 +181,7 @@ export function publishTrainingContent(client, contentId, expectedUpdatedAt) {
   return rpc(client, 'publish_training_content', { requested_content_id: contentId, expected_updated_at: expectedUpdatedAt })
 }
 export const archiveTrainingContent = (client, contentId) => contentAction(client, 'archive_training_content', contentId)
-export const getGoPracticeContent = (client, contentId) => contentAction(client, 'get_go_practice_content', contentId)
+export const getGoPracticeContent = (client, contentId) => contentAction(client, 'get_go_practice_content_v2', contentId)
 
 export function getGoCapabilities(client) {
   return rpc(client, 'get_go_capabilities')
@@ -193,7 +193,7 @@ export function listGoPracticeCatalog(client, {
   if ((language && !LANGUAGES.has(language)) || (topicId && !validUuid(topicId)) ||
       !Number.isInteger(limit) || limit < 1 || limit > 100 ||
       !Number.isInteger(offset) || offset < 0) return Promise.resolve(invalidRequest())
-  return rpc(client, 'list_go_practice_catalog', {
+  return rpc(client, 'list_go_practice_catalog_v2', {
     requested_language: language,
     requested_topic_id: topicId,
     requested_limit: limit,
@@ -204,7 +204,7 @@ export function listGoPracticeCatalog(client, {
 export function listGoHostCatalog(client, { language = null, limit = 100, offset = 0 } = {}) {
   if ((language && !LANGUAGES.has(language)) || !Number.isInteger(limit) || limit < 1 || limit > 100 ||
       !Number.isInteger(offset) || offset < 0) return Promise.resolve(invalidRequest())
-  return hostedRpc(client, 'list_go_host_catalog', {
+  return hostedRpc(client, 'list_go_host_catalog_v2', {
     requested_language: language, requested_limit: limit, requested_offset: offset,
   })
 }
@@ -224,6 +224,11 @@ export function joinGoHostedSession(client, roomCode) {
 export function getGoHostedSession(client, sessionId) {
   if (!validUuid(sessionId)) return Promise.resolve(invalidRequest())
   return hostedRpc(client, 'get_go_hosted_session', { requested_session_id: sessionId })
+}
+
+export function getGoHostedTiming(client, sessionId) {
+  if (!validUuid(sessionId)) return Promise.resolve(invalidRequest())
+  return hostedRpc(client, 'get_go_hosted_timing', { requested_session_id: sessionId })
 }
 
 export function getGoHostedResults(client, sessionId) {
@@ -270,6 +275,28 @@ export function startTrainingAttempt(client, contentId, sourceMode) {
   return rpc(client, 'start_training_attempt', {
     requested_content_id: contentId,
     requested_source_mode: sourceMode,
+  })
+}
+
+export function getGoPracticeTiming(client, attemptId) {
+  if (!validUuid(attemptId)) return Promise.resolve(invalidRequest())
+  try { assertGoPracticeDestination(client.supabaseUrl) } catch {
+    return Promise.resolve({ data: null, error: publicError('practice_blocked', 'Practice is not enabled here.') })
+  }
+  return rpc(client, 'get_go_practice_timing', { requested_attempt_id: attemptId })
+}
+
+export function submitGoPracticeAnswer(client, attemptId, questionId, answer) {
+  if (!validUuid(attemptId) || !validUuid(questionId) || answer === undefined) {
+    return Promise.resolve(invalidRequest())
+  }
+  try { assertGoPracticeDestination(client.supabaseUrl) } catch {
+    return Promise.resolve({ data: null, error: publicError('practice_blocked', 'Practice is not enabled here.') })
+  }
+  return rpc(client, 'submit_go_practice_answer', {
+    requested_attempt_id: attemptId,
+    requested_question_id: questionId,
+    requested_answer: answer,
   })
 }
 

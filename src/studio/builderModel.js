@@ -8,10 +8,11 @@ export function draftFromDetails(data) {
 }
 export function questionsFromDetails(data) {
   return data.questions.map(q => ({ position: q.position, question_type: q.question_type, prompt: q.prompt, answer_options: q.answer_options,
-    correct_answer: q.correct_answer, explanation: q.explanation || '', topic_ids: q.topic_ids, media_id: q.media_id || null }))
+    correct_answer: q.correct_answer, explanation: q.explanation || '', topic_ids: q.topic_ids, media_id: q.media_id || null,
+    time_limit_seconds: q.time_limit_seconds ?? 30 }))
 }
 export function newQuestion(topicIds) {
-  return { position: 1, question_type: 'multiple_choice', prompt: '', answer_options: ['', ''], correct_answer: 0, explanation: '', topic_ids: topicIds.slice(0, 1), media_id: null }
+  return { position: 1, question_type: 'multiple_choice', prompt: '', answer_options: ['', ''], correct_answer: 0, explanation: '', topic_ids: topicIds.slice(0, 1), media_id: null, time_limit_seconds: 30 }
 }
 export const orderedQuestions = questions => questions.map((q, i) => ({ ...q, position: i + 1 }))
 export function validateBasics(draft) {

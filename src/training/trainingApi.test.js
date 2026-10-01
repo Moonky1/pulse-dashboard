@@ -9,6 +9,7 @@ import {
   createGoHostedSession,
   joinGoHostedSession,
   getGoHostedSession,
+  getGoHostedTiming,
   getGoHostedResults,
   listGoHostCatalog,
   startGoHostedSession,
@@ -17,6 +18,7 @@ import {
   cancelGoHostedSession,
   getGoCapabilities,
   getGoPracticeContent,
+  getGoPracticeTiming,
   getTrainingContentAuthoringDetails,
   getTrainingFilterOptions,
   listAcademyModules,
@@ -27,6 +29,7 @@ import {
   publishTrainingContent,
   replaceTrainingQuestions,
   startTrainingAttempt,
+  submitGoPracticeAnswer,
   updateTrainingContentDraft,
 } from './trainingApi.js'
 
@@ -63,7 +66,7 @@ test('GO capability and Practice catalog clients use exact protected RPCs', asyn
   await listGoPracticeCatalog(client, { language: 'en', topicId: TOPIC_ID, limit: 20, offset: 2 })
   assert.deepEqual(calls, [
     { name: 'get_go_capabilities', args: undefined },
-    { name: 'list_go_practice_catalog', args: { requested_language: 'en', requested_topic_id: TOPIC_ID, requested_limit: 20, requested_offset: 2 } },
+    { name: 'list_go_practice_catalog_v2', args: { requested_language: 'en', requested_topic_id: TOPIC_ID, requested_limit: 20, requested_offset: 2 } },
   ])
 })
 
@@ -73,16 +76,18 @@ test('Hosted GO client sends only canonical room, version, question, and answer 
   await createGoHostedSession(client, CONTENT_ID)
   await joinGoHostedSession(client, 'KK 1234')
   await getGoHostedSession(client, SESSION_ID)
+  await getGoHostedTiming(client, SESSION_ID)
   await getGoHostedResults(client, SESSION_ID)
   await startGoHostedSession(client, SESSION_ID, 3)
   await submitGoHostedAnswer(client, SESSION_ID, TOPIC_ID, 1, 2)
   await advanceGoHostedSession(client, SESSION_ID, 4)
   await cancelGoHostedSession(client, SESSION_ID, 5)
   assert.deepEqual(calls, [
-    { name: 'list_go_host_catalog', args: { requested_language: 'es', requested_limit: 20, requested_offset: 2 } },
+    { name: 'list_go_host_catalog_v2', args: { requested_language: 'es', requested_limit: 20, requested_offset: 2 } },
     { name: 'create_go_hosted_session', args: { requested_content_id: CONTENT_ID } },
     { name: 'join_go_hosted_session', args: { requested_room_code: 'KK 1234' } },
     { name: 'get_go_hosted_session', args: { requested_session_id: SESSION_ID } },
+    { name: 'get_go_hosted_timing', args: { requested_session_id: SESSION_ID } },
     { name: 'get_go_hosted_results', args: { requested_session_id: SESSION_ID } },
     { name: 'start_go_hosted_session', args: { requested_session_id: SESSION_ID, expected_version: 3 } },
     { name: 'submit_go_hosted_answer', args: { requested_session_id: SESSION_ID, requested_question_id: TOPIC_ID, requested_answer: 1, expected_question_position: 2 } },
@@ -97,7 +102,7 @@ test('authoring details use the one protected answer-key RPC and preserve server
   const { client, calls } = recorder(payload)
   const result = await getTrainingContentAuthoringDetails(client, CONTENT_ID)
   assert.deepEqual(calls, [{
-    name: 'get_training_content_authoring_details',
+    name: 'get_training_content_authoring_details_v2',
     args: { requested_content_id: CONTENT_ID },
   }])
   assert.equal(result.data.content.updated_at, UPDATED_AT)
@@ -134,7 +139,7 @@ test('draft update and structured questions preserve stale-write token', async (
   await updateTrainingContentDraft(client, CONTENT_ID, draft)
   await replaceTrainingQuestions(client, CONTENT_ID, [{ position: 1, question_type: 'true_false', prompt: 'Ready?', answer_options: [], correct_answer: true, topic_ids: [TOPIC_ID] }], UPDATED_AT)
   assert.equal(calls[0].args.expected_updated_at, UPDATED_AT)
-  assert.equal(calls[1].name, 'replace_training_questions')
+  assert.equal(calls[1].name, 'replace_training_questions_v2')
   assert.equal(calls[1].args.expected_updated_at, UPDATED_AT)
 })
 
@@ -144,7 +149,7 @@ test('publish, archive and GO Practice use exact content actions', async () => {
   await archiveTrainingContent(client, CONTENT_ID)
   await getGoPracticeContent(client, CONTENT_ID)
   assert.deepEqual(calls.map(({ name }) => name), [
-    'publish_training_content', 'archive_training_content', 'get_go_practice_content',
+    'publish_training_content', 'archive_training_content', 'get_go_practice_content_v2',
   ])
   assert.equal(calls[0].args.expected_updated_at, UPDATED_AT)
   assert.ok(calls.slice(1).every(({ args }) => Object.keys(args).join() === 'requested_content_id'))
@@ -157,6 +162,16 @@ test('attempt start cannot submit learner identity and completion cannot submit 
   assert.deepEqual(calls[0], { name: 'start_training_attempt', args: { requested_content_id: CONTENT_ID, requested_source_mode: 'go_practice' } })
   assert.deepEqual(calls[1], { name: 'complete_training_attempt', args: { requested_attempt_id: ATTEMPT_ID, requested_answers: [{ question_id: TOPIC_ID, answer: 0 }], requested_duration_seconds: 14 } })
   assert.doesNotMatch(JSON.stringify(calls), /learner|score|correct_answers/i)
+})
+
+test('timed GO Practice uses only own attempt and selected question IDs', async () => {
+  const { client, calls } = recorder()
+  await getGoPracticeTiming(client, ATTEMPT_ID)
+  await submitGoPracticeAnswer(client, ATTEMPT_ID, TOPIC_ID, null)
+  assert.deepEqual(calls, [
+    { name: 'get_go_practice_timing', args: { requested_attempt_id: ATTEMPT_ID } },
+    { name: 'submit_go_practice_answer', args: { requested_attempt_id: ATTEMPT_ID, requested_question_id: TOPIC_ID, requested_answer: null } },
+  ])
 })
 
 test('history is own-only and takes no target learner identifier', async () => {
@@ -206,9 +221,9 @@ test('Training client has no direct tables, role-name gates, localStorage, or le
     'list_training_catalog', 'get_training_filter_options', 'create_training_content_draft',
     'get_training_content_authoring_details',
     'replace_training_questions', 'publish_training_content', 'get_go_practice_content',
-    'get_go_capabilities', 'list_go_practice_catalog', 'start_training_attempt',
+    'get_go_capabilities', 'list_go_practice_catalog_v2', 'start_training_attempt',
     'complete_training_attempt', 'list_my_training_results',
-    'list_go_host_catalog', 'create_go_hosted_session', 'join_go_hosted_session',
+    'list_go_host_catalog_v2', 'create_go_hosted_session', 'join_go_hosted_session',
     'get_go_hosted_session', 'start_go_hosted_session', 'submit_go_hosted_answer',
     'advance_go_hosted_session', 'cancel_go_hosted_session',
   ]) assert.match(source, new RegExp(rpcName))

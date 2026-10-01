@@ -1,21 +1,23 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
 import { resolveGoPracticeDestination } from '../training/goPracticeDestination.js'
-import { completeTrainingAttempt, getGoPracticeContent, startTrainingAttempt } from '../training/trainingApi.js'
+import { getGoPracticeContent, getGoPracticeTiming, startTrainingAttempt, submitGoPracticeAnswer } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canPractice } from './goAccess.js'
 import { resultMedal } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
-import { buildAnswerSubmission, isAnswerReady, isSafePracticePayload, normalizePracticeContent, normalizeResult } from './goPracticeModel.js'
+import { isAnswerReady, isSafePracticePayload, normalizePracticeContent, normalizeResult } from './goPracticeModel.js'
+import { GoQuestionCountdown } from './GoQuestionCountdown.jsx'
 import { GO_ART, resolveGoArt } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
+import { useQuestionCountdown } from './useQuestionCountdown.js'
 
-function AnswerControl({ question, answer, onChange }) {
-  if (question.question_type === 'multiple_choice') return <fieldset className="go-answer-list"><legend>Choose one answer</legend>{question.answer_options.map((option, index) => <label key={index}><input type="radio" name={question.id} checked={answer === index} onChange={() => onChange(index)} /><span>{option}</span></label>)}</fieldset>
-  if (question.question_type === 'true_false') return <fieldset className="go-answer-list go-answer-list--binary"><legend>Choose one answer</legend>{[true, false].map(value => <label key={String(value)}><input type="radio" name={question.id} checked={answer === value} onChange={() => onChange(value)} /><span>{value ? 'True' : 'False'}</span></label>)}</fieldset>
-  return <label className="go-text-answer"><span>Your answer</span><textarea autoFocus rows="4" value={answer ?? ''} maxLength="1000" onChange={event => onChange(event.target.value)} /></label>
+function AnswerControl({ question, answer, onChange, disabled }) {
+  if (question.question_type === 'multiple_choice') return <fieldset className="go-answer-list" disabled={disabled}><legend>Choose one answer</legend>{question.answer_options.map((option, index) => <label key={index}><input type="radio" name={question.id} checked={answer === index} onChange={() => onChange(index)} /><span>{option}</span></label>)}</fieldset>
+  if (question.question_type === 'true_false') return <fieldset className="go-answer-list go-answer-list--binary" disabled={disabled}><legend>Choose one answer</legend>{[true, false].map(value => <label key={String(value)}><input type="radio" name={question.id} checked={answer === value} onChange={() => onChange(value)} /><span>{value ? 'True' : 'False'}</span></label>)}</fieldset>
+  return <label className="go-text-answer"><span>Your answer</span><textarea autoFocus rows="4" value={answer ?? ''} disabled={disabled} maxLength="1000" onChange={event => onChange(event.target.value)} /></label>
 }
 
 export function GoPracticePlayer() {
@@ -23,10 +25,12 @@ export function GoPracticePlayer() {
   const access = useGoAccess()
   const destination = resolveGoPracticeDestination(supabase.supabaseUrl)
   const [session, setSession] = useState({ content: null, attempt: null, loading: true, error: null })
-  const [answers, setAnswers] = useState({})
-  const [questionIndex, setQuestionIndex] = useState(0)
+  const [answer, setAnswer] = useState(undefined)
+  const [timing, setTiming] = useState(null)
   const [result, setResult] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
+  const { remainingMs, secondsLeft, expired } = useQuestionCountdown(timing)
 
   const openAttempt = useCallback(async () => {
     setSession(previous => ({ ...previous, loading: true, error: null }))
@@ -34,10 +38,21 @@ export function GoPracticePlayer() {
       getGoPracticeContent(supabase, contentId),
       startTrainingAttempt(supabase, contentId, 'go_practice'),
     ])
-    const content = normalizePracticeContent(contentResponse.data)
     const attempt = normalizeResult(attemptResponse.data)
-    const error = contentResponse.error || attemptResponse.error || (!content || !isSafePracticePayload(content) ? { message: 'This practice item is unavailable.' } : null)
-    setSession({ content: error ? null : content, attempt: error ? null : attempt, loading: false, error })
+    const timingResponse = attempt?.attempt_id
+      ? await getGoPracticeTiming(supabase, attempt.attempt_id)
+      : { data: null, error: null }
+    const content = normalizePracticeContent(contentResponse.data)
+    const selectedIds = normalizeResult(timingResponse.data)?.question_ids
+    const questionById = new Map(content?.questions.map(question => [question.id, question]))
+    const round = Array.isArray(selectedIds) ? selectedIds.map(id => questionById.get(id)) : []
+    const selectedContent = content && round.length === 10 && round.every(Boolean)
+      ? { ...content, questions: round }
+      : null
+    const error = contentResponse.error || attemptResponse.error || timingResponse.error || (!selectedContent || !isSafePracticePayload(selectedContent) ? { message: 'This practice item is unavailable.' } : null)
+    setTiming(error ? null : normalizeResult(timingResponse.data))
+    setAnswer(undefined)
+    setSession({ content: error ? null : selectedContent, attempt: error ? null : attempt, loading: false, error })
   }, [contentId])
 
   useEffect(() => {
@@ -46,26 +61,36 @@ export function GoPracticePlayer() {
     return () => clearTimeout(timer)
   }, [access.capabilities, access.state, destination.allowed, openAttempt])
 
+  const questionIndex = (Number(timing?.question_position) || 1) - 1
   const question = session.content?.questions[questionIndex]
   const progress = session.content ? ((questionIndex + 1) / session.content.questions.length) * 100 : 0
+  const submitCurrent = useCallback(async value => {
+    if (submittingRef.current || !question || !session.attempt) return
+    submittingRef.current = true
+    setSubmitting(true)
+    const response = await submitGoPracticeAnswer(supabase, session.attempt.attempt_id, question.id, value)
+    submittingRef.current = false
+    setSubmitting(false)
+    if (response.error) return setSession(previous => ({ ...previous, error: response.error }))
+    const next = normalizeResult(response.data)
+    if (next.completed) setResult(normalizeResult(next.result))
+    else { setAnswer(undefined); setTiming(next) }
+  }, [question, session.attempt])
+
+  useEffect(() => {
+    if (!expired || !question || result || submittingRef.current) return
+    const timer = setTimeout(() => { void submitCurrent(null) }, 0)
+    return () => clearTimeout(timer)
+  }, [expired, question, result, submitCurrent])
+
   if (access.state !== 'allowed') return <GoAccessState access={access} />
   if (!canPractice(access.capabilities)) return <GoAccessState access={{ state: 'denied' }} />
   if (!destination.allowed) return <GoShell><section className="go-state"><h1>Practice isn’t available here</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
   if (session.loading) return <GoShell><section className="go-state" role="status"><h1>Preparing your practice…</h1></section></GoShell>
-  if (session.error || !question) return <GoShell><section className="go-state" role="alert"><h1>We couldn’t start this practice</h1><p>{session.error?.message}</p><Link to="/go/practice">Choose another</Link></section></GoShell>
-
-  async function finish() {
-    setSubmitting(true)
-    const startedAt = new Date(session.attempt.started_at).getTime()
-    const durationSeconds = Number.isFinite(startedAt) ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : null
-    const response = await completeTrainingAttempt(supabase, session.attempt.attempt_id, buildAnswerSubmission(session.content.questions, answers), durationSeconds, { sourceMode: 'go_practice' })
-    setSubmitting(false)
-    if (response.error) return setSession(previous => ({ ...previous, error: response.error }))
-    setResult(normalizeResult(response.data))
-  }
+  if (session.error || (!question && !result)) return <GoShell><section className="go-state" role="alert"><h1>We couldn’t start this practice</h1><p>{session.error?.message}</p><Link to="/go/practice">Choose another</Link></section></GoShell>
 
   async function practiceAgain() {
-    setAnswers({}); setQuestionIndex(0); setResult(null)
+    setAnswer(undefined); setTiming(null); setResult(null)
     await openAttempt()
   }
 
@@ -81,12 +106,13 @@ export function GoPracticePlayer() {
   </section></GoShell>
   }
 
-  const ready = isAnswerReady(question, answers[question.id])
+  const ready = isAnswerReady(question, answer)
   const last = questionIndex === session.content.questions.length - 1
   return <GoShell><section className="go-player">
     <header><div className="go-player-identity"><img src={GO_ART.goal} alt="" /><div><p className="go-eyebrow">{session.content.title}</p><span>Question {questionIndex + 1} of {session.content.questions.length}</span></div></div><Link to="/go/practice">Exit</Link></header>
     <div className="go-progress" role="progressbar" aria-valuemin="1" aria-valuemax={session.content.questions.length} aria-valuenow={questionIndex + 1}><span style={{ width: `${progress}%` }} /></div>
-    <article><span className="go-question-number" aria-hidden="true">{String(questionIndex + 1).padStart(2, '0')}</span><h1>{question.prompt}</h1><AnswerControl question={question} answer={answers[question.id]} onChange={answer => setAnswers(value => ({ ...value, [question.id]: answer }))} /></article>
-    <footer><span aria-live="polite">{ready ? 'Answer saved.' : 'Choose an answer to continue.'}</span><Button disabled={!ready || submitting} onClick={() => last ? void finish() : setQuestionIndex(value => value + 1)}>{submitting ? 'Scoring…' : last ? 'See result' : 'Next'}</Button></footer>
+    <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} />
+    <article><span className="go-question-number" aria-hidden="true">{String(questionIndex + 1).padStart(2, '0')}</span><h1>{question.prompt}</h1><AnswerControl question={question} answer={answer} onChange={setAnswer} disabled={expired || submitting} /></article>
+    <footer><span aria-live="polite">{expired ? 'Time is up. Moving on…' : ready ? 'Answer ready.' : 'Choose an answer to continue.'}</span><Button disabled={!ready || expired || submitting} onClick={() => void submitCurrent(answer)}>{submitting ? 'Saving…' : last ? 'See result' : 'Next'}</Button></footer>
   </section></GoShell>
 }

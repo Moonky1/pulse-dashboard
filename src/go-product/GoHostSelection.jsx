@@ -6,10 +6,10 @@ import { resolveGoHostedDestination } from '../training/goHostedDestination.js'
 import { createGoHostedSession, listGoHostCatalog } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canHost } from './goAccess.js'
-import { classicHostLevels, isPublishedClassicLevel } from './goClassicCatalog.js'
+import { classicHostLevels } from './goClassicCatalog.js'
 import { roomPath } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
-import { GoClassicLevelCard, GoClassicModeChoice, GoCreator, GoLanguageChoices, GoSelectionBack, GoSelectionHeading } from './GoSelectionCards.jsx'
+import { GoCatalogSection, GoClassicLevelCard, GoClassicModeChoice, GoCreator, GoLanguageChoices, GoSelectionBack, GoSelectionHeading } from './GoSelectionCards.jsx'
 import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
 
@@ -43,10 +43,10 @@ export function GoHostSelection() {
     navigate(roomPath(data))
   }
 
-  const hasClassicCatalog = catalog.items.some(isPublishedClassicLevel)
   const classicLevels = classicHostLevels(catalog.items, selectedLanguage)
   // Keep the existing Classic-only host gate while other modes lack their own contract.
-  const otherGames = hasClassicCatalog ? [] : catalog.items.filter(item => item.language === selectedLanguage)
+  const classicIds = new Set(classicLevels.map(item => item.id))
+  const otherGames = catalog.items.filter(item => item.language === selectedLanguage && !classicIds.has(item.id))
   const isSpanish = selectedLanguage === 'es'
   const title = !selectedLanguage ? 'Choose language' : selectedMode === 'classic'
     ? isSpanish ? 'Elige la dificultad' : 'Choose difficulty'
@@ -58,17 +58,17 @@ export function GoHostSelection() {
     {!catalog.loading && !catalog.error && !catalog.items.length && <section className="go-state"><h2>No games are ready to host</h2><p>Published quizzes and assessments available to you will appear here.</p></section>}
     {!catalog.loading && !catalog.error && !!catalog.items.length && !selectedLanguage && <GoLanguageChoices onSelect={setSelectedLanguage} />}
     {selectedLanguage && !selectedMode && <GoSelectionBack onClick={() => { setSelectedLanguage(''); setSelectedMode('') }}>{isSpanish ? 'Cambiar idioma' : 'Change language'}</GoSelectionBack>}
-    {selectedLanguage && !selectedMode && <section className="go-game-choices" aria-label="Choose a game">
-      {!!classicLevels.length && <GoClassicModeChoice language={selectedLanguage} onClick={() => setSelectedMode('classic')} />}
-      {otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
+    {selectedLanguage && !selectedMode && <>
+      {!!classicLevels.length && <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'} description={isSpanish ? 'Los juegos originales, organizados por modo.' : 'Original games, organized by mode.'}><GoClassicModeChoice language={selectedLanguage} onClick={() => setSelectedMode('classic')} /></GoCatalogSection>}
+      {!!otherGames.length && <GoCatalogSection title={isSpanish ? 'Juegos del equipo' : 'Games from your team'} description={isSpanish ? 'Creados y publicados por personas de tu equipo.' : 'Created and published by people on your team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
         <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART.classic} alt="" /></span></div>
         <h2>{item.title}</h2><p>{item.description || 'Ready for your team.'}</p>
-        <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>{item.question_count}</strong> {isSpanish ? 'preguntas' : 'questions'}</div>
+        <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>10</strong> {isSpanish ? `por ronda · ${item.question_count} en el banco` : `per round · ${item.question_count} in the bank`}</div>
         <GoCreator item={item} />
         <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>{isSpanish ? 'Crear sala' : 'Create room'}</Button>
-      </article>)}
+      </article>)}</GoCatalogSection>}
       {!classicLevels.length && !otherGames.length && <p className="go-catalog-warning" role="status">{isSpanish ? 'Todavía no hay juegos disponibles en español.' : 'No games are ready in English yet.'}</p>}
-    </section>}
+    </>}
     {selectedMode === 'classic' && <>
       <GoSelectionBack onClick={() => setSelectedMode('')}>{isSpanish ? 'Cambiar juego' : 'Change game'}</GoSelectionBack>
       {classicLevels.length !== 3 && <p className="go-catalog-warning" role="status">{isSpanish ? `Solo ${classicLevels.length} de 3 niveles están disponibles en este idioma.` : `Only ${classicLevels.length} of 3 levels are ready in this language.`}</p>}

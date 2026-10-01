@@ -7,7 +7,7 @@ import { supabase } from '../utils/supabase.js'
 import { canPractice } from './goAccess.js'
 import { classicPracticeLevels } from './goClassicCatalog.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
-import { GoClassicLevelCard, GoClassicModeChoice, GoCreator, GoLanguageChoices, GoSelectionBack, GoSelectionHeading } from './GoSelectionCards.jsx'
+import { GoCatalogSection, GoClassicLevelCard, GoClassicModeChoice, GoCreator, GoLanguageChoices, GoSelectionBack, GoSelectionHeading } from './GoSelectionCards.jsx'
 import { normalizeCatalog } from './goPracticeModel.js'
 import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
@@ -48,16 +48,16 @@ export function GoPracticeSelection() {
     {!selectedLanguage && <GoLanguageChoices onSelect={setSelectedLanguage} />}
     {selectedLanguage && !selectedMode && <GoSelectionBack onClick={() => { setSelectedLanguage(''); setSelectedMode('') }}>{isSpanish ? 'Cambiar idioma' : 'Change language'}</GoSelectionBack>}
     {selectedLanguage && <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding challenges…' : catalog.error?.message || ''}</div>}
-    {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <section className="go-game-choices" aria-label="Choose a game">
-      {!!classicLevels.length && <GoClassicModeChoice language={selectedLanguage} onClick={() => setSelectedMode('classic')} />}
-      {otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
+    {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <>
+      {!!classicLevels.length && <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'} description={isSpanish ? 'Los juegos originales, organizados por modo.' : 'Original games, organized by mode.'}><GoClassicModeChoice language={selectedLanguage} onClick={() => setSelectedMode('classic')} /></GoCatalogSection>}
+      {!!otherGames.length && <GoCatalogSection title={isSpanish ? 'Juegos del equipo' : 'Games from your team'} description={isSpanish ? 'Creados y publicados por personas de tu equipo.' : 'Created and published by people on your team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
         <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART.classic} alt="" /></span></div>
         <h2>{item.title}</h2><p>{item.description || 'A quick way to sharpen what you know.'}</p>
         <GoCreator item={item} />
         <Link to={`/go/practice/${item.id}`}>{isSpanish ? 'Jugar' : 'Play'}</Link>
-      </article>)}
+      </article>)}</GoCatalogSection>}
       {!classicLevels.length && !otherGames.length && <p className="go-catalog-warning" role="status">{isSpanish ? 'Todavía no hay juegos disponibles en español.' : 'No games are ready in English yet.'}</p>}
-    </section>}
+    </>}
     {selectedMode === 'classic' && !catalog.loading && !catalog.error && <>
       <GoSelectionBack onClick={() => setSelectedMode('')}>{isSpanish ? 'Cambiar juego' : 'Change game'}</GoSelectionBack>
       {classicLevels.length !== 3 && <p className="go-catalog-warning" role="status">{isSpanish ? `Solo ${classicLevels.length} de 3 niveles están disponibles en este idioma.` : `Only ${classicLevels.length} of 3 levels are ready in this language.`}</p>}

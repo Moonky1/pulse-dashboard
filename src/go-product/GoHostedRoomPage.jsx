@@ -10,7 +10,9 @@ import { GoShell } from './GoShell.jsx'
 import { GoFlag } from './GoFlag.jsx'
 import { GO_ART } from './goVisualAssets.js'
 import { HostedAnswerControl } from './HostedAnswerControl.jsx'
+import { GoQuestionCountdown } from './GoQuestionCountdown.jsx'
 import { useHostedRoom } from './useHostedRoom.js'
+import { useQuestionCountdown } from './useQuestionCountdown.js'
 
 function RoomHeader({ room }) {
   const language = languagePresentation(room.content.language)
@@ -56,30 +58,35 @@ function Lobby({ room, action, busy, error }) {
   </>
 }
 
-function HostQuestion({ room, action, busy, error }) {
+function HostQuestion({ room, timing, action, busy, error }) {
   const question = room.current_question
+  const { remainingMs, secondsLeft, expired } = useQuestionCountdown(timing)
+  const allAnswered = room.participant_count > 0 && room.answered_count === room.participant_count
   return <>
     <RoomHeader room={room} />
     <section className="go-live-question go-live-question--host">
       <div className="go-question-counter"><span>Question {question.position} of {room.question_count}</span><strong>{room.answered_count}/{room.participant_count} answered</strong></div>
+      <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} />
       <article><p className="go-question-type">{question.question_type.replaceAll('_', ' ')}</p><h2>{question.prompt}</h2>{question.question_type !== 'text' && <div className="go-host-options">{question.answer_options.length ? question.answer_options.map((option, index) => <span key={index}>{String.fromCharCode(65 + index)}. {option}</span>) : <><span>True</span><span>False</span></>}</div>}</article>
       <div className="go-answer-meter" aria-label={`${room.answered_count} of ${room.participant_count} answered`}><span style={{ width: `${room.participant_count ? room.answered_count / room.participant_count * 100 : 0}%` }} /></div>
       {error && <p className="go-inline-error" role="alert">{error}</p>}
-      <div className="go-room-actions"><Button loading={busy === 'advance'} disabled={!!busy} onClick={() => action('advance')}>{question.position === room.question_count ? 'Finish game' : 'Next question'}</Button><Button variant="ghost" loading={busy === 'cancel'} disabled={!!busy} onClick={() => action('cancel')}>Cancel game</Button></div>
+      <div className="go-room-actions"><Button loading={busy === 'advance'} disabled={!!busy || (!expired && !allAnswered)} onClick={() => action('advance')}>{question.position === room.question_count ? 'Finish game' : 'Next question'}</Button><Button variant="ghost" loading={busy === 'cancel'} disabled={!!busy} onClick={() => action('cancel')}>Cancel game</Button></div>
     </section>
   </>
 }
 
-function PlayerQuestion({ room, submit, busy, error }) {
+function PlayerQuestion({ room, timing, submit, busy, error }) {
   const [answer, setAnswer] = useState(undefined)
   const question = room.current_question
+  const { remainingMs, secondsLeft, expired } = useQuestionCountdown(timing)
   return <>
     <RoomHeader room={room} />
     <section className="go-live-question">
-      <div className="go-question-counter"><span>Question {question.position} of {room.question_count}</span><strong>{room.my_answered ? 'Answer locked ✓' : 'Choose your answer'}</strong></div>
-      <article><h2>{question.prompt}</h2><HostedAnswerControl question={question} answer={answer} onChange={setAnswer} disabled={room.my_answered || busy} /></article>
+      <div className="go-question-counter"><span>Question {question.position} of {room.question_count}</span><strong>{room.my_answered ? 'Answer locked ✓' : expired ? 'Time is up' : 'Choose your answer'}</strong></div>
+      <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} />
+      <article><h2>{question.prompt}</h2><HostedAnswerControl question={question} answer={answer} onChange={setAnswer} disabled={room.my_answered || busy || expired || !timing} /></article>
       {error && <p className="go-inline-error" role="alert">{error}</p>}
-      <footer><span>{room.my_answered ? 'Waiting for the host…' : 'Your answer is final once sent.'}</span><Button loading={busy} disabled={room.my_answered || busy || !hostedAnswerReady(question, answer)} onClick={() => void submit(answer)}>Submit answer</Button></footer>
+      <footer><span>{room.my_answered ? 'Waiting for the host…' : expired ? 'Time is up. Waiting for the host…' : 'Your answer is final once sent.'}</span><Button loading={busy} disabled={room.my_answered || busy || expired || !timing || !hostedAnswerReady(question, answer)} onClick={() => void submit(answer)}>Submit answer</Button></footer>
     </section>
   </>
 }
@@ -144,5 +151,5 @@ export function GoHostedRoomPage({ expectedViewer }) {
   if (room.status === 'completed') return <GoShell><Results room={room} /></GoShell>
   if (['cancelled', 'expired'].includes(room.status)) return <GoShell><section className="go-state"><img className="go-state-art" src={GO_ART.zero2} alt="" /><h1>{room.status === 'expired' ? 'This room expired' : 'This game was cancelled'}</h1><p>No result was recorded.</p><Link to="/go">Back to GO</Link></section></GoShell>
   if (room.status === 'lobby') return <GoShell><Lobby room={room} action={hostAction} busy={busy} error={error} /></GoShell>
-  return <GoShell>{room.viewer_role === 'host' ? <HostQuestion room={room} action={hostAction} busy={busy} error={error} /> : <PlayerQuestion key={room.current_question.id} room={room} submit={submit} busy={busy === 'submit'} error={error} />}</GoShell>
+  return <GoShell>{room.viewer_role === 'host' ? <HostQuestion key={room.current_question.id} room={room} timing={state.timing} action={hostAction} busy={busy} error={error} /> : <PlayerQuestion key={room.current_question.id} room={room} timing={state.timing} submit={submit} busy={busy === 'submit'} error={error} />}</GoShell>
 }

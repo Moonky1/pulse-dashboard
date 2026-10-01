@@ -1,18 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { getGoHostedSession } from '../training/trainingApi.js'
+import { getGoHostedSession, getGoHostedTiming } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { normalizeHostedRoom } from './goHostedModel.js'
 
 export function useHostedRoom(sessionId) {
-  const [state, setState] = useState({ room: null, loading: true, error: null })
+  const [state, setState] = useState({ room: null, timing: null, loading: true, error: null })
   const mounted = useRef(true)
   const refresh = useCallback(async ({ quiet = false } = {}) => {
     if (!quiet) setState(previous => ({ ...previous, loading: true, error: null }))
     const { data, error } = await getGoHostedSession(supabase, sessionId)
     if (!mounted.current) return null
     const room = normalizeHostedRoom(data)
-    setState({ room, loading: false, error: error || (!room ? { message: 'This game is unavailable.' } : null) })
+    const timingResponse = room?.status === 'active'
+      ? await getGoHostedTiming(supabase, sessionId)
+      : { data: null, error: null }
+    if (!mounted.current) return null
+    const timing = Number(timingResponse.data?.question_position) === room?.current_question_position
+      ? timingResponse.data : null
+    setState({ room, timing, loading: false, error: error || timingResponse.error || (!room ? { message: 'This game is unavailable.' } : null) })
     return room
   }, [sessionId])
 
