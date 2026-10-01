@@ -41,11 +41,9 @@ export function GoCatalogSection({ title, description, children }) {
 }
 
 export function GoCreator({ item, system = false }) {
-  const creator = system ? 'Pulse' : item?.creator_display
-  if (!creator) return null
-  return system
-    ? <p className="go-card-creator go-card-creator--pulse">Pulse original</p>
-    : <p className="go-card-creator">Created by <strong>{creator}</strong></p>
+  if (system) return <p className="go-card-creator go-card-creator--pulse">Pulse original</p>
+  if (!item?.creator_display) return null
+  return <p className="go-card-creator">{item.language === 'es' ? 'Creado por' : 'Created by'} <strong>{item.creator_display}</strong></p>
 }
 
 export function GoClassicModeChoice({ language, onClick }) {
@@ -65,7 +63,7 @@ export function GoClassicLevelCard({ item, onCreate, creating }) {
     <h2>{item.levelLabel}</h2>
     <p>{classicLevelDescription(item.language, item.level)}</p>
     <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>10</strong> {item.language === 'es' ? 'por ronda · banco de 40' : 'per round · 40 in the bank'}</div>
-    <GoCreator system />
+    <GoCreator item={item} />
     {host
       ? <Button loading={creating === item.id} disabled={creating !== null} onClick={() => onCreate(item.id)}>{item.language === 'es' ? 'Crear sala' : 'Create room'}</Button>
       : <Link to={`/go/practice/${item.id}`}>{item.language === 'es' ? 'Jugar' : 'Play'}</Link>}
