@@ -33,7 +33,8 @@ test('Practice remains server scored while Hosted UI uses protected lifecycle co
   assert.match(hosted, /startGoHostedSession/)
   assert.match(hosted, /submitGoHostedAnswer/)
   assert.match(hosted, /advanceGoHostedSession/)
-  assert.doesNotMatch(hosted, /correct_answer\b|is_correct|leaderboard/i)
+  assert.match(hosted, /getGoHostedResults/)
+  assert.doesNotMatch(hosted, /correct_answer\b|is_correct/i)
 })
 
 test('Hosted UI selectively preserves existing GO personality without legacy runtime imports', async () => {
@@ -45,9 +46,32 @@ test('Hosted UI selectively preserves existing GO personality without legacy run
   assert.match(room, /GO_ART\.classic/)
   assert.match(visuals, /certification\.webp/)
   assert.match(visuals, /classic\.webp/)
+  assert.match(visuals, /easy\.webp/)
+  assert.match(visuals, /medium\.webp/)
+  assert.match(visuals, /advanced\.webp/)
   assert.match(room, /resultMedal/)
   assert.match(css, /image-rendering:pixelated/)
   assert.doesNotMatch(host + room, /lucide|heroicons|fontawesome|from ['"]\.\.\/go\//i)
+})
+
+test('Classic hosting uses real flags and distinct level art without repeated catalog copy', async () => {
+  const host = await read('GoHostSelection.jsx')
+  const room = await read('GoHostedRoomPage.jsx')
+  const flag = await read('GoFlag.jsx')
+  const usFlag = await read('../../public/flags/united-states.svg')
+  assert.match(host, /GO_ART\[item\.level\]/)
+  assert.match(host, /<GoFlag language=\{choice\.code\}/)
+  assert.match(room, /<GoFlag language=\{room\.content\.language\}/)
+  assert.match(await read('GoPracticeSelection.jsx'), /<GoFlag language=\{item\.language\}/)
+  assert.match(flag, /\/flags\/mexico\.png/)
+  assert.match(flag, /\/flags\/united-states\.svg/)
+  assert.match(flag, /import mexicoFlag from/)
+  assert.match(flag, /import unitedStatesFlag from/)
+  assert.match(room, /import lobbyMusic from/)
+  assert.doesNotMatch(room, /src="\/audio\/lobby-music\.mp3"/)
+  assert.match(usFlag, /viewBox="0 0 741 390"/)
+  assert.doesNotMatch(host, /Three Classic Quiz levels|40 questions from the Pulse GO Classic bank|Easy, Medium and Advanced/)
+  assert.match(room, /Waiting for players/)
 })
 
 test('GO landing stays compact, action-led, and reuses legacy visual personality', async () => {

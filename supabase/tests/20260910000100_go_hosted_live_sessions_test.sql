@@ -10,6 +10,10 @@ select has_function('public','list_go_host_catalog',array['text','integer','inte
 select has_function('public','create_go_hosted_session',array['uuid'],'create room RPC exists');
 select has_function('public','join_go_hosted_session',array['text'],'join room RPC exists');
 select has_function('public','get_go_hosted_session',array['uuid'],'room snapshot RPC exists');
+select has_function('public','get_go_hosted_results',array['uuid'],'completed host rankings RPC exists');
+select ok(has_function_privilege('authenticated','public.get_go_hosted_results(uuid)','EXECUTE'),'authenticated Staff may request host rankings through RPC');
+select ok(not has_function_privilege('anon','public.get_go_hosted_results(uuid)','EXECUTE'),'anonymous users cannot request host rankings');
+select ok(not has_function_privilege('service_role','public.get_go_hosted_results(uuid)','EXECUTE'),'rankings do not require a browser service role');
 select has_function('public','start_go_hosted_session',array['uuid','integer'],'start room RPC exists');
 select has_function('public','submit_go_hosted_answer',array['uuid','uuid','jsonb','integer'],'answer RPC exists');
 select has_function('public','advance_go_hosted_session',array['uuid','integer'],'advance RPC exists');
@@ -107,6 +111,7 @@ select is((public.create_go_hosted_session((select content_id from go1b_content)
 select is((select count(*) from public.go_sessions),1::bigint,'double create does not duplicate rooms');
 select is((select count(*) from public.go_session_memberships where member_kind='host'),1::bigint,'canonical host is stored once');
 select ok(not (public.get_go_hosted_session((select room_id from go1b_room))::text ~ 'email|auth_user|staff_user|learner_id|attempt_id|role_id'),'host snapshot exposes no identity internals');
+select throws_ok(format('select public.get_go_hosted_results(%L::uuid)',(select room_id from go1b_room)),'P0002',null,'rankings are unavailable before completion');
 
 -- Join is idempotent, eligibility-bound, and not an authorization token.
 select set_config('request.jwt.claim.sub','aa200000-0000-4000-8000-000000000002',true);
@@ -179,8 +184,15 @@ select lives_ok(format('select public.advance_go_hosted_session(%L::uuid,%s)',(s
 select is((select count(*) from public.training_results),2::bigint,'finish retry creates no duplicate results');
 select is((public.get_go_hosted_session((select room_id from go1b_room))->'host_summary'->>'players')::integer,2,'host receives aggregate summary without leaderboard');
 select ok(not (public.get_go_hosted_session((select room_id from go1b_room))::text ~ 'Player One|Player Two'),'completed host summary contains no player leaderboard');
+select is(jsonb_array_length(public.get_go_hosted_results((select room_id from go1b_room))),2,'host sees both completed player results');
+select is(public.get_go_hosted_results((select room_id from go1b_room))->0->>'name','Player One','ranking uses server score order');
+select is(public.get_go_hosted_results((select room_id from go1b_room))->1->>'correct_answers','0','ranking includes canonical correct count');
+select ok(not (public.get_go_hosted_results((select room_id from go1b_room))::text ~ 'email|auth_user|staff_user|learner_id|attempt_id|"correct_answer"|private alpha'),'ranking exposes no identity links, answer keys, or explanations');
 select set_config('request.jwt.claim.sub','aa200000-0000-4000-8000-000000000002',true);
+select throws_ok(format('select public.get_go_hosted_results(%L::uuid)',(select room_id from go1b_room)),'P0002',null,'player cannot read opponent rankings');
 select is((public.get_go_hosted_session((select room_id from go1b_room))->'my_result'->>'correct_answers')::integer,3,'player sees only personal canonical result');
+select set_config('request.jwt.claim.sub','aa200000-0000-4000-8000-000000000005',true);
+select throws_ok(format('select public.get_go_hosted_results(%L::uuid)',(select room_id from go1b_room)),'P0002',null,'other Staff cannot read completed rankings');
 select is((select source_mode from public.list_my_training_results(50) limit 1),'go_hosted','hosted result appears in canonical personal history');
 
 -- Completed room releases the host for another game; lobby cancellation creates no results.
