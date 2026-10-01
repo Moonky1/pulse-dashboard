@@ -45,3 +45,17 @@ test('Practice groups the same three Classic levels without mixing languages', (
   assert.deepEqual(classicPracticeLevels(items, 'en').map(item => item.id), ['en-easy'])
   assert.match(classicLevelDescription('es', 'easy'), /consentimiento/)
 })
+
+test('Spanish Classic levels recognize older English metadata and prefer translated titles', () => {
+  const legacy = [
+    level('es', 'Classic Quiz · Advanced', 'legacy-advanced'),
+    level('es', 'Classic Quiz · Easy', 'legacy-easy'),
+    level('es', 'Classic Quiz · Medium', 'legacy-medium'),
+  ]
+  assert.deepEqual(classicHostLevels(legacy, 'es').map(item => item.id),
+    ['legacy-easy', 'legacy-medium', 'legacy-advanced'])
+  assert.deepEqual(classicPracticeLevels(legacy, 'es').map(item => item.id),
+    ['legacy-easy', 'legacy-medium', 'legacy-advanced'])
+  assert.deepEqual(classicHostLevels([...legacy, level('es', 'Classic Quiz · Fácil', 'translated-easy')], 'es').map(item => item.id),
+    ['translated-easy', 'legacy-medium', 'legacy-advanced'])
+})
