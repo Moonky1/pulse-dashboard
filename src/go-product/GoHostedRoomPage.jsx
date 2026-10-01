@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
+import lobbyMusic from '../../public/audio/lobby-music.mp3'
 import { Button } from '../components/ui/Button.jsx'
 import { advanceGoHostedSession, cancelGoHostedSession, getGoHostedResults, startGoHostedSession, submitGoHostedAnswer } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
@@ -47,7 +48,7 @@ function Lobby({ room, action, busy, error }) {
       <p>{room.participant_count ? 'Ready to begin when everyone has joined.' : 'No players yet — share the code!'}</p>
       <strong className="go-lobby-count">{room.participant_count} {room.participant_count === 1 ? 'player' : 'players'} ready</strong>
       {!!room.participants.length && <div className="go-player-roster" aria-live="polite">{room.participants.map(player => <div key={player.seat}><span className={`go-player-marker go-player-marker--${(Number(player.seat) || 0) % 4}`}>{player.name.slice(0, 1).toUpperCase()}</span><strong>{player.name}</strong><small>Ready ✓</small></div>)}</div>}
-      {isHost && <><audio ref={music} src="/audio/lobby-music.mp3" preload="none" /><button type="button" className="go-lobby-music" aria-pressed={musicOn} onClick={() => void toggleMusic()}>♫ Lobby Music {musicOn ? 'On' : 'Off'}</button></>}
+      {isHost && <><audio ref={music} src={lobbyMusic} preload="none" /><button type="button" className="go-lobby-music" aria-pressed={musicOn} onClick={() => void toggleMusic()}>♫ Lobby Music {musicOn ? 'On' : 'Off'}</button></>}
       {!isHost && <p>The host will start the first question.</p>}
       {error && <p className="go-inline-error" role="alert">{error}</p>}
       {isHost && <div className="go-room-actions"><Button loading={busy === 'start'} disabled={!room.participant_count || !!busy} onClick={() => action('start')}>Start game</Button><Button variant="ghost" loading={busy === 'cancel'} disabled={!!busy} onClick={() => action('cancel')}>Cancel room</Button></div>}
