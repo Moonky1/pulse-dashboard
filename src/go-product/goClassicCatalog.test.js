@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { classicHostLevels, isPublishedClassicLevel } from './goClassicCatalog.js'
+import { classicHostLevels, classicLevelDescription, classicPracticeLevels, isPublishedClassicLevel } from './goClassicCatalog.js'
 
 const level = (language, title, id) => ({
   id, language, title, content_type: 'quiz', question_count: 40,
@@ -30,4 +30,18 @@ test('Synthetic or incomplete quizzes cannot masquerade as a Classic level', () 
   assert.equal(isPublishedClassicLevel({ ...valid, question_count: 10 }), false)
   assert.equal(isPublishedClassicLevel({ ...valid, topics: [] }), false)
   assert.equal(isPublishedClassicLevel({ ...valid, title: 'GO Bank · Classic Quiz · Easy' }), false)
+})
+
+test('Practice groups the same three Classic levels without mixing languages', () => {
+  const items = [
+    level('es', 'Classic Quiz · Avanzado', 'es-advanced'),
+    level('en', 'Classic Quiz · Easy', 'en-easy'),
+    level('es', 'Classic Quiz · Fácil', 'es-easy'),
+    level('es', 'Classic Quiz · Medio', 'es-medium'),
+    { ...level('es', 'Other quiz', 'other'), content_type: 'assessment' },
+  ].map(item => { const practiceItem = { ...item }; delete practiceItem.question_count; return practiceItem })
+  assert.deepEqual(classicPracticeLevels(items, 'es').map(item => item.id),
+    ['es-easy', 'es-medium', 'es-advanced'])
+  assert.deepEqual(classicPracticeLevels(items, 'en').map(item => item.id), ['en-easy'])
+  assert.match(classicLevelDescription('es', 'easy'), /consentimiento/)
 })
