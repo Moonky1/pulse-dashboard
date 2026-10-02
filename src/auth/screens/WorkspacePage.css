@@ -1,89 +1,90 @@
 .pulse-launcher {
   min-height: 100dvh;
-  padding: clamp(1.25rem, 3vw, 2.5rem);
+  padding: clamp(1rem, 2.5vw, 2rem);
   background:
-    radial-gradient(circle at 9% 6%, rgba(69, 91, 158, .12), transparent 34rem),
-    radial-gradient(circle at 90% 82%, rgba(87, 62, 147, .08), transparent 34rem),
-    var(--pulse-canvas);
+    radial-gradient(circle at 50% -12%, rgba(110, 72, 178, .22), transparent 34rem),
+    radial-gradient(circle at 6% 80%, rgba(42, 72, 127, .1), transparent 35rem),
+    radial-gradient(circle at 94% 78%, rgba(105, 55, 158, .09), transparent 32rem),
+    #060711;
   color: var(--pulse-text-primary);
 }
-
-.pulse-launcher__inner { width: min(100%, 76rem); margin: 0 auto; }
-.pulse-launcher__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.pulse-launcher-account { position: relative; z-index: 4; }
+.pulse-launcher__inner { width: min(100%, 68rem); margin: 0 auto; }
+.pulse-launcher__header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; }
+.pulse-launcher__header > .auth-brand { grid-column: 2; justify-self: center; }
+.pulse-launcher-account { position: relative; z-index: 4; grid-column: 3; justify-self: end; }
 .pulse-launcher-account summary {
   display: flex; align-items: center; gap: .7rem; min-height: 3rem;
-  padding: .35rem .55rem .35rem .35rem; border: 1px solid rgba(179, 197, 243, .15);
-  border-radius: 999px; background: rgba(17, 25, 42, .72); cursor: pointer;
+  padding: .35rem .55rem .35rem .35rem; border: 1px solid rgba(201, 185, 244, .18);
+  border-radius: 999px; background: rgba(28, 24, 42, .72); cursor: pointer;
   font-size: .86rem; font-weight: 700; list-style: none;
 }
 .pulse-launcher-account summary::-webkit-details-marker { display: none; }
-.pulse-launcher-account summary:hover, .pulse-launcher-account summary:focus-visible { border-color: rgba(190, 209, 255, .42); }
+.pulse-launcher-account summary:hover, .pulse-launcher-account summary:focus-visible { border-color: rgba(211, 189, 255, .55); }
 .pulse-launcher-account summary .admin-staff-avatar { width: 2.25rem; height: 2.25rem; }
 .pulse-launcher-account__chevron { color: var(--pulse-text-muted); font-size: 1.2rem; transition: transform .2s ease; }
 .pulse-launcher-account[open] .pulse-launcher-account__chevron { transform: rotate(180deg); }
 .pulse-launcher-account__menu {
-  position: absolute; top: calc(100% + .75rem); right: 0; width: min(19rem, calc(100vw - 2.5rem));
-  padding: 1.15rem; border: 1px solid rgba(183, 201, 247, .18); border-radius: 1.1rem;
-  background: #111827; box-shadow: 0 24px 64px rgba(0, 0, 0, .45);
+  position: absolute; top: calc(100% + .75rem); right: 0; width: min(19rem, calc(100vw - 2rem));
+  padding: 1.15rem; border: 1px solid rgba(201, 185, 244, .2); border-radius: 1.1rem;
+  background: #151420; box-shadow: 0 24px 64px rgba(0, 0, 0, .5);
 }
-.pulse-launcher-account__label { margin: 0 0 1rem; color: #aeb9cf; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.pulse-launcher-account__label { margin: 0 0 1rem; color: #b9b4ca; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .pulse-launcher-account__identity { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; overflow-wrap: anywhere; }
 .pulse-launcher-account__identity .admin-staff-avatar { flex: none; }
 .pulse-launcher-account__menu .staff-avatar-controls { padding: .8rem 0; border-top: 1px solid rgba(255, 255, 255, .08); border-bottom: 1px solid rgba(255, 255, 255, .08); }
 .pulse-launcher-account__menu > .pulse-button { width: 100%; margin-top: .7rem; }
 
-.pulse-launcher__welcome { margin: clamp(3.5rem, 9vh, 7rem) 0 clamp(2rem, 5vw, 3.5rem); }
-.pulse-launcher__eyebrow { margin: 0 0 1rem; color: #b5c7fa; font-size: .68rem; font-weight: 800; letter-spacing: .19em; }
-.pulse-launcher__eyebrow span { padding: 0 .3rem; color: #677ba9; }
-.pulse-launcher__welcome h1 { margin: 0; font-size: clamp(2.5rem, 5.1vw, 4.8rem); line-height: 1.05; letter-spacing: -.065em; }
-.pulse-launcher__welcome > p:last-child { margin: 1rem 0 0; color: #aebbd1; font-size: clamp(.98rem, 1.4vw, 1.12rem); }
+.pulse-launcher__welcome { margin: clamp(3rem, 8vh, 5.5rem) auto clamp(2rem, 5vh, 3rem); text-align: center; }
+.pulse-launcher__eyebrow { margin: 0 0 1rem; color: #c6a8ff; font-size: .68rem; font-weight: 800; letter-spacing: .21em; }
+.pulse-launcher__eyebrow span { padding: 0 .3rem; color: #7d689d; }
+.pulse-launcher__welcome h1 { margin: 0; font-size: clamp(2.5rem, 5vw, 4.25rem); line-height: 1.08; letter-spacing: -.062em; }
+.pulse-launcher__inner > .auth-workspace-notice { width: min(100%, 36rem); margin: 0 auto 1.5rem; text-align: center; }
 
-.pulse-launcher__apps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.pulse-launcher__apps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem; width: min(100%, 62rem); margin: 0 auto; }
 .pulse-launcher-app {
-  position: relative; display: flex; flex-direction: column; justify-content: space-between;
-  min-width: 0; min-height: 16.5rem; overflow: hidden; padding: clamp(1.35rem, 2vw, 1.85rem);
-  border: 1px solid rgba(168, 187, 232, .13); border-radius: 1.4rem;
-  background: linear-gradient(153deg, rgba(20, 30, 50, .94), rgba(8, 13, 23, .98));
-  color: #f7f9ff; text-decoration: none;
+  --launcher-glow: rgba(134, 91, 216, .24);
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.15rem; min-width: 0; min-height: 16rem; overflow: hidden; isolation: isolate;
+  padding: 1.5rem; border: 1px solid rgba(217, 203, 247, .16); border-radius: 1.75rem;
+  background: linear-gradient(155deg, rgba(29, 27, 42, .9), rgba(11, 11, 22, .96) 75%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .055), 0 22px 58px rgba(0, 0, 0, .2);
+  color: #f7f5ff; text-align: center; text-decoration: none;
   transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
 }
+.pulse-launcher-app::before {
+  position: absolute; z-index: -1; width: 90%; height: 82%; left: 5%; bottom: -55%;
+  border-radius: 50%; background: var(--launcher-glow); filter: blur(48px); content: '';
+}
+.pulse-launcher-app::after {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(120deg, rgba(255, 255, 255, .045), transparent 40%, rgba(255, 255, 255, .02)); content: '';
+}
 .pulse-launcher-app:is(a):hover, .pulse-launcher-app:is(a):focus-visible {
-  transform: translateY(-3px); border-color: rgba(177, 204, 255, .4);
-  box-shadow: 0 24px 44px rgba(0, 0, 0, .27), inset 0 1px 0 rgba(255, 255, 255, .06);
+  transform: translateY(-3px); border-color: rgba(215, 188, 255, .47);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .11), 0 28px 60px rgba(0, 0, 0, .32), 0 0 36px var(--launcher-glow);
 }
-.pulse-launcher-app::after { position: absolute; inset: 0 0 auto auto; width: 12rem; height: 12rem; pointer-events: none; background: radial-gradient(circle, rgba(91, 128, 220, .1), transparent 68%); content: ''; }
-.pulse-launcher-app--go { grid-column: span 2; background: radial-gradient(circle at 83% 14%, rgba(66, 156, 200, .17), transparent 37%), linear-gradient(145deg, #132337, #09121f 78%); }
-.pulse-launcher-app--dashboard { background: radial-gradient(circle at 84% 15%, rgba(154, 139, 249, .12), transparent 43%), linear-gradient(145deg, #1b1c32, #0b1020); }
-.pulse-launcher-app--studio { background: radial-gradient(circle at 86% 12%, rgba(197, 124, 91, .11), transparent 43%), linear-gradient(145deg, #211a29, #100e19); }
-.pulse-launcher-app--academy { background: radial-gradient(circle at 86% 12%, rgba(99, 153, 212, .11), transparent 43%), linear-gradient(145deg, #152133, #0a111d); }
-.pulse-launcher-app--admin { background: radial-gradient(circle at 86% 12%, rgba(92, 173, 145, .09), transparent 43%), linear-gradient(145deg, #162124, #0a1117); }
-.pulse-launcher-app__top { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.pulse-launcher-app__icon { display: grid; place-items: center; width: 4rem; height: 4rem; border: 1px solid rgba(185, 209, 255, .14); border-radius: 1rem; background: rgba(119, 151, 216, .07); color: #c8daff; }
-.pulse-launcher-app__icon img { width: 3.1rem; height: 3.1rem; object-fit: contain; image-rendering: pixelated; }
+.pulse-launcher-app--go { --launcher-glow: rgba(89, 118, 246, .28); }
+.pulse-launcher-app--studio { --launcher-glow: rgba(176, 104, 218, .28); }
+.pulse-launcher-app--academy { --launcher-glow: rgba(94, 150, 218, .25); }
+.pulse-launcher-app--dashboard { --launcher-glow: rgba(153, 102, 218, .25); }
+.pulse-launcher-app--admin { --launcher-glow: rgba(110, 136, 200, .22); grid-column: 1 / -1; justify-self: center; width: min(100%, 30rem); min-height: 14rem; }
+.pulse-launcher-app__icon { display: grid; place-items: center; flex: none; width: 4.1rem; height: 4.1rem; border: 1px solid rgba(220, 207, 249, .2); border-radius: 1.25rem; background: rgba(158, 131, 211, .085); color: #e3d5ff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06); }
+.pulse-launcher-app__icon img { width: 3.15rem; height: 3.15rem; object-fit: contain; image-rendering: pixelated; }
 .pulse-launcher-app__icon svg { width: 2.4rem; height: 2.4rem; }
-.pulse-launcher-app__arrow { color: #bfcdea; font-size: 1.3rem; }
-.pulse-launcher-app__soon { padding: .45rem .6rem; border: 1px solid rgba(195, 177, 255, .2); border-radius: 999px; color: #d4cafa; font-size: .6rem; font-weight: 800; letter-spacing: .08em; white-space: nowrap; }
-.pulse-launcher-app__copy { position: relative; z-index: 1; }
-.pulse-launcher-app__eyebrow { color: #aebbd7; font-size: .62rem; font-weight: 800; letter-spacing: .13em; }
-.pulse-launcher-app h2 { margin: .5rem 0 .45rem; font-size: clamp(1.55rem, 2.15vw, 2rem); line-height: 1.15; letter-spacing: -.045em; }
-.pulse-launcher-app p { max-width: 27rem; margin: 0; color: #aebbd0; font-size: .91rem; line-height: 1.5; }
-.pulse-launcher-app--go h2 { font-size: clamp(2rem, 3vw, 2.75rem); }
-.pulse-launcher-app--go .pulse-launcher-app__icon { width: 4.6rem; height: 4.6rem; }
-.pulse-launcher-app--go .pulse-launcher-app__icon img { width: 3.6rem; height: 3.6rem; }
+.pulse-launcher-app__copy { display: grid; justify-items: center; gap: .35rem; max-width: 23rem; }
+.pulse-launcher-app__eyebrow { color: #c1b1d8; font-size: .61rem; font-weight: 800; letter-spacing: .15em; }
+.pulse-launcher-app h2 { margin: 0; font-size: clamp(1.5rem, 2.2vw, 2rem); line-height: 1.15; letter-spacing: -.045em; }
+.pulse-launcher-app p { max-width: 22rem; margin: 0; color: #aaa6b9; font-size: .88rem; line-height: 1.45; }
+.pulse-launcher-app__arrow { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border: 1px solid rgba(218, 199, 252, .18); border-radius: 50%; color: #d6c9ef; font-size: .95rem; }
+.pulse-launcher-app__soon { padding: .35rem .6rem; border: 1px solid rgba(195, 177, 255, .25); border-radius: 999px; color: #d7c6f6; font-size: .59rem; font-weight: 800; letter-spacing: .09em; white-space: nowrap; }
 
-@media (max-width: 900px) {
-  .pulse-launcher__apps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pulse-launcher-app--go { grid-column: span 2; }
-}
-@media (max-width: 580px) {
-  .pulse-launcher { padding: 1.1rem; }
+@media (max-width: 620px) {
+  .pulse-launcher { padding: 1rem; }
   .pulse-launcher-account summary { width: 3rem; justify-content: center; padding: .3rem; }
   .pulse-launcher-account summary > span:not(.admin-staff-avatar) { display: none; }
-  .pulse-launcher__welcome { margin: 4rem 0 2.2rem; }
-  .pulse-launcher__apps { grid-template-columns: 1fr; gap: .8rem; }
-  .pulse-launcher-app, .pulse-launcher-app--go { grid-column: auto; min-height: 14.5rem; }
-  .pulse-launcher-account__menu { right: 0; }
+  .pulse-launcher__welcome { margin: 3.8rem auto 2.5rem; }
+  .pulse-launcher__apps { grid-template-columns: 1fr; gap: .85rem; }
+  .pulse-launcher-app, .pulse-launcher-app--admin { grid-column: auto; width: 100%; min-height: 15rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pulse-launcher-app, .pulse-launcher-account__chevron { transition: none; }

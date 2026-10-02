@@ -24,8 +24,9 @@ function AcademyIcon() {
 
 function WorkspaceApp({ className = '', to, eyebrow, title, description, image, icon }) {
   return <Link className={`pulse-launcher-app ${className}`} to={to}>
-    <div className="pulse-launcher-app__top"><span className="pulse-launcher-app__icon">{image ? <img src={image} alt="" /> : icon}</span><span className="pulse-launcher-app__arrow" aria-hidden="true">↗</span></div>
+    <span className="pulse-launcher-app__icon">{image ? <img src={image} alt="" /> : icon}</span>
     <div className="pulse-launcher-app__copy"><span className="pulse-launcher-app__eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p></div>
+    <span className="pulse-launcher-app__arrow" aria-hidden="true">↗</span>
   </Link>
 }
 
@@ -54,7 +55,7 @@ export function WorkspacePage() {
   return <main className="pulse-launcher">
     <div className="pulse-launcher__inner">
       <header className="pulse-launcher__header">
-        <Brand compact />
+        <Brand compact homePath="/workspace" />
         <details className="pulse-launcher-account">
           <summary><StaffAvatar {...avatarProps} size="sm" /><span>{fullName}</span><span className="pulse-launcher-account__chevron" aria-hidden="true">⌄</span></summary>
           <div className="pulse-launcher-account__menu">
@@ -69,7 +70,6 @@ export function WorkspacePage() {
       <section className="pulse-launcher__welcome">
         <p className="pulse-launcher__eyebrow">KAMPAIGN KINGS <span aria-hidden="true">·</span> PULSE</p>
         <h1>Welcome back, {firstName}</h1>
-        <p>Your work, learning and team experiences in one place.</p>
       </section>
 
       {invitationAccepted && <p className="auth-workspace-notice auth-workspace-notice--success" role="status">Invitation accepted. Welcome to Pulse.</p>}
@@ -77,12 +77,13 @@ export function WorkspacePage() {
 
       <section className="pulse-launcher__apps" aria-label="Pulse products">
         {goAccess.state === 'allowed' && (canPractice(goAccess.capabilities) || canHost(goAccess.capabilities)) && <WorkspaceApp className="pulse-launcher-app--go" to="/go" eyebrow="INTERACTIVE LEARNING" title="Pulse GO" description="Practice your skills and bring the team together in live games." image={GO_ART.classic} />}
-        <article className="pulse-launcher-app pulse-launcher-app--dashboard" aria-label="Dashboard, in development">
-          <div className="pulse-launcher-app__top"><span className="pulse-launcher-app__icon"><DashboardIcon /></span><span className="pulse-launcher-app__soon">IN DEVELOPMENT</span></div>
-          <div className="pulse-launcher-app__copy"><span className="pulse-launcher-app__eyebrow">A CLEARER VIEW</span><h2>Dashboard</h2><p>Operational performance, teams and insights.</p></div>
-        </article>
         {studioAccess.state === 'allowed' && <WorkspaceApp className="pulse-launcher-app--studio" to="/studio" eyebrow="MAKE IT YOURS" title="Studio" description={canCreateStudioContent(studioAccess.permissionKeys) ? 'Create games and manage training content.' : 'Explore training content from your team.'} image={GO_ART.goal2} />}
         <WorkspaceApp className="pulse-launcher-app--academy" to="/academy" eyebrow="KNOWLEDGE LIBRARY" title="Academy" description="Guides, scripts and standards for better conversations." icon={<AcademyIcon />} />
+        <article className="pulse-launcher-app pulse-launcher-app--dashboard" aria-label="Dashboard, in development">
+          <span className="pulse-launcher-app__icon"><DashboardIcon /></span>
+          <div className="pulse-launcher-app__copy"><span className="pulse-launcher-app__eyebrow">A CLEARER VIEW</span><h2>Dashboard</h2><p>Operational performance, teams and insights.</p></div>
+          <span className="pulse-launcher-app__soon">IN DEVELOPMENT</span>
+        </article>
         {adminAccess.state === 'allowed' && <WorkspaceApp className="pulse-launcher-app--admin" to="/admin/users" eyebrow="TEAM OPERATIONS" title="Administration" description="People, access and organization." image={GO_ART.valid} />}
       </section>
     </div>
