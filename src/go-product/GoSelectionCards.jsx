@@ -36,7 +36,7 @@ export function GoSelectionBack({ onClick, children }) {
 
 export function GoCatalogSection({ title, description, children }) {
   return <section className="go-catalog-section" aria-label={title}>
-    <header><h2>{title}</h2><p>{description}</p></header>
+    <header><h2>{title}</h2>{description && <p>{description}</p>}</header>
     <div className="go-game-choices">{children}</div>
   </section>
 }
