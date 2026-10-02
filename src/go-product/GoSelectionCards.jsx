@@ -47,21 +47,28 @@ export function GoCreator({ item, system = false }) {
   return <p className="go-card-creator">{item.language === 'es' ? 'Creado por' : 'Created by'} <strong>{item.creator_display}</strong></p>
 }
 
-export function GoPulseModeChoices({ language, classicReady, onClassic }) {
+export function GoPulseModeChoices({ language, classicReady, modeItems = {}, onClassic, onMode, host = false, creating = null }) {
   return PULSE_MODES.map(mode => {
-    const playable = mode.playable && classicReady
+    const item = modeItems[mode.key]
+    const ready = mode.key === 'classic' ? classicReady : !!item
+    const playable = ready && (!host || mode.hosted)
+    const action = playable
+      ? mode.key === 'classic' ? (language === 'es' ? 'Elegir nivel' : 'Choose level')
+        : host ? (language === 'es' ? 'Crear sala' : 'Create room') : (language === 'es' ? 'Jugar' : 'Play')
+      : ready && !mode.hosted && host ? (language === 'es' ? 'Solo individual' : 'Individual only')
+        : (language === 'es' ? 'En desarrollo' : 'In development')
     const content = <>
       <img src={GO_ART[mode.art]} alt="" />
       <h2>{mode.title}</h2>
       <p>{mode.description[language] || mode.description.en}</p>
       <GoCreator system />
       <span className={`go-game-choice__action${playable ? '' : ' go-game-choice__action--pending'}`}>
-        {playable ? (language === 'es' ? 'Elegir nivel' : 'Choose level') : (language === 'es' ? 'En desarrollo' : 'In development')}{playable && ' →'}
+        {creating === item?.id ? (language === 'es' ? 'Creando…' : 'Creating…') : action}{playable && creating !== item?.id && ' →'}
       </span>
     </>
     return playable
-      ? <button className="go-game-choice" type="button" onClick={onClassic} key={mode.key}>{content}</button>
-      : <article className="go-game-choice go-game-choice--pending" key={mode.key}>{content}</article>
+      ? <button className="go-game-choice" data-mode={mode.key} type="button" disabled={creating !== null} onClick={() => mode.key === 'classic' ? onClassic() : onMode(mode.key, item)} key={mode.key}>{content}</button>
+      : <article className="go-game-choice go-game-choice--pending" data-mode={mode.key} key={mode.key}>{content}</article>
   })
 }
 

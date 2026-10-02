@@ -34,6 +34,59 @@
 @media(max-width:620px){.go-lobby-banner{align-items:flex-start;flex-direction:column;font-size:12px}.go-lobby-banner strong{font-size:18px}.go-lobby-stage{min-height:530px;padding:52px 4px}.go-lobby-stage h1{font-size:clamp(41px,12vw,63px)}.go-results-section{padding:17px}.go-results-section header h2{font-size:25px}.go-results-section li{grid-template-columns:34px 1fr auto;gap:8px;padding:9px}.go-results-section li b{font-size:13px}}
 @media(max-width:1000px){.go-game-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.go-game-choices{grid-template-columns:1fr}.go-page-heading--selection>img{width:50px;height:50px}.go-language-choice{min-height:160px}.go-game-choice{min-height:285px}}
+
+/* GO-3 mode signatures keep the shared Pulse shell while changing the action. */
+.go-game-choice[data-mode="valid-invalid"]{--mode-accent:#73d8b2}
+.go-game-choice[data-mode="disposition-trainer"]{--mode-accent:#8abcf0}
+.go-game-choice[data-mode="eligible"]{--mode-accent:#addc8c}
+.go-game-choice[data-mode="objection-battle"]{--mode-accent:#b89dff}
+.go-game-choice[data-mode="certification"]{--mode-accent:#e6c878}
+.go-game-choice[data-mode]:not([data-mode="classic"]){box-shadow:inset 0 1px 0 color-mix(in srgb,var(--mode-accent) 18%,transparent)}
+.go-game-choice[data-mode]:not([data-mode="classic"]):hover,.go-game-choice[data-mode]:not([data-mode="classic"]):focus-visible{border-color:var(--mode-accent);box-shadow:0 14px 45px color-mix(in srgb,var(--mode-accent) 12%,transparent)}
+.go-game-choice[data-mode]:not([data-mode="classic"]) .go-game-choice__action{color:var(--mode-accent)}
+.go-game-choice[data-mode] img{transition:transform .22s ease,filter .22s ease}
+.go-game-choice[data-mode]:not(.go-game-choice--pending):hover img,.go-game-choice[data-mode]:not(.go-game-choice--pending):focus-visible img{transform:translateY(-3px);filter:drop-shadow(0 12px 16px color-mix(in srgb,var(--mode-accent,#9db6ff) 22%,transparent))}
+.go-game-choice--pending:hover{transform:none;border-color:rgba(255,255,255,.12);box-shadow:none}
+.go-mode-prompt{padding:22px 24px;border:1px solid #ffffff1a;border-radius:18px;background:linear-gradient(135deg,#1a2336,#111927);margin-bottom:22px}
+.go-mode-prompt>span{display:block;margin-bottom:12px;color:#b4c7e6;font-size:11px;font-weight:800;letter-spacing:.16em}
+.go-mode-prompt h1,.go-mode-prompt h2{margin:0;line-height:1.3}
+.go-mode-prompt--valid-invalid{border-left:4px solid #73d8b2}
+.go-mode-prompt--disposition-trainer{border-left:4px solid #8abcf0}
+.go-mode-prompt--eligible{border-left:4px solid #addc8c}
+.go-mode-prompt--objection-battle{border-left:4px solid #b89dff;background:linear-gradient(135deg,#202139,#111725)}
+.go-mode-prompt--certification{border-left:4px solid #e6c878;background:linear-gradient(135deg,#242336,#121724)}
+.go-mode-answers{border:0;padding:0;margin:0;min-width:0}
+.go-mode-answers legend{font-size:12px;color:#aabbd4;margin-bottom:12px}
+.go-mode-answers>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.go-mode-answers button{display:flex;align-items:center;gap:15px;min-height:78px;width:100%;padding:18px;border:1px solid #ffffff23;border-radius:15px;background:#0b1220;color:#f2f5ff;text-align:left;font:inherit;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
+.go-mode-answers button:hover:not(:disabled),.go-mode-answers button:focus-visible{transform:translateY(-2px);border-color:#bed4ff}
+.go-mode-answers button.is-selected{border-color:#bdd3ff;background:#1c2a43;box-shadow:0 0 0 2px #a6c9ff24 inset}
+.go-mode-answers button:disabled{cursor:not-allowed;opacity:.58}
+.go-mode-answers button strong{min-width:0;overflow-wrap:anywhere;line-height:1.4}
+.go-mode-answers--valid-invalid button:first-child,.go-mode-answers--eligible button:first-child{border-left:4px solid #68d3a0}
+.go-mode-answers--valid-invalid button:last-child,.go-mode-answers--eligible button:last-child{border-left:4px solid #ef8793}
+.go-mode-answers--disposition-trainer button{min-height:92px}
+.go-mode-answers__index{font-size:12px;color:#9ec9f5;font-weight:800}
+.go-mode-answers--objection-battle>div{grid-template-columns:1fr}
+.go-mode-answers--objection-battle button{align-items:flex-start;flex-direction:column;gap:6px;min-height:0;border-left:4px solid #aa9aff}
+.go-mode-answers__speaker{font-size:10px;font-weight:800;letter-spacing:.12em;color:#c5b5ff}
+.go-mode-answers--certification button{border-color:#d4ba702b}
+.go-mode-answers__decision-icon{display:grid;flex:none;width:34px;height:34px;place-items:center;border:1px solid currentColor;border-radius:50%;font-size:23px;font-weight:850;line-height:1}
+.go-mode-answers--valid-invalid button:first-child .go-mode-answers__decision-icon,.go-mode-answers--eligible button:first-child .go-mode-answers__decision-icon{color:#84e8bb}
+.go-mode-answers--valid-invalid button:last-child .go-mode-answers__decision-icon,.go-mode-answers--eligible button:last-child .go-mode-answers__decision-icon{color:#f4a0a9}
+.go-host-options--valid-invalid span:first-child,.go-host-options--eligible span:first-child{border-left:3px solid #73d8b2}
+.go-host-options--valid-invalid span:last-child,.go-host-options--eligible span:last-child{border-left:3px solid #ef8793}
+.go-host-options--objection-battle{grid-template-columns:1fr}.go-host-options--objection-battle span{border-left:3px solid #b89dff}
+.go-host-options--disposition-trainer span{border-left:3px solid #8abcf0}
+.go-host-options--certification span{border-color:#d4ba7040}
+.go-player-question,.go-live-question__card{animation:go-question-enter .22s ease-out both}
+@keyframes go-question-enter{from{opacity:.65;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.go-result--certification{border-color:#d2b66b55}
+.go-practice-review__scenario-label{display:block;margin-top:13px;color:#c5b5ff;font-size:10px;font-weight:850;letter-spacing:.14em}
+.go-result--certification .go-result-score{color:#ebd598}
+@media(max-width:620px){.go-mode-prompt{padding:18px}.go-mode-answers>div{grid-template-columns:1fr}.go-mode-answers--valid-invalid>div,.go-mode-answers--eligible>div{grid-template-columns:repeat(2,minmax(0,1fr))}.go-mode-answers button{min-height:74px;padding:15px}.go-mode-answers--valid-invalid button strong,.go-mode-answers--eligible button strong{font-size:13px;overflow-wrap:anywhere}}
+@media(max-width:620px){.go-mode-answers--valid-invalid button,.go-mode-answers--eligible button{align-items:center;flex-direction:column;justify-content:center;gap:8px;text-align:center}.go-mode-answers__decision-icon{width:30px;height:30px;font-size:20px}.go-host-options--valid-invalid,.go-host-options--eligible{grid-template-columns:repeat(2,minmax(0,1fr))}.go-host-options span{overflow-wrap:anywhere}}
+@media(prefers-reduced-motion:reduce){.go-mode-answers button,.go-game-choice[data-mode],.go-game-choice[data-mode] img{transition:none}.go-mode-answers button:hover:not(:disabled),.go-mode-answers button:focus-visible,.go-game-choice[data-mode]:hover img{transform:none}.go-player-question,.go-live-question__card{animation:none}}
 @media(prefers-reduced-motion:reduce){.go-shell *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}.go-mode-card:hover,.go-content-card:hover{transform:none}}
 .go-question-clock{margin:14px 0 24px}.go-question-clock__label{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;color:#b7c7e3;font-size:12px;font-weight:750}.go-question-clock__label strong{color:#d8e9ff;font-size:19px;font-variant-numeric:tabular-nums}.go-question-clock__track{height:8px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.09)}.go-question-clock__track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#6ae2b1,#7fa9ff);transition:width .1s linear}.go-question-clock--urgent .go-question-clock__label strong{color:#ffb2a4}.go-question-clock--urgent .go-question-clock__track span{background:linear-gradient(90deg,#ffb087,#ff707d)}
 .go-game-choice--pending{cursor:default;border-color:rgba(255,255,255,.075)}.go-game-choice--pending:hover{transform:none;border-color:rgba(255,255,255,.075)}.go-game-choice__action--pending{color:#a4b3cc;font-weight:700}.go-content-card--centered .go-card-creator{min-height:18px;margin-top:auto!important;margin-bottom:25px!important}.go-content-card--centered>a,.go-content-card--centered>.pulse-button{margin-top:0}

@@ -3,10 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
 import { resolveGoHostedDestination } from '../training/goHostedDestination.js'
-import { createGoHostedSession, listGoHostCatalog } from '../training/trainingApi.js'
+import { createGoHostedSession, getGoQuestionBankGroups, listGoHostCatalog } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canHost } from './goAccess.js'
 import { classicHostLevels } from './goClassicCatalog.js'
+import { classifyGoCatalog } from './goModeCatalog.js'
 import { roomPath } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { GoCatalogSection, GoClassicLevelCard, GoCreator, GoLanguageChoices, GoPulseModeChoices, GoSelectionBack, GoSelectionHeading } from './GoSelectionCards.jsx'
@@ -17,7 +18,7 @@ export function GoHostSelection() {
   const access = useGoAccess()
   const navigate = useNavigate()
   const destination = resolveGoHostedDestination(supabase.supabaseUrl)
-  const [catalog, setCatalog] = useState({ items: [], loading: true, error: null })
+  const [catalog, setCatalog] = useState({ items: [], groups: [], loading: true, error: null })
   const [creating, setCreating] = useState(null)
   const [selectedLanguage, setSelectedLanguage] = useState('')
   const [selectedMode, setSelectedMode] = useState('')
@@ -25,9 +26,13 @@ export function GoHostSelection() {
   useEffect(() => {
     if (access.state !== 'allowed' || !canHost(access.capabilities) || !destination.allowed) return
     let current = true
-    void listGoHostCatalog(supabase).then(({ data, error }) => {
-      if (current) setCatalog({ items: data || [], loading: false, error })
-    })
+    void (async () => {
+      const listed = await listGoHostCatalog(supabase)
+      const items = listed.data || []
+      const groups = listed.error ? { data: [], error: null }
+        : await getGoQuestionBankGroups(supabase, items.map(item => item.id))
+      if (current) setCatalog({ items, groups: groups.data || [], loading: false, error: listed.error || groups.error })
+    })()
     return () => { current = false }
   }, [access.capabilities, access.state, destination.allowed])
 
@@ -44,9 +49,9 @@ export function GoHostSelection() {
   }
 
   const classicLevels = classicHostLevels(catalog.items, selectedLanguage)
-  // Keep the existing Classic-only host gate while other modes lack their own contract.
-  const classicIds = new Set(classicLevels.map(item => item.id))
-  const otherGames = catalog.items.filter(item => item.language === selectedLanguage && !classicIds.has(item.id))
+  const { modeItems, otherGames: creatorGames } = classifyGoCatalog(
+    catalog.items.filter(item => item.language === selectedLanguage), catalog.groups, selectedLanguage)
+  const otherGames = creatorGames
   const isSpanish = selectedLanguage === 'es'
   const title = !selectedLanguage ? 'Choose language' : selectedMode === 'classic'
     ? isSpanish ? 'Elige la dificultad' : 'Choose difficulty'
@@ -58,7 +63,7 @@ export function GoHostSelection() {
     {!catalog.loading && !catalog.error && !selectedLanguage && <GoLanguageChoices onSelect={setSelectedLanguage} />}
     {selectedLanguage && !selectedMode && <GoSelectionBack onClick={() => { setSelectedLanguage(''); setSelectedMode('') }}>{isSpanish ? 'Cambiar idioma' : 'Change language'}</GoSelectionBack>}
     {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <>
-      <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'}><GoPulseModeChoices language={selectedLanguage} classicReady={classicLevels.length === 3} onClassic={() => setSelectedMode('classic')} /></GoCatalogSection>
+      <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'}><GoPulseModeChoices language={selectedLanguage} classicReady={classicLevels.length === 3} modeItems={modeItems} onClassic={() => setSelectedMode('classic')} onMode={(_, item) => void createRoom(item.id)} host creating={creating} /></GoCatalogSection>
       {!!otherGames.length && <GoCatalogSection title={isSpanish ? 'De nuestros creadores' : 'From our creators'} description={isSpanish ? 'Juegos creados y publicados por personas del equipo.' : 'Games created and published by people on the team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
         <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART.classic} alt="" /></span></div>
         <h2>{item.title}</h2><p>{item.description || 'Ready for your team.'}</p>

@@ -226,6 +226,17 @@ export function getGoHostedSession(client, sessionId) {
   return hostedRpc(client, 'get_go_hosted_session', { requested_session_id: sessionId })
 }
 
+export function getGoQuestionBankGroups(client, contentIds) {
+  if (!validUuidList(contentIds) || contentIds.length > 100) return Promise.resolve(invalidRequest())
+  if (!contentIds.length) return Promise.resolve({ data: [], error: null })
+  return rpc(client, 'get_go_question_bank_groups', { requested_content_ids: contentIds })
+}
+
+export function getGoCertificationResult(client, attemptId) {
+  if (!validUuid(attemptId)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'get_go_certification_result', { requested_attempt_id: attemptId })
+}
+
 export function getGoHostedTiming(client, sessionId) {
   if (!validUuid(sessionId)) return Promise.resolve(invalidRequest())
   return hostedRpc(client, 'get_go_hosted_timing', { requested_session_id: sessionId })

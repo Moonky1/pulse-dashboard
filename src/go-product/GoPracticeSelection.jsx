@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { resolveGoPracticeDestination } from '../training/goPracticeDestination.js'
-import { listGoPracticeCatalog } from '../training/trainingApi.js'
+import { getGoQuestionBankGroups, listGoPracticeCatalog } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canPractice } from './goAccess.js'
 import { classicPracticeLevels } from './goClassicCatalog.js'
+import { classifyGoCatalog } from './goModeCatalog.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { GoCatalogSection, GoClassicLevelCard, GoCreator, GoLanguageChoices, GoPulseModeChoices, GoSelectionBack, GoSelectionHeading } from './GoSelectionCards.jsx'
 import { normalizeCatalog } from './goPracticeModel.js'
@@ -13,20 +14,25 @@ import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
 
 export function GoPracticeSelection() {
+  const navigate = useNavigate()
   const access = useGoAccess()
   const destination = resolveGoPracticeDestination(supabase.supabaseUrl)
   const [selectedLanguage, setSelectedLanguage] = useState('')
   const [selectedMode, setSelectedMode] = useState('')
-  const [catalog, setCatalog] = useState({ items: [], loading: false, error: null })
+  const [catalog, setCatalog] = useState({ items: [], groups: [], loading: false, error: null })
 
   useEffect(() => {
     if (access.state !== 'allowed' || !canPractice(access.capabilities) || !destination.allowed || !selectedLanguage) return
     let current = true
     const timer = setTimeout(() => {
-      setCatalog({ items: [], loading: true, error: null })
-      void listGoPracticeCatalog(supabase, { language: selectedLanguage }).then(({ data, error }) => {
-        if (current) setCatalog({ items: normalizeCatalog(data || []), loading: false, error })
-      })
+      setCatalog({ items: [], groups: [], loading: true, error: null })
+      void (async () => {
+        const listed = await listGoPracticeCatalog(supabase, { language: selectedLanguage })
+        const items = normalizeCatalog(listed.data || [])
+        const groups = listed.error ? { data: [], error: null }
+          : await getGoQuestionBankGroups(supabase, items.map(item => item.id))
+        if (current) setCatalog({ items, groups: groups.data || [], loading: false, error: listed.error || groups.error })
+      })()
     }, 0)
     return () => { current = false; clearTimeout(timer) }
   }, [access.capabilities, access.state, destination.allowed, selectedLanguage])
@@ -37,8 +43,7 @@ export function GoPracticeSelection() {
 
   const isSpanish = selectedLanguage === 'es'
   const classicLevels = classicPracticeLevels(catalog.items, selectedLanguage)
-  const classicIds = new Set(classicLevels.map(item => item.id))
-  const otherGames = catalog.items.filter(item => !classicIds.has(item.id))
+  const { modeItems, otherGames } = classifyGoCatalog(catalog.items, catalog.groups, selectedLanguage)
   const title = !selectedLanguage ? 'Choose language' : selectedMode === 'classic'
     ? isSpanish ? 'Elige la dificultad' : 'Choose difficulty'
     : isSpanish ? 'Elige un juego' : 'Choose a game'
@@ -49,7 +54,7 @@ export function GoPracticeSelection() {
     {selectedLanguage && !selectedMode && <GoSelectionBack onClick={() => { setSelectedLanguage(''); setSelectedMode('') }}>{isSpanish ? 'Cambiar idioma' : 'Change language'}</GoSelectionBack>}
     {selectedLanguage && <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding challenges…' : catalog.error?.message || ''}</div>}
     {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <>
-      <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'}><GoPulseModeChoices language={selectedLanguage} classicReady={classicLevels.length === 3} onClassic={() => setSelectedMode('classic')} /></GoCatalogSection>
+      <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'}><GoPulseModeChoices language={selectedLanguage} classicReady={classicLevels.length === 3} modeItems={modeItems} onClassic={() => setSelectedMode('classic')} onMode={(_, item) => navigate(`/go/practice/${item.id}`)} /></GoCatalogSection>
       {!!otherGames.length && <GoCatalogSection title={isSpanish ? 'De nuestros creadores' : 'From our creators'} description={isSpanish ? 'Juegos creados y publicados por personas del equipo.' : 'Games created and published by people on the team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
         <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART.classic} alt="" /></span></div>
         <h2>{item.title}</h2><p>{item.description || 'A quick way to sharpen what you know.'}</p>
