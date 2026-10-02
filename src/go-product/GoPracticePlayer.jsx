@@ -163,7 +163,7 @@ export function GoPracticePlayer() {
     <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} language={session.content.language} />
     <article className={`go-player-question go-player-question--${session.mode}`} key={question.id}><span className="go-question-number" aria-hidden="true">{String(questionIndex + 1).padStart(2, '0')}</span><GoModePrompt mode={session.mode} question={question} language={session.content.language} />
       {session.mode === 'classic' ? <AnswerControl question={question} answer={answer} onChange={setAnswer} disabled={expired || submitting} language={session.content.language} />
-        : <GoModeAnswers mode={session.mode} question={question} answer={answer} onChange={setAnswer} disabled={expired || submitting} language={session.content.language} />}</article>
+        : <GoModeAnswers mode={session.mode} question={question} answer={answer} onChange={setAnswer} disabled={expired || submitting} language={session.content.language} optionSeed={session.attempt.attempt_id} />}</article>
     <footer><span aria-live="polite">{expired ? (es ? 'Se acabó el tiempo. Seguimos…' : 'Time is up. Moving on…') : ready ? (es ? 'Respuesta lista' : 'Answer ready') : (es ? 'Elige una respuesta para continuar' : 'Choose an answer to continue')}</span><Button disabled={!ready || expired || submitting} onClick={() => void submitCurrent(answer)}>{submitting ? (es ? 'Guardando…' : 'Saving…') : last ? (es ? 'Ver resultado' : 'See result') : (es ? 'Siguiente' : 'Next')}</Button></footer>
   </section></GoShell>
 }

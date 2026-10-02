@@ -52,7 +52,7 @@ export function GoPracticeSelection() {
     <GoSelectionHeading eyebrow="Practice" title={title} description={!selectedLanguage ? 'First, choose the language for your game.' : null} art={GO_ART.goal1} />
     {!selectedLanguage && <GoLanguageChoices onSelect={setSelectedLanguage} />}
     {selectedLanguage && !selectedMode && <GoSelectionBack onClick={() => { setSelectedLanguage(''); setSelectedMode('') }}>{isSpanish ? 'Cambiar idioma' : 'Change language'}</GoSelectionBack>}
-    {selectedLanguage && <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding challenges…' : catalog.error?.message || ''}</div>}
+    {selectedLanguage && <div className="go-live-status" aria-live="polite">{catalog.loading ? isSpanish ? 'Buscando juegos…' : 'Finding challenges…' : catalog.error?.message || ''}</div>}
     {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <>
       <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'}><GoPulseModeChoices language={selectedLanguage} classicReady={classicLevels.length === 3} modeItems={modeItems} onClassic={() => setSelectedMode('classic')} onMode={(_, item) => navigate(`/go/practice/${item.id}`)} /></GoCatalogSection>
       {!!otherGames.length && <GoCatalogSection title={isSpanish ? 'De nuestros creadores' : 'From our creators'} description={isSpanish ? 'Juegos creados y publicados por personas del equipo.' : 'Games created and published by people on the team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>

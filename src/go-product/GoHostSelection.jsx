@@ -58,8 +58,8 @@ export function GoHostSelection() {
     : isSpanish ? 'Elige un juego' : 'Choose a game'
 
   return <GoShell>
-    <GoSelectionHeading eyebrow="Host a game" title={title} description={!selectedLanguage ? 'First, choose the language for your game.' : null} art={GO_ART.certification} />
-    <div className="go-live-status" aria-live="polite">{catalog.loading ? 'Finding host-ready games…' : catalog.error?.message || ''}</div>
+    <GoSelectionHeading eyebrow={isSpanish ? 'Organiza una partida' : 'Host a game'} title={title} description={!selectedLanguage ? 'First, choose the language for your game.' : null} art={GO_ART.certification} />
+    <div className="go-live-status" aria-live="polite">{catalog.loading ? isSpanish ? 'Buscando juegos para organizar…' : 'Finding host-ready games…' : catalog.error?.message || ''}</div>
     {!catalog.loading && !catalog.error && !selectedLanguage && <GoLanguageChoices onSelect={setSelectedLanguage} />}
     {selectedLanguage && !selectedMode && <GoSelectionBack onClick={() => { setSelectedLanguage(''); setSelectedMode('') }}>{isSpanish ? 'Cambiar idioma' : 'Change language'}</GoSelectionBack>}
     {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <>

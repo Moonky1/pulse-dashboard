@@ -12,6 +12,7 @@ import { GO_ART, resolveGoArt } from './goVisualAssets.js'
 import { HostedAnswerControl } from './HostedAnswerControl.jsx'
 import { modeForContent } from './goModeCatalog.js'
 import { GoModeAnswers, GoModePrompt } from './GoModeQuestion.jsx'
+import { orderedModeOptions } from './goOptionOrder.js'
 import { goModeResultLine, goResultHeading } from './goModeCopy.js'
 import { GoQuestionCountdown } from './GoQuestionCountdown.jsx'
 import { useHostedRoom } from './useHostedRoom.js'
@@ -28,6 +29,9 @@ function RoomHeader({ room }) {
 
 function Lobby({ room, action, busy, error }) {
   const isHost = room.viewer_role === 'host'
+  const es = room.content.language === 'es'
+  const joinAt = globalThis.location?.hostname?.endsWith('.vercel.app')
+    ? `${globalThis.location.host}/go` : 'pulse-kk.com/go'
   const music = useRef(null)
   const [musicOn, setMusicOn] = useState(false)
   useEffect(() => () => { music.current?.pause() }, [])
@@ -48,16 +52,16 @@ function Lobby({ room, action, busy, error }) {
     }
   }
   return <>
-    <div className="go-lobby-banner"><span>Join at <strong>pulse-kk.com/go</strong> · Code <strong>{room.room_code}</strong></span><span><GoFlag language={room.content.language} /> {languagePresentation(room.content.language).label} · {room.content.title}</span></div>
+    <div className="go-lobby-banner"><span>{es ? 'Únete en' : 'Join at'} <strong>{joinAt}</strong> · {es ? 'Código' : 'Code'} <strong>{room.room_code}</strong></span><span><GoFlag language={room.content.language} /> {languagePresentation(room.content.language).label} · {room.content.title}</span></div>
     <section className="go-lobby-stage">
-      <h1><span aria-hidden="true">⌛</span> Waiting for players...</h1>
-      <p>{room.participant_count ? 'Ready to begin when everyone has joined.' : 'No players yet — share the code!'}</p>
-      <strong className="go-lobby-count">{room.participant_count} {room.participant_count === 1 ? 'player' : 'players'} ready</strong>
-      {!!room.participants.length && <div className="go-player-roster" aria-live="polite">{room.participants.map(player => <div key={player.seat}><span className={`go-player-marker go-player-marker--${(Number(player.seat) || 0) % 4}`}>{player.name.slice(0, 1).toUpperCase()}</span><strong>{player.name}</strong><small>Ready ✓</small></div>)}</div>}
-      {isHost && <><audio ref={music} src={lobbyMusic} preload="none" /><button type="button" className="go-lobby-music" aria-pressed={musicOn} onClick={() => void toggleMusic()}>♫ Lobby Music {musicOn ? 'On' : 'Off'}</button></>}
-      {!isHost && <p>The host will start the first question.</p>}
+      <h1><span aria-hidden="true">⌛</span> {es ? 'Esperando jugadores…' : 'Waiting for players...'}</h1>
+      <p>{room.participant_count ? es ? 'Listos para comenzar cuando todos hayan entrado.' : 'Ready to begin when everyone has joined.' : es ? 'Aún no hay jugadores. Comparte el código.' : 'No players yet — share the code!'}</p>
+      <strong className="go-lobby-count">{room.participant_count} {es ? room.participant_count === 1 ? 'jugador listo' : 'jugadores listos' : room.participant_count === 1 ? 'player ready' : 'players ready'}</strong>
+      {!!room.participants.length && <div className="go-player-roster" aria-live="polite">{room.participants.map(player => <div key={player.seat}><span className={`go-player-marker go-player-marker--${(Number(player.seat) || 0) % 4}`}>{player.name.slice(0, 1).toUpperCase()}</span><strong>{player.name}</strong><small>{es ? 'Listo' : 'Ready'} ✓</small></div>)}</div>}
+      {isHost && <><audio ref={music} src={lobbyMusic} preload="none" /><button type="button" className="go-lobby-music" aria-pressed={musicOn} onClick={() => void toggleMusic()}>♫ {es ? 'Música de sala' : 'Lobby Music'} {musicOn ? es ? 'Activada' : 'On' : es ? 'Desactivada' : 'Off'}</button></>}
+      {!isHost && <p>{es ? 'El anfitrión iniciará la primera pregunta.' : 'The host will start the first question.'}</p>}
       {error && <p className="go-inline-error" role="alert">{error}</p>}
-      {isHost && <div className="go-room-actions"><Button loading={busy === 'start'} disabled={!room.participant_count || !!busy} onClick={() => action('start')}>Start game</Button><Button variant="ghost" loading={busy === 'cancel'} disabled={!!busy} onClick={() => action('cancel')}>Cancel room</Button></div>}
+      {isHost && <div className="go-room-actions"><Button loading={busy === 'start'} disabled={!room.participant_count || !!busy} onClick={() => action('start')}>{es ? 'Iniciar juego' : 'Start game'}</Button><Button variant="ghost" loading={busy === 'cancel'} disabled={!!busy} onClick={() => action('cancel')}>{es ? 'Cancelar sala' : 'Cancel room'}</Button></div>}
     </section>
   </>
 }
@@ -72,7 +76,7 @@ function HostQuestion({ room, mode, timing, action, busy, error }) {
     <section className="go-live-question go-live-question--host">
       <div className="go-question-counter"><span>{es ? 'Pregunta' : 'Question'} {question.position} {es ? 'de' : 'of'} {room.question_count}</span><strong>{room.answered_count}/{room.participant_count} {es ? 'respondieron' : 'answered'}</strong></div>
       <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} language={room.content.language} />
-      <article className={`go-live-question__card go-live-question__card--${mode}`} key={question.id}><GoModePrompt mode={mode} question={question} language={room.content.language} heading="h2" />{question.question_type !== 'text' && <div className={`go-host-options go-host-options--${mode}`}>{question.answer_options.length ? question.answer_options.map((option, index) => <span key={index}>{mode === 'classic' ? `${String.fromCharCode(65 + index)}. ` : ''}{(mode === 'valid-invalid' || mode === 'eligible') && <b aria-hidden="true">{index === 0 ? '✓ ' : '× '}</b>}{option}</span>) : <><span>True</span><span>False</span></>}</div>}</article>
+      <article className={`go-live-question__card go-live-question__card--${mode}`} key={question.id}><GoModePrompt mode={mode} question={question} language={room.content.language} heading="h2" />{question.question_type !== 'text' && <div className={`go-host-options go-host-options--${mode}`}>{question.answer_options.length ? orderedModeOptions(question, mode, room.session_id).map(({ option, originalIndex }, displayIndex) => <span key={originalIndex}>{mode === 'classic' ? `${String.fromCharCode(65 + displayIndex)}. ` : ''}{(mode === 'valid-invalid' || mode === 'eligible') && <b aria-hidden="true">{originalIndex === 0 ? '✓ ' : '× '}</b>}{option}</span>) : <><span>{es ? 'Verdadero' : 'True'}</span><span>{es ? 'Falso' : 'False'}</span></>}</div>}</article>
       <div className="go-answer-meter" aria-label={`${room.answered_count} of ${room.participant_count} answered`}><span style={{ width: `${room.participant_count ? room.answered_count / room.participant_count * 100 : 0}%` }} /></div>
       {error && <p className="go-inline-error" role="alert">{error}</p>}
       <div className="go-room-actions"><Button loading={busy === 'advance'} disabled={!!busy || (!expired && !allAnswered)} onClick={() => action('advance')}>{question.position === room.question_count ? es ? 'Terminar juego' : 'Finish game' : es ? 'Siguiente pregunta' : 'Next question'}</Button><Button variant="ghost" loading={busy === 'cancel'} disabled={!!busy} onClick={() => action('cancel')}>{es ? 'Cancelar juego' : 'Cancel game'}</Button></div>
@@ -92,7 +96,7 @@ function PlayerQuestion({ room, mode, timing, submit, busy, error }) {
       <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} language={room.content.language} />
       <article className={`go-live-question__card go-live-question__card--${mode}`}><GoModePrompt mode={mode} question={question} language={room.content.language} heading="h2" />
         {mode === 'classic' ? <HostedAnswerControl question={question} answer={answer} onChange={setAnswer} disabled={room.my_answered || busy || expired || !timing} language={room.content.language} />
-          : <GoModeAnswers mode={mode} question={question} answer={answer} onChange={setAnswer} disabled={room.my_answered || busy || expired || !timing} language={room.content.language} />}</article>
+          : <GoModeAnswers mode={mode} question={question} answer={answer} onChange={setAnswer} disabled={room.my_answered || busy || expired || !timing} language={room.content.language} optionSeed={room.session_id} />}</article>
       {error && <p className="go-inline-error" role="alert">{error}</p>}
       <footer><span>{room.my_answered ? es ? 'Esperando al anfitrión…' : 'Waiting for the host…' : expired ? es ? 'Tiempo agotado. Esperando al anfitrión…' : 'Time is up. Waiting for the host…' : es ? 'Tu respuesta será definitiva al enviarla' : 'Your answer is final once sent'}</span><Button loading={busy} disabled={room.my_answered || busy || expired || !timing || !hostedAnswerReady(question, answer)} onClick={() => void submit(answer)}>{es ? 'Enviar respuesta' : 'Submit answer'}</Button></footer>
     </section>

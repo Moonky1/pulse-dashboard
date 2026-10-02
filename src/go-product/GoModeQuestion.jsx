@@ -1,3 +1,5 @@
+import { orderedModeOptions } from './goOptionOrder.js'
+
 const MODE_COPY = {
   'valid-invalid': { en: ['TRANSFER DECISION', 'Choose your decision'], es: ['DECISIÓN DE TRANSFERENCIA', 'Elige tu decisión'] },
   'disposition-trainer': { en: ['CALL SCENARIO', 'Choose the disposition'], es: ['SITUACIÓN DE LLAMADA', 'Elige la disposición'] },
@@ -15,16 +17,16 @@ export function GoModePrompt({ mode, question, language = 'en', heading = 'h1' }
   </div>
 }
 
-export function GoModeAnswers({ mode, question, answer, onChange, disabled = false, language = 'en' }) {
+export function GoModeAnswers({ mode, question, answer, onChange, disabled = false, language = 'en', optionSeed = '' }) {
   const copy = MODE_COPY[mode]?.[language] || MODE_COPY[mode]?.en
-  const options = question.answer_options || []
+  const options = orderedModeOptions(question, mode, optionSeed)
   if (!copy || question.question_type !== 'multiple_choice') return null
   return <fieldset className={`go-mode-answers go-mode-answers--${mode}`} disabled={disabled}>
     <legend>{copy[1]}</legend>
-    <div>{options.map((option, index) => <button type="button" key={index} aria-pressed={answer === index}
-      className={answer === index ? 'is-selected' : ''} onClick={() => onChange(index)}>
-      {(mode === 'valid-invalid' || mode === 'eligible') && <span className="go-mode-answers__decision-icon" aria-hidden="true">{index === 0 ? '✓' : '×'}</span>}
-      {mode === 'disposition-trainer' && <span className="go-mode-answers__index">{String(index + 1).padStart(2, '0')}</span>}
+    <div>{options.map(({ option, originalIndex }, displayIndex) => <button type="button" key={originalIndex} aria-pressed={answer === originalIndex}
+      className={answer === originalIndex ? 'is-selected' : ''} onClick={() => onChange(originalIndex)}>
+      {(mode === 'valid-invalid' || mode === 'eligible') && <span className="go-mode-answers__decision-icon" aria-hidden="true">{originalIndex === 0 ? '✓' : '×'}</span>}
+      {mode === 'disposition-trainer' && <span className="go-mode-answers__index">{String(displayIndex + 1).padStart(2, '0')}</span>}
       {mode === 'objection-battle' && <span className="go-mode-answers__speaker">{language === 'es' ? 'AGENTE' : 'AGENT'}</span>}
       <strong>{option}</strong>
     </button>)}</div>
