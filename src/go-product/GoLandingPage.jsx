@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
 import { joinGoHostedSession } from '../training/trainingApi.js'
@@ -14,7 +13,8 @@ import { useGoAccess } from './useGoAccess.js'
 export function GoLandingPage() {
   const access = useGoAccess()
   const navigate = useNavigate()
-  const [roomCode, setRoomCode] = useState('')
+  const [searchParams] = useSearchParams()
+  const [roomCode, setRoomCode] = useState(() => normalizeRoomCode(searchParams.get('code') || ''))
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState(null)
   if (access.state !== 'allowed') return <GoAccessState access={access} />

@@ -77,6 +77,15 @@ test('Classic hosting uses real flags and distinct level art without repeated ca
   assert.match(room, /Waiting for players/)
 })
 
+test('Hosted lobby shares a compact invitation with a prefilled GO join code', async () => {
+  const room = await read('GoHostedRoomPage.jsx')
+  const landing = await read('GoLandingPage.jsx')
+  assert.doesNotMatch(room, /Join at|joinAt/)
+  assert.match(room, /Copy invite link/)
+  assert.match(room, /\/go\?code=/)
+  assert.match(landing, /normalizeRoomCode\(searchParams\.get\('code'\)/)
+})
+
 test('GO landing stays compact, action-led, and reuses legacy visual personality', async () => {
   const landing = await read('GoLandingPage.jsx')
   const practice = await read('GoPracticeSelection.jsx')

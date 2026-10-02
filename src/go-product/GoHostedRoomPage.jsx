@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import lobbyMusic from '../../public/audio/lobby-music.mp3'
+import lobbyMusic from '../../public/audio/wii-party-main-menu.mp3'
 import { Button } from '../components/ui/Button.jsx'
 import { advanceGoHostedSession, cancelGoHostedSession, getGoHostedResults, getGoQuestionBankGroups, startGoHostedSession, submitGoHostedAnswer } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
@@ -30,11 +30,19 @@ function RoomHeader({ room }) {
 function Lobby({ room, action, busy, error }) {
   const isHost = room.viewer_role === 'host'
   const es = room.content.language === 'es'
-  const joinAt = globalThis.location?.hostname?.endsWith('.vercel.app')
-    ? `${globalThis.location.host}/go` : 'pulse-kk.com/go'
   const music = useRef(null)
   const [musicOn, setMusicOn] = useState(false)
+  const [inviteCopied, setInviteCopied] = useState(false)
   useEffect(() => () => { music.current?.pause() }, [])
+
+  async function copyInvite() {
+    try {
+      await globalThis.navigator.clipboard.writeText(`${globalThis.location.origin}/go?code=${encodeURIComponent(room.room_code)}`)
+      setInviteCopied(true)
+    } catch {
+      setInviteCopied(false)
+    }
+  }
 
   async function toggleMusic() {
     if (!music.current) return
@@ -52,7 +60,7 @@ function Lobby({ room, action, busy, error }) {
     }
   }
   return <>
-    <div className="go-lobby-banner"><span>{es ? 'Únete en' : 'Join at'} <strong>{joinAt}</strong> · {es ? 'Código' : 'Code'} <strong>{room.room_code}</strong></span><span><GoFlag language={room.content.language} /> {languagePresentation(room.content.language).label} · {room.content.title}</span></div>
+    <div className="go-lobby-banner"><div className="go-lobby-invite"><span>{es ? 'Código de sala' : 'Room code'}</span><strong>{room.room_code}</strong><button type="button" onClick={() => void copyInvite()}>{inviteCopied ? es ? 'Enlace copiado ✓' : 'Link copied ✓' : es ? 'Copiar invitación' : 'Copy invite link'}</button></div><span><GoFlag language={room.content.language} /> {languagePresentation(room.content.language).label} · {room.content.title}</span></div>
     <section className="go-lobby-stage">
       <h1><span aria-hidden="true">⌛</span> {es ? 'Esperando jugadores…' : 'Waiting for players...'}</h1>
       <p>{room.participant_count ? es ? 'Listos para comenzar cuando todos hayan entrado.' : 'Ready to begin when everyone has joined.' : es ? 'Aún no hay jugadores. Comparte el código.' : 'No players yet — share the code!'}</p>
