@@ -1,0 +1,91 @@
+.pulse-launcher {
+  min-height: 100dvh;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  background:
+    radial-gradient(circle at 9% 6%, rgba(69, 91, 158, .12), transparent 34rem),
+    radial-gradient(circle at 90% 82%, rgba(87, 62, 147, .08), transparent 34rem),
+    var(--pulse-canvas);
+  color: var(--pulse-text-primary);
+}
+
+.pulse-launcher__inner { width: min(100%, 76rem); margin: 0 auto; }
+.pulse-launcher__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.pulse-launcher-account { position: relative; z-index: 4; }
+.pulse-launcher-account summary {
+  display: flex; align-items: center; gap: .7rem; min-height: 3rem;
+  padding: .35rem .55rem .35rem .35rem; border: 1px solid rgba(179, 197, 243, .15);
+  border-radius: 999px; background: rgba(17, 25, 42, .72); cursor: pointer;
+  font-size: .86rem; font-weight: 700; list-style: none;
+}
+.pulse-launcher-account summary::-webkit-details-marker { display: none; }
+.pulse-launcher-account summary:hover, .pulse-launcher-account summary:focus-visible { border-color: rgba(190, 209, 255, .42); }
+.pulse-launcher-account summary .admin-staff-avatar { width: 2.25rem; height: 2.25rem; }
+.pulse-launcher-account__chevron { color: var(--pulse-text-muted); font-size: 1.2rem; transition: transform .2s ease; }
+.pulse-launcher-account[open] .pulse-launcher-account__chevron { transform: rotate(180deg); }
+.pulse-launcher-account__menu {
+  position: absolute; top: calc(100% + .75rem); right: 0; width: min(19rem, calc(100vw - 2.5rem));
+  padding: 1.15rem; border: 1px solid rgba(183, 201, 247, .18); border-radius: 1.1rem;
+  background: #111827; box-shadow: 0 24px 64px rgba(0, 0, 0, .45);
+}
+.pulse-launcher-account__label { margin: 0 0 1rem; color: #aeb9cf; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.pulse-launcher-account__identity { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; overflow-wrap: anywhere; }
+.pulse-launcher-account__identity .admin-staff-avatar { flex: none; }
+.pulse-launcher-account__menu .staff-avatar-controls { padding: .8rem 0; border-top: 1px solid rgba(255, 255, 255, .08); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.pulse-launcher-account__menu > .pulse-button { width: 100%; margin-top: .7rem; }
+
+.pulse-launcher__welcome { margin: clamp(3.5rem, 9vh, 7rem) 0 clamp(2rem, 5vw, 3.5rem); }
+.pulse-launcher__eyebrow { margin: 0 0 1rem; color: #b5c7fa; font-size: .68rem; font-weight: 800; letter-spacing: .19em; }
+.pulse-launcher__eyebrow span { padding: 0 .3rem; color: #677ba9; }
+.pulse-launcher__welcome h1 { margin: 0; font-size: clamp(2.5rem, 5.1vw, 4.8rem); line-height: 1.05; letter-spacing: -.065em; }
+.pulse-launcher__welcome > p:last-child { margin: 1rem 0 0; color: #aebbd1; font-size: clamp(.98rem, 1.4vw, 1.12rem); }
+
+.pulse-launcher__apps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.pulse-launcher-app {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  min-width: 0; min-height: 16.5rem; overflow: hidden; padding: clamp(1.35rem, 2vw, 1.85rem);
+  border: 1px solid rgba(168, 187, 232, .13); border-radius: 1.4rem;
+  background: linear-gradient(153deg, rgba(20, 30, 50, .94), rgba(8, 13, 23, .98));
+  color: #f7f9ff; text-decoration: none;
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+.pulse-launcher-app:is(a):hover, .pulse-launcher-app:is(a):focus-visible {
+  transform: translateY(-3px); border-color: rgba(177, 204, 255, .4);
+  box-shadow: 0 24px 44px rgba(0, 0, 0, .27), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+.pulse-launcher-app::after { position: absolute; inset: 0 0 auto auto; width: 12rem; height: 12rem; pointer-events: none; background: radial-gradient(circle, rgba(91, 128, 220, .1), transparent 68%); content: ''; }
+.pulse-launcher-app--go { grid-column: span 2; background: radial-gradient(circle at 83% 14%, rgba(66, 156, 200, .17), transparent 37%), linear-gradient(145deg, #132337, #09121f 78%); }
+.pulse-launcher-app--dashboard { background: radial-gradient(circle at 84% 15%, rgba(154, 139, 249, .12), transparent 43%), linear-gradient(145deg, #1b1c32, #0b1020); }
+.pulse-launcher-app--studio { background: radial-gradient(circle at 86% 12%, rgba(197, 124, 91, .11), transparent 43%), linear-gradient(145deg, #211a29, #100e19); }
+.pulse-launcher-app--academy { background: radial-gradient(circle at 86% 12%, rgba(99, 153, 212, .11), transparent 43%), linear-gradient(145deg, #152133, #0a111d); }
+.pulse-launcher-app--admin { background: radial-gradient(circle at 86% 12%, rgba(92, 173, 145, .09), transparent 43%), linear-gradient(145deg, #162124, #0a1117); }
+.pulse-launcher-app__top { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.pulse-launcher-app__icon { display: grid; place-items: center; width: 4rem; height: 4rem; border: 1px solid rgba(185, 209, 255, .14); border-radius: 1rem; background: rgba(119, 151, 216, .07); color: #c8daff; }
+.pulse-launcher-app__icon img { width: 3.1rem; height: 3.1rem; object-fit: contain; image-rendering: pixelated; }
+.pulse-launcher-app__icon svg { width: 2.4rem; height: 2.4rem; }
+.pulse-launcher-app__arrow { color: #bfcdea; font-size: 1.3rem; }
+.pulse-launcher-app__soon { padding: .45rem .6rem; border: 1px solid rgba(195, 177, 255, .2); border-radius: 999px; color: #d4cafa; font-size: .6rem; font-weight: 800; letter-spacing: .08em; white-space: nowrap; }
+.pulse-launcher-app__copy { position: relative; z-index: 1; }
+.pulse-launcher-app__eyebrow { color: #aebbd7; font-size: .62rem; font-weight: 800; letter-spacing: .13em; }
+.pulse-launcher-app h2 { margin: .5rem 0 .45rem; font-size: clamp(1.55rem, 2.15vw, 2rem); line-height: 1.15; letter-spacing: -.045em; }
+.pulse-launcher-app p { max-width: 27rem; margin: 0; color: #aebbd0; font-size: .91rem; line-height: 1.5; }
+.pulse-launcher-app--go h2 { font-size: clamp(2rem, 3vw, 2.75rem); }
+.pulse-launcher-app--go .pulse-launcher-app__icon { width: 4.6rem; height: 4.6rem; }
+.pulse-launcher-app--go .pulse-launcher-app__icon img { width: 3.6rem; height: 3.6rem; }
+
+@media (max-width: 900px) {
+  .pulse-launcher__apps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pulse-launcher-app--go { grid-column: span 2; }
+}
+@media (max-width: 580px) {
+  .pulse-launcher { padding: 1.1rem; }
+  .pulse-launcher-account summary { width: 3rem; justify-content: center; padding: .3rem; }
+  .pulse-launcher-account summary > span:not(.admin-staff-avatar) { display: none; }
+  .pulse-launcher__welcome { margin: 4rem 0 2.2rem; }
+  .pulse-launcher__apps { grid-template-columns: 1fr; gap: .8rem; }
+  .pulse-launcher-app, .pulse-launcher-app--go { grid-column: auto; min-height: 14.5rem; }
+  .pulse-launcher-account__menu { right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse-launcher-app, .pulse-launcher-account__chevron { transition: none; }
+  .pulse-launcher-app:is(a):hover { transform: none; }
+}

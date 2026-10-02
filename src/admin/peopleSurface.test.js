@@ -42,6 +42,7 @@ test('staff profile keeps human sections and displays only the canonical Joined 
   assert.match(detail, /Joined Pulse/)
   assert.match(detail, /JoinedPulseAdministration/)
   assert.match(assignments, /No campaigns assigned/)
-  assert.match(workspace, /Browse the directory and Staff Tree/)
+  assert.match(workspace, /title="Administration"/)
+  assert.doesNotMatch(workspace, /auth-workspace-people-link|Browse the directory and Staff Tree/)
   assert.doesNotMatch(`${detail}\n${avatar}`, /avatarUrl|photoUrl|Registered|createdAt/)
 })

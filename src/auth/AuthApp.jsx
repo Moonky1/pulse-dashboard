@@ -7,6 +7,8 @@ import { useAuth } from './AuthProvider.jsx'
 const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').then((module) => ({ default: module.AccountStatePage })))
 const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => ({ default: module.AdminArea })))
 const AgentSignInPage = lazy(() => import('./screens/AgentSignInPage.jsx').then((module) => ({ default: module.AgentSignInPage })))
+const AcademyPage = lazy(() => import('../go/GoLearn.jsx'))
+const AcademyDetailPage = lazy(() => import('../go/GoLearnDetail.jsx'))
 const AuthCallbackPage = lazy(() => import('./screens/AuthCallbackPage.jsx').then((module) => ({ default: module.AuthCallbackPage })))
 const ForgotPasswordPage = lazy(() => import('./screens/ForgotPasswordPage.jsx').then((module) => ({ default: module.ForgotPasswordPage })))
 const GoLandingPage = lazy(() => import('../go-product/GoLandingPage.jsx').then((module) => ({ default: module.GoLandingPage })))
@@ -56,6 +58,8 @@ export function AuthApp() {
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/pending-approval" element={<RouteGate allow={[AUTH_STATES.PENDING]}><PendingApprovalPage /></RouteGate>} />
         <Route path="/workspace" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><WorkspacePage /></RouteGate>} />
+        <Route path="/academy" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AcademyPage /></RouteGate>} />
+        <Route path="/academy/:id" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AcademyDetailPage /></RouteGate>} />
         <Route path="/go" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoLandingPage /></RouteGate>} />
         <Route path="/go/host" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostSelection /></RouteGate>} />
         <Route path="/go/host/:sessionId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostedRoomPage expectedViewer="host" /></RouteGate>} />

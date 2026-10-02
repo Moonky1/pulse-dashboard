@@ -220,8 +220,7 @@ function DetailShell({ lang, setLang, section, children, toc }) {
   const copy = ACADEMY_COPY[lang]
 
   const goHome = () => {
-    const loggedIn = Boolean(localStorage.getItem('pulse_user'))
-    navigate(loggedIn ? '/dashboard' : '/')
+    navigate('/workspace')
   }
 
   const changeLang = (nextLang) => {
