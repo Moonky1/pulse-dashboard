@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ProductHeader } from '../components/ProductHeader.jsx'
 import PulseBrandTitle from '../components/PulseBrandTitle'
-import PulseGoBackground from './PulseGoBackground'
 import {
   scripts,
   objections,
@@ -204,10 +204,6 @@ export default function GoLearn() {
 
   const copy = ACADEMY_COPY[lang]
 
-  const goHome = () => {
-    navigate('/workspace')
-  }
-
   const changeLang = (nextLang) => {
     setLang(nextLang)
     saveAcademyLang(nextLang)
@@ -232,32 +228,9 @@ export default function GoLearn() {
     .filter(Boolean)
 
   return (
-    <div className="ac-page">
-      <PulseGoBackground />
-
-      <header className="ac-topnav">
-<nav className="ac-nav-pill">
-  <button onClick={goHome}>
-    {copy.navHome}
-  </button>
-
-  <button onClick={() => navigate('/go')}>
-    {copy.navGo}
-  </button>
-
-  <button onClick={() => navigate('/studio')}>
-    Studio
-  </button>
-
-  <button
-    className="active"
-    onClick={() => navigate('/academy')}
-  >
-    {copy.navAcademy}
-  </button>
-</nav>
-
-        <div className="ac-lang-switch" aria-label="Academy language">
+    <div className="ac-page pulse-product-surface">
+      <ProductHeader />
+      <div className="ac-language-bar"><div className="ac-lang-switch" aria-label="Academy language">
           {LANG_OPTIONS.map((option) => (
             <button
               key={option.id}
@@ -268,8 +241,7 @@ export default function GoLearn() {
               {option.short}
             </button>
           ))}
-        </div>
-      </header>
+      </div></div>
 
       <main className="ac-home">
 <section className="ac-hero">

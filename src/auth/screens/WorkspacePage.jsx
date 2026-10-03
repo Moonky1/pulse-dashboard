@@ -2,16 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAdminAccess } from '../../admin/hooks/useAdminAccess.js'
-import { AvatarControls } from '../../components/AvatarControls.jsx'
-import { StaffAvatar } from '../../components/StaffAvatar.jsx'
-import { Button } from '../../components/ui/Button.jsx'
+import { ProductHeader } from '../../components/ProductHeader.jsx'
 import { canHost, canPractice } from '../../go-product/goAccess.js'
 import { GO_ART } from '../../go-product/goVisualAssets.js'
 import { useGoAccess } from '../../go-product/useGoAccess.js'
 import { canCreateStudioContent } from '../../studio/studioAccess.js'
 import { useStudioAccess } from '../../studio/hooks/useStudioAccess.js'
 import { useAuth } from '../AuthProvider.jsx'
-import { Brand } from '../components/AuthShell.jsx'
 import './WorkspacePage.css'
 
 function DashboardIcon() {
@@ -22,16 +19,16 @@ function AcademyIcon() {
   return <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M32 49c-7-5-14-6-23-5V15c9-1 16 0 23 5 7-5 14-6 23-5v29c-9-1-16 0-23 5Z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" /><path d="M32 20v29M16 25c3-.2 6 .3 9 1.5m14 0c3-1.2 6-1.7 9-1.5M16 33c3-.2 6 .3 9 1.5m14 0c3-1.2 6-1.7 9-1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
 }
 
-function WorkspaceApp({ className = '', to, eyebrow, title, description, image, icon }) {
+function WorkspaceApp({ className = '', to, eyebrow, title, description, image, icon, status }) {
   return <Link className={`pulse-launcher-app ${className}`} to={to}>
     <span className="pulse-launcher-app__icon">{image ? <img src={image} alt="" /> : icon}</span>
     <div className="pulse-launcher-app__copy"><span className="pulse-launcher-app__eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p></div>
-    <span className="pulse-launcher-app__arrow" aria-hidden="true">↗</span>
+    {status ? <span className="pulse-launcher-app__soon">{status}</span> : <span className="pulse-launcher-app__arrow" aria-hidden="true">↗</span>}
   </Link>
 }
 
 export function WorkspacePage() {
-  const { profile, signOut } = useAuth()
+  const { profile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [adminAccessNotice] = useState(() => location.state?.adminAccess ?? null)
@@ -41,12 +38,6 @@ export function WorkspacePage() {
   const studioAccess = useStudioAccess()
   const fullName = profile?.display_name || profile?.full_name || 'there'
   const firstName = fullName.trim().split(/\s+/)[0]
-  const avatarProps = {
-    name: fullName,
-    customAvatarPath: profile?.custom_avatar_path,
-    googleAvatarUrl: profile?.google_avatar_url,
-    avatarUpdatedAt: profile?.avatar_updated_at,
-  }
 
   useEffect(() => {
     if (location.state?.adminAccess || location.state?.invitationAccepted) navigate(location.pathname, { replace: true, state: null })
@@ -54,18 +45,7 @@ export function WorkspacePage() {
 
   return <main className="pulse-launcher">
     <div className="pulse-launcher__inner">
-      <header className="pulse-launcher__header">
-        <Brand compact homePath="/workspace" />
-        <details className="pulse-launcher-account">
-          <summary><StaffAvatar {...avatarProps} size="sm" /><span>{fullName}</span><span className="pulse-launcher-account__chevron" aria-hidden="true">⌄</span></summary>
-          <div className="pulse-launcher-account__menu">
-            <p className="pulse-launcher-account__label">Account</p>
-            <div className="pulse-launcher-account__identity"><StaffAvatar {...avatarProps} size="md" /><strong>{fullName}</strong></div>
-            <AvatarControls compact />
-            <Button type="button" variant="ghost" onClick={signOut}>Sign out</Button>
-          </div>
-        </details>
-      </header>
+      <ProductHeader />
 
       <section className="pulse-launcher__welcome">
         <p className="pulse-launcher__eyebrow">KAMPAIGN KINGS <span aria-hidden="true">·</span> PULSE</p>
@@ -79,11 +59,7 @@ export function WorkspacePage() {
         {goAccess.state === 'allowed' && (canPractice(goAccess.capabilities) || canHost(goAccess.capabilities)) && <WorkspaceApp className="pulse-launcher-app--go" to="/go" eyebrow="INTERACTIVE LEARNING" title="Pulse GO" description="Practice your skills and bring the team together in live games." image={GO_ART.classic} />}
         {studioAccess.state === 'allowed' && <WorkspaceApp className="pulse-launcher-app--studio" to="/studio" eyebrow="MAKE IT YOURS" title="Studio" description={canCreateStudioContent(studioAccess.permissionKeys) ? 'Create games and manage training content.' : 'Explore training content from your team.'} image={GO_ART.goal2} />}
         <WorkspaceApp className="pulse-launcher-app--academy" to="/academy" eyebrow="KNOWLEDGE LIBRARY" title="Academy" description="Guides, scripts and standards for better conversations." icon={<AcademyIcon />} />
-        <article className="pulse-launcher-app pulse-launcher-app--dashboard" aria-label="Dashboard, in development">
-          <span className="pulse-launcher-app__icon"><DashboardIcon /></span>
-          <div className="pulse-launcher-app__copy"><span className="pulse-launcher-app__eyebrow">A CLEARER VIEW</span><h2>Dashboard</h2><p>Operational performance, teams and insights.</p></div>
-          <span className="pulse-launcher-app__soon">IN DEVELOPMENT</span>
-        </article>
+        <WorkspaceApp className="pulse-launcher-app--dashboard" to="/dashboard" eyebrow="A CLEARER VIEW" title="Dashboard" description="Operational performance, teams and insights." icon={<DashboardIcon />} status="IN DEVELOPMENT" />
         {adminAccess.state === 'allowed' && <WorkspaceApp className="pulse-launcher-app--admin" to="/admin/users" eyebrow="TEAM OPERATIONS" title="Administration" description="People, access and organization." image={GO_ART.valid} />}
       </section>
     </div>

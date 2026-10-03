@@ -1643,3 +1643,21 @@
   }
 
 }
+
+/* Shared Pulse product frame, keeping Academy search and article layouts intact. */
+.ac-page.pulse-product-surface {
+  --pgl-border: rgba(217, 203, 247, .16);
+  --pgl-shadow: 0 24px 80px rgba(0, 0, 0, .35);
+  background: var(--pulse-product-background);
+}
+.ac-language-bar { position: relative; z-index: 12; display: flex; justify-content: center; margin: .3rem auto 0; }
+.ac-language-bar .ac-lang-switch { margin: 0; }
+.ac-page .ac-home { padding-top: 2.5rem; }
+.ac-page .ac-detail-layout { padding-top: 2.5rem; }
+.ac-page .ac-panel, .ac-page .ac-start-card, .ac-page .ac-section-card, .ac-page .ac-topic-card {
+  border-color: rgba(217, 203, 247, .16);
+  background-color: rgba(24, 22, 38, .75);
+}
+@media (max-width: 640px) {
+  .ac-page .ac-home, .ac-page .ac-detail-layout { padding-top: 2rem; }
+}

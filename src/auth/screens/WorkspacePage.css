@@ -9,31 +9,6 @@
   color: var(--pulse-text-primary);
 }
 .pulse-launcher__inner { width: min(100%, 68rem); margin: 0 auto; }
-.pulse-launcher__header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; }
-.pulse-launcher__header > .auth-brand { grid-column: 2; justify-self: center; }
-.pulse-launcher-account { position: relative; z-index: 4; grid-column: 3; justify-self: end; }
-.pulse-launcher-account summary {
-  display: flex; align-items: center; gap: .7rem; min-height: 3rem;
-  padding: .35rem .55rem .35rem .35rem; border: 1px solid rgba(201, 185, 244, .18);
-  border-radius: 999px; background: rgba(28, 24, 42, .72); cursor: pointer;
-  font-size: .86rem; font-weight: 700; list-style: none;
-}
-.pulse-launcher-account summary::-webkit-details-marker { display: none; }
-.pulse-launcher-account summary:hover, .pulse-launcher-account summary:focus-visible { border-color: rgba(211, 189, 255, .55); }
-.pulse-launcher-account summary .admin-staff-avatar { width: 2.25rem; height: 2.25rem; }
-.pulse-launcher-account__chevron { color: var(--pulse-text-muted); font-size: 1.2rem; transition: transform .2s ease; }
-.pulse-launcher-account[open] .pulse-launcher-account__chevron { transform: rotate(180deg); }
-.pulse-launcher-account__menu {
-  position: absolute; top: calc(100% + .75rem); right: 0; width: min(19rem, calc(100vw - 2rem));
-  padding: 1.15rem; border: 1px solid rgba(201, 185, 244, .2); border-radius: 1.1rem;
-  background: #151420; box-shadow: 0 24px 64px rgba(0, 0, 0, .5);
-}
-.pulse-launcher-account__label { margin: 0 0 1rem; color: #b9b4ca; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.pulse-launcher-account__identity { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; overflow-wrap: anywhere; }
-.pulse-launcher-account__identity .admin-staff-avatar { flex: none; }
-.pulse-launcher-account__menu .staff-avatar-controls { padding: .8rem 0; border-top: 1px solid rgba(255, 255, 255, .08); border-bottom: 1px solid rgba(255, 255, 255, .08); }
-.pulse-launcher-account__menu > .pulse-button { width: 100%; margin-top: .7rem; }
-
 .pulse-launcher__welcome { margin: clamp(3rem, 8vh, 5.5rem) auto clamp(2rem, 5vh, 3rem); text-align: center; }
 .pulse-launcher__eyebrow { margin: 0 0 1rem; color: #c6a8ff; font-size: .68rem; font-weight: 800; letter-spacing: .21em; }
 .pulse-launcher__eyebrow span { padding: 0 .3rem; color: #7d689d; }
@@ -80,13 +55,11 @@
 
 @media (max-width: 620px) {
   .pulse-launcher { padding: 1rem; }
-  .pulse-launcher-account summary { width: 3rem; justify-content: center; padding: .3rem; }
-  .pulse-launcher-account summary > span:not(.admin-staff-avatar) { display: none; }
   .pulse-launcher__welcome { margin: 3.8rem auto 2.5rem; }
   .pulse-launcher__apps { grid-template-columns: 1fr; gap: .85rem; }
   .pulse-launcher-app, .pulse-launcher-app--admin { grid-column: auto; width: 100%; min-height: 15rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pulse-launcher-app, .pulse-launcher-account__chevron { transition: none; }
+  .pulse-launcher-app { transition: none; }
   .pulse-launcher-app:is(a):hover { transform: none; }
 }

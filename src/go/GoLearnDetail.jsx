@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import PulseGoBackground from './PulseGoBackground'
+import { ProductHeader } from '../components/ProductHeader.jsx'
 import {
   scripts,
   objections,
   productKnowledge,
   callFlow,
-  dosAndDonts,
   dialer,
   roleplayScenarios,
 } from './goContent'
@@ -219,17 +218,13 @@ function DetailShell({ lang, setLang, section, children, toc }) {
   const navigate = useNavigate()
   const copy = ACADEMY_COPY[lang]
 
-  const goHome = () => {
-    navigate('/workspace')
-  }
-
   const changeLang = (nextLang) => {
     setLang(nextLang)
     saveAcademyLang(nextLang)
   }
 
   return (
-    <div className="ac-page">
+    <div className="ac-page pulse-product-surface">
       <div className="ac-stars" aria-hidden="true">
         <span />
         <span />
@@ -238,29 +233,8 @@ function DetailShell({ lang, setLang, section, children, toc }) {
         <span />
       </div>
 
-      <header className="ac-topnav">
-<nav className="ac-nav-pill">
-  <button onClick={goHome}>
-    {copy.navHome}
-  </button>
-
-  <button onClick={() => navigate('/go')}>
-    {copy.navGo}
-  </button>
-
-  <button onClick={() => navigate('/studio')}>
-    Studio
-  </button>
-
-  <button
-    className="active"
-    onClick={() => navigate('/academy')}
-  >
-    {copy.navAcademy}
-  </button>
-</nav>
-
-        <div className="ac-lang-switch">
+      <ProductHeader />
+      <div className="ac-language-bar"><div className="ac-lang-switch" aria-label="Academy language">
           {LANG_OPTIONS.map((option) => (
             <button
               key={option.id}
@@ -271,8 +245,7 @@ function DetailShell({ lang, setLang, section, children, toc }) {
               {option.short}
             </button>
           ))}
-        </div>
-      </header>
+      </div></div>
 
       <main className="ac-detail-layout">
         <aside className="ac-sidebar ac-detail-side">

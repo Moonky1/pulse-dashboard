@@ -1,0 +1,13 @@
+.pulse-dashboard-page { display: flex; flex-direction: column; }
+.pulse-dashboard-page__main {
+  display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center;
+  width: min(100% - 2rem, 48rem); margin: 0 auto; padding: 4rem 1rem 7rem; text-align: center;
+}
+.pulse-dashboard-page__symbol { display: grid; place-items: center; width: 5rem; height: 5rem; margin-bottom: 2rem; border: 1px solid rgba(220, 207, 249, .2); border-radius: 1.5rem; background: rgba(158, 131, 211, .085); color: #e3d5ff; box-shadow: 0 24px 70px rgba(138, 86, 220, .12); }
+.pulse-dashboard-page__symbol svg { width: 3rem; height: 3rem; }
+.pulse-dashboard-page__eyebrow { color: #c6a8ff; font-size: .68rem; font-weight: 800; letter-spacing: .21em; }
+.pulse-dashboard-page h1 { margin: 1rem 0 .75rem; font-size: clamp(3.5rem, 8vw, 6rem); line-height: 1; letter-spacing: -.075em; }
+.pulse-dashboard-page__main > p:not(.pulse-dashboard-page__eyebrow) { color: #b6adc7; font-size: clamp(1rem, 2vw, 1.2rem); line-height: 1.5; }
+.pulse-dashboard-page__status { margin: 2rem 0; padding: .45rem .7rem; border: 1px solid rgba(195, 177, 255, .25); border-radius: 999px; color: #d7c6f6; font-size: .65rem; font-weight: 800; letter-spacing: .12em; }
+.pulse-dashboard-page__main > a { color: #e7d9ff; font-size: .9rem; font-weight: 750; }
+.pulse-dashboard-page__main > a:hover { text-decoration: underline; }

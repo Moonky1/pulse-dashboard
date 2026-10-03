@@ -18,7 +18,7 @@ test('homepage and legal pages are public routes outside RouteGate', async () =>
 test('authenticated product routes remain protected', async () => {
   const app = await read('./AuthApp.jsx')
 
-  for (const path of ['/workspace', '/go', '/studio', '/admin/*']) {
+  for (const path of ['/workspace', '/dashboard', '/go', '/studio', '/admin/*']) {
     const line = app.split('\n').find((candidate) => candidate.includes(`path="${path}"`))
     assert.match(line, /RouteGate allow=\{\[AUTH_STATES\.ACTIVE\]\}/)
   }
@@ -97,11 +97,12 @@ test('the browser mark uses the Pulse metallic ring identity', async () => {
 })
 
 test('the shared Pulse orb uses size-aware optical motion with a static reduced-motion state', async () => {
-  const [orb, styles, publicShell, authShell, workspace, goShell, studioShell, adminShell] = await Promise.all([
+  const [orb, styles, publicShell, authShell, productHeader, workspace, goShell, studioShell, adminShell] = await Promise.all([
     read('../components/ui/PulseOrb.jsx'),
     read('../components/ui/ui.css'),
     read('./components/PublicSiteShell.jsx'),
     read('./components/AuthShell.jsx'),
+    read('../components/ProductHeader.jsx'),
     read('./screens/WorkspacePage.jsx'),
     read('../go-product/GoShell.jsx'),
     read('../studio/StudioShell.jsx'),
@@ -117,7 +118,27 @@ test('the shared Pulse orb uses size-aware optical motion with a static reduced-
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/)
   assert.doesNotMatch(styles, /rotate\((?:132|226|229|294|298|340|346)deg\)/)
 
-  for (const surface of [publicShell, authShell, workspace, goShell, studioShell, adminShell]) {
+  for (const surface of [publicShell, authShell, productHeader, adminShell]) {
     assert.match(surface, /PulseOrb|<Brand/)
   }
+  for (const surface of [workspace, goShell, studioShell]) assert.match(surface, /ProductHeader/)
+})
+
+test('active products share a centered Pulse navigation and keep Studio leave protection', async () => {
+  const [header, styles, academy, academyDetail, dashboard, studio] = await Promise.all([
+    read('../components/ProductHeader.jsx'),
+    read('../components/ProductHeader.css'),
+    read('../go/GoLearn.jsx'),
+    read('../go/GoLearnDetail.jsx'),
+    read('./screens/ProductDashboardPage.jsx'),
+    read('../studio/StudioShell.jsx'),
+  ])
+  assert.match(header, /'\/dashboard'.*'\/go'/s)
+  assert.match(header, /'\/studio'.*'\/academy'/s)
+  assert.match(header, /aria-label="Pulse Workspace"/)
+  assert.match(header, /if \(!confirmLeave\(\)\) event\.preventDefault\(\)/)
+  assert.match(styles, /grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\)/)
+  for (const surface of [academy, academyDetail, dashboard, studio]) assert.match(surface, /<ProductHeader/)
+  assert.match(dashboard, /IN DEVELOPMENT/)
+  assert.match(studio, /confirmLeave=\{confirmLeave\}/)
 })
