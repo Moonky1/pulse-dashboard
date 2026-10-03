@@ -67,6 +67,12 @@
 .pulse-product-account summary:hover, .pulse-product-account summary:focus-visible { border-color: rgba(211, 189, 255, .55); }
 .pulse-product-account summary .admin-staff-avatar { width: 2.25rem; height: 2.25rem; }
 .pulse-product-account__name { max-width: 7.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pulse-product-account__avatar { position: relative; display: inline-flex; flex: none; }
+.pulse-product-account__avatar > .pulse-product-account__dot { position: absolute; right: -.05rem; bottom: -.05rem; width: .72rem; height: .72rem; border: 2px solid #1c182a; }
+.pulse-product-account__dot { display: inline-block; flex: none; width: .8rem; height: .8rem; border-radius: 50%; background: #777488; }
+.pulse-product-account__dot--available { background: #50d787; box-shadow: 0 0 0 3px rgba(80, 215, 135, .13); }
+.pulse-product-account__dot--focused { background: #e6a449; box-shadow: 0 0 0 3px rgba(230, 164, 73, .13); }
+.pulse-product-account__dot--away { background: #a29ab4; }
 .pulse-product-account__menu {
   position: absolute; top: calc(100% + .75rem); right: 0; width: min(19rem, calc(100vw - 2rem));
   padding: 1.15rem; border: 1px solid rgba(201, 185, 244, .2); border-radius: 1.1rem;
@@ -77,6 +83,12 @@
 .pulse-product-account__identity .admin-staff-avatar { flex: none; }
 .pulse-product-account__identity span:last-child { display: grid; gap: .2rem; }
 .pulse-product-account__identity small { color: #a9a2bc; font-size: .73rem; }
+.pulse-product-account__status { display: flex; align-items: center; gap: .55rem; min-height: 2.7rem; margin-bottom: .55rem; padding: .35rem .55rem; border: 1px solid rgba(201, 185, 244, .14); border-radius: .65rem; color: #e9e5f3; }
+.pulse-product-account__status-label { color: #aaa3b8; font-size: .76rem; }
+.pulse-product-account__status select { flex: 1; min-width: 0; margin-left: auto; padding: .3rem .1rem; border: 0; background: transparent; color: #f7f5ff; font: inherit; font-size: .8rem; font-weight: 700; text-align: right; cursor: pointer; }
+.pulse-product-account__status select option { background: #151420; color: #f7f5ff; }
+.pulse-product-account__status select:disabled { opacity: .55; cursor: wait; }
+.pulse-product-account__error { margin: .2rem 0 .7rem; color: #ffafb8; font-size: .75rem; }
 .pulse-product-account__items { display: grid; gap: .2rem; padding: .55rem 0; border-top: 1px solid rgba(255, 255, 255, .08); border-bottom: 1px solid rgba(255, 255, 255, .08); }
 .pulse-product-account__items a { display: flex; align-items: center; justify-content: space-between; padding: .7rem .65rem; border-radius: .55rem; color: #ece7f7; font-size: .84rem; font-weight: 700; text-decoration: none; }
 .pulse-product-account__items a span { color: #b690f2; }

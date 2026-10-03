@@ -118,9 +118,10 @@ test('the shared Pulse orb uses size-aware optical motion with a static reduced-
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/)
   assert.doesNotMatch(styles, /rotate\((?:132|226|229|294|298|340|346)deg\)/)
 
-  for (const surface of [publicShell, authShell, productHeader, adminShell]) {
+  for (const surface of [publicShell, authShell, productHeader]) {
     assert.match(surface, /PulseOrb|<Brand/)
   }
+  assert.match(adminShell, /ProductHeader/)
   for (const surface of [workspace, goShell, studioShell]) assert.match(surface, /ProductHeader/)
 })
 

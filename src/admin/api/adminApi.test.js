@@ -66,6 +66,15 @@ test('people directory enriches list rows through the existing protected detail 
   assert.deepEqual(calls.map((call) => call.name), ['list_managed_users', 'get_managed_user'])
 })
 
+test('people directory does not present incomplete member details as an empty position', async () => {
+  const client = { rpc: async (name) => name === 'list_managed_users'
+    ? { data: [row], error: null }
+    : { data: null, error: { code: '42501', message: 'Private detail' } } }
+  const result = await listManagedUsersWithDetails(client)
+  assert.deepEqual(result.data, [])
+  assert.equal(result.error.code, 'access_denied')
+})
+
 test('user detail normalizes a successful exact result', async () => {
   const client = { rpc: async (name, args) => {
     assert.equal(name, 'get_managed_user')

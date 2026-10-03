@@ -289,6 +289,8 @@ export async function listManagedUsersWithDetails(client, options = {}) {
   const listed = await listManagedUsers(client, options)
   if (listed.error || !listed.data.length) return listed
   const details = await Promise.all(listed.data.map((user) => getManagedUser(client, user.id)))
+  const detailError = details.find((result) => result.error)?.error
+  if (detailError) return { data: [], error: detailError }
   return {
     data: listed.data.map((user, index) => details[index].data ? { ...user, ...details[index].data } : user),
     error: null,

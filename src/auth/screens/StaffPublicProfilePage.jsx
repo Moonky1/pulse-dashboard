@@ -25,7 +25,7 @@ export function StaffPublicProfilePage() {
       {result.loading ? <p className="pulse-account-page__message" role="status">Loading profile…</p> : profile ? <section className="pulse-account-card pulse-account-card--public">
         <StaffAvatar name={profile.name} customAvatarPath={profile.custom_avatar_path} googleAvatarUrl={profile.google_avatar_url} avatarUpdatedAt={profile.avatar_updated_at} size="lg" />
         <p className="pulse-account-card__eyebrow">PULSE STAFF</p><h1>{profile.name}</h1>
-        {presence && <span className="pulse-account-card__presence">{presence}</span>}
+        {presence && <span className={`pulse-account-card__presence pulse-account-card__presence--${profile.presence}`}>{presence}</span>}
         {profile.bio && <p className="pulse-account-card__bio">{profile.bio}</p>}
         <p className="pulse-account-card__privacy">Visible only to signed-in Staff.</p>
       </section> : <section className="pulse-account-card pulse-account-card--public"><h1>Profile unavailable</h1><p>{result.error ? 'Pulse could not load this profile right now.' : 'This Staff profile is private or does not exist.'}</p></section>}

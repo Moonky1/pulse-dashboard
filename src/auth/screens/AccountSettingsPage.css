@@ -50,6 +50,10 @@
 .pulse-account-card--public .pulse-account-card__eyebrow { margin-top: 1.3rem; }
 .pulse-account-card--public h1 { margin: 0 0 .7rem; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.055em; }
 .pulse-account-card__presence { padding: .4rem .7rem; border: 1px solid rgba(185, 138, 249, .3); border-radius: 999px; color: #e1c8ff; font-size: .75rem; font-weight: 750; }
+.pulse-account-card__presence::before { content: ''; display: inline-block; width: .5rem; height: .5rem; margin-right: .4rem; border-radius: 50%; background: currentColor; vertical-align: .03rem; }
+.pulse-account-card__presence--available { border-color: rgba(80, 215, 135, .3); background: rgba(80, 215, 135, .08); color: #6de8a0; }
+.pulse-account-card__presence--focused { border-color: rgba(230, 164, 73, .3); background: rgba(230, 164, 73, .08); color: #f2bd68; }
+.pulse-account-card__presence--away { border-color: rgba(177, 169, 192, .28); background: rgba(177, 169, 192, .08); color: #b9b0c8; }
 .pulse-account-card__bio { max-width: 28rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .pulse-account-card__privacy { font-size: .77rem; }
 .pulse-account-page__message { color: #b9b1c8; }
