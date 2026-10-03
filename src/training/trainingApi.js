@@ -50,7 +50,7 @@ function hostedRpc(client, name, args) {
   try { assertGoHostedDestination(client.supabaseUrl) } catch {
     return Promise.resolve({ data: null, error: publicError('hosted_blocked', 'Live games are not enabled for this Pulse destination.') })
   }
-  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog_v3' && name !== 'get_go_hosted_session' && name !== 'get_go_hosted_timing' && name !== 'get_go_hosted_results') {
+  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog_v3' && name !== 'get_go_hosted_session' && name !== 'get_my_go_hosted_session' && name !== 'get_go_hosted_timing' && name !== 'get_go_hosted_results') {
     return Promise.resolve(invalidRequest())
   }
   return rpc(client, name, args)
@@ -214,11 +214,35 @@ export function createGoHostedSession(client, contentId) {
   return hostedRpc(client, 'create_go_hosted_session', { requested_content_id: contentId })
 }
 
-export function joinGoHostedSession(client, roomCode) {
+export async function joinGoHostedSession(client, roomCode) {
   if (typeof roomCode !== 'string' || !/^\s*kk[\s-]?\d{4}\s*$/i.test(roomCode)) {
-    return Promise.resolve({ data: null, error: publicError('not_found', 'That game code is not available.') })
+    return { data: null, error: publicError('not_found', 'This room has ended or the code is invalid.') }
   }
-  return hostedRpc(client, 'join_go_hosted_session', { requested_room_code: roomCode })
+  const result = await hostedRpc(client, 'join_go_hosted_session', { requested_room_code: roomCode })
+  return result.error?.code === 'not_found'
+    ? { data: null, error: publicError('not_found', 'This room has ended or the code is invalid.') }
+    : result
+}
+
+export function getTrainingGameVersions(client, contentId) {
+  if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'get_training_game_versions', { requested_content_id: contentId })
+}
+
+export function createTrainingContentRevision(client, contentId) {
+  if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'create_training_content_revision_v2', { requested_content_id: contentId })
+}
+
+export function setTrainingGameTimer(client, contentId, seconds, expectedUpdatedAt) {
+  if (!validUuid(contentId) || ![null, 15, 30, 45, 60].includes(seconds) || !expectedUpdatedAt) {
+    return Promise.resolve(invalidRequest())
+  }
+  return rpc(client, 'set_training_game_timer', {
+    requested_content_id: contentId,
+    requested_timer_seconds: seconds,
+    expected_updated_at: expectedUpdatedAt,
+  })
 }
 
 export function getGoHostedSession(client, sessionId) {
@@ -226,10 +250,20 @@ export function getGoHostedSession(client, sessionId) {
   return hostedRpc(client, 'get_go_hosted_session', { requested_session_id: sessionId })
 }
 
+export function getMyGoHostedSession(client) {
+  return hostedRpc(client, 'get_my_go_hosted_session', {})
+}
+
 export function getGoQuestionBankGroups(client, contentIds) {
   if (!validUuidList(contentIds) || contentIds.length > 100) return Promise.resolve(invalidRequest())
   if (!contentIds.length) return Promise.resolve({ data: [], error: null })
   return rpc(client, 'get_go_question_bank_groups', { requested_content_ids: contentIds })
+}
+
+export function getGoGameIdentity(client, contentIds) {
+  if (!validUuidList(contentIds) || contentIds.length > 100) return Promise.resolve(invalidRequest())
+  if (!contentIds.length) return Promise.resolve({ data: [], error: null })
+  return rpc(client, 'get_go_game_identity', { requested_content_ids: contentIds })
 }
 
 export function getGoCertificationResult(client, attemptId) {

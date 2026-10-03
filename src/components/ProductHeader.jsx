@@ -34,7 +34,7 @@ export function ProductHeader({ confirmLeave = () => true }) {
   }
 
   function guardNavigation(event) {
-    if (!confirmLeave()) event.preventDefault()
+    if (!confirmLeave(event.currentTarget.getAttribute('href'))) event.preventDefault()
   }
 
   function productLink({ to, label }) {
@@ -80,7 +80,7 @@ export function ProductHeader({ confirmLeave = () => true }) {
           <Link to="/settings" onClick={guardNavigation}>Settings <span aria-hidden="true">↗</span></Link>
           {adminAccess.state === 'allowed' && <Link to="/admin/users" onClick={guardNavigation}>Administration <span aria-hidden="true">↗</span></Link>}
         </nav>
-        <Button type="button" variant="ghost" onClick={() => { if (confirmLeave()) void signOut() }}>Sign out</Button>
+        <Button type="button" variant="ghost" onClick={() => { if (confirmLeave('signout')) void signOut() }}>Sign out</Button>
       </div>
     </details>
   </header>

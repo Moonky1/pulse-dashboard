@@ -36,6 +36,7 @@ export function WorkspacePage() {
   const adminAccess = useAdminAccess()
   const goAccess = useGoAccess()
   const studioAccess = useStudioAccess()
+  const accessLoading = [adminAccess, goAccess, studioAccess].some(access => access.state === 'loading')
   const fullName = profile?.display_name || profile?.full_name || 'there'
   const firstName = fullName.trim().split(/\s+/)[0]
 
@@ -55,12 +56,20 @@ export function WorkspacePage() {
       {invitationAccepted && <p className="auth-workspace-notice auth-workspace-notice--success" role="status">Invitation accepted. Welcome to Pulse.</p>}
       {adminAccessNotice && <p className="auth-workspace-notice" role="status">{adminAccessNotice === 'denied' ? 'Your account does not have access to Administration.' : 'Pulse could not verify Administration access. Try again later.'}</p>}
 
-      <section className="pulse-launcher__apps" aria-label="Pulse products">
+      <section className="pulse-launcher__apps" aria-label="Pulse products" aria-busy={accessLoading}>
+        {accessLoading ? <>
+          <div className="pulse-launcher-app pulse-launcher-app--skeleton" role="status" aria-label="Opening Pulse products" />
+          <div className="pulse-launcher-app pulse-launcher-app--skeleton" aria-hidden="true" />
+          <div className="pulse-launcher-app pulse-launcher-app--skeleton" aria-hidden="true" />
+          <div className="pulse-launcher-app pulse-launcher-app--admin pulse-launcher-app--skeleton" aria-hidden="true" />
+          <div className="pulse-launcher-app pulse-launcher-app--skeleton" aria-hidden="true" />
+        </> : <>
         {goAccess.state === 'allowed' && (canPractice(goAccess.capabilities) || canHost(goAccess.capabilities)) && <WorkspaceApp className="pulse-launcher-app--go" to="/go" eyebrow="INTERACTIVE LEARNING" title="Pulse GO" description="Practice your skills and bring the team together in live games." image={GO_ART.classic} />}
         {studioAccess.state === 'allowed' && <WorkspaceApp className="pulse-launcher-app--studio" to="/studio" eyebrow="MAKE IT YOURS" title="Studio" description={canCreateStudioContent(studioAccess.permissionKeys) ? 'Create games and manage training content.' : 'Explore training content from your team.'} image={GO_ART.goal2} />}
         <WorkspaceApp className="pulse-launcher-app--academy" to="/academy" eyebrow="KNOWLEDGE LIBRARY" title="Academy" description="Guides, scripts and standards for better conversations." icon={<AcademyIcon />} />
         <WorkspaceApp className="pulse-launcher-app--dashboard" to="/dashboard" eyebrow="A CLEARER VIEW" title="Dashboard" description="Operational performance, teams and insights." icon={<DashboardIcon />} status="IN DEVELOPMENT" />
         {adminAccess.state === 'allowed' && <WorkspaceApp className="pulse-launcher-app--admin" to="/admin/users" eyebrow="TEAM OPERATIONS" title="Administration" description="People, access and organization." image={GO_ART.valid} />}
+        </>}
       </section>
     </div>
   </main>

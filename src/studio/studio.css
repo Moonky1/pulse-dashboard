@@ -157,8 +157,16 @@
 .studio-primary { border: 1px solid rgba(217, 203, 247, .3); background: linear-gradient(120deg, #f6efff, #d9c8ff); box-shadow: 0 12px 35px rgba(137, 84, 223, .17); }
 .studio-card { border-color: rgba(217, 203, 247, .16); background: linear-gradient(155deg, rgba(29, 27, 42, .94), rgba(11, 11, 22, .98) 75%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); }
 .studio-card:hover { border-color: rgba(215, 188, 255, .47); }
+.studio-card__actions { display: flex; align-items: center; gap: .75rem; margin-top: auto; }
+.studio-card__actions a { color: #d7c6ff; font-weight: 700; }
+.studio-card__actions .pulse-button { min-height: 2.25rem; padding: .45rem .85rem; }
 .studio-shell input:not([type=checkbox]):not([type=radio]), .studio-shell textarea, .studio-shell select { background: #0c0a16; border-color: rgba(217, 203, 247, .16); }
 @media (max-width: 600px) {
   .studio-main { padding-top: 2rem; }
   .studio-heading { align-items: center; }
 }
+.studio-update-action { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1rem 0 1.5rem; padding: 1.2rem; border: 1px solid rgba(204, 169, 255, .29); border-radius: 1rem; background: linear-gradient(120deg, rgba(88, 56, 139, .18), rgba(22, 20, 37, .8)); }
+.studio-update-action p { margin: .35rem 0 0; color: #b7afc8; }
+.studio-game-timer { display: flex; align-items: end; gap: .8rem; margin: 1.3rem 0; }
+.studio-game-timer label { display: grid; gap: .4rem; min-width: min(100%, 14rem); }
+@media (max-width: 600px) { .studio-update-action, .studio-game-timer { align-items: stretch; flex-direction: column; } }

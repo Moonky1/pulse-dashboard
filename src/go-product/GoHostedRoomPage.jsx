@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import lobbyMusic from '../../public/audio/wii-party-main-menu.mp3'
 import { Button } from '../components/ui/Button.jsx'
+import { useAuth } from '../auth/AuthProvider.jsx'
 import { advanceGoHostedSession, cancelGoHostedSession, getGoHostedResults, getGoQuestionBankGroups, startGoHostedSession, submitGoHostedAnswer } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { hostedAnswerReady, languagePresentation, resultMedal } from './goHostedModel.js'
@@ -145,14 +146,60 @@ function Results({ room, mode }) {
   </section>
 }
 
+function LeaveWaitingRoomDialog({ language, busy, error, onStay, onLeave }) {
+  const ref = useRef(null)
+  const es = language === 'es'
+  useEffect(() => {
+    const previousFocus = document.activeElement
+    ref.current?.showModal()
+    return () => previousFocus?.focus()
+  }, [])
+  return <dialog ref={ref} className="go-leave-dialog" onCancel={(event) => { event.preventDefault(); if (!busy) onStay() }} aria-label={es ? 'Salir de la sala' : 'Leave this room'}>
+    <span className="go-eyebrow">{es ? 'SALA EN ESPERA' : 'WAITING ROOM'}</span>
+    <h2>{es ? '¿Salir de esta sala?' : 'Leave this room?'}</h2>
+    <p>{es ? 'La sala todavía espera jugadores. Si sales, se cerrará y el código dejará de funcionar.' : 'This room is still waiting for players. Leaving will close it and the code will stop working.'}</p>
+    {error && <p className="go-inline-error" role="alert">{error}</p>}
+    <div className="go-leave-dialog__actions"><Button variant="secondary" disabled={busy} onClick={onStay}>{es ? 'Quedarme' : 'Stay'}</Button><Button loading={busy} disabled={busy} onClick={onLeave}>{es ? 'Salir y cerrar sala' : 'Leave and close room'}</Button></div>
+  </dialog>
+}
+
 export function GoHostedRoomPage({ expectedViewer }) {
   const { sessionId } = useParams()
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
   const state = useHostedRoom(sessionId)
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
   const room = state.room
   const [modeState, setModeState] = useState({ contentId: null, mode: null })
   const previousStatus = useRef(null)
+  const [leaveDestination, setLeaveDestination] = useState(null)
+  const [leaveBusy, setLeaveBusy] = useState(false)
+  const [leaveError, setLeaveError] = useState(null)
+
+  function confirmLeave(destination) {
+    if (room?.viewer_role !== 'host' || room.status !== 'lobby') return true
+    setLeaveDestination(destination || '/workspace')
+    setLeaveError(null)
+    return false
+  }
+
+  async function closeAndLeave() {
+    if (!room || leaveBusy) return
+    setLeaveBusy(true)
+    setLeaveError(null)
+    const response = await cancelGoHostedSession(supabase, sessionId, room.version)
+    setLeaveBusy(false)
+    if (response.error) {
+      setLeaveError(response.error.message)
+      await state.refresh({ quiet: true })
+      return
+    }
+    const destination = leaveDestination
+    setLeaveDestination(null)
+    if (destination === 'signout') await signOut()
+    else navigate(destination || '/workspace', { replace: true })
+  }
 
   useEffect(() => {
     if (previousStatus.current === 'active' && room?.status === 'completed') playGoSound('complete')
@@ -193,6 +240,6 @@ export function GoHostedRoomPage({ expectedViewer }) {
   const mode = modeState.mode
   if (room.status === 'completed') return <GoShell><Results room={room} mode={mode} /></GoShell>
   if (['cancelled', 'expired'].includes(room.status)) return <GoShell><section className="go-state"><img className="go-state-art" src={GO_ART.zero2} alt="" /><h1>{room.status === 'expired' ? 'This room expired' : 'This game was cancelled'}</h1><p>No result was recorded.</p><Link to="/go">Back to GO</Link></section></GoShell>
-  if (room.status === 'lobby') return <GoShell><Lobby room={room} action={hostAction} busy={busy} error={error} /></GoShell>
+  if (room.status === 'lobby') return <GoShell confirmLeave={confirmLeave}><Lobby room={room} action={hostAction} busy={busy} error={error} />{leaveDestination && room.viewer_role === 'host' && <LeaveWaitingRoomDialog language={room.content.language} busy={leaveBusy} error={leaveError} onStay={() => setLeaveDestination(null)} onLeave={() => void closeAndLeave()} />}</GoShell>
   return <GoShell>{room.viewer_role === 'host' ? <HostQuestion key={room.current_question.id} room={room} mode={mode} timing={state.timing} action={hostAction} busy={busy} error={error} /> : <PlayerQuestion key={room.current_question.id} room={room} mode={mode} timing={state.timing} submit={submit} busy={busy === 'submit'} error={error} />}</GoShell>
 }

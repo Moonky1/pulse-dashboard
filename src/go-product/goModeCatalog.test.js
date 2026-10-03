@@ -7,9 +7,9 @@ import { goModeResultLine } from './goModeCopy.js'
 test('all original modes are recognized without mixing languages or creator games', () => {
   assert.equal(ORIGINAL_MODE_CODES.length, 6)
   const items = [
-    { id: 'valid-en', language: 'en' },
-    { id: 'valid-es', language: 'es' },
-    { id: 'creator-en', language: 'en' },
+    { id: 'valid-en', language: 'en', authorship_kind: 'pulse' },
+    { id: 'valid-es', language: 'es', authorship_kind: 'pulse' },
+    { id: 'creator-en', language: 'en', authorship_kind: 'staff', question_count: 10 },
   ]
   const groups = [
     { id: 'valid-en', game_mode: 'valid-invalid', review_required: false },
@@ -22,11 +22,20 @@ test('all original modes are recognized without mixing languages or creator game
 })
 
 test('draft or unreviewed original modes do not unlock', () => {
-  const items = [{ id: 'unreviewed', language: 'en' }]
+  const items = [{ id: 'unreviewed', language: 'en', authorship_kind: 'pulse' }]
   const groups = [{ id: 'unreviewed', game_mode: 'eligible', review_required: true }]
   const catalog = classifyGoCatalog(items, groups, 'en')
   assert.equal(catalog.modeItems.eligible, undefined)
   assert.deepEqual(catalog.otherGames, [])
+})
+
+test('creator games only appear when a current published bank can launch a full round', () => {
+  const items = [
+    { id: 'short', language: 'en', authorship_kind: 'staff', question_count: 9 },
+    { id: 'ready', language: 'en', authorship_kind: 'staff', question_count: 10 },
+    { id: 'official', language: 'en', authorship_kind: 'pulse', question_count: 40 },
+  ]
+  assert.deepEqual(classifyGoCatalog(items, [], 'en').otherGames.map(item => item.id), ['ready'])
 })
 
 test('results use each mode’s meaning in both languages', () => {

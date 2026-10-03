@@ -50,4 +50,5 @@ export const AUTHORING_MUTATIONS = new Set([
   'create_training_content_draft', 'update_training_content_draft',
   'replace_training_questions', 'replace_training_questions_v2',
   'publish_training_content', 'archive_training_content',
+  'create_training_content_revision_v2', 'set_training_game_timer',
 ])

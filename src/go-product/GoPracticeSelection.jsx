@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { resolveGoPracticeDestination } from '../training/goPracticeDestination.js'
-import { getGoQuestionBankGroups, listGoPracticeCatalog } from '../training/trainingApi.js'
+import { getGoGameIdentity, getGoQuestionBankGroups, listGoPracticeCatalog } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canPractice } from './goAccess.js'
 import { classicPracticeLevels } from './goClassicCatalog.js'
@@ -29,9 +29,13 @@ export function GoPracticeSelection() {
       void (async () => {
         const listed = await listGoPracticeCatalog(supabase, { language: selectedLanguage })
         const items = normalizeCatalog(listed.data || [])
-        const groups = listed.error ? { data: [], error: null }
-          : await getGoQuestionBankGroups(supabase, items.map(item => item.id))
-        if (current) setCatalog({ items, groups: groups.data || [], loading: false, error: listed.error || groups.error })
+        const [groups, identity] = listed.error ? [{ data: [], error: null }, { data: [], error: null }]
+          : await Promise.all([
+            getGoQuestionBankGroups(supabase, items.map(item => item.id)),
+            getGoGameIdentity(supabase, items.map(item => item.id)),
+          ])
+        const byId = new Map((identity.data || []).map(item => [item.id, item]))
+        if (current) setCatalog({ items: items.map(item => ({ ...item, ...byId.get(item.id) })), groups: groups.data || [], loading: false, error: listed.error || groups.error || identity.error })
       })()
     }, 0)
     return () => { current = false; clearTimeout(timer) }
@@ -59,9 +63,7 @@ export function GoPracticeSelection() {
         <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART.classic} alt="" /></span></div>
         <h2>{item.title}</h2><p>{item.description || 'A quick way to sharpen what you know.'}</p>
         <GoCreator item={item} />
-        {Number(item.question_count) >= 10
-          ? <Link to={`/go/practice/${item.id}`}>{isSpanish ? 'Jugar' : 'Play'}</Link>
-          : <span className="go-creator-pending" role="status">{isSpanish ? 'Próximamente' : 'Coming soon'}</span>}
+        <Link to={`/go/practice/${item.id}`}>{isSpanish ? 'Jugar' : 'Play'}</Link>
       </article>)}</GoCatalogSection>}
     </>}
     {selectedMode === 'classic' && !catalog.loading && !catalog.error && <>

@@ -113,3 +113,14 @@
   .go-mode-heading { align-items: center; margin: 1.5rem auto 2rem; }
   .go-mode-heading__rewards { display: flex; }
 }
+
+.go-leave-dialog { width: min(100% - 2rem, 29rem); padding: 1.8rem; border: 1px solid rgba(186, 160, 238, .3); border-radius: 1.4rem; background: linear-gradient(150deg, #19172a, #090b16); box-shadow: 0 28px 90px rgba(0, 0, 0, .65); color: #f6f3ff; }
+.go-leave-dialog::backdrop { background: rgba(3, 4, 12, .76); backdrop-filter: blur(8px); }
+.go-leave-dialog h2 { margin: .65rem 0; font-size: clamp(1.5rem, 5vw, 2rem); }
+.go-leave-dialog p { color: #b7b0c8; line-height: 1.5; }
+.go-leave-dialog__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: .7rem; margin-top: 1.5rem; }
+@media (max-width: 620px) { .go-leave-dialog__actions .pulse-button { flex: 1 1 100%; } }
+.go-host-recovery { width: min(100%, 42rem); margin: 1rem auto 2rem; padding: 1.4rem; border: 1px solid rgba(202, 160, 255, .35); border-radius: 1.2rem; background: linear-gradient(140deg, #1a1830, #0c101d); text-align: center; }
+.go-host-recovery h2 { margin: 0 0 .5rem; }
+.go-host-recovery p { color: #b7bad0; }
+.go-host-recovery__actions { display: flex; justify-content: center; flex-wrap: wrap; gap: .6rem; margin-top: 1.2rem; }

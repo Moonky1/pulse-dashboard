@@ -12,13 +12,15 @@ export function classifyGoCatalog(items, groups, language) {
   for (const group of groups || []) {
     if (!knownModes.has(group?.game_mode)) continue
     const item = itemById.get(group.id)
-    if (!item || item.language !== language) continue
+    if (!item || item.language !== language || item.authorship_kind !== 'pulse') continue
     classifiedIds.add(item.id)
     if (!group.review_required && group.game_mode !== 'classic') {
       modeItems[group.game_mode] = item
     }
   }
-  return { modeItems, otherGames: items.filter(item => !classifiedIds.has(item.id)) }
+  return { modeItems, otherGames: items.filter(item =>
+    !classifiedIds.has(item.id) && item.authorship_kind === 'staff' &&
+    Number(item.question_count) >= 10) }
 }
 
 export function modeForContent(groups, contentId) {

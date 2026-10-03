@@ -137,7 +137,7 @@ test('active products share a centered Pulse navigation and keep Studio leave pr
   assert.match(header, /'\/dashboard'.*'\/go'/s)
   assert.match(header, /'\/studio'.*'\/academy'/s)
   assert.match(header, /aria-label="Pulse Workspace"/)
-  assert.match(header, /if \(!confirmLeave\(\)\) event\.preventDefault\(\)/)
+  assert.match(header, /if \(!confirmLeave\(event\.currentTarget\.getAttribute\('href'\)\)\) event\.preventDefault\(\)/)
   assert.match(styles, /\.pulse-product-header__inner\s*\{[^}]*display: flex;[^}]*justify-content: center;[^}]*width: fit-content;/s)
   for (const surface of [academy, academyDetail, dashboard, studio]) assert.match(surface, /<ProductHeader/)
   assert.match(dashboard, /IN DEVELOPMENT/)

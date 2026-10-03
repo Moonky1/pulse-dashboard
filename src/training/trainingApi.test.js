@@ -6,7 +6,10 @@ import {
   archiveTrainingContent,
   completeTrainingAttempt,
   createTrainingContentDraft,
+  createTrainingContentRevision,
   createGoHostedSession,
+  getGoGameIdentity,
+  getMyGoHostedSession,
   joinGoHostedSession,
   getGoHostedSession,
   getGoHostedTiming,
@@ -21,6 +24,7 @@ import {
   getGoPracticeCompletedReview,
   getGoPracticeTiming,
   getTrainingContentAuthoringDetails,
+  getTrainingGameVersions,
   getTrainingFilterOptions,
   listAcademyModules,
   listMyTrainingResults,
@@ -29,6 +33,7 @@ import {
   normalizeTrainingError,
   publishTrainingContent,
   replaceTrainingQuestions,
+  setTrainingGameTimer,
   startTrainingAttempt,
   submitGoPracticeAnswer,
   updateTrainingContentDraft,
@@ -77,6 +82,7 @@ test('Hosted GO client sends only canonical room, version, question, and answer 
   await createGoHostedSession(client, CONTENT_ID)
   await joinGoHostedSession(client, 'KK 1234')
   await getGoHostedSession(client, SESSION_ID)
+  await getMyGoHostedSession(client)
   await getGoHostedTiming(client, SESSION_ID)
   await getGoHostedResults(client, SESSION_ID)
   await startGoHostedSession(client, SESSION_ID, 3)
@@ -88,6 +94,7 @@ test('Hosted GO client sends only canonical room, version, question, and answer 
     { name: 'create_go_hosted_session', args: { requested_content_id: CONTENT_ID } },
     { name: 'join_go_hosted_session', args: { requested_room_code: 'KK 1234' } },
     { name: 'get_go_hosted_session', args: { requested_session_id: SESSION_ID } },
+    { name: 'get_my_go_hosted_session', args: {} },
     { name: 'get_go_hosted_timing', args: { requested_session_id: SESSION_ID } },
     { name: 'get_go_hosted_results', args: { requested_session_id: SESSION_ID } },
     { name: 'start_go_hosted_session', args: { requested_session_id: SESSION_ID, expected_version: 3 } },
@@ -163,6 +170,24 @@ test('attempt start cannot submit learner identity and completion cannot submit 
   assert.deepEqual(calls[0], { name: 'start_training_attempt', args: { requested_content_id: CONTENT_ID, requested_source_mode: 'go_practice' } })
   assert.deepEqual(calls[1], { name: 'complete_training_attempt', args: { requested_attempt_id: ATTEMPT_ID, requested_answers: [{ question_id: TOPIC_ID, answer: 0 }], requested_duration_seconds: 14 } })
   assert.doesNotMatch(JSON.stringify(calls), /learner|score|correct_answers/i)
+})
+
+test('creator identity and version actions never accept browser-selected actor or version numbers', async () => {
+  const { client, calls } = recorder()
+  await getGoGameIdentity(client, [CONTENT_ID])
+  await getTrainingGameVersions(client, CONTENT_ID)
+  await createTrainingContentRevision(client, CONTENT_ID)
+  await setTrainingGameTimer(client, CONTENT_ID, 30, UPDATED_AT)
+  assert.deepEqual(calls, [
+    { name: 'get_go_game_identity', args: { requested_content_ids: [CONTENT_ID] } },
+    { name: 'get_training_game_versions', args: { requested_content_id: CONTENT_ID } },
+    { name: 'create_training_content_revision_v2', args: { requested_content_id: CONTENT_ID } },
+    { name: 'set_training_game_timer', args: { requested_content_id: CONTENT_ID, requested_timer_seconds: 30, expected_updated_at: UPDATED_AT } },
+  ])
+  assert.doesNotMatch(JSON.stringify(calls), /actor_id|user_id|version_number|is_current/)
+  const denied = await createTrainingContentRevision(client, 'not-a-uuid')
+  assert.equal(denied.error.code, 'invalid_request')
+  assert.equal(calls.length, 4)
 })
 
 test('timed GO Practice uses only own attempt and selected question IDs', async () => {

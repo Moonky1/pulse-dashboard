@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom'
 import { ProductHeader } from '../components/ProductHeader.jsx'
 import './goProduct.css'
 
-export function GoShell({ children }) {
+export function GoShell({ children, confirmLeave }) {
   return <div className="go-shell pulse-product-surface">
-    <ProductHeader />
+    <ProductHeader confirmLeave={confirmLeave} />
     <main className="go-main">{children}</main>
   </div>
 }

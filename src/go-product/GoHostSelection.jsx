@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '../components/ui/Button.jsx'
 import { resolveGoHostedDestination } from '../training/goHostedDestination.js'
-import { createGoHostedSession, getGoQuestionBankGroups, listGoHostCatalog } from '../training/trainingApi.js'
+import { cancelGoHostedSession, createGoHostedSession, getGoGameIdentity, getGoQuestionBankGroups, getMyGoHostedSession, listGoHostCatalog } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
 import { canHost } from './goAccess.js'
 import { classicHostLevels } from './goClassicCatalog.js'
@@ -22,6 +22,8 @@ export function GoHostSelection() {
   const [creating, setCreating] = useState(null)
   const [selectedLanguage, setSelectedLanguage] = useState('')
   const [selectedMode, setSelectedMode] = useState('')
+  const [existingRoom, setExistingRoom] = useState(null)
+  const [recoveryError, setRecoveryError] = useState(null)
 
   useEffect(() => {
     if (access.state !== 'allowed' || !canHost(access.capabilities) || !destination.allowed) return
@@ -29,9 +31,13 @@ export function GoHostSelection() {
     void (async () => {
       const listed = await listGoHostCatalog(supabase)
       const items = listed.data || []
-      const groups = listed.error ? { data: [], error: null }
-        : await getGoQuestionBankGroups(supabase, items.map(item => item.id))
-      if (current) setCatalog({ items, groups: groups.data || [], loading: false, error: listed.error || groups.error })
+      const [groups, identity] = listed.error ? [{ data: [], error: null }, { data: [], error: null }]
+        : await Promise.all([
+          getGoQuestionBankGroups(supabase, items.map(item => item.id)),
+          getGoGameIdentity(supabase, items.map(item => item.id)),
+        ])
+      const byId = new Map((identity.data || []).map(item => [item.id, item]))
+      if (current) setCatalog({ items: items.map(item => ({ ...item, ...byId.get(item.id) })), groups: groups.data || [], loading: false, error: listed.error || groups.error || identity.error })
     })()
     return () => { current = false }
   }, [access.capabilities, access.state, destination.allowed])
@@ -44,8 +50,33 @@ export function GoHostSelection() {
     setCreating(contentId)
     const { data, error } = await createGoHostedSession(supabase, contentId)
     setCreating(null)
-    if (error) return setCatalog(value => ({ ...value, error }))
+    if (error) {
+      const current = await getMyGoHostedSession(supabase)
+      if (current.data && !current.error) {
+        setExistingRoom({ room: current.data, requestedContentId: contentId })
+        setRecoveryError(null)
+        return
+      }
+      return setCatalog(value => ({ ...value, error }))
+    }
     navigate(roomPath(data))
+  }
+
+  async function closeCurrentAndHost() {
+    if (!existingRoom || creating) return
+    setCreating(existingRoom.requestedContentId)
+    setRecoveryError(null)
+    const { error } = await cancelGoHostedSession(supabase, existingRoom.room.session_id, existingRoom.room.version)
+    setCreating(null)
+    if (error) {
+      setRecoveryError(error.message)
+      const current = await getMyGoHostedSession(supabase)
+      if (current.data) setExistingRoom(value => ({ ...value, room: current.data }))
+      return
+    }
+    const nextContentId = existingRoom.requestedContentId
+    setExistingRoom(null)
+    await createRoom(nextContentId)
   }
 
   const classicLevels = classicHostLevels(catalog.items, selectedLanguage)
@@ -60,6 +91,12 @@ export function GoHostSelection() {
   return <GoShell>
     <GoSelectionHeading eyebrow={isSpanish ? 'Organiza una partida' : 'Host a game'} title={title} description={!selectedLanguage ? 'First, choose the language for your game.' : null} art={GO_ART.certification} />
     <div className="go-live-status" aria-live="polite">{catalog.loading ? isSpanish ? 'Buscando juegos para organizar…' : 'Finding host-ready games…' : catalog.error?.message || ''}</div>
+    {existingRoom && <section className="go-host-recovery" role="region" aria-label={isSpanish ? 'Sala activa' : 'Active room'}>
+      <h2>{isSpanish ? 'Ya tienes una sala abierta' : 'You already have a room open'}</h2>
+      <p>{existingRoom.room.status === 'lobby' ? isSpanish ? 'Cierra la sala en espera para crear otra, o vuelve a la sala actual.' : 'Close the waiting room to host another game, or return to your current room.' : isSpanish ? 'Tu juego en vivo sigue activo. Vuelve a él para continuarlo.' : 'Your live game is still active. Return to it to continue.'}</p>
+      {recoveryError && <p className="go-inline-error" role="alert">{recoveryError}</p>}
+      <div className="go-host-recovery__actions"><Button variant="secondary" onClick={() => navigate(roomPath(existingRoom.room))}>{isSpanish ? 'Volver a la sala' : 'Return to room'}</Button>{existingRoom.room.status === 'lobby' && <Button loading={!!creating} disabled={!!creating} onClick={() => void closeCurrentAndHost()}>{isSpanish ? 'Cerrar y crear otra' : 'Close current room and host another'}</Button>}<Button variant="ghost" onClick={() => setExistingRoom(null)}>{isSpanish ? 'Seguir aquí' : 'Stay here'}</Button></div>
+    </section>}
     {!catalog.loading && !catalog.error && !selectedLanguage && <GoLanguageChoices onSelect={setSelectedLanguage} />}
     {selectedLanguage && !selectedMode && <GoSelectionBack onClick={() => { setSelectedLanguage(''); setSelectedMode('') }}>{isSpanish ? 'Cambiar idioma' : 'Change language'}</GoSelectionBack>}
     {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <>
@@ -69,9 +106,7 @@ export function GoHostSelection() {
         <h2>{item.title}</h2><p>{item.description || 'Ready for your team.'}</p>
         <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>10</strong> {isSpanish ? 'por ronda' : 'per round'}</div>
         <GoCreator item={item} />
-        {Number(item.question_count) >= 10
-          ? <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>{isSpanish ? 'Crear sala' : 'Create room'}</Button>
-          : <span className="go-creator-pending" role="status">{isSpanish ? 'Próximamente' : 'Coming soon'}</span>}
+        <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>{isSpanish ? 'Crear sala' : 'Create room'}</Button>
       </article>)}</GoCatalogSection>}
     </>}
     {selectedMode === 'classic' && <>
