@@ -5,6 +5,7 @@ import { AUTH_STATES, routeForAuthState } from './authState.js'
 import { AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH } from './authRoutes.js'
 import { useAuth } from './AuthProvider.jsx'
 const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').then((module) => ({ default: module.AccountStatePage })))
+const AccountSettingsPage = lazy(() => import('./screens/AccountSettingsPage.jsx').then((module) => ({ default: module.AccountSettingsPage })))
 const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => ({ default: module.AdminArea })))
 const AgentSignInPage = lazy(() => import('./screens/AgentSignInPage.jsx').then((module) => ({ default: module.AgentSignInPage })))
 const AcademyPage = lazy(() => import('../go/GoLearn.jsx'))
@@ -25,6 +26,7 @@ const ResetPasswordPage = lazy(() => import('./screens/ResetPasswordPage.jsx').t
 const SignInPage = lazy(() => import('./screens/SignInPage.jsx').then((module) => ({ default: module.SignInPage })))
 const StudioPage = lazy(() => import('../studio/StudioPage.jsx').then((module) => ({ default: module.StudioPage })))
 const StudioBuilder = lazy(() => import('../studio/StudioBuilder.jsx').then((module) => ({ default: module.StudioBuilder })))
+const StaffPublicProfilePage = lazy(() => import('./screens/StaffPublicProfilePage.jsx').then((module) => ({ default: module.StaffPublicProfilePage })))
 const VerifyEmailPage = lazy(() => import('./screens/VerifyEmailPage.jsx').then((module) => ({ default: module.VerifyEmailPage })))
 const WorkspacePage = lazy(() => import('./screens/WorkspacePage.jsx').then((module) => ({ default: module.WorkspacePage })))
 
@@ -60,6 +62,9 @@ export function AuthApp() {
         <Route path="/pending-approval" element={<RouteGate allow={[AUTH_STATES.PENDING]}><PendingApprovalPage /></RouteGate>} />
         <Route path="/workspace" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><WorkspacePage /></RouteGate>} />
         <Route path="/dashboard" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><ProductDashboardPage /></RouteGate>} />
+        <Route path="/settings" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AccountSettingsPage /></RouteGate>} />
+        <Route path="/settings/profile" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AccountSettingsPage section="profile" /></RouteGate>} />
+        <Route path="/staff/:profileId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StaffPublicProfilePage /></RouteGate>} />
         <Route path="/academy" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AcademyPage /></RouteGate>} />
         <Route path="/academy/:id" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AcademyDetailPage /></RouteGate>} />
         <Route path="/go" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoLandingPage /></RouteGate>} />

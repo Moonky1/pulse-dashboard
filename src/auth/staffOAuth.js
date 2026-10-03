@@ -1,7 +1,7 @@
 export const STAFF_OAUTH_PROVIDER = 'google'
 export const STAFF_OAUTH_RETURN_KEY = 'pulse_staff_oauth_return'
 
-const ALLOWED_RETURN_ROOTS = Object.freeze(['/workspace', '/studio', '/go', '/admin'])
+const ALLOWED_RETURN_ROOTS = Object.freeze(['/workspace', '/dashboard', '/go', '/studio', '/academy', '/settings', '/staff', '/admin'])
 const INTERNAL_ORIGIN = 'https://pulse.internal'
 
 function browserSessionStorage() {
