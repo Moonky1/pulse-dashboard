@@ -34,10 +34,10 @@ export function GoSelectionBack({ onClick, children }) {
   return <div className="go-selection-back"><button type="button" onClick={onClick}>← {children}</button></div>
 }
 
-export function GoCatalogSection({ title, description, children }) {
+export function GoCatalogSection({ title, description, children, creators = false }) {
   return <section className="go-catalog-section" aria-label={title}>
     <header><h2>{title}</h2>{description && <p>{description}</p>}</header>
-    <div className="go-game-choices">{children}</div>
+    <div className={`go-game-choices${creators ? ' go-game-choices--creators' : ''}`}>{children}</div>
   </section>
 }
 

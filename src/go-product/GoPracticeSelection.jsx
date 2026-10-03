@@ -55,7 +55,7 @@ export function GoPracticeSelection() {
     {selectedLanguage && <div className="go-live-status" aria-live="polite">{catalog.loading ? isSpanish ? 'Buscando juegos…' : 'Finding challenges…' : catalog.error?.message || ''}</div>}
     {selectedLanguage && !catalog.loading && !catalog.error && !selectedMode && <>
       <GoCatalogSection title={isSpanish ? 'Modos de Pulse' : 'Pulse games'}><GoPulseModeChoices language={selectedLanguage} classicReady={classicLevels.length === 3} modeItems={modeItems} onClassic={() => setSelectedMode('classic')} onMode={(_, item) => navigate(`/go/practice/${item.id}`)} /></GoCatalogSection>
-      {!!otherGames.length && <GoCatalogSection title={isSpanish ? 'De nuestros creadores' : 'From our creators'} description={isSpanish ? 'Juegos creados y publicados por personas del equipo.' : 'Games created and published by people on the team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
+      {!!otherGames.length && <GoCatalogSection creators title={isSpanish ? 'De nuestros creadores' : 'From our creators'} description={isSpanish ? 'Juegos creados y publicados por personas del equipo.' : 'Games created and published by people on the team.'}>{otherGames.map(item => <article className="go-content-card go-content-card--centered" key={item.id}>
         <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART.classic} alt="" /></span></div>
         <h2>{item.title}</h2><p>{item.description || 'A quick way to sharpen what you know.'}</p>
         <GoCreator item={item} />

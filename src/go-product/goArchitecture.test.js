@@ -121,11 +121,16 @@ test('GO lists all six source modes, enabled only by classified published conten
 test('GO catalogs omit redundant copy and empty creator sections', async () => {
   const practice = await read('GoPracticeSelection.jsx')
   const host = await read('GoHostSelection.jsx')
+  const cards = await read('GoSelectionCards.jsx')
+  const css = await read('goProduct.css')
   for (const source of [practice, host]) {
     assert.doesNotMatch(source, /Original games, organized by mode|Los juegos originales, organizados por modo/)
     assert.doesNotMatch(source, /Published team games will appear here|Los juegos publicados por el equipo aparecerán aquí/)
     assert.match(source, /!!otherGames\.length && <GoCatalogSection/)
+    assert.match(source, /<GoCatalogSection creators title=/)
   }
+  assert.match(cards, /go-game-choices--creators/)
+  assert.match(css, /justify-content:center/)
 })
 
 test('VISUAL-2 keeps GO playful, responsive, and dependency-free', async () => {
