@@ -50,7 +50,7 @@ function hostedRpc(client, name, args) {
   try { assertGoHostedDestination(client.supabaseUrl) } catch {
     return Promise.resolve({ data: null, error: publicError('hosted_blocked', 'Live games are not enabled for this Pulse destination.') })
   }
-  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog_v2' && name !== 'get_go_hosted_session' && name !== 'get_go_hosted_timing' && name !== 'get_go_hosted_results') {
+  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog_v3' && name !== 'get_go_hosted_session' && name !== 'get_go_hosted_timing' && name !== 'get_go_hosted_results') {
     return Promise.resolve(invalidRequest())
   }
   return rpc(client, name, args)
@@ -193,7 +193,7 @@ export function listGoPracticeCatalog(client, {
   if ((language && !LANGUAGES.has(language)) || (topicId && !validUuid(topicId)) ||
       !Number.isInteger(limit) || limit < 1 || limit > 100 ||
       !Number.isInteger(offset) || offset < 0) return Promise.resolve(invalidRequest())
-  return rpc(client, 'list_go_practice_catalog_v2', {
+  return rpc(client, 'list_go_practice_catalog_v3', {
     requested_language: language,
     requested_topic_id: topicId,
     requested_limit: limit,
@@ -204,7 +204,7 @@ export function listGoPracticeCatalog(client, {
 export function listGoHostCatalog(client, { language = null, limit = 100, offset = 0 } = {}) {
   if ((language && !LANGUAGES.has(language)) || !Number.isInteger(limit) || limit < 1 || limit > 100 ||
       !Number.isInteger(offset) || offset < 0) return Promise.resolve(invalidRequest())
-  return hostedRpc(client, 'list_go_host_catalog_v2', {
+  return hostedRpc(client, 'list_go_host_catalog_v3', {
     requested_language: language, requested_limit: limit, requested_offset: offset,
   })
 }
@@ -312,7 +312,7 @@ export function submitGoPracticeAnswer(client, attemptId, questionId, answer) {
   try { assertGoPracticeDestination(client.supabaseUrl) } catch {
     return Promise.resolve({ data: null, error: publicError('practice_blocked', 'Practice is not enabled here.') })
   }
-  return rpc(client, 'submit_go_practice_answer', {
+  return rpc(client, 'submit_go_practice_answer_with_feedback', {
     requested_attempt_id: attemptId,
     requested_question_id: questionId,
     requested_answer: answer,

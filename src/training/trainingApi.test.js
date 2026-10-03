@@ -67,7 +67,7 @@ test('GO capability and Practice catalog clients use exact protected RPCs', asyn
   await listGoPracticeCatalog(client, { language: 'en', topicId: TOPIC_ID, limit: 20, offset: 2 })
   assert.deepEqual(calls, [
     { name: 'get_go_capabilities', args: undefined },
-    { name: 'list_go_practice_catalog_v2', args: { requested_language: 'en', requested_topic_id: TOPIC_ID, requested_limit: 20, requested_offset: 2 } },
+    { name: 'list_go_practice_catalog_v3', args: { requested_language: 'en', requested_topic_id: TOPIC_ID, requested_limit: 20, requested_offset: 2 } },
   ])
 })
 
@@ -84,7 +84,7 @@ test('Hosted GO client sends only canonical room, version, question, and answer 
   await advanceGoHostedSession(client, SESSION_ID, 4)
   await cancelGoHostedSession(client, SESSION_ID, 5)
   assert.deepEqual(calls, [
-    { name: 'list_go_host_catalog_v2', args: { requested_language: 'es', requested_limit: 20, requested_offset: 2 } },
+    { name: 'list_go_host_catalog_v3', args: { requested_language: 'es', requested_limit: 20, requested_offset: 2 } },
     { name: 'create_go_hosted_session', args: { requested_content_id: CONTENT_ID } },
     { name: 'join_go_hosted_session', args: { requested_room_code: 'KK 1234' } },
     { name: 'get_go_hosted_session', args: { requested_session_id: SESSION_ID } },
@@ -172,7 +172,7 @@ test('timed GO Practice uses only own attempt and selected question IDs', async 
   await getGoPracticeCompletedReview(client, ATTEMPT_ID)
   assert.deepEqual(calls, [
     { name: 'get_go_practice_timing', args: { requested_attempt_id: ATTEMPT_ID } },
-    { name: 'submit_go_practice_answer', args: { requested_attempt_id: ATTEMPT_ID, requested_question_id: TOPIC_ID, requested_answer: null } },
+    { name: 'submit_go_practice_answer_with_feedback', args: { requested_attempt_id: ATTEMPT_ID, requested_question_id: TOPIC_ID, requested_answer: null } },
     { name: 'get_go_practice_completed_review', args: { requested_attempt_id: ATTEMPT_ID } },
   ])
 })
@@ -224,9 +224,9 @@ test('Training client has no direct tables, role-name gates, localStorage, or le
     'list_training_catalog', 'get_training_filter_options', 'create_training_content_draft',
     'get_training_content_authoring_details',
     'replace_training_questions', 'publish_training_content', 'get_go_practice_content',
-    'get_go_capabilities', 'list_go_practice_catalog_v2', 'start_training_attempt',
+    'get_go_capabilities', 'list_go_practice_catalog_v3', 'start_training_attempt',
     'complete_training_attempt', 'list_my_training_results',
-    'list_go_host_catalog_v2', 'create_go_hosted_session', 'join_go_hosted_session',
+    'list_go_host_catalog_v3', 'create_go_hosted_session', 'join_go_hosted_session',
     'get_go_hosted_session', 'start_go_hosted_session', 'submit_go_hosted_answer',
     'advance_go_hosted_session', 'cancel_go_hosted_session',
   ]) assert.match(source, new RegExp(rpcName))

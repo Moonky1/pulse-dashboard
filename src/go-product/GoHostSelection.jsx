@@ -69,7 +69,9 @@ export function GoHostSelection() {
         <h2>{item.title}</h2><p>{item.description || 'Ready for your team.'}</p>
         <div className="go-card-stat"><span aria-hidden="true">🎯</span><strong>10</strong> {isSpanish ? 'por ronda' : 'per round'}</div>
         <GoCreator item={item} />
-        <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>{isSpanish ? 'Crear sala' : 'Create room'}</Button>
+        {Number(item.question_count) >= 10
+          ? <Button loading={creating === item.id} disabled={creating !== null} onClick={() => void createRoom(item.id)}>{isSpanish ? 'Crear sala' : 'Create room'}</Button>
+          : <span className="go-creator-pending" role="status">{isSpanish ? 'Próximamente' : 'Coming soon'}</span>}
       </article>)}</GoCatalogSection>}
     </>}
     {selectedMode === 'classic' && <>

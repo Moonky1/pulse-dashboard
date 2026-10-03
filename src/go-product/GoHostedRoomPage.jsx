@@ -15,6 +15,8 @@ import { GoModeAnswers, GoModePrompt } from './GoModeQuestion.jsx'
 import { orderedModeOptions } from './goOptionOrder.js'
 import { goModeResultLine, goResultHeading } from './goModeCopy.js'
 import { GoQuestionCountdown } from './GoQuestionCountdown.jsx'
+import { GoSoundToggle } from './GoSoundToggle.jsx'
+import { playGoSound, primeGoSound } from './goSoundEffects.js'
 import { useHostedRoom } from './useHostedRoom.js'
 import { useQuestionCountdown } from './useQuestionCountdown.js'
 
@@ -23,7 +25,7 @@ function RoomHeader({ room }) {
   const es = room.content.language === 'es'
   return <header className="go-room-heading">
     <div><p className="go-eyebrow">{room.viewer_role === 'host' ? es ? 'SALA EN VIVO' : 'HOSTING LIVE' : es ? 'JUEGO EN VIVO' : 'LIVE GAME'}</p><h1>{room.content.title}</h1><p><GoFlag language={room.content.language} /> {language.label} · {room.question_count} {es ? 'preguntas' : 'questions'}</p></div>
-    <div className="go-room-code"><img src={GO_ART.classic} alt="" /><div><span>{es ? 'Código de acceso' : 'Join with'}</span><strong>{room.room_code}</strong></div></div>
+    <div className="go-room-header-tools"><GoSoundToggle language={room.content.language} /><div className="go-room-code"><img src={GO_ART.classic} alt="" /><div><span>{es ? 'Código de acceso' : 'Join with'}</span><strong>{room.room_code}</strong></div></div></div>
   </header>
 }
 
@@ -150,6 +152,12 @@ export function GoHostedRoomPage({ expectedViewer }) {
   const [error, setError] = useState(null)
   const room = state.room
   const [modeState, setModeState] = useState({ contentId: null, mode: null })
+  const previousStatus = useRef(null)
+
+  useEffect(() => {
+    if (previousStatus.current === 'active' && room?.status === 'completed') playGoSound('complete')
+    if (room?.status) previousStatus.current = room.status
+  }, [room?.status])
 
   useEffect(() => {
     if (!room?.content?.id) return
@@ -161,6 +169,7 @@ export function GoHostedRoomPage({ expectedViewer }) {
   }, [room?.content?.id])
 
   async function hostAction(kind) {
+    if (kind === 'advance') primeGoSound()
     setBusy(kind); setError(null)
     const call = kind === 'start' ? startGoHostedSession : kind === 'advance' ? advanceGoHostedSession : cancelGoHostedSession
     const response = await call(supabase, sessionId, room.version)
@@ -169,6 +178,7 @@ export function GoHostedRoomPage({ expectedViewer }) {
     else await state.refresh({ quiet: true })
   }
   async function submit(answer) {
+    primeGoSound()
     setBusy('submit'); setError(null)
     const response = await submitGoHostedAnswer(supabase, sessionId, room.current_question.id, answer, room.current_question.position)
     setBusy(null)

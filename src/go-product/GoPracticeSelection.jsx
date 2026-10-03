@@ -59,7 +59,9 @@ export function GoPracticeSelection() {
         <div className="go-card-visual"><span className="go-card-art"><img src={GO_ART.classic} alt="" /></span></div>
         <h2>{item.title}</h2><p>{item.description || 'A quick way to sharpen what you know.'}</p>
         <GoCreator item={item} />
-        <Link to={`/go/practice/${item.id}`}>{isSpanish ? 'Jugar' : 'Play'}</Link>
+        {Number(item.question_count) >= 10
+          ? <Link to={`/go/practice/${item.id}`}>{isSpanish ? 'Jugar' : 'Play'}</Link>
+          : <span className="go-creator-pending" role="status">{isSpanish ? 'Próximamente' : 'Coming soon'}</span>}
       </article>)}</GoCatalogSection>}
     </>}
     {selectedMode === 'classic' && !catalog.loading && !catalog.error && <>

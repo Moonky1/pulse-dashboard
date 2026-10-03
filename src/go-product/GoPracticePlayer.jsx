@@ -15,7 +15,9 @@ import { modeForContent } from './goModeCatalog.js'
 import { GoModeAnswers, GoModePrompt } from './GoModeQuestion.jsx'
 import { goModeResultLine, goResultHeading } from './goModeCopy.js'
 import { GoQuestionCountdown } from './GoQuestionCountdown.jsx'
+import { GoSoundToggle } from './GoSoundToggle.jsx'
 import { GO_ART, resolveGoArt } from './goVisualAssets.js'
+import { playGoSound, primeGoSound } from './goSoundEffects.js'
 import { useGoAccess } from './useGoAccess.js'
 import { useQuestionCountdown } from './useQuestionCountdown.js'
 
@@ -78,6 +80,7 @@ export function GoPracticePlayer() {
   const es = session.content?.language === 'es'
   const submitCurrent = useCallback(async value => {
     if (submittingRef.current || !question || !session.attempt) return
+    if (value !== null) primeGoSound()
     submittingRef.current = true
     setSubmitting(true)
     const response = await submitGoPracticeAnswer(supabase, session.attempt.attempt_id, question.id, value)
@@ -85,6 +88,10 @@ export function GoPracticePlayer() {
     setSubmitting(false)
     if (response.error) return setSession(previous => ({ ...previous, error: response.error }))
     const next = normalizeResult(response.data)
+    if (next.answer_feedback === 'correct' || next.answer_feedback === 'incorrect') {
+      playGoSound(next.answer_feedback)
+    }
+    if (next.completed) playGoSound('complete', next.answer_feedback ? 0.55 : 0)
     if (next.completed) setResult(normalizeResult(next.result))
     else { setAnswer(undefined); setTiming(next) }
   }, [question, session.attempt])
@@ -158,7 +165,7 @@ export function GoPracticePlayer() {
   const ready = isAnswerReady(question, answer)
   const last = questionIndex === session.content.questions.length - 1
   return <GoShell><section className="go-player">
-    <header><div className="go-player-identity"><img src={GO_ART.goal} alt="" /><div><p className="go-eyebrow">{session.content.title}</p><span>{es ? 'Pregunta' : 'Question'} {questionIndex + 1} {es ? 'de' : 'of'} {session.content.questions.length}</span></div></div><Link to="/go/practice">{es ? 'Salir' : 'Exit'}</Link></header>
+    <header><div className="go-player-identity"><img src={GO_ART.goal} alt="" /><div><p className="go-eyebrow">{session.content.title}</p><span>{es ? 'Pregunta' : 'Question'} {questionIndex + 1} {es ? 'de' : 'of'} {session.content.questions.length}</span></div></div><div className="go-player-tools"><GoSoundToggle language={session.content.language} /><Link to="/go/practice">{es ? 'Salir' : 'Exit'}</Link></div></header>
     <div className="go-progress" role="progressbar" aria-valuemin="1" aria-valuemax={session.content.questions.length} aria-valuenow={questionIndex + 1}><span style={{ width: `${progress}%` }} /></div>
     <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} language={session.content.language} />
     <article className={`go-player-question go-player-question--${session.mode}`} key={question.id}><span className="go-question-number" aria-hidden="true">{String(questionIndex + 1).padStart(2, '0')}</span><GoModePrompt mode={session.mode} question={question} language={session.content.language} />
