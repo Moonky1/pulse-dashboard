@@ -15,13 +15,21 @@ select ok(not has_function_privilege('anon','public.agent_login_with_pin(text,te
 select ok(not has_function_privilege('authenticated','public.agent_login_with_pin(text,text,text)','EXECUTE'),'Staff browser cannot call login verifier');
 select ok(not has_function_privilege('anon','public.admin_provision_agent(text,text,uuid,text,text,uuid)','EXECUTE'),'anonymous caller cannot provision an Agent');
 
-insert into public.departments(id,code,name,is_active)
-values ('da410000-0000-4000-8000-000000000001','agent1_test','Agent-1 Test Department',true);
-insert into public.campaigns(id,code,name,is_active)
-values ('ca410000-0000-4000-8000-000000000001','agent1_campaign','Agent-1 Test Campaign',true);
-insert into public.teams(id,department_id,campaign_id,code,name,is_active) values
-  ('ea410000-0000-4000-8000-000000000001','da410000-0000-4000-8000-000000000001','ca410000-0000-4000-8000-000000000001','agent1_team_a','Agent-1 Team A',true),
-  ('ea410000-0000-4000-8000-000000000002','da410000-0000-4000-8000-000000000001','ca410000-0000-4000-8000-000000000001','agent1_team_b','Agent-1 Team B',true);
+insert into public.business_areas(id,code,name,is_active)
+values ('ba410000-0000-4000-8000-000000000002','agent1_test','Agent-1 Test Area',true);
+insert into public.campaigns(id,business_area_id,code,name,is_active)
+values ('ca410000-0000-4000-8000-000000000001','ba410000-0000-4000-8000-000000000002',
+  'agent1_campaign','Agent-1 Test Campaign',true);
+insert into public.operating_units(id,business_area_id,campaign_id,code,name,is_active)
+values ('0a410000-0000-4000-8000-000000000001','ba410000-0000-4000-8000-000000000002',
+  'ca410000-0000-4000-8000-000000000001','openers','Openers',true);
+insert into public.teams(id,business_area_id,campaign_id,operating_unit_id,code,name,is_active) values
+  ('ea410000-0000-4000-8000-000000000001','ba410000-0000-4000-8000-000000000002',
+    'ca410000-0000-4000-8000-000000000001','0a410000-0000-4000-8000-000000000001',
+    'agent1_team_a','Agent-1 Team A',true),
+  ('ea410000-0000-4000-8000-000000000002','ba410000-0000-4000-8000-000000000002',
+    'ca410000-0000-4000-8000-000000000001','0a410000-0000-4000-8000-000000000001',
+    'agent1_team_b','Agent-1 Team B',true);
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values ('aa410000-0000-4000-8000-000000000001','authenticated','authenticated','agent1.admin@example.test','',now(),'{}','{}',now(),now());
 insert into public.users(id,auth_user_id,email,full_name,status,approved_at)

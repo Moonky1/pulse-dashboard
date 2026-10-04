@@ -9,9 +9,8 @@ test('Agent provisioning validates details before any server call', async () => 
   let calls = 0
   const client = { rpc: async () => { calls += 1; return { data: null, error: null } } }
   for (const values of [
-    { code: 'abcd', displayName: 'QA Agent', teamId: TEAM },
-    { code: '3248', displayName: 'Q', teamId: TEAM },
-    { code: '3248', displayName: 'QA Agent', teamId: 'wrong' },
+    { code: 'abcd', teamId: TEAM },
+    { code: '3248', teamId: 'wrong' },
   ]) {
     assert.equal((await provisionAgent(client, values)).error.code, 'invalid_request')
   }
@@ -23,10 +22,10 @@ test('Staff provisions an approved Agent without choosing their PIN', async () =
   const calls = []
   const activation = { agent_id: 'new-agent-id', agent_code: '3248', activation_code: '0123456789abcdef' }
   const client = { rpc: async (...args) => { calls.push(args); return { data: activation, error: null } } }
-  const result = await provisionAgent(client, { code: ' 3248 ', displayName: ' QA Agent 3248 ', teamId: TEAM })
+  const result = await provisionAgent(client, { code: ' 3248 ', teamId: TEAM })
   assert.deepEqual(result.data, activation)
   assert.deepEqual(calls, [['admin_prepare_agent_activation', {
-    requested_agent_code: '3248', requested_display_name: 'QA Agent 3248',
+    requested_agent_code: '3248', requested_display_name: 'Agent 3248',
     requested_team_id: TEAM, requested_full_name: null, requested_operating_unit_id: null,
   }]])
   assert.equal(JSON.stringify(calls).includes('pin'), false)
@@ -40,7 +39,7 @@ test('Staff can request a fresh one-time code without setting a PIN', async () =
 })
 
 test('Agent provisioning returns safe duplicate and permission errors', async () => {
-  const values = { code: '3248', displayName: 'QA Agent 3248', teamId: TEAM }
+  const values = { code: '3248', teamId: TEAM }
   const duplicate = await provisionAgent({ rpc: async () => ({ error: { code: '23505' } }) }, values)
   assert.equal(duplicate.error.code, 'duplicate')
   const denied = await provisionAgent({ rpc: async () => ({ error: { code: '42501' } }) }, values)

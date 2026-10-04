@@ -16,13 +16,24 @@ select ok(not has_function_privilege('authenticated','public.admin_provision_age
 select ok(not has_function_privilege('authenticated','public.admin_reset_agent_pin(uuid,text)','EXECUTE'),
   'old Staff-set-PIN reset contract is retired');
 
-insert into public.departments(id,code,name,is_active)
-values ('da470000-0000-4000-8000-000000000001','agent1_activation','Activation Test Department',true);
-insert into public.campaigns(id,code,name,is_active)
-values ('ca470000-0000-4000-8000-000000000001','agent1_activation','Activation Test Campaign',true);
-insert into public.teams(id,department_id,campaign_id,code,name,is_active)
-values ('ea470000-0000-4000-8000-000000000001','da470000-0000-4000-8000-000000000001',
-  'ca470000-0000-4000-8000-000000000001','agent1_activation','Activation Test Team',true);
+insert into public.business_areas(id,code,name,is_active)
+values ('ba470000-0000-4000-8000-000000000002','agent1_activation','Activation Test Area',true);
+insert into public.campaigns(id,business_area_id,code,name,is_active)
+values ('ca470000-0000-4000-8000-000000000001','ba470000-0000-4000-8000-000000000002',
+  'agent1_activation','Activation Test Campaign',true);
+insert into public.operating_units(id,business_area_id,campaign_id,code,name,is_active)
+values ('0a470000-0000-4000-8000-000000000001','ba470000-0000-4000-8000-000000000002',
+  'ca470000-0000-4000-8000-000000000001','openers','Openers',true);
+insert into public.operating_units(id,business_area_id,campaign_id,code,name,is_active)
+values ('0a470000-0000-4000-8000-000000000002','ba470000-0000-4000-8000-000000000002',
+  'ca470000-0000-4000-8000-000000000001','closers','Closers',true);
+insert into public.teams(id,business_area_id,campaign_id,operating_unit_id,code,name,is_active)
+values ('ea470000-0000-4000-8000-000000000001','ba470000-0000-4000-8000-000000000002',
+  'ca470000-0000-4000-8000-000000000001','0a470000-0000-4000-8000-000000000001',
+  'agent1_activation','Activation Test Team',true);
+insert into public.teams(id,business_area_id,campaign_id,code,name,is_active)
+values ('ea470000-0000-4000-8000-000000000002','ba470000-0000-4000-8000-000000000002',
+  'ca470000-0000-4000-8000-000000000001','non_opener','Non-opener Test Team',true);
 insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values ('aa470000-0000-4000-8000-000000000001','authenticated','authenticated',
   'agent1.activation@example.test','',now(),'{}','{}',now(),now());
@@ -34,11 +45,28 @@ values ('fa470000-0000-4000-8000-000000000001','ba470000-0000-4000-8000-00000000
   '10000000-0000-0000-0000-000000000010','global');
 select set_config('request.jwt.claim.sub','aa470000-0000-4000-8000-000000000001',true);
 
+select throws_ok($$select public.admin_prepare_agent_activation('4790','Wrong Team',
+  'ea470000-0000-4000-8000-000000000002',null,null)$$,'22023',null,
+  'an administrator cannot provision an Agent outside an opener team');
+select throws_ok($$select public.admin_prepare_agent_activation('4791','Wrong Unit',
+  'ea470000-0000-4000-8000-000000000001',null,
+  '0a470000-0000-4000-8000-000000000002')$$,'22023',null,
+  'an administrator cannot attach an opener Agent to a different operating unit');
+
 create temporary table activation_fixture(agent_id uuid,agent_code text,activation_code text);
 insert into activation_fixture
 select (result->>'agent_id')::uuid,result->>'agent_code',result->>'activation_code'
 from (select public.admin_prepare_agent_activation('4747','Activation Agent',
   'ea470000-0000-4000-8000-000000000001',null,null) result) created;
+
+select is((select operating_unit_id from public.agents
+  where id=(select agent_id from activation_fixture)),
+  '0a470000-0000-4000-8000-000000000001'::uuid,
+  'Agent inherits the opener operating unit from the selected team');
+select throws_ok($$select public.admin_update_agent(
+  (select agent_id from activation_fixture where agent_code='4747'),
+  'active','ea470000-0000-4000-8000-000000000002',null)$$,'22023',null,
+  'an administrator cannot move an Agent outside an opener team');
 
 select ok((select activation_code ~ '^[0-9a-f]{16}$' from activation_fixture),
   'Staff receives a 64-bit one-time code');

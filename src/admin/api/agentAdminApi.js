@@ -9,16 +9,14 @@ function normalizeAgentError(error, action) {
   return { code: 'unavailable', message: `Could not ${action} this Agent. Try again.` }
 }
 
-export async function provisionAgent(client, { code, displayName, teamId }) {
+export async function provisionAgent(client, { code, teamId }) {
   const normalizedCode = String(code ?? '').trim()
-  const normalizedName = String(displayName ?? '').trim()
-  if (!AGENT_CODE.test(normalizedCode) || normalizedName.length < 2 || normalizedName.length > 80
-      || !UUID.test(teamId ?? '')) {
-    return { data: null, error: { code: 'invalid_request', message: 'Check the Agent ID, name and team.' } }
+  if (!AGENT_CODE.test(normalizedCode) || !UUID.test(teamId ?? '')) {
+    return { data: null, error: { code: 'invalid_request', message: 'Check the Agent ID and opener team.' } }
   }
   const { data, error } = await client.rpc('admin_prepare_agent_activation', {
     requested_agent_code: normalizedCode,
-    requested_display_name: normalizedName,
+    requested_display_name: `Agent ${normalizedCode}`,
     requested_team_id: teamId,
     requested_full_name: null,
     requested_operating_unit_id: null,

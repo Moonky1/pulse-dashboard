@@ -2,16 +2,16 @@ import { useEffect, useState } from 'react'
 
 import { Button } from '../../components/ui/Button.jsx'
 import { supabase } from '../../utils/supabase.js'
-import { listManagedTeams } from '../api/adminApi.js'
+import { loadBusinessCatalog } from '../api/adminApi.js'
 import { provisionAgent, reissueAgentActivation } from '../api/agentAdminApi.js'
+import { openerTeamGroups } from '../agentTeamOptions.js'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
 
 export function AdminAgentsPage() {
-  const [teams, setTeams] = useState([])
+  const [teamGroups, setTeamGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [code, setCode] = useState('')
-  const [displayName, setDisplayName] = useState('')
   const [teamId, setTeamId] = useState('')
   const [reissueCode, setReissueCode] = useState('')
   const [activation, setActivation] = useState(null)
@@ -20,9 +20,9 @@ export function AdminAgentsPage() {
 
   useEffect(() => {
     let current = true
-    void listManagedTeams(supabase).then((result) => {
+    void loadBusinessCatalog(supabase).then((result) => {
       if (!current) return
-      setTeams(result.data.filter((team) => team.isActive))
+      setTeamGroups(openerTeamGroups(result.data ?? {}))
       setLoadError(result.error)
       setLoading(false)
     })
@@ -34,12 +34,11 @@ export function AdminAgentsPage() {
     setSubmitting(true)
     setError(null)
     setActivation(null)
-    const result = await provisionAgent(supabase, { code, displayName, teamId })
+    const result = await provisionAgent(supabase, { code, teamId })
     setSubmitting(false)
     if (result.error) { setError(result.error); return }
     setActivation(result.data)
     setCode('')
-    setDisplayName('')
     setTeamId('')
   }
 
@@ -59,22 +58,21 @@ export function AdminAgentsPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading"><div><p>Pulse GO</p><h1>Agents</h1><span>Provision a company player without granting Staff access</span></div></div>
-      {loading ? <AdminStatePanel kind="loading" title="Loading teams" body="Checking available teams…" />
-        : loadError ? <AdminStatePanel kind="error" title="Teams unavailable" body={loadError.message} />
+      {loading ? <AdminStatePanel kind="loading" title="Loading opener teams" body="Checking available teams…" />
+        : loadError ? <AdminStatePanel kind="error" title="Opener teams unavailable" body={loadError.message} />
           : <section className="admin-agent-card" aria-label="Create Agent">
-            <div><p className="admin-agent-card__eyebrow">Staff-only operation</p><h2>Create Agent</h2><p>Approve an Agent ID and team. The Agent chooses their own private PIN with a one-time activation code.</p></div>
+            <div><p className="admin-agent-card__eyebrow">Staff-only operation</p><h2>Create Agent</h2><p>Choose an opener team and enter the Agent ID. The player sets their own private PIN with a one-time activation code.</p></div>
             <form onSubmit={(event) => void submit(event)} autoComplete="off">
               <label><span>Agent ID</span><input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" pattern="[0-9]{4,12}" maxLength={12} placeholder="3248" required /></label>
-              <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} minLength={2} maxLength={80} placeholder="QA Agent 3248" required /></label>
-              <label><span>Team</span><select value={teamId} onChange={(event) => setTeamId(event.target.value)} required><option value="">Choose a team</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
-              <div className="admin-agent-card__actions"><p>The activation code expires in 24 hours and appears only once. Share it privately with the Agent.</p><Button type="submit" loading={submitting} disabled={!teams.length}>Create Agent</Button></div>
+              <label><span>Opener team</span><select value={teamId} onChange={(event) => setTeamId(event.target.value)} required><option value="">Choose an opener team</option>{teamGroups.map((group) => <optgroup key={group.id} label={group.name}>{group.teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</optgroup>)}</select></label>
+              <div className="admin-agent-card__actions"><p>{teamGroups.length ? `The player will appear as Agent ${code || '3248'}. The activation code expires in 24 hours and appears only once.` : 'No active opener teams are available.'}</p><Button type="submit" loading={submitting} disabled={!teamGroups.length}>Create Agent</Button></div>
             </form>
           </section>}
-      <section className="admin-agent-card" aria-label="Reissue Agent activation">
-        <div><p className="admin-agent-card__eyebrow">Account recovery</p><h2>Issue a new activation code</h2><p>For an existing Agent who lost the code or PIN. This immediately revokes their current PIN and sessions.</p></div>
+      <section className="admin-agent-card" aria-label="Recover Agent access">
+        <div><p className="admin-agent-card__eyebrow">Existing Agents only</p><h2>Recover Agent access</h2><p>If an Agent forgot their PIN or lost their activation code, generate a new one. Their old PIN and open sessions stop working immediately.</p></div>
         <form onSubmit={(event) => void reissue(event)} autoComplete="off">
           <label><span>Agent ID</span><input value={reissueCode} onChange={(event) => setReissueCode(event.target.value)} inputMode="numeric" pattern="[0-9]{4,12}" maxLength={12} placeholder="3248" required /></label>
-          <div className="admin-agent-card__actions"><p>Confirm the Agent’s identity before sharing the new code.</p><Button type="submit" loading={submitting}>Reissue code</Button></div>
+          <div className="admin-agent-card__actions"><p>Confirm the Agent’s identity before sharing the new code.</p><Button type="submit" loading={submitting}>Generate recovery code</Button></div>
         </form>
       </section>
       {error && <p className="admin-operation-error" role="alert">{error.message}</p>}
