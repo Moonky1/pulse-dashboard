@@ -5,6 +5,7 @@ import {
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './auth/AuthProvider.jsx'
+import { AgentSessionProvider } from './go-product/AgentSession.jsx'
 
 createRoot(
   document.getElementById(
@@ -12,6 +13,6 @@ createRoot(
   )
 ).render(
   <AuthProvider>
-    <App />
+    <AgentSessionProvider><App /></AgentSessionProvider>
   </AuthProvider>
 )

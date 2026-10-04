@@ -19,6 +19,7 @@ import { GoSoundToggle } from './GoSoundToggle.jsx'
 import { GO_ART, resolveGoArt } from './goVisualAssets.js'
 import { playGoSound, primeGoSound } from './goSoundEffects.js'
 import { useGoAccess } from './useGoAccess.js'
+import { useGoIdentity } from './useGoIdentity.js'
 import { useQuestionCountdown } from './useQuestionCountdown.js'
 
 function AnswerControl({ question, answer, onChange, disabled, language }) {
@@ -30,7 +31,10 @@ function AnswerControl({ question, answer, onChange, disabled, language }) {
 export function GoPracticePlayer() {
   const { contentId } = useParams()
   const access = useGoAccess()
-  const destination = resolveGoPracticeDestination(supabase.supabaseUrl)
+  const practiceAllowed = canPractice(access.capabilities)
+  const identity = useGoIdentity()
+  const client = identity.client || supabase
+  const destination = resolveGoPracticeDestination(client.supabaseUrl)
   const [session, setSession] = useState({ content: null, attempt: null, mode: 'classic', loading: true, error: null })
   const [answer, setAnswer] = useState(undefined)
   const [timing, setTiming] = useState(null)
@@ -46,13 +50,13 @@ export function GoPracticePlayer() {
   const openAttempt = useCallback(async () => {
     setSession(previous => ({ ...previous, loading: true, error: null }))
     const [contentResponse, attemptResponse, modeResponse] = await Promise.all([
-      getGoPracticeContent(supabase, contentId),
-      startTrainingAttempt(supabase, contentId, 'go_practice'),
-      getGoQuestionBankGroups(supabase, [contentId]),
+      getGoPracticeContent(client, contentId),
+      startTrainingAttempt(client, contentId, 'go_practice'),
+      getGoQuestionBankGroups(client, [contentId]),
     ])
     const attempt = normalizeResult(attemptResponse.data)
     const timingResponse = attempt?.attempt_id
-      ? await getGoPracticeTiming(supabase, attempt.attempt_id)
+      ? await getGoPracticeTiming(client, attempt.attempt_id)
       : { data: null, error: null }
     const content = normalizePracticeContent(contentResponse.data)
     const selectedIds = normalizeResult(timingResponse.data)?.question_ids
@@ -66,13 +70,13 @@ export function GoPracticePlayer() {
     setAnswer(undefined)
     setSession({ content: error ? null : selectedContent, attempt: error ? null : attempt,
       mode: modeForContent(modeResponse.data, contentId), loading: false, error })
-  }, [contentId])
+  }, [client, contentId])
 
   useEffect(() => {
-    if (access.state !== 'allowed' || !canPractice(access.capabilities) || !destination.allowed) return
+    if (access.state !== 'allowed' || !practiceAllowed || !destination.allowed) return
     const timer = setTimeout(() => { void openAttempt() }, 0)
     return () => clearTimeout(timer)
-  }, [access.capabilities, access.state, destination.allowed, openAttempt])
+  }, [access.state, destination.allowed, openAttempt, practiceAllowed])
 
   const questionIndex = (Number(timing?.question_position) || 1) - 1
   const question = session.content?.questions[questionIndex]
@@ -83,7 +87,7 @@ export function GoPracticePlayer() {
     if (value !== null) primeGoSound()
     submittingRef.current = true
     setSubmitting(true)
-    const response = await submitGoPracticeAnswer(supabase, session.attempt.attempt_id, question.id, value)
+    const response = await submitGoPracticeAnswer(client, session.attempt.attempt_id, question.id, value)
     submittingRef.current = false
     setSubmitting(false)
     if (response.error) return setSession(previous => ({ ...previous, error: response.error }))
@@ -94,7 +98,7 @@ export function GoPracticePlayer() {
     if (next.completed) playGoSound('complete', next.answer_feedback ? 0.55 : 0)
     if (next.completed) setResult(normalizeResult(next.result))
     else { setAnswer(undefined); setTiming(next) }
-  }, [question, session.attempt])
+  }, [client, question, session.attempt])
 
   useEffect(() => {
     if (!expired || !question || result || submittingRef.current) return
@@ -107,29 +111,29 @@ export function GoPracticePlayer() {
     let current = true
     const timer = setTimeout(() => {
       setReview({ questions: null, loading: true, error: null })
-      void getGoPracticeCompletedReview(supabase, result.attempt_id).then(({ data, error }) => {
+      void getGoPracticeCompletedReview(client, result.attempt_id).then(({ data, error }) => {
         if (!current) return
         const questions = error ? null : normalizePracticeReview(data, result.attempt_id)
         setReview({ questions, loading: false, error: error || (!questions ? { message: 'Review unavailable.' } : null) })
       })
     }, 0)
     return () => { current = false; clearTimeout(timer) }
-  }, [result?.attempt_id, reviewRetry, session.mode])
+  }, [client, result?.attempt_id, reviewRetry, session.mode])
 
   useEffect(() => {
     if (!result?.attempt_id || session.mode !== 'certification') return
     let current = true
     const timer = setTimeout(() => {
       setCertification({ data: null, loading: true, error: null })
-      void getGoCertificationResult(supabase, result.attempt_id).then(({ data, error }) => {
+      void getGoCertificationResult(client, result.attempt_id).then(({ data, error }) => {
         if (current) setCertification({ data: error ? null : data, loading: false, error })
       })
     }, 0)
     return () => { current = false; clearTimeout(timer) }
-  }, [result?.attempt_id, session.mode, certificationRetry])
+  }, [client, result?.attempt_id, session.mode, certificationRetry])
 
   if (access.state !== 'allowed') return <GoAccessState access={access} />
-  if (!canPractice(access.capabilities)) return <GoAccessState access={{ state: 'denied' }} />
+  if (!practiceAllowed) return <GoAccessState access={{ state: 'denied' }} />
   if (!destination.allowed) return <GoShell><section className="go-state"><h1>Practice isn’t available here</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
   if (session.loading) return <GoShell><section className="go-state" role="status"><h1>Preparing your practice…</h1></section></GoShell>
   if (session.error || (!question && !result)) return <GoShell><section className="go-state" role="alert"><h1>We couldn’t start this practice</h1><p>{session.error?.message}</p><Link to="/go/practice">Choose another</Link></section></GoShell>

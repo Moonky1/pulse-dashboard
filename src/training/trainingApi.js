@@ -187,6 +187,15 @@ export function getGoCapabilities(client) {
   return rpc(client, 'get_go_capabilities')
 }
 
+export function getGoGlobalRanking(client, period = 'week') {
+  if (!['week', 'all_time'].includes(period)) return Promise.resolve(invalidRequest())
+  return rpc(client, 'get_go_global_ranking', { requested_period: period })
+}
+
+export function getMyGoProgress(client) {
+  return rpc(client, 'get_my_go_progress', {})
+}
+
 export function listGoPracticeCatalog(client, {
   language = null, topicId = null, limit = 100, offset = 0,
 } = {}) {

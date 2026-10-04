@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AUTH_STATES, routeForAuthState } from './authState.js'
 import { AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH } from './authRoutes.js'
 import { useAuth } from './AuthProvider.jsx'
+import { useGoIdentity } from '../go-product/useGoIdentity.js'
 const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').then((module) => ({ default: module.AccountStatePage })))
 const AccountSettingsPage = lazy(() => import('./screens/AccountSettingsPage.jsx').then((module) => ({ default: module.AccountSettingsPage })))
 const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => ({ default: module.AdminArea })))
@@ -17,6 +18,7 @@ const GoHostSelection = lazy(() => import('../go-product/GoHostSelection.jsx').t
 const GoHostedRoomPage = lazy(() => import('../go-product/GoHostedRoomPage.jsx').then((module) => ({ default: module.GoHostedRoomPage })))
 const GoPracticePlayer = lazy(() => import('../go-product/GoPracticePlayer.jsx').then((module) => ({ default: module.GoPracticePlayer })))
 const GoPracticeSelection = lazy(() => import('../go-product/GoPracticeSelection.jsx').then((module) => ({ default: module.GoPracticeSelection })))
+const GoPlayerProgress = lazy(() => import('../go-product/GoPlayerProgress.jsx').then((module) => ({ default: module.GoPlayerProgress })))
 const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx').then((module) => ({ default: module.PendingApprovalPage })))
 const ProductDashboardPage = lazy(() => import('./screens/ProductDashboardPage.jsx').then((module) => ({ default: module.ProductDashboardPage })))
 const PublicHomePage = lazy(() => import('./screens/PublicHomePage.jsx').then((module) => ({ default: module.PublicHomePage })))
@@ -42,6 +44,14 @@ function PublicOnly({ children }) {
   return <RouteGate allow={[AUTH_STATES.ANONYMOUS]}>{children}</RouteGate>
 }
 
+function GoPlayerGate({ children }) {
+  const identity = useGoIdentity()
+  const location = useLocation()
+  if (identity.loading) return <AccountStatePage kind="loading" />
+  if (identity.kind === 'staff' || identity.kind === 'agent') return children
+  return <Navigate to={`${AGENT_SIGN_IN_PATH}?next=${encodeURIComponent(location.pathname)}`} replace />
+}
+
 export function AuthApp() {
   return (
     <BrowserRouter>
@@ -52,7 +62,7 @@ export function AuthApp() {
         <Route path={AUTH_ENTRY_PATH} element={<PublicOnly><SignInPage /></PublicOnly>} />
         <Route path={STAFF_REGISTER_PATH} element={<PublicOnly><RegisterPage /></PublicOnly>} />
         <Route path={STAFF_FORGOT_PASSWORD_PATH} element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
-        <Route path={AGENT_SIGN_IN_PATH} element={<PublicOnly><AgentSignInPage /></PublicOnly>} />
+        <Route path={AGENT_SIGN_IN_PATH} element={<AgentSignInPage />} />
         <Route path="/staff/signin" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
         <Route path="/staff/register" element={<Navigate to={STAFF_REGISTER_PATH} replace />} />
         <Route path="/staff/forgot-password" element={<Navigate to={STAFF_FORGOT_PASSWORD_PATH} replace />} />
@@ -67,12 +77,13 @@ export function AuthApp() {
         <Route path="/staff/:profileId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StaffPublicProfilePage /></RouteGate>} />
         <Route path="/academy" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AcademyPage /></RouteGate>} />
         <Route path="/academy/:id" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AcademyDetailPage /></RouteGate>} />
-        <Route path="/go" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoLandingPage /></RouteGate>} />
+        <Route path="/go" element={<GoLandingPage />} />
         <Route path="/go/host" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostSelection /></RouteGate>} />
         <Route path="/go/host/:sessionId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostedRoomPage expectedViewer="host" /></RouteGate>} />
-        <Route path="/go/room/:sessionId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostedRoomPage expectedViewer="participant" /></RouteGate>} />
-        <Route path="/go/practice" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoPracticeSelection /></RouteGate>} />
-        <Route path="/go/practice/:contentId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoPracticePlayer /></RouteGate>} />
+        <Route path="/go/room/:sessionId" element={<GoPlayerGate><GoHostedRoomPage expectedViewer="participant" /></GoPlayerGate>} />
+        <Route path="/go/practice" element={<GoPlayerGate><GoPracticeSelection /></GoPlayerGate>} />
+        <Route path="/go/practice/:contentId" element={<GoPlayerGate><GoPracticePlayer /></GoPlayerGate>} />
+        <Route path="/go/progress" element={<GoPlayerGate><GoPlayerProgress /></GoPlayerGate>} />
         <Route path="/studio" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioPage /></RouteGate>} />
         <Route path="/studio/create" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />
         <Route path="/studio/content/:contentId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />

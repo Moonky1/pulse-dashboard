@@ -18,10 +18,16 @@ test('homepage and legal pages are public routes outside RouteGate', async () =>
 test('authenticated product routes remain protected', async () => {
   const app = await read('./AuthApp.jsx')
 
-  for (const path of ['/workspace', '/dashboard', '/go', '/studio', '/admin/*']) {
+  for (const path of ['/workspace', '/dashboard', '/studio', '/admin/*']) {
     const line = app.split('\n').find((candidate) => candidate.includes(`path="${path}"`))
     assert.match(line, /RouteGate allow=\{\[AUTH_STATES\.ACTIVE\]\}/)
   }
+  assert.match(app, /path="\/go" element=\{<GoLandingPage \/>\}/)
+  for (const path of ['/go/practice', '/go/practice/:contentId', '/go/room/:sessionId', '/go/progress']) {
+    const line = app.split('\n').find((candidate) => candidate.includes(`path="${path}"`))
+    assert.match(line, /<GoPlayerGate>/)
+  }
+  assert.match(app, /path="\/go\/host".*AUTH_STATES\.ACTIVE/)
 })
 
 test('public homepage presents concise Pulse entry without exposing internal data', async () => {

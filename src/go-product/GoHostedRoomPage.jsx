@@ -19,6 +19,7 @@ import { GoQuestionCountdown } from './GoQuestionCountdown.jsx'
 import { GoSoundToggle } from './GoSoundToggle.jsx'
 import { playGoSound, primeGoSound } from './goSoundEffects.js'
 import { useHostedRoom } from './useHostedRoom.js'
+import { useGoIdentity } from './useGoIdentity.js'
 import { useQuestionCountdown } from './useQuestionCountdown.js'
 
 function RoomHeader({ room }) {
@@ -164,6 +165,8 @@ function LeaveWaitingRoomDialog({ language, busy, error, onStay, onLeave }) {
 }
 
 export function GoHostedRoomPage({ expectedViewer }) {
+  const identity = useGoIdentity()
+  const client = identity.client || supabase
   const { sessionId } = useParams()
   const navigate = useNavigate()
   const { signOut } = useAuth()
@@ -209,11 +212,11 @@ export function GoHostedRoomPage({ expectedViewer }) {
   useEffect(() => {
     if (!room?.content?.id) return
     let current = true
-    void getGoQuestionBankGroups(supabase, [room.content.id]).then(({ data }) => {
+    void getGoQuestionBankGroups(client, [room.content.id]).then(({ data }) => {
       if (current) setModeState({ contentId: room.content.id, mode: modeForContent(data, room.content.id) })
     })
     return () => { current = false }
-  }, [room?.content?.id])
+  }, [client, room?.content?.id])
 
   async function hostAction(kind) {
     if (kind === 'advance') primeGoSound()
@@ -227,7 +230,7 @@ export function GoHostedRoomPage({ expectedViewer }) {
   async function submit(answer) {
     primeGoSound()
     setBusy('submit'); setError(null)
-    const response = await submitGoHostedAnswer(supabase, sessionId, room.current_question.id, answer, room.current_question.position)
+    const response = await submitGoHostedAnswer(client, sessionId, room.current_question.id, answer, room.current_question.position)
     setBusy(null)
     if (response.error) setError(response.error.message)
     else await state.refresh({ quiet: true })

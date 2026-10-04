@@ -12,37 +12,41 @@ import { GoCatalogSection, GoClassicLevelCard, GoCreator, GoLanguageChoices, GoP
 import { normalizeCatalog } from './goPracticeModel.js'
 import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
+import { useGoIdentity } from './useGoIdentity.js'
 
 export function GoPracticeSelection() {
   const navigate = useNavigate()
   const access = useGoAccess()
-  const destination = resolveGoPracticeDestination(supabase.supabaseUrl)
+  const practiceAllowed = canPractice(access.capabilities)
+  const identity = useGoIdentity()
+  const client = identity.client || supabase
+  const destination = resolveGoPracticeDestination(client.supabaseUrl)
   const [selectedLanguage, setSelectedLanguage] = useState('')
   const [selectedMode, setSelectedMode] = useState('')
   const [catalog, setCatalog] = useState({ items: [], groups: [], loading: false, error: null })
 
   useEffect(() => {
-    if (access.state !== 'allowed' || !canPractice(access.capabilities) || !destination.allowed || !selectedLanguage) return
+    if (access.state !== 'allowed' || !practiceAllowed || !destination.allowed || !selectedLanguage) return
     let current = true
     const timer = setTimeout(() => {
       setCatalog({ items: [], groups: [], loading: true, error: null })
       void (async () => {
-        const listed = await listGoPracticeCatalog(supabase, { language: selectedLanguage })
+        const listed = await listGoPracticeCatalog(client, { language: selectedLanguage })
         const items = normalizeCatalog(listed.data || [])
         const [groups, identity] = listed.error ? [{ data: [], error: null }, { data: [], error: null }]
           : await Promise.all([
-            getGoQuestionBankGroups(supabase, items.map(item => item.id)),
-            getGoGameIdentity(supabase, items.map(item => item.id)),
+            getGoQuestionBankGroups(client, items.map(item => item.id)),
+            getGoGameIdentity(client, items.map(item => item.id)),
           ])
         const byId = new Map((identity.data || []).map(item => [item.id, item]))
         if (current) setCatalog({ items: items.map(item => ({ ...item, ...byId.get(item.id) })), groups: groups.data || [], loading: false, error: listed.error || groups.error || identity.error })
       })()
     }, 0)
     return () => { current = false; clearTimeout(timer) }
-  }, [access.capabilities, access.state, destination.allowed, selectedLanguage])
+  }, [access.state, client, destination.allowed, practiceAllowed, selectedLanguage])
 
   if (access.state !== 'allowed') return <GoAccessState access={access} />
-  if (!canPractice(access.capabilities)) return <GoAccessState access={{ state: 'denied' }} />
+  if (!practiceAllowed) return <GoAccessState access={{ state: 'denied' }} />
   if (!destination.allowed) return <GoShell><section className="go-state" role="status"><h1>Practice isn’t available here</h1><p>Try again from an enabled Pulse environment.</p><Link to="/go">Back to GO</Link></section></GoShell>
 
   const isSpanish = selectedLanguage === 'es'

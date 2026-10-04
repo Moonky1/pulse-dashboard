@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom'
 
 import { ProductHeader } from '../components/ProductHeader.jsx'
+import { AgentGoHeader } from './AgentGoHeader.jsx'
+import { useGoIdentity } from './useGoIdentity.js'
 import './goProduct.css'
 
 export function GoShell({ children, confirmLeave }) {
+  const identity = useGoIdentity()
   return <div className="go-shell pulse-product-surface">
-    <ProductHeader confirmLeave={confirmLeave} />
+    {identity.kind === 'staff' ? <ProductHeader confirmLeave={confirmLeave} /> : <AgentGoHeader />}
     <main className="go-main">{children}</main>
   </div>
 }

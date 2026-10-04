@@ -103,7 +103,7 @@ test('migration is protected, read/schema-only, and keeps Agent linkage deferred
   assert.doesNotMatch(sql, /execute\s+format|\btruncate\b/i)
 })
 
-test('Production keeps Staff and future Agent entry boundaries separate', async () => {
+test('Staff and Agent entry boundaries remain separate', async () => {
   const [authApp, agentSignIn, index] = await Promise.all([
     readFile(authAppUrl, 'utf8'),
     readFile(agentSignInUrl, 'utf8'),
@@ -111,7 +111,9 @@ test('Production keeps Staff and future Agent entry boundaries separate', async 
   ])
   assert.match(index, /src\/auth\/main\.jsx/)
   assert.match(authApp, /AGENT_SIGN_IN_PATH/)
-  assert.match(authApp, /PublicOnly><AgentSignInPage/)
+  assert.match(authApp, /path=\{AGENT_SIGN_IN_PATH\} element=\{<AgentSignInPage \/>\}/)
+  assert.match(authApp, /path="\/studio".*AUTH_STATES\.ACTIVE/)
+  assert.match(authApp, /path="\/admin\/\*".*AUTH_STATES\.ACTIVE/)
   assert.doesNotMatch(agentSignIn, /signInWithPassword|signInWithOAuth|signUp|public\.users/)
   assert.doesNotMatch(agentSignIn, /go\.play|academy\.view|studio\./)
 })
