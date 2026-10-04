@@ -115,6 +115,24 @@ export function createAgentHandler(makeClient = serviceClient) {
       }
     }
     const action = request.method === 'GET' ? 'profile' : body.action
+    if (action === 'activate') {
+      const code = typeof body.args?.code === 'string' ? body.args.code.trim() : ''
+      const activationCode = typeof body.args?.activationCode === 'string' ? body.args.activationCode.trim().toLowerCase() : ''
+      const pin = body.args?.pin
+      if (!/^\d{4,12}$/.test(code) || !/^[0-9a-f]{16}$/.test(activationCode)
+        || typeof pin !== 'string' || !/^\d{6,12}$/.test(pin)) {
+        return fail(response, 400, 'Check the Agent ID, activation code and PIN.', 'invalid_request')
+      }
+      const { data, error } = await client.rpc('agent_activate_with_code', {
+        requested_agent_code: code, requested_activation_code: activationCode, requested_pin: pin,
+      })
+      if (error) {
+        const [status, message, publicCode] = publicRpcError(error)
+        return fail(response, status, message, publicCode)
+      }
+      if (!data?.activated) return fail(response, 401, 'Activation failed. Check your code or ask an administrator for a new one.', 'invalid_activation')
+      return send(response, 200, { data: { activated: true }, error: null })
+    }
     if (action === 'login') {
       const code = typeof body.args?.code === 'string' ? body.args.code.trim() : ''
       const pin = body.args?.pin

@@ -37,6 +37,29 @@ test('Agent code without PIN cannot authenticate', async () => {
   assert.equal(calls.length, 0)
 })
 
+test('Agent can activate once with a one-time code and self-chosen PIN', async () => {
+  const { request, calls } = setup({ agent_activate_with_code: () => ({ data: { activated: true }, error: null }) })
+  const response = await request('activate', { code: '3248', activationCode: 'ABCDEF0123456789', pin: '731482' }, { token: null })
+  assert.equal(response.status, 200)
+  assert.equal(response.payload.data.activated, true)
+  assert.equal(response.headers['Set-Cookie'], undefined)
+  assert.deepEqual(calls, [{ name: 'agent_activate_with_code', args: {
+    requested_agent_code: '3248', requested_activation_code: 'abcdef0123456789', requested_pin: '731482',
+  } }])
+})
+
+test('invalid activation is generic and never creates a session', async () => {
+  const { request, calls } = setup({ agent_activate_with_code: () => ({ data: { activated: false }, error: null }) })
+  const invalid = await request('activate', { code: '3248', activationCode: '123', pin: '731482' }, { token: null })
+  assert.equal(invalid.status, 400)
+  assert.equal(calls.length, 0)
+  const denied = await request('activate', { code: '3248', activationCode: '0000000000000000', pin: '731482' }, { token: null })
+  assert.equal(denied.status, 401)
+  assert.equal(denied.payload.error.code, 'invalid_activation')
+  assert.equal(denied.headers['Set-Cookie'], undefined)
+  assert.equal(calls.length, 1)
+})
+
 test('wrong PIN response is generic and never sets a cookie', async () => {
   const { request } = setup({ agent_login_with_pin: () => ({ data: { authenticated: false }, error: null }) })
   const response = await request('login', { code: '3248', pin: '000000' }, { token: null })

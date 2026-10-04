@@ -15,6 +15,9 @@ export function AgentSignInPage() {
   const [params] = useSearchParams()
   const [code, setCode] = useState('')
   const [pin, setPin] = useState('')
+  const [activationMode, setActivationMode] = useState(false)
+  const [activationCode, setActivationCode] = useState('')
+  const [confirmPin, setConfirmPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const roomCode = params.get('code') || ''
@@ -28,8 +31,23 @@ export function AgentSignInPage() {
     event.preventDefault()
     setBusy(true); setError('')
     if (identity.kind !== 'agent') {
+      let activatedNow = false
+      if (activationMode) {
+        if (pin !== confirmPin) { setBusy(false); setError('The PINs do not match.'); return }
+        const activation = await agentRequest('activate', { code: code.trim(), activationCode, pin })
+        if (activation.error) { setBusy(false); setError(activation.error.message); return }
+        setActivationCode('')
+        setConfirmPin('')
+        setActivationMode(false)
+        activatedNow = true
+      }
       const result = await signIn(code.trim(), pin)
-      if (result.error) { setBusy(false); setError(result.error.message); return }
+      if (result.error) {
+        setBusy(false)
+        setError(activatedNow ? 'Your PIN was created. Sign in with your new PIN to continue.' : result.error.message)
+        if (activatedNow) setPin('')
+        return
+      }
     }
     if (roomCode) {
       const joined = await agentRequest('roomJoin', { roomCode })
@@ -52,10 +70,15 @@ export function AgentSignInPage() {
     </form> : <form onSubmit={continueToGame}>
       <label htmlFor="agent-code">Agent ID</label>
       <input id="agent-code" inputMode="numeric" autoComplete="username" pattern="[0-9]{4,12}" maxLength="12" required value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ''))} placeholder="3248" />
-      <label htmlFor="agent-pin">PIN</label>
-      <input id="agent-pin" type="password" inputMode="numeric" autoComplete="current-password" pattern="[0-9]{6,12}" minLength="6" maxLength="12" required value={pin} onChange={event => setPin(event.target.value.replace(/\D/g, ''))} placeholder="Your private PIN" />
-      <Button loading={busy}>Continue</Button>
-      <p className="go-agent-entry__help">Forgot your PIN? Contact your Team Leader or Pulse administrator.</p>
+      {activationMode && <><label htmlFor="agent-activation">One-time activation code</label>
+        <input id="agent-activation" inputMode="text" autoComplete="one-time-code" pattern="[0-9A-Fa-f]{16}" maxLength="16" required value={activationCode} onChange={event => setActivationCode(event.target.value.replace(/[^0-9a-f]/gi, '').toLowerCase())} placeholder="16 characters" /></>}
+      <label htmlFor="agent-pin">{activationMode ? 'Create your PIN' : 'PIN'}</label>
+      <input id="agent-pin" type="password" inputMode="numeric" autoComplete={activationMode ? 'new-password' : 'current-password'} pattern="[0-9]{6,12}" minLength="6" maxLength="12" required value={pin} onChange={event => setPin(event.target.value.replace(/\D/g, ''))} placeholder={activationMode ? '6–12 digits' : 'Your private PIN'} />
+      {activationMode && <><label htmlFor="agent-pin-confirm">Confirm your PIN</label>
+        <input id="agent-pin-confirm" type="password" inputMode="numeric" autoComplete="new-password" pattern="[0-9]{6,12}" minLength="6" maxLength="12" required value={confirmPin} onChange={event => setConfirmPin(event.target.value.replace(/\D/g, ''))} placeholder="Repeat your PIN" /></>}
+      <Button loading={busy}>{activationMode ? 'Activate and continue' : 'Continue'}</Button>
+      <button className="go-agent-entry__mode" type="button" onClick={() => { setActivationMode(!activationMode); setPin(''); setConfirmPin(''); setActivationCode(''); setError('') }}>{activationMode ? 'I already have a PIN' : 'First time here? Create your PIN'}</button>
+      <p className="go-agent-entry__help">{activationMode ? 'Ask your Team Leader or Pulse administrator for your one-time code. It expires in 24 hours.' : 'Forgot your PIN? Ask your Team Leader or Pulse administrator for a new activation code.'}</p>
     </form>}
     {error && <p className="go-agent-entry__error" role="alert">{error}</p>}
   </section></GoShell>
