@@ -3,7 +3,7 @@ import { Button } from '../components/ui/Button.jsx'
 import { supabase } from '../utils/supabase.js'
 import { MAX_SOURCE_BYTES, MAX_SOURCE_SECONDS, trimAudioToWav, validateAudioSelection } from '../training/audioClip.js'
 import { QuestionAudioPlayer } from '../training/QuestionAudioPlayer.jsx'
-import { uploadTrainingQuestionAudio } from '../training/trainingMediaApi.js'
+import { deleteTrainingQuestionAudio, uploadTrainingQuestionAudio } from '../training/trainingMediaApi.js'
 
 const seconds = value => Math.round(value * 10) / 10
 
@@ -14,6 +14,7 @@ export function QuestionAudioEditor({ contentId, question, onChange, disabled })
   const [start, setStart] = useState(0)
   const [end, setEnd] = useState(0)
   const [working, setWorking] = useState(false)
+  const [freshMediaId, setFreshMediaId] = useState(null)
   const [error, setError] = useState('')
   const audio = useRef(null)
   useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
@@ -41,17 +42,29 @@ export function QuestionAudioEditor({ contentId, question, onChange, disabled })
     try {
       const clip = await trimAudioToWav(file, start, end, question.time_limit_seconds ?? 30)
       const mediaId = await uploadTrainingQuestionAudio(supabase, contentId, clip)
+      if (freshMediaId && freshMediaId !== mediaId) void deleteTrainingQuestionAudio(supabase, freshMediaId).catch(() => {})
+      setFreshMediaId(mediaId)
       onChange({ media_id: mediaId, audio_start_ms: 0, audio_end_ms: Math.round((end - start) * 1000), audio_pending: false })
       audio.current?.pause()
       setFile(null); setUrl(null); setDuration(0)
     } catch (cause) { setError(cause.message || 'Could not prepare this audio.') }
     finally { setWorking(false) }
   }
+  async function remove() {
+    const mediaId = question.media_id
+    onChange({ media_id: null, audio_start_ms: null, audio_end_ms: null, audio_pending: false })
+    if (mediaId === freshMediaId) {
+      setWorking(true)
+      try { await deleteTrainingQuestionAudio(supabase, mediaId); setFreshMediaId(null) }
+      catch { setError('Save the question before this audio can be cleaned up.') }
+      finally { setWorking(false) }
+    }
+  }
   const maxEnd = Math.min(duration, start + (question.time_limit_seconds ?? 30))
   return <div className="studio-audio-editor">
     <div><strong>Question audio</strong><small>Choose the part of a call learners should hear. Only that part is uploaded.</small></div>
     {question.media_id && question.audio_end_ms != null && !file && <div className="studio-audio-existing"><QuestionAudioPlayer contentId={contentId} question={question} />
-      <Button variant="ghost" disabled={disabled} onClick={() => onChange({ media_id: null, audio_start_ms: null, audio_end_ms: null, audio_pending: false })}>Remove audio</Button></div>}
+      <Button variant="ghost" disabled={disabled || working} onClick={() => void remove()}>Remove audio</Button></div>}
     <label>Choose a recording<input type="file" accept="audio/*" disabled={disabled || working} onChange={event => {
       choose(event.target.files?.[0]); event.target.value = ''
     }} /></label>

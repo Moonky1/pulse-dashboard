@@ -31,3 +31,12 @@ export async function getTrainingQuestionAudioUrl(client, contentId, mediaId, se
   } catch { throw new Error('Audio unavailable.') }
   return data.url
 }
+
+export async function deleteTrainingQuestionAudio(client, mediaId) {
+  assertTrainingAuthoringDestination(client.supabaseUrl)
+  if (!UUID.test(mediaId)) throw new Error('Audio unavailable.')
+  const { data, error } = await client.functions.invoke('pulse-training-media', {
+    body: { action: 'delete', mediaId },
+  })
+  if (error || data?.deleted !== true) throw new Error('Audio could not be removed yet.')
+}

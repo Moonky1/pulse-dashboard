@@ -73,6 +73,27 @@ Deno.serve(async request => {
     return reply(origin, 200, { url: signed.signedUrl, mimeType: media.mime_type })
   }
 
+  if (payload.action === 'delete') {
+    if (!UUID.test(String(payload.mediaId))) return reply(origin, 400, { error: 'invalid_request' })
+    const { data: marked, error: markError } = await userClient.rpc('mark_training_media_deleting', {
+      requested_media_id: payload.mediaId,
+    })
+    if (markError) return reply(origin, markError.code === '55000' ? 409 : 403, { error: 'media_cannot_be_deleted' })
+    if (!marked) return reply(origin, 404, { error: 'media_unavailable' })
+    const { data: media, error: mediaError } = await adminClient.from('training_media')
+      .select('storage_path,status').eq('id', payload.mediaId).maybeSingle()
+    if (mediaError || !media) return reply(origin, 503, { error: 'media_unavailable' })
+    if (media.status === 'deleted') return reply(origin, 200, { deleted: true })
+    if (media.status !== 'deleting') return reply(origin, 503, { error: 'media_unavailable' })
+    const { error: removeError } = await adminClient.storage.from(BUCKET).remove([media.storage_path])
+    if (removeError) return reply(origin, 503, { error: 'storage_unavailable' })
+    const { error: finishError } = await adminClient.rpc('finish_training_media_delete', {
+      requested_media_id: payload.mediaId,
+    })
+    if (finishError) return reply(origin, 503, { error: 'media_cleanup_failed' })
+    return reply(origin, 200, { deleted: true })
+  }
+
   if (payload.action !== 'upload' || !UUID.test(String(payload.contentId)) || !file) return reply(origin, 400, { error: 'invalid_request' })
   if (file.size > MAX_BYTES) return reply(origin, 413, { error: 'audio_too_large' })
   const mime = file.type

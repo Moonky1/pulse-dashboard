@@ -14,6 +14,8 @@ test('audio upload uses the guarded media function and never uploads a whole sou
   assert.match(media, /assertTrainingAuthoringDestination/)
   assert.match(edge, /can_write_training_media/)
   assert.match(edge, /can_read_training_media/)
+  assert.match(edge, /mark_training_media_deleting/)
+  assert.match(edge, /finish_training_media_delete/)
   assert.match(edge, /createSignedUrl\(media.storage_path, 600\)/)
   assert.match(edge, /mime !== 'audio\/wav'/)
   assert.doesNotMatch(edge, /storage_path:.*payload|service_role.*request/i)

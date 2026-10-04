@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button.jsx'
 import { supabase } from '../utils/supabase.js'
+import { deleteTrainingQuestionAudio } from '../training/trainingMediaApi.js'
 import { createTrainingContentDraft, createTrainingContentRevision, getGoGameIdentity, getTrainingGameVersions, updateTrainingContentDraft, replaceTrainingQuestions, getTrainingContentAuthoringDetails, getTrainingFilterOptions, publishTrainingContent, archiveTrainingContent, setTrainingGameTimer } from '../training/trainingApi.js'
 import { validateQuestions } from '../training/questionValidation.js'
 import { resolveTrainingAuthoringDestination } from '../training/authoringDestination.js'
@@ -122,9 +123,12 @@ export function StudioBuilder() {
     const invalid = validateQuestions(questions, details.topics.map(t => t.id))
     if (invalid) return fail(invalid)
     await run(async () => {
+      const currentMedia = new Set(questions.map(question => question.media_id).filter(Boolean))
+      const detachedMedia = savedQuestions.map(question => question.media_id).filter(id => id && !currentMedia.has(id))
       const result = await replaceTrainingQuestions(supabase, contentId, questions, details.content.updated_at)
       if (result.error) { setError(result.error); return }
       await readAfterSave(contentId, 'questions')
+      await Promise.allSettled(detachedMedia.map(id => deleteTrainingQuestionAudio(supabase, id)))
     })
   }
   async function openReview() {
