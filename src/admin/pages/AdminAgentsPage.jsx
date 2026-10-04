@@ -58,14 +58,14 @@ export function AdminAgentsPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading"><div><p>Pulse GO</p><h1>Agents</h1><span>Provision a company player without granting Staff access</span></div></div>
-      {loading ? <AdminStatePanel kind="loading" title="Loading opener teams" body="Checking available teams…" />
-        : loadError ? <AdminStatePanel kind="error" title="Opener teams unavailable" body={loadError.message} />
+      {loading ? <AdminStatePanel kind="loading" title="Loading teams" body="Checking available teams…" />
+        : loadError ? <AdminStatePanel kind="error" title="Teams unavailable" body={loadError.message} />
           : <section className="admin-agent-card" aria-label="Create Agent">
-            <div><p className="admin-agent-card__eyebrow">Staff-only operation</p><h2>Create Agent</h2><p>Choose an opener team and enter the Agent ID. The player sets their own private PIN with a one-time activation code.</p></div>
+            <div><p className="admin-agent-card__eyebrow">Staff-only operation</p><h2>Create Agent</h2><p>Enter the Agent ID and select their team. The player sets their own private PIN with a one-time activation code.</p></div>
             <form onSubmit={(event) => void submit(event)} autoComplete="off">
               <label><span>Agent ID</span><input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" pattern="[0-9]{4,12}" maxLength={12} placeholder="3248" required /></label>
-              <label><span>Opener team</span><select value={teamId} onChange={(event) => setTeamId(event.target.value)} required><option value="">Choose an opener team</option>{teamGroups.map((group) => <optgroup key={group.id} label={group.name}>{group.teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</optgroup>)}</select></label>
-              <div className="admin-agent-card__actions"><p>{teamGroups.length ? `The player will appear as Agent ${code || '3248'}. The activation code expires in 24 hours and appears only once.` : 'No active opener teams are available.'}</p><Button type="submit" loading={submitting} disabled={!teamGroups.length}>Create Agent</Button></div>
+              <label><span>Team</span><select value={teamId} onChange={(event) => setTeamId(event.target.value)} required><option value="">Select team</option>{teamGroups.map((group) => <optgroup key={group.id} label={group.name}>{group.teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</optgroup>)}</select></label>
+              <div className="admin-agent-card__actions"><p>{teamGroups.length ? `The player will appear as Agent ${code || '3248'}. The activation code expires in 24 hours and appears only once.` : 'No active teams are available.'}</p><Button type="submit" loading={submitting} disabled={!teamGroups.length}>Create Agent</Button></div>
             </form>
           </section>}
       <section className="admin-agent-card" aria-label="Recover Agent access">

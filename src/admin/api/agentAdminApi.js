@@ -12,7 +12,7 @@ function normalizeAgentError(error, action) {
 export async function provisionAgent(client, { code, teamId }) {
   const normalizedCode = String(code ?? '').trim()
   if (!AGENT_CODE.test(normalizedCode) || !UUID.test(teamId ?? '')) {
-    return { data: null, error: { code: 'invalid_request', message: 'Check the Agent ID and opener team.' } }
+    return { data: null, error: { code: 'invalid_request', message: 'Check the Agent ID and team.' } }
   }
   const { data, error } = await client.rpc('admin_prepare_agent_activation', {
     requested_agent_code: normalizedCode,
