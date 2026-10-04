@@ -19,6 +19,7 @@ const GoHostedRoomPage = lazy(() => import('../go-product/GoHostedRoomPage.jsx')
 const GoPracticePlayer = lazy(() => import('../go-product/GoPracticePlayer.jsx').then((module) => ({ default: module.GoPracticePlayer })))
 const GoPracticeSelection = lazy(() => import('../go-product/GoPracticeSelection.jsx').then((module) => ({ default: module.GoPracticeSelection })))
 const GoPlayerProgress = lazy(() => import('../go-product/GoPlayerProgress.jsx').then((module) => ({ default: module.GoPlayerProgress })))
+const AgentProfilePage = lazy(() => import('../go-product/AgentProfilePage.jsx').then((module) => ({ default: module.AgentProfilePage })))
 const PendingApprovalPage = lazy(() => import('./screens/PendingApprovalPage.jsx').then((module) => ({ default: module.PendingApprovalPage })))
 const ProductDashboardPage = lazy(() => import('./screens/ProductDashboardPage.jsx').then((module) => ({ default: module.ProductDashboardPage })))
 const PublicHomePage = lazy(() => import('./screens/PublicHomePage.jsx').then((module) => ({ default: module.PublicHomePage })))
@@ -84,6 +85,7 @@ export function AuthApp() {
         <Route path="/go/practice" element={<GoPlayerGate><GoPracticeSelection /></GoPlayerGate>} />
         <Route path="/go/practice/:contentId" element={<GoPlayerGate><GoPracticePlayer /></GoPlayerGate>} />
         <Route path="/go/progress" element={<GoPlayerGate><GoPlayerProgress /></GoPlayerGate>} />
+        <Route path="/profile/:agentCode" element={<GoPlayerGate><AgentProfilePage /></GoPlayerGate>} />
         <Route path="/studio" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioPage /></RouteGate>} />
         <Route path="/studio/create" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />
         <Route path="/studio/content/:contentId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />

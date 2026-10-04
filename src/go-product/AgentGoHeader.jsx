@@ -20,7 +20,7 @@ export function AgentGoHeader() {
   return <header className="go-agent-header">
     <Link to="/go" className="go-agent-header__brand" aria-label="Pulse GO home"><span aria-hidden="true">◉</span> Pulse GO</Link>
     {kind === 'agent' ? <nav aria-label="Agent player">
-      <Link to="/go/progress">My progress</Link>
+      <Link to={`/profile/${agent.agent_code}`}>My profile</Link>
       <span className="go-agent-header__identity"><strong>{agent.display_name}</strong><small>{agent.team_name}</small></span>
       <button type="button" onClick={() => void leave()}>Sign out</button>
       {logoutError && <span role="alert" className="go-agent-header__error">Couldn’t sign out. Try again.</span>}

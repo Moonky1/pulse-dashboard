@@ -35,7 +35,7 @@ export function GoLandingPage() {
   }
   return <GoShell>
     <section className="go-mode-heading">
-      <div><p className="go-eyebrow">Pulse GO</p><h1>Choose a game</h1><p>Practice, host, or join a live round</p>{identity.client && <Link className="go-mode-heading__progress" to="/go/progress">My progress →</Link>}</div>
+      <div><p className="go-eyebrow">Pulse GO</p><h1>Choose a game</h1><p>Practice, host, or join a live round</p>{identity.client && <Link className="go-mode-heading__progress" to={identity.kind === 'agent' ? `/profile/${identity.agent.agent_code}` : '/go/progress'}>{identity.kind === 'agent' ? 'My profile' : 'My progress'} →</Link>}</div>
       <div className="go-mode-heading__rewards" aria-hidden="true"><img src={GO_ART.points} alt="" /><img src={GO_ART.medal1} alt="" /></div>
     </section>
     <section className="go-mode-grid" aria-label="GO game modes">

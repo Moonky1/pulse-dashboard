@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { Button } from '../../components/ui/Button.jsx'
 import { supabase } from '../../utils/supabase.js'
 import { loadBusinessCatalog } from '../api/adminApi.js'
 import { provisionAgent, reissueAgentActivation } from '../api/agentAdminApi.js'
 import { openerTeamGroups } from '../agentTeamOptions.js'
+import { validAgentCode } from '../../profile/agentProfileService.js'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
 
 export function AdminAgentsPage() {
@@ -14,6 +16,7 @@ export function AdminAgentsPage() {
   const [code, setCode] = useState('')
   const [teamId, setTeamId] = useState('')
   const [reissueCode, setReissueCode] = useState('')
+  const [profileCode, setProfileCode] = useState('')
   const [activation, setActivation] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -75,11 +78,16 @@ export function AdminAgentsPage() {
           <div className="admin-agent-card__actions"><p>Confirm the Agent’s identity before sharing the new code.</p><Button type="submit" loading={submitting}>Generate recovery code</Button></div>
         </form>
       </section>
+      <section className="admin-agent-card" aria-label="Find Agent profile">
+        <div><p className="admin-agent-card__eyebrow">Staff access</p><h2>Agent profile</h2><p>Open an Agent’s team and completed GO results by Agent ID.</p></div>
+        <div className="admin-agent-card__profile-search"><label><span>Agent ID</span><input value={profileCode} onChange={(event) => setProfileCode(event.target.value)} inputMode="numeric" pattern="[0-9]{4,12}" maxLength={12} placeholder="3248" /></label>{validAgentCode(profileCode) && <Link to={`/profile/${profileCode}`}>View profile →</Link>}</div>
+      </section>
       {error && <p className="admin-operation-error" role="alert">{error.message}</p>}
       {activation && <section className="admin-agent-card admin-agent-activation" role="status" aria-label="One-time activation code">
         <div><p className="admin-agent-card__eyebrow">Shown only now</p><h2>Activation code for Agent {activation.agent_code}</h2><p>Expires in 24 hours. Send this code privately; the Agent will set their own PIN at sign-in. Leaving this page hides the code.</p></div>
         <code>{activation.activation_code}</code>
         <Button type="button" variant="secondary" onClick={() => void navigator.clipboard?.writeText(activation.activation_code)}>Copy code</Button>
+        <Link to={`/profile/${activation.agent_code}`}>View Agent profile →</Link>
       </section>}
     </main>
   )
