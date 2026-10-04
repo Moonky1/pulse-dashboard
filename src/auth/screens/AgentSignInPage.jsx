@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '../AuthProvider.jsx'
+import { agentReturnPath } from '../authRoutes.js'
 import { Button } from '../../components/ui/Button.jsx'
 import { agentRequest } from '../../go-product/agentGoApi.js'
 import { useAgentSession } from '../../go-product/agentSessionContext.js'
@@ -24,9 +25,7 @@ export function AgentSignInPage() {
   const [error, setError] = useState('')
   const [switching, setSwitching] = useState(false)
   const roomCode = params.get('code') || ''
-  const requestedNext = params.get('next') || '/go'
-  const next = requestedNext === '/go' || requestedNext === '/go/practice' || requestedNext === '/academy'
-    || /^\/(?:go\/(?:practice|room)\/[0-9a-f-]{36}|academy\/[a-z0-9-]+)$/i.test(requestedNext) ? requestedNext : '/go'
+  const next = agentReturnPath(params.get('next'))
 
   if (identity.loading) return <GoShell forceAgentHeader><section className="go-state"><h1>Opening Pulse GO…</h1></section></GoShell>
 

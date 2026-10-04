@@ -2,7 +2,21 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-import { AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, LEGACY_STAFF_PATH_REDIRECTS, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH, STAFF_SIGN_IN_PATH } from './authRoutes.js'
+import { agentReturnPath, AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, LEGACY_STAFF_PATH_REDIRECTS, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH, STAFF_SIGN_IN_PATH } from './authRoutes.js'
+
+test('Agent sign-in returns to the requested player profile, progress, game or Academy guide', () => {
+  for (const path of ['/go', '/go/practice', '/go/progress', '/profile/990001', '/academy', '/academy/product-knowledge',
+    '/go/practice/11111111-1111-4111-8111-111111111111', '/go/room/11111111-1111-4111-8111-111111111111']) {
+    assert.equal(agentReturnPath(path), path)
+  }
+})
+
+test('Agent sign-in rejects external destinations and Staff-only paths', () => {
+  for (const path of [null, '', 'https://other.test/go', '//other.test/go', '/studio', '/dashboard', '/admin/agents',
+    '/go/host', '/profile/invalid', '/profile/990001/../admin', '/academy/../../studio', '/go/room/' + '-'.repeat(36)]) {
+    assert.equal(agentReturnPath(path), '/go')
+  }
+})
 
 test('keeps staff and agent entry paths separate', () => {
   assert.equal(AUTH_ENTRY_PATH, '/signin')

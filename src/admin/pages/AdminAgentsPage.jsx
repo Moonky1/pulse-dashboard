@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Button } from '../../components/ui/Button.jsx'
@@ -18,6 +18,8 @@ export function AdminAgentsPage() {
   const [reissueCode, setReissueCode] = useState('')
   const [profileCode, setProfileCode] = useState('')
   const [activation, setActivation] = useState(null)
+  const activationPanel = useRef(null)
+  const [copyStatus, setCopyStatus] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -32,11 +34,27 @@ export function AdminAgentsPage() {
     return () => { current = false }
   }, [])
 
+  useEffect(() => {
+    if (!activation) return
+    activationPanel.current?.focus({ preventScroll: true })
+    activationPanel.current?.scrollIntoView({ block: 'start' })
+  }, [activation])
+
+  async function copyActivationCode() {
+    try {
+      await navigator.clipboard.writeText(activation.activation_code)
+      setCopyStatus('copied')
+    } catch {
+      setCopyStatus('failed')
+    }
+  }
+
   const submit = async (event) => {
     event.preventDefault()
     setSubmitting(true)
     setError(null)
     setActivation(null)
+    setCopyStatus('')
     const result = await provisionAgent(supabase, { code, teamId })
     setSubmitting(false)
     if (result.error) { setError(result.error); return }
@@ -51,6 +69,7 @@ export function AdminAgentsPage() {
     setSubmitting(true)
     setError(null)
     setActivation(null)
+    setCopyStatus('')
     const result = await reissueAgentActivation(supabase, reissueCode)
     setSubmitting(false)
     if (result.error) { setError(result.error); return }
@@ -61,6 +80,16 @@ export function AdminAgentsPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading"><div><p>Pulse GO</p><h1>Agents</h1><span>Provision a company player without granting Staff access</span></div></div>
+      {error && <p className="admin-operation-error" role="alert">{error.message}</p>}
+      {activation && <section ref={activationPanel} className="admin-agent-card admin-agent-activation" tabIndex={-1} role="region" aria-labelledby="agent-activation-heading">
+        <div><p className="admin-agent-card__eyebrow">Agent access is ready</p><h2 id="agent-activation-heading">Activation code for Agent {activation.agent_code}</h2><p>Copy this code before leaving. It is shown only now and expires in 24 hours.</p></div>
+        <code>{activation.activation_code}</code>
+        <Button type="button" variant="secondary" onClick={() => void copyActivationCode()}>{copyStatus === 'copied' ? 'Code copied ✓' : 'Copy code'}</Button>
+        {copyStatus === 'failed' && <p role="alert">Couldn’t copy automatically. Select the code above and copy it manually.</p>}
+        <p>Share it privately with the Agent. At <strong>/agent/signin</strong>, they choose <strong>First time here? Create your PIN</strong> and enter their Agent ID, this code and their own private PIN.</p>
+        <p className="admin-agent-activation__tip">Testing it yourself? Save the code, then open Agent sign-in in a private browser window so your Staff session stays open.</p>
+        <Link to={`/profile/${activation.agent_code}`}>View Agent profile →</Link>
+      </section>}
       {loading ? <AdminStatePanel kind="loading" title="Loading teams" body="Checking available teams…" />
         : loadError ? <AdminStatePanel kind="error" title="Teams unavailable" body={loadError.message} />
           : <section className="admin-agent-card" aria-label="Create Agent">
@@ -82,13 +111,6 @@ export function AdminAgentsPage() {
         <div><p className="admin-agent-card__eyebrow">Staff access</p><h2>Agent profile</h2><p>Open an Agent’s team and completed GO results by Agent ID.</p></div>
         <div className="admin-agent-card__profile-search"><label><span>Agent ID</span><input value={profileCode} onChange={(event) => setProfileCode(event.target.value)} inputMode="numeric" pattern="[0-9]{4,12}" maxLength={12} placeholder="3248" /></label>{validAgentCode(profileCode) && <Link to={`/profile/${profileCode}`}>View profile →</Link>}</div>
       </section>
-      {error && <p className="admin-operation-error" role="alert">{error.message}</p>}
-      {activation && <section className="admin-agent-card admin-agent-activation" role="status" aria-label="One-time activation code">
-        <div><p className="admin-agent-card__eyebrow">Shown only now</p><h2>Activation code for Agent {activation.agent_code}</h2><p>Expires in 24 hours. Send this code privately; the Agent will set their own PIN at sign-in. Leaving this page hides the code.</p></div>
-        <code>{activation.activation_code}</code>
-        <Button type="button" variant="secondary" onClick={() => void navigator.clipboard?.writeText(activation.activation_code)}>Copy code</Button>
-        <Link to={`/profile/${activation.agent_code}`}>View Agent profile →</Link>
-      </section>}
     </main>
   )
 }

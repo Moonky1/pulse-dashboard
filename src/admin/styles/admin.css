@@ -214,7 +214,9 @@
 .admin-agent-card__actions{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-top:.6rem}
 .admin-agent-card__actions p{margin:0;font-size:var(--pulse-text-caption)}
 .admin-agent-card+.admin-agent-card{margin-top:1.25rem}
-.admin-agent-activation{margin-top:1.25rem;text-align:center}
+.admin-agent-activation{margin-top:1.25rem;text-align:center;scroll-margin-top:6rem;border-color:rgba(173,141,255,.55);box-shadow:0 0 0 1px rgba(173,141,255,.1),0 24px 70px rgba(0,0,0,.2)}
+.admin-agent-activation:focus{outline:2px solid var(--pulse-focus);outline-offset:4px}
+.admin-agent-activation__tip{margin:0;font-size:var(--pulse-text-caption)}
 .admin-agent-activation code{display:block;overflow-wrap:anywhere;padding:1rem;border:1px solid rgba(201,185,244,.25);border-radius:.85rem;background:rgba(5,7,17,.75);color:#e9d8ff;font-size:clamp(1.35rem,4vw,2rem);font-weight:800;letter-spacing:.13em}
 .admin-agent-activation .pulse-button{justify-self:center}
 @media(max-width:900px){.admin-agent-card__actions{align-items:stretch;flex-direction:column}.admin-agent-card__actions .pulse-button{width:100%}}
