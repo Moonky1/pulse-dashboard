@@ -136,6 +136,10 @@ begin
       values(v_content_id,'quiz',bank->>'title',bank->>'description',bank->>'language','draft',v_creator_id);
     insert into public.training_content_topics(content_id,topic_id) values(v_content_id,v_topic_id);
     insert into public.training_content_audiences(content_id,scope_type) values(v_content_id,'global');
+    -- Original modes must be designated before publication. The published
+    -- authorship setting is immutable and drives both catalog and access rules.
+    perform set_config('request.jwt.claim.sub',v_creator_auth::text,true);
+    perform public.mark_training_game_canonical(v_content_id);
 
     for question in select value from jsonb_array_elements(bank->'questions') loop
       insert into public.training_questions
