@@ -4,6 +4,12 @@ import test from 'node:test'
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8')
 
+test('the actual HTML entry mounts Agent sessions around every GO route', async () => {
+  const [html, main] = await Promise.all([read('../../index.html'), read('./main.jsx')])
+  assert.match(html, /src="\/src\/auth\/main\.jsx"/)
+  assert.match(main, /<AuthProvider><AgentSessionProvider><AuthApp \/><\/AgentSessionProvider><\/AuthProvider>/)
+})
+
 test('homepage and legal pages are public routes outside RouteGate', async () => {
   const app = await read('./AuthApp.jsx')
   const publicRouteLines = app.split('\n').filter((line) => /path="\/(?:"|privacy"|terms")/.test(line))

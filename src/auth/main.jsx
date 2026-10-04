@@ -6,5 +6,8 @@ import '../components/ui/ui.css'
 import './styles/auth.css'
 import { AuthApp } from './AuthApp.jsx'
 import { AuthProvider } from './AuthProvider.jsx'
+import { AgentSessionProvider } from '../go-product/AgentSession.jsx'
 
-createRoot(document.getElementById('root')).render(<StrictMode><AuthProvider><AuthApp /></AuthProvider></StrictMode>)
+createRoot(document.getElementById('root')).render(
+  <StrictMode><AuthProvider><AgentSessionProvider><AuthApp /></AgentSessionProvider></AuthProvider></StrictMode>
+)
