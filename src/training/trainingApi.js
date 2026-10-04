@@ -50,7 +50,7 @@ function hostedRpc(client, name, args) {
   try { assertGoHostedDestination(client.supabaseUrl) } catch {
     return Promise.resolve({ data: null, error: publicError('hosted_blocked', 'Live games are not enabled for this Pulse destination.') })
   }
-  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog_v3' && name !== 'get_go_hosted_session' && name !== 'get_my_go_hosted_session' && name !== 'get_go_hosted_timing' && name !== 'get_go_hosted_results') {
+  if (!HOSTED_MUTATIONS.has(name) && name !== 'list_go_host_catalog_v3' && name !== 'get_go_hosted_session' && name !== 'get_go_hosted_experience_v2' && name !== 'get_my_go_hosted_session' && name !== 'get_go_hosted_timing' && name !== 'get_go_hosted_results') {
     return Promise.resolve(invalidRequest())
   }
   return rpc(client, name, args)
@@ -107,7 +107,7 @@ export function listStudioContent(client, { status = null, language = null, topi
 
 export function getTrainingContentAuthoringDetails(client, contentId) {
   if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
-  return rpc(client, 'get_training_content_authoring_details_v2', {
+  return rpc(client, 'get_training_content_authoring_details_v3', {
     requested_content_id: contentId,
   })
 }
@@ -164,7 +164,7 @@ export function replaceTrainingQuestions(client, contentId, questions, expectedU
   if (!validUuid(contentId) || validateQuestions(questions) || !expectedUpdatedAt) {
     return Promise.resolve(invalidRequest())
   }
-  return rpc(client, 'replace_training_questions_v2', {
+  return rpc(client, 'replace_training_questions_v3', {
     requested_content_id: contentId,
     requested_questions: questions,
     expected_updated_at: expectedUpdatedAt,
@@ -181,7 +181,7 @@ export function publishTrainingContent(client, contentId, expectedUpdatedAt) {
   return rpc(client, 'publish_training_content', { requested_content_id: contentId, expected_updated_at: expectedUpdatedAt })
 }
 export const archiveTrainingContent = (client, contentId) => contentAction(client, 'archive_training_content', contentId)
-export const getGoPracticeContent = (client, contentId) => contentAction(client, 'get_go_practice_content_v2', contentId)
+export const getGoPracticeContent = (client, contentId) => contentAction(client, 'get_go_practice_content_v3', contentId)
 
 export function getGoCapabilities(client) {
   return rpc(client, 'get_go_capabilities')
@@ -240,7 +240,7 @@ export function getTrainingGameVersions(client, contentId) {
 
 export function createTrainingContentRevision(client, contentId) {
   if (!validUuid(contentId)) return Promise.resolve(invalidRequest())
-  return rpc(client, 'create_training_content_revision_v2', { requested_content_id: contentId })
+  return rpc(client, 'create_training_content_revision_v3', { requested_content_id: contentId })
 }
 
 export function setTrainingGameTimer(client, contentId, seconds, expectedUpdatedAt) {
@@ -256,7 +256,7 @@ export function setTrainingGameTimer(client, contentId, seconds, expectedUpdated
 
 export function getGoHostedSession(client, sessionId) {
   if (!validUuid(sessionId)) return Promise.resolve(invalidRequest())
-  return hostedRpc(client, 'get_go_hosted_session', { requested_session_id: sessionId })
+  return hostedRpc(client, 'get_go_hosted_experience_v2', { requested_session_id: sessionId })
 }
 
 export function getMyGoHostedSession(client) {

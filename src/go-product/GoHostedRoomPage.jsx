@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button.jsx'
 import { useAuth } from '../auth/AuthProvider.jsx'
 import { advanceGoHostedSession, cancelGoHostedSession, getGoHostedResults, getGoQuestionBankGroups, startGoHostedSession, submitGoHostedAnswer } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
+import { QuestionAudioPlayer } from '../training/QuestionAudioPlayer.jsx'
 import { hostedAnswerReady, languagePresentation, resultMedal } from './goHostedModel.js'
 import { GoShell } from './GoShell.jsx'
 import { GoFlag } from './GoFlag.jsx'
@@ -88,7 +89,7 @@ function HostQuestion({ room, mode, timing, action, busy, error }) {
     <section className="go-live-question go-live-question--host">
       <div className="go-question-counter"><span>{es ? 'Pregunta' : 'Question'} {question.position} {es ? 'de' : 'of'} {room.question_count}</span><strong>{room.answered_count}/{room.participant_count} {es ? 'respondieron' : 'answered'}</strong></div>
       <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} language={room.content.language} />
-      <article className={`go-live-question__card go-live-question__card--${mode}`} key={question.id}><GoModePrompt mode={mode} question={question} language={room.content.language} heading="h2" />{question.question_type !== 'text' && <div className={`go-host-options go-host-options--${mode}`}>{question.answer_options.length ? orderedModeOptions(question, mode, room.session_id).map(({ option, originalIndex }, displayIndex) => <span key={originalIndex}>{mode === 'classic' ? `${String.fromCharCode(65 + displayIndex)}. ` : ''}{(mode === 'valid-invalid' || mode === 'eligible') && <b aria-hidden="true">{originalIndex === 0 ? '✓ ' : '× '}</b>}{option}</span>) : <><span>{es ? 'Verdadero' : 'True'}</span><span>{es ? 'Falso' : 'False'}</span></>}</div>}</article>
+      <article className={`go-live-question__card go-live-question__card--${mode}`} key={question.id}><GoModePrompt mode={mode} question={question} language={room.content.language} heading="h2" /><QuestionAudioPlayer contentId={room.content.id} question={question} sessionId={room.session_id} language={room.content.language} />{question.question_type !== 'text' && <div className={`go-host-options go-host-options--${mode}`}>{question.answer_options.length ? orderedModeOptions(question, mode, room.session_id).map(({ option, originalIndex }, displayIndex) => <span key={originalIndex}>{mode === 'classic' ? `${String.fromCharCode(65 + displayIndex)}. ` : ''}{(mode === 'valid-invalid' || mode === 'eligible') && <b aria-hidden="true">{originalIndex === 0 ? '✓ ' : '× '}</b>}{option}</span>) : <><span>{es ? 'Verdadero' : 'True'}</span><span>{es ? 'Falso' : 'False'}</span></>}</div>}</article>
       <div className="go-answer-meter" aria-label={`${room.answered_count} of ${room.participant_count} answered`}><span style={{ width: `${room.participant_count ? room.answered_count / room.participant_count * 100 : 0}%` }} /></div>
       {error && <p className="go-inline-error" role="alert">{error}</p>}
       <div className="go-room-actions"><Button loading={busy === 'advance'} disabled={!!busy || (!expired && !allAnswered)} onClick={() => action('advance')}>{question.position === room.question_count ? es ? 'Terminar juego' : 'Finish game' : es ? 'Siguiente pregunta' : 'Next question'}</Button><Button variant="ghost" loading={busy === 'cancel'} disabled={!!busy} onClick={() => action('cancel')}>{es ? 'Cancelar juego' : 'Cancel game'}</Button></div>
@@ -106,7 +107,7 @@ function PlayerQuestion({ room, mode, timing, submit, busy, error }) {
     <section className="go-live-question">
       <div className="go-question-counter"><span>{es ? 'Pregunta' : 'Question'} {question.position} {es ? 'de' : 'of'} {room.question_count}</span><strong>{room.my_answered ? es ? 'Respuesta enviada ✓' : 'Answer locked ✓' : expired ? es ? 'Tiempo agotado' : 'Time is up' : es ? 'Elige tu respuesta' : 'Choose your answer'}</strong></div>
       <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} language={room.content.language} />
-      <article className={`go-live-question__card go-live-question__card--${mode}`}><GoModePrompt mode={mode} question={question} language={room.content.language} heading="h2" />
+      <article className={`go-live-question__card go-live-question__card--${mode}`}><GoModePrompt mode={mode} question={question} language={room.content.language} heading="h2" /><QuestionAudioPlayer contentId={room.content.id} question={question} sessionId={room.session_id} language={room.content.language} />
         {mode === 'classic' ? <HostedAnswerControl question={question} answer={answer} onChange={setAnswer} disabled={room.my_answered || busy || expired || !timing} language={room.content.language} />
           : <GoModeAnswers mode={mode} question={question} answer={answer} onChange={setAnswer} disabled={room.my_answered || busy || expired || !timing} language={room.content.language} optionSeed={room.session_id} />}</article>
       {error && <p className="go-inline-error" role="alert">{error}</p>}

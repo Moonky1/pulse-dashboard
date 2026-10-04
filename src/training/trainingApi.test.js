@@ -93,7 +93,7 @@ test('Hosted GO client sends only canonical room, version, question, and answer 
     { name: 'list_go_host_catalog_v3', args: { requested_language: 'es', requested_limit: 20, requested_offset: 2 } },
     { name: 'create_go_hosted_session', args: { requested_content_id: CONTENT_ID } },
     { name: 'join_go_hosted_session', args: { requested_room_code: 'KK 1234' } },
-    { name: 'get_go_hosted_session', args: { requested_session_id: SESSION_ID } },
+    { name: 'get_go_hosted_experience_v2', args: { requested_session_id: SESSION_ID } },
     { name: 'get_my_go_hosted_session', args: {} },
     { name: 'get_go_hosted_timing', args: { requested_session_id: SESSION_ID } },
     { name: 'get_go_hosted_results', args: { requested_session_id: SESSION_ID } },
@@ -110,7 +110,7 @@ test('authoring details use the one protected answer-key RPC and preserve server
   const { client, calls } = recorder(payload)
   const result = await getTrainingContentAuthoringDetails(client, CONTENT_ID)
   assert.deepEqual(calls, [{
-    name: 'get_training_content_authoring_details_v2',
+    name: 'get_training_content_authoring_details_v3',
     args: { requested_content_id: CONTENT_ID },
   }])
   assert.equal(result.data.content.updated_at, UPDATED_AT)
@@ -147,7 +147,7 @@ test('draft update and structured questions preserve stale-write token', async (
   await updateTrainingContentDraft(client, CONTENT_ID, draft)
   await replaceTrainingQuestions(client, CONTENT_ID, [{ position: 1, question_type: 'true_false', prompt: 'Ready?', answer_options: [], correct_answer: true, topic_ids: [TOPIC_ID] }], UPDATED_AT)
   assert.equal(calls[0].args.expected_updated_at, UPDATED_AT)
-  assert.equal(calls[1].name, 'replace_training_questions_v2')
+  assert.equal(calls[1].name, 'replace_training_questions_v3')
   assert.equal(calls[1].args.expected_updated_at, UPDATED_AT)
 })
 
@@ -157,7 +157,7 @@ test('publish, archive and GO Practice use exact content actions', async () => {
   await archiveTrainingContent(client, CONTENT_ID)
   await getGoPracticeContent(client, CONTENT_ID)
   assert.deepEqual(calls.map(({ name }) => name), [
-    'publish_training_content', 'archive_training_content', 'get_go_practice_content_v2',
+    'publish_training_content', 'archive_training_content', 'get_go_practice_content_v3',
   ])
   assert.equal(calls[0].args.expected_updated_at, UPDATED_AT)
   assert.ok(calls.slice(1).every(({ args }) => Object.keys(args).join() === 'requested_content_id'))
@@ -181,7 +181,7 @@ test('creator identity and version actions never accept browser-selected actor o
   assert.deepEqual(calls, [
     { name: 'get_go_game_identity', args: { requested_content_ids: [CONTENT_ID] } },
     { name: 'get_training_game_versions', args: { requested_content_id: CONTENT_ID } },
-    { name: 'create_training_content_revision_v2', args: { requested_content_id: CONTENT_ID } },
+    { name: 'create_training_content_revision_v3', args: { requested_content_id: CONTENT_ID } },
     { name: 'set_training_game_timer', args: { requested_content_id: CONTENT_ID, requested_timer_seconds: 30, expected_updated_at: UPDATED_AT } },
   ])
   assert.doesNotMatch(JSON.stringify(calls), /actor_id|user_id|version_number|is_current/)

@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button.jsx'
 import { resolveGoPracticeDestination } from '../training/goPracticeDestination.js'
 import { getGoCertificationResult, getGoPracticeCompletedReview, getGoPracticeContent, getGoPracticeTiming, getGoQuestionBankGroups, startTrainingAttempt, submitGoPracticeAnswer } from '../training/trainingApi.js'
 import { supabase } from '../utils/supabase.js'
+import { QuestionAudioPlayer } from '../training/QuestionAudioPlayer.jsx'
 import { canPractice } from './goAccess.js'
 import { resultMedal } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
@@ -172,7 +173,7 @@ export function GoPracticePlayer() {
     <header><div className="go-player-identity"><img src={GO_ART.goal} alt="" /><div><p className="go-eyebrow">{session.content.title}</p><span>{es ? 'Pregunta' : 'Question'} {questionIndex + 1} {es ? 'de' : 'of'} {session.content.questions.length}</span></div></div><div className="go-player-tools"><GoSoundToggle language={session.content.language} /><Link to="/go/practice">{es ? 'Salir' : 'Exit'}</Link></div></header>
     <div className="go-progress" role="progressbar" aria-valuemin="1" aria-valuemax={session.content.questions.length} aria-valuenow={questionIndex + 1}><span style={{ width: `${progress}%` }} /></div>
     <GoQuestionCountdown timing={timing} remainingMs={remainingMs} secondsLeft={secondsLeft} language={session.content.language} />
-    <article className={`go-player-question go-player-question--${session.mode}`} key={question.id}><span className="go-question-number" aria-hidden="true">{String(questionIndex + 1).padStart(2, '0')}</span><GoModePrompt mode={session.mode} question={question} language={session.content.language} />
+    <article className={`go-player-question go-player-question--${session.mode}`} key={question.id}><span className="go-question-number" aria-hidden="true">{String(questionIndex + 1).padStart(2, '0')}</span><GoModePrompt mode={session.mode} question={question} language={session.content.language} /><QuestionAudioPlayer contentId={contentId} question={question} language={session.content.language} />
       {session.mode === 'classic' ? <AnswerControl question={question} answer={answer} onChange={setAnswer} disabled={expired || submitting} language={session.content.language} />
         : <GoModeAnswers mode={session.mode} question={question} answer={answer} onChange={setAnswer} disabled={expired || submitting} language={session.content.language} optionSeed={session.attempt.attempt_id} />}</article>
     <footer><span aria-live="polite">{expired ? (es ? 'Se acabó el tiempo. Seguimos…' : 'Time is up. Moving on…') : ready ? (es ? 'Respuesta lista' : 'Answer ready') : (es ? 'Elige una respuesta para continuar' : 'Choose an answer to continue')}</span><Button disabled={!ready || expired || submitting} onClick={() => void submitCurrent(answer)}>{submitting ? (es ? 'Guardando…' : 'Saving…') : last ? (es ? 'Ver resultado' : 'See result') : (es ? 'Siguiente' : 'Next')}</Button></footer>

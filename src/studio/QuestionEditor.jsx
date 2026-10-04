@@ -1,7 +1,8 @@
 import { Button } from '../components/ui/Button.jsx'
 import { newQuestion, orderedQuestions } from './builderModel.js'
+import { QuestionAudioEditor } from './QuestionAudioEditor.jsx'
 
-export function QuestionEditor({ questions, onChange, topics, disabled }) {
+export function QuestionEditor({ contentId, questions, onChange, topics, disabled }) {
   const update = (index, changes) => onChange(questions.map((q, i) => i === index ? { ...q, ...changes } : q))
   const move = (index, direction) => {
     const next = [...questions]
@@ -16,6 +17,7 @@ export function QuestionEditor({ questions, onChange, topics, disabled }) {
       </div>
       <label>Time to answer<select aria-label={'Time for question ' + (index + 1)} value={q.time_limit_seconds ?? 30} onChange={e => update(index, { time_limit_seconds: Number(e.target.value) })}><option value={10}>10 seconds</option><option value={20}>20 seconds</option><option value={30}>30 seconds</option><option value={60}>1 minute</option></select></label>
       <label>Prompt<textarea aria-label="Prompt" rows={2} maxLength={2000} value={q.prompt} onChange={e => update(index, { prompt: e.target.value })} placeholder="What would you like to ask?" /></label>
+      {contentId && <QuestionAudioEditor contentId={contentId} question={q} onChange={changes => update(index, changes)} disabled={disabled} />}
       {q.question_type === 'multiple_choice' && <div className="studio-options"><p>Options · select the correct answer</p>{q.answer_options.map((option, oi) => <div className="studio-option" key={oi}><input type="radio" name={'answer-' + index} aria-label={'Correct answer: option ' + (oi + 1)} checked={q.correct_answer === oi} onChange={() => update(index, { correct_answer: oi })} /><input aria-label={'Option ' + (oi + 1)} maxLength={1000} value={option} onChange={e => update(index, { answer_options: q.answer_options.map((v, i) => i === oi ? e.target.value : v) })} /><Button variant="ghost" aria-label={'Remove option ' + (oi + 1)} disabled={q.answer_options.length <= 2} onClick={() => update(index, { answer_options: q.answer_options.filter((_, i) => i !== oi), correct_answer: q.correct_answer === oi ? 0 : q.correct_answer > oi ? q.correct_answer - 1 : q.correct_answer })}>×</Button></div>)}<Button variant="ghost" disabled={q.answer_options.length >= 8} onClick={() => update(index, { answer_options: [...q.answer_options, ''] })}>+ Add option</Button></div>}
       {q.question_type === 'true_false' && <label>Correct answer<select aria-label="Correct answer" value={String(q.correct_answer)} onChange={e => update(index, { correct_answer: e.target.value === 'true' })}><option value="true">True</option><option value="false">False</option></select></label>}
       {q.question_type === 'text' && <label>Accepted answers<textarea aria-label="Accepted answers" rows={3} value={q.correct_answer.join('\n')} onChange={e => update(index, { correct_answer: e.target.value.split('\n') })} placeholder="One accepted answer per line" /><small>One answer per line. Capitalization and spaces at the beginning or end are ignored; the rest must match.</small></label>}
