@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canInviteStaff, canManageCampaigns, canManageDepartments, canManageStaffWork, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewOperationalAssignments, canViewPositions, canViewTeams, canViewUserHistory, hasAdminUsersAccess, hasAnyAdminSurfaceAccess, resolveAdminAccess } from './access.js'
+import { canApprovePendingUsers, canAssignRoles, canBlockPendingUsers, canInviteStaff, canManageAgents, canManageCampaigns, canManageDepartments, canManageStaffWork, canManageTeams, canManageUsers, canViewAudit, canViewCampaigns, canViewDepartments, canViewOperationalAssignments, canViewPositions, canViewTeams, canViewUserHistory, hasAdminUsersAccess, hasAnyAdminSurfaceAccess, resolveAdminAccess } from './access.js'
 
 test('Admin is visible only with both required canonical permissions', () => {
   assert.equal(hasAdminUsersAccess(['admin.access', 'users.view']), true)
@@ -71,6 +71,13 @@ test('Staff invitations require the dedicated canonical permission', () => {
   assert.equal(canInviteStaff(['admin.access', 'users.approve', 'roles.assign']), false)
   assert.equal(canInviteStaff(['users.invite']), false)
   assert.equal(hasAnyAdminSurfaceAccess(['admin.access', 'users.invite']), true)
+})
+
+test('Agent provisioning is a Staff administration surface with a dedicated permission', () => {
+  assert.equal(canManageAgents(['admin.access', 'agents.manage']), true)
+  assert.equal(canManageAgents(['agents.manage']), false)
+  assert.equal(canManageAgents(['admin.access']), false)
+  assert.equal(resolveAdminAccess({ permissionKeys: ['admin.access', 'agents.manage'] }), 'allowed')
 })
 
 test('campaign catalog access uses only canonical campaign permissions', () => {
