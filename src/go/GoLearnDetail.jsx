@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ProductHeader } from '../components/ProductHeader.jsx'
+import { AcademyHeader } from './AcademyHeader.jsx'
 import {
   scripts,
   objections,
@@ -233,7 +233,7 @@ function DetailShell({ lang, setLang, section, children, toc }) {
         <span />
       </div>
 
-      <ProductHeader />
+      <AcademyHeader />
       <div className="ac-language-bar"><div className="ac-lang-switch" aria-label="Academy language">
           {LANG_OPTIONS.map((option) => (
             <button

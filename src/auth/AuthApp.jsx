@@ -76,8 +76,8 @@ export function AuthApp() {
         <Route path="/settings" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AccountSettingsPage /></RouteGate>} />
         <Route path="/settings/profile" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AccountSettingsPage section="profile" /></RouteGate>} />
         <Route path="/staff/:profileId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StaffPublicProfilePage /></RouteGate>} />
-        <Route path="/academy" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AcademyPage /></RouteGate>} />
-        <Route path="/academy/:id" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AcademyDetailPage /></RouteGate>} />
+        <Route path="/academy" element={<GoPlayerGate><AcademyPage /></GoPlayerGate>} />
+        <Route path="/academy/:id" element={<GoPlayerGate><AcademyDetailPage /></GoPlayerGate>} />
         <Route path="/go" element={<GoLandingPage />} />
         <Route path="/go/host" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostSelection /></RouteGate>} />
         <Route path="/go/host/:sessionId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostedRoomPage expectedViewer="host" /></RouteGate>} />

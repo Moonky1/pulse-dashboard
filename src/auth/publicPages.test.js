@@ -138,11 +138,12 @@ test('the shared Pulse orb uses size-aware optical motion with a static reduced-
 })
 
 test('active products share a centered Pulse navigation and keep Studio leave protection', async () => {
-  const [header, styles, academy, academyDetail, dashboard, studio] = await Promise.all([
+  const [header, styles, academy, academyDetail, academyHeader, dashboard, studio] = await Promise.all([
     read('../components/ProductHeader.jsx'),
     read('../components/ProductHeader.css'),
     read('../go/GoLearn.jsx'),
     read('../go/GoLearnDetail.jsx'),
+    read('../go/AcademyHeader.jsx'),
     read('./screens/ProductDashboardPage.jsx'),
     read('../studio/StudioShell.jsx'),
   ])
@@ -151,7 +152,9 @@ test('active products share a centered Pulse navigation and keep Studio leave pr
   assert.match(header, /aria-label="Pulse Workspace"/)
   assert.match(header, /if \(!confirmLeave\(event\.currentTarget\.getAttribute\('href'\)\)\) event\.preventDefault\(\)/)
   assert.match(styles, /\.pulse-product-header__inner\s*\{[^}]*display: flex;[^}]*justify-content: center;[^}]*width: fit-content;/s)
-  for (const surface of [academy, academyDetail, dashboard, studio]) assert.match(surface, /<ProductHeader/)
+  for (const surface of [dashboard, studio]) assert.match(surface, /<ProductHeader/)
+  for (const surface of [academy, academyDetail]) assert.match(surface, /<AcademyHeader/)
+  assert.match(academyHeader, /identity\.kind === 'agent' \? <AgentGoHeader \/> : <ProductHeader \/>/)
   assert.match(dashboard, /IN DEVELOPMENT/)
   assert.match(studio, /confirmLeave=\{confirmLeave\}/)
 })

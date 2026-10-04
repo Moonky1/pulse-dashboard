@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
+import { useAuth } from '../AuthProvider.jsx'
 import { Button } from '../../components/ui/Button.jsx'
 import { agentRequest } from '../../go-product/agentGoApi.js'
 import { useAgentSession } from '../../go-product/agentSessionContext.js'
@@ -10,6 +11,7 @@ import { useGoIdentity } from '../../go-product/useGoIdentity.js'
 
 export function AgentSignInPage() {
   const identity = useGoIdentity()
+  const { signOut: signOutStaff } = useAuth()
   const { signIn } = useAgentSession()
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -20,12 +22,20 @@ export function AgentSignInPage() {
   const [confirmPin, setConfirmPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [switching, setSwitching] = useState(false)
   const roomCode = params.get('code') || ''
   const requestedNext = params.get('next') || '/go'
-  const next = requestedNext === '/go' || requestedNext === '/go/practice' || /^\/go\/(?:practice|room)\/[0-9a-f-]{36}$/i.test(requestedNext) ? requestedNext : '/go'
+  const next = requestedNext === '/go' || requestedNext === '/go/practice' || requestedNext === '/academy'
+    || /^\/(?:go\/(?:practice|room)\/[0-9a-f-]{36}|academy\/[a-z0-9-]+)$/i.test(requestedNext) ? requestedNext : '/go'
 
-  if (identity.kind === 'staff') return <Navigate to="/go" replace />
-  if (identity.loading) return <GoShell><section className="go-state"><h1>Opening Pulse GO…</h1></section></GoShell>
+  if (identity.loading) return <GoShell forceAgentHeader><section className="go-state"><h1>Opening Pulse GO…</h1></section></GoShell>
+
+  async function switchToAgent() {
+    setSwitching(true); setError('')
+    const result = await signOutStaff()
+    setSwitching(false)
+    if (result.error) setError('Could not close your Staff session. Try again.')
+  }
 
   async function continueToGame(event) {
     event.preventDefault()
@@ -59,7 +69,16 @@ export function AgentSignInPage() {
     }
   }
 
-  return <GoShell><section className="go-agent-entry">
+  if (identity.kind === 'staff') return <GoShell forceAgentHeader><section className="go-agent-entry">
+    <div className="go-agent-entry__art" aria-hidden="true">✦</div>
+    <p className="go-eyebrow">Pulse GO · Agent access</p>
+    <h1>Switch to Agent</h1>
+    <p>You are signed in as Staff in this browser. To use an Agent ID here, first close your Staff session. Your Staff account will not be changed.</p>
+    <Button type="button" loading={switching} onClick={() => void switchToAgent()}>Sign out of Staff and continue</Button>
+    {error && <p className="go-agent-entry__error" role="alert">{error}</p>}
+  </section></GoShell>
+
+  return <GoShell forceAgentHeader><section className="go-agent-entry">
     <div className="go-agent-entry__art" aria-hidden="true">✦</div>
     <p className="go-eyebrow">Pulse GO · Player access</p>
     <h1>{roomCode ? 'Join your game' : 'Welcome to Pulse GO'}</h1>

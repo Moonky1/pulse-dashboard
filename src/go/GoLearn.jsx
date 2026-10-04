@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ProductHeader } from '../components/ProductHeader.jsx'
+import { AcademyHeader } from './AcademyHeader.jsx'
 import PulseBrandTitle from '../components/PulseBrandTitle'
 import {
   scripts,
@@ -229,7 +229,7 @@ export default function GoLearn() {
 
   return (
     <div className="ac-page pulse-product-surface">
-      <ProductHeader />
+      <AcademyHeader />
       <div className="ac-language-bar"><div className="ac-lang-switch" aria-label="Academy language">
           {LANG_OPTIONS.map((option) => (
             <button

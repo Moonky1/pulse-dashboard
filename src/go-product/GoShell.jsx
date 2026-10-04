@@ -5,10 +5,10 @@ import { AgentGoHeader } from './AgentGoHeader.jsx'
 import { useGoIdentity } from './useGoIdentity.js'
 import './goProduct.css'
 
-export function GoShell({ children, confirmLeave }) {
+export function GoShell({ children, confirmLeave, forceAgentHeader = false }) {
   const identity = useGoIdentity()
   return <div className="go-shell pulse-product-surface">
-    {identity.kind === 'staff' ? <ProductHeader confirmLeave={confirmLeave} /> : <AgentGoHeader />}
+    {identity.kind === 'staff' && !forceAgentHeader ? <ProductHeader confirmLeave={confirmLeave} /> : <AgentGoHeader entry={forceAgentHeader} />}
     <main className="go-main">{children}</main>
   </div>
 }
