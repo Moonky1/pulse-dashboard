@@ -9,6 +9,13 @@ export function validateQuestions(questions, contentTopicIds = null) {
     if (!Array.isArray(q.topic_ids) || !q.topic_ids.length || (contentTopicIds && q.topic_ids.some(id => !contentTopicIds.includes(id)))) return prefix + 'choose a topic from this item.'
     if (!Array.isArray(q.answer_options)) return prefix + 'check the answer options.'
     if (q.time_limit_seconds !== undefined && ![10, 20, 30, 60].includes(q.time_limit_seconds)) return prefix + 'choose 10, 20, 30 or 60 seconds.'
+    if (q.audio_pending) return prefix + 'finish or cancel the selected audio before saving.'
+    if ((q.audio_start_ms != null || q.audio_end_ms != null) &&
+      (!q.media_id || !Number.isInteger(q.audio_start_ms) || !Number.isInteger(q.audio_end_ms) ||
+        q.audio_start_ms < 0 || q.audio_end_ms <= q.audio_start_ms ||
+        q.audio_end_ms - q.audio_start_ms > (q.time_limit_seconds ?? 30) * 1000)) {
+      return prefix + 'choose an audio clip within the question time limit.'
+    }
     if (q.question_type === 'multiple_choice') {
       if (q.answer_options.length < 2 || q.answer_options.length > 8 || q.answer_options.some(o => !text(o, 1000))) return prefix + 'write 2–8 non-empty options (up to 1,000 characters each).'
       if (!Number.isInteger(q.correct_answer) || q.correct_answer < 0 || q.correct_answer >= q.answer_options.length) return prefix + 'choose the correct answer.'
