@@ -86,7 +86,10 @@ export function AuthProvider({ children, client = supabase }) {
         recoveryStorage()?.setItem(RECOVERY_MARKER, 'active')
         setRecoveryMode(true)
       }
-      if (event === 'TOKEN_REFRESHED' && nextSession) {
+      // An initial refresh must still hydrate the Staff profile. Marking its
+      // token resolved before bootstrap would leave loading true indefinitely.
+      if (event === 'TOKEN_REFRESHED' && nextSession
+        && sessionKey.current !== null && sessionKey.current !== 'anonymous') {
         sessionKey.current = nextSession.access_token
         setSession(nextSession)
         return

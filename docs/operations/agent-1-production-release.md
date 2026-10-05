@@ -29,6 +29,8 @@ The Agent API requires `PULSE_AGENT_SUPABASE_URL` and `PULSE_AGENT_SERVICE_ROLE_
 
 Confirm the deployed commit is Ready in Vercel and owns the canonical domain. Check the homepage, Staff/Agent entry pages, direct route refreshes and anonymous access denial without creating synthetic Production accounts. An authenticated Staff check uses an existing user session; do not change Simon or seed fictitious Agents for a production smoke test.
 
+The production smoke check exposed an initial Staff token-refresh bootstrap race. The provider now hydrates the trusted profile on an initial refresh instead of prematurely marking the token resolved and leaving the page loading indefinitely. Normal refreshes of an already hydrated identity keep the previous behavior. Regression tests execute the provider's actual event callback. Existing authenticated bootstrap also refreshes Auth session metadata and the own-Google-avatar helper's `updated_at`; migration-time fingerprints were compared before these normal smoke-check refreshes.
+
 Previous Ready Production deployment: `https://pulse-auhj8bhgt-pulsekk.vercel.app` (`dpl_9wTH9QRPwDKSLTLTurc7AdGr18cf`). If the frontend needs rollback, restore that deployment through the approved release process; preserve the additive schema and real results. Do not reset the database or force-push Git history.
 
 ## Remaining checkpoints
