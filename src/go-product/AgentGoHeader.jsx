@@ -7,6 +7,8 @@ import { PulseOrb } from '../components/ui/PulseOrb.jsx'
 import '../components/ProductHeader.css'
 import { useAgentSession } from './agentSessionContext.js'
 import { useGoIdentity } from './useGoIdentity.js'
+import { goPlayerName } from './goPlayerIdentity.js'
+import { GoTeamBadge } from './GoTeamBadge.jsx'
 
 export function AgentGoHeader({ entry = false }) {
   const { agent, kind } = useGoIdentity()
@@ -14,6 +16,7 @@ export function AgentGoHeader({ entry = false }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [logoutError, setLogoutError] = useState(false)
+  const name = goPlayerName(agent || {})
 
   async function leave() {
     setLogoutError(false)
@@ -29,10 +32,10 @@ export function AgentGoHeader({ entry = false }) {
       <div className="pulse-product-header__links pulse-product-header__links--right"><Link to="/academy" aria-current={pathname === '/academy' || pathname.startsWith('/academy/') ? 'page' : undefined}>Academy</Link></div>
     </nav>
     <details className="pulse-product-account" key={pathname}>
-      <summary aria-label={`Account menu for ${agent.display_name}, Agent ID ${agent.agent_code}`}><span className="pulse-product-account__avatar"><StaffAvatar name={agent.display_name} size="sm" /></span><span className="pulse-product-account__name pulse-product-account__name--agent"><strong title={agent.display_name}>{agent.display_name}</strong><small>{agent.agent_code}</small></span></summary>
+      <summary aria-label={`Account menu for ${name}, ID: ${agent.agent_code}`}><span className="pulse-product-account__avatar"><StaffAvatar name={name} size="sm" /></span><span className="pulse-product-account__name pulse-product-account__name--agent"><strong title={name}>{name}</strong><small>ID: {agent.agent_code}</small></span></summary>
       <div className="pulse-product-account__menu">
         <p className="pulse-product-account__label">Account</p>
-        <div className="pulse-product-account__identity"><StaffAvatar name={agent.display_name} size="md" /><span><strong>{agent.display_name}</strong><small>Agent ID {agent.agent_code}</small><small>{agent.team_name}</small></span></div>
+        <div className="pulse-product-account__identity"><StaffAvatar name={name} size="md" /><span><strong>{name}</strong><small>ID: {agent.agent_code}</small><GoTeamBadge player={agent} /></span></div>
         <nav className="pulse-product-account__items" aria-label="Account menu">
           <Link to={`/profile/${agent.agent_code}`}>Profile <span aria-hidden="true">↗</span></Link>
           <Link to="/agent/settings">Settings <span aria-hidden="true">↗</span></Link>

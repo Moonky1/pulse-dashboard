@@ -18,7 +18,7 @@ import { goModeResultLine, goResultHeading } from './goModeCopy.js'
 import { GoQuestionCountdown } from './GoQuestionCountdown.jsx'
 import { GoSoundToggle } from './GoSoundToggle.jsx'
 import { GO_ART, resolveGoArt } from './goVisualAssets.js'
-import { playGoSound, primeGoSound } from './goSoundEffects.js'
+import { playGoSound, practiceCompletionSound, primeGoSound } from './goSoundEffects.js'
 import { useGoAccess } from './useGoAccess.js'
 import { useGoIdentity } from './useGoIdentity.js'
 import { useQuestionCountdown } from './useQuestionCountdown.js'
@@ -93,13 +93,17 @@ export function GoPracticePlayer() {
     setSubmitting(false)
     if (response.error) return setSession(previous => ({ ...previous, error: response.error }))
     const next = normalizeResult(response.data)
-    if (next.answer_feedback === 'correct' || next.answer_feedback === 'incorrect') {
+    const hasFeedback = session.mode !== 'certification' && ['correct', 'incorrect'].includes(next.answer_feedback)
+    if (hasFeedback) {
       playGoSound(next.answer_feedback)
     }
-    if (next.completed) playGoSound('complete', next.answer_feedback ? 0.55 : 0)
-    if (next.completed) setResult(normalizeResult(next.result))
+    if (next.completed) {
+      const completedResult = normalizeResult(next.result)
+      playGoSound(session.mode === 'certification' ? 'complete' : practiceCompletionSound(completedResult?.score_percent), hasFeedback ? 0.55 : 0)
+      setResult(completedResult)
+    }
     else { setAnswer(undefined); setTiming(next) }
-  }, [client, question, session.attempt])
+  }, [client, question, session.attempt, session.mode])
 
   useEffect(() => {
     if (!expired || !question || result || submittingRef.current) return

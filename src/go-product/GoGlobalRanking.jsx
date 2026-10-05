@@ -3,6 +3,12 @@ import { useEffect, useState } from 'react'
 import { getGoGlobalRanking } from '../training/trainingApi.js'
 import { GO_ART } from './goVisualAssets.js'
 import { useGoIdentity } from './useGoIdentity.js'
+import { goPlayerName } from './goPlayerIdentity.js'
+import { GoTeamBadge } from './GoTeamBadge.jsx'
+
+function RankedIdentity({ player }) {
+  return <div className="go-global-ranking__identity"><strong>{goPlayerName(player)}{player.agent_code && <small className="go-global-ranking__id">{player.agent_code}</small>}</strong><GoTeamBadge player={player} includeCampaign={false} /></div>
+}
 
 export function GoGlobalRanking() {
   const identity = useGoIdentity()
@@ -33,10 +39,9 @@ export function GoGlobalRanking() {
     {state.error && <p role="alert">Ranking is unavailable right now.</p>}
     {!state.loading && !state.error && (top.length ? <ol>{top.map(player => <li key={player.rank}>
       <span className="go-global-ranking__place">#{player.rank}</span>
-      <strong>{player.display_name}<small>{player.team || 'Pulse team'}</small></strong>
+      <RankedIdentity player={player} />
       <b>{Number(player.points).toLocaleString()} pts</b>
     </li>)}</ol> : <p>No Hosted scores yet. The first completed game will start the ranking.</p>)}
-    {ownOutsideTop && <div className="go-global-ranking__own"><span>Your rank</span><strong>#{own.rank} · {own.display_name}</strong><b>{Number(own.points).toLocaleString()} pts</b></div>}
-    <small className="go-global-ranking__note">Weekly results reset every Monday at 00:00 UTC.</small>
+    {ownOutsideTop && <div className="go-global-ranking__own"><span>Your rank · #{own.rank}</span><RankedIdentity player={own} /><b>{Number(own.points).toLocaleString()} pts</b></div>}
   </section>
 }

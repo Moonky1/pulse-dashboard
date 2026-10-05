@@ -1,0 +1,8 @@
+.go-team-badge { gap: .45rem; box-shadow: inset 0 1px 0 #ffffff0f, 0 0 15px rgba(var(--identity-rgb), .13); }
+.go-team-badge img { flex: none; width: 23px; height: 15px; object-fit: cover; border-radius: 2px; }
+.go-team-badge > span { min-width: 0; color: inherit; overflow-wrap: anywhere; }
+.pulse-product-account__identity .go-team-badge:last-child { display: inline-flex; margin-top: .2rem; font-size: .7rem; }
+.pulse-product-account__identity .go-team-badge > span { display: inline; }
+.go-agent-profile__meta .go-team-badge { font-size: .8rem; color: rgb(var(--identity-rgb)); background: linear-gradient(135deg, rgba(var(--identity-rgb), .18), rgba(var(--identity-rgb), .055)); border-color: rgba(var(--identity-rgb), .34); }
+.go-agent-profile__meta .go-team-badge > span { padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; }
+.go-global-ranking .go-team-badge > span { color: inherit; font: inherit; }

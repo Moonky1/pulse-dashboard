@@ -7,6 +7,8 @@ import { supabase } from '../utils/supabase.js'
 import { GoProgressOverview } from './GoProgressOverview.jsx'
 import { GoShell } from './GoShell.jsx'
 import { useGoIdentity } from './useGoIdentity.js'
+import { goPlayerName } from './goPlayerIdentity.js'
+import { GoTeamBadge } from './GoTeamBadge.jsx'
 
 export function AgentProfilePage() {
   const { agentCode } = useParams()
@@ -20,9 +22,7 @@ export function AgentProfilePage() {
       ? getStaffAgentProfile(supabase, agentCode)
       : getMyGoProgress(identity.client).then(({ data, error }) => ({
         data: error ? null : {
-          agent_code: identity.agent.agent_code,
-          display_name: identity.agent.display_name,
-          team_name: identity.agent.team_name,
+          ...identity.agent,
           go: data,
         }, error,
       }))
@@ -30,7 +30,7 @@ export function AgentProfilePage() {
       if (active) setState({ code: agentCode, loading: false, data, error })
     })
     return () => { active = false }
-  }, [agentCode, identity.kind, identity.agent?.agent_code, identity.agent?.display_name, identity.agent?.team_name, identity.client])
+  }, [agentCode, identity.kind, identity.agent, identity.client])
 
   const allowed = validAgentCode(agentCode) && (identity.kind === 'staff' || identity.agent?.agent_code === agentCode)
   const loading = allowed && (state.loading || state.code !== agentCode)
@@ -41,10 +41,10 @@ export function AgentProfilePage() {
     {!loading && !profile && <div className="go-agent-profile__empty"><h1>Profile unavailable</h1><p>{state.error ? 'We couldn’t load this Agent profile right now.' : 'This Agent profile is not available to your account.'}</p></div>}
     {profile && <>
       <header className="go-agent-profile__hero">
-        <div className="go-agent-profile__avatar" aria-hidden="true">{profile.display_name?.slice(0, 1).toUpperCase() || 'A'}</div>
-        <p className="go-eyebrow">Pulse · Agent profile</p>
-        <h1>{profile.full_name || profile.display_name}</h1>
-        <p className="go-agent-profile__meta"><span>Agent ID {profile.agent_code}</span><span>{profile.team_name}</span>{identity.kind === 'staff' && <span>{profile.status}</span>}</p>
+        <div className="go-agent-profile__avatar" aria-hidden="true">{goPlayerName(profile).slice(0, 1).toUpperCase()}</div>
+        <p className="go-eyebrow">Pulse · Profile</p>
+        <h1>{goPlayerName(profile)}</h1>
+        <p className="go-agent-profile__meta"><span>ID: {profile.agent_code}</span><GoTeamBadge player={profile} />{identity.kind === 'staff' && <span>{profile.status}</span>}</p>
       </header>
       <div className="go-agent-profile__section-heading"><p className="go-eyebrow">Your game record</p><h2>Pulse GO</h2><p>Completed games and ranking from Pulse GO.</p></div>
       {profile.go && <GoProgressOverview progress={profile.go} />}

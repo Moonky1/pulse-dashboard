@@ -6,6 +6,8 @@ import { getMyGoProgress } from '../training/trainingApi.js'
 import { GoProgressOverview } from './GoProgressOverview.jsx'
 import { GoShell } from './GoShell.jsx'
 import { useGoIdentity } from './useGoIdentity.js'
+import { goPlayerName } from './goPlayerIdentity.js'
+import { GoTeamBadge } from './GoTeamBadge.jsx'
 
 export function GoPlayerProgress() {
   const identity = useGoIdentity()
@@ -19,12 +21,12 @@ export function GoPlayerProgress() {
     })
     return () => { active = false }
   }, [identity.client])
-  const playerName = identity.agent?.display_name || profile?.display_name || profile?.full_name || 'Player'
+  const playerName = goPlayerName(identity.agent || profile || {})
   const progress = state.data
   return <GoShell><section className="go-player-progress">
     <Link to="/go">← Back to GO</Link>
     <p className="go-eyebrow">Pulse GO player</p><h1>{playerName}</h1>
-    {identity.kind === 'agent' && <p className="go-player-progress__identity">Agent ID {identity.agent.agent_code} · {identity.agent.team_name}</p>}
+    {identity.kind === 'agent' && <p className="go-player-progress__identity">ID: {identity.agent.agent_code} <GoTeamBadge player={identity.agent} /></p>}
     {state.loading && <p role="status">Loading your progress…</p>}
     {state.error && <p role="alert">Your progress is unavailable right now.</p>}
     {progress && <GoProgressOverview progress={progress} />}
