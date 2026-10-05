@@ -88,6 +88,36 @@ test('each protected action derives Agent identity from the cookie, not the body
   assert.equal(calls[0].args.requested_token_hash, createHash('sha256').update(TOKEN).digest('hex'))
 })
 
+test('valid canonical game and attempt IDs reach the protected Agent contracts', async () => {
+  const operations = [
+    ['metadata', { contentIds: [OTHER_ID] }, 'agent_get_go_catalog_metadata', { requested_content_ids: [OTHER_ID] }],
+    ['content', { contentId: OTHER_ID }, 'agent_get_go_practice_content', { requested_content_id: OTHER_ID }],
+    ['practiceStart', { contentId: OTHER_ID }, 'agent_start_go_practice', { requested_content_id: OTHER_ID }],
+    ['practiceTiming', { attemptId: OTHER_ID }, 'agent_get_go_practice_timing', { requested_attempt_id: OTHER_ID }],
+    ['practiceAnswer', { attemptId: OTHER_ID, questionId: AGENT_ID, answer: 0 }, 'agent_submit_go_practice_answer', { requested_attempt_id: OTHER_ID, requested_question_id: AGENT_ID, requested_answer: 0 }],
+    ['practiceReview', { attemptId: OTHER_ID }, 'agent_get_go_practice_completed_review', { requested_attempt_id: OTHER_ID }],
+    ['certificationResult', { attemptId: OTHER_ID }, 'agent_get_go_certification_result', { requested_attempt_id: OTHER_ID }],
+    ['roomSnapshot', { sessionId: OTHER_ID }, 'agent_get_go_hosted_session', { requested_session_id: OTHER_ID }],
+    ['roomTiming', { sessionId: OTHER_ID }, 'agent_get_go_hosted_timing', { requested_session_id: OTHER_ID }],
+    ['roomAnswer', { sessionId: OTHER_ID, questionId: AGENT_ID, answer: false, position: 1 }, 'agent_submit_go_hosted_answer', { requested_session_id: OTHER_ID, requested_question_id: AGENT_ID, requested_answer: false, expected_question_position: 1 }],
+  ]
+  for (const [action, args, name, forwarded] of operations) {
+    const { request, calls } = setup()
+    const response = await request(action, { ...args, requested_agent_id: OTHER_ID })
+    assert.equal(response.status, 200, `${action} accepts a standard UUID`)
+    assert.deepEqual(calls[1], { name, args: { requested_agent_id: AGENT_ID, ...forwarded } })
+  }
+})
+
+test('malformed IDs never reach Agent game contracts', async () => {
+  for (const id of ['22222222-2222-4222-222222222222', 'not-a-game', `${OTHER_ID}/../admin`, null]) {
+    const { request, calls } = setup()
+    assert.equal((await request('metadata', { contentIds: [id] })).status, 400)
+    assert.equal((await request('practiceStart', { contentId: id })).status, 400)
+    assert.ok(calls.every(call => call.name === 'agent_session_profile'))
+  }
+})
+
 test('browser cannot reach a Staff or unknown RPC through the Agent endpoint', async () => {
   const { request, calls } = setup()
   const response = await request('admin_provision_agent', { requested_agent_id: OTHER_ID })

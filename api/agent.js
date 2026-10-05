@@ -4,7 +4,7 @@ import process from 'node:process'
 import { createClient } from '@supabase/supabase-js'
 
 const COOKIE = '__Host-pulse_agent'
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ROOM_CODE = /^\s*KK[\s-]?\d{4}\s*$/i
 const PERIODS = new Set(['week', 'all_time'])
 

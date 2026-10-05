@@ -4,11 +4,13 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AUTH_STATES, routeForAuthState } from './authState.js'
 import { AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH } from './authRoutes.js'
 import { useAuth } from './AuthProvider.jsx'
+import { PageLoadBoundary } from './components/PageLoadBoundary.jsx'
 import { useGoIdentity } from '../go-product/useGoIdentity.js'
 const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').then((module) => ({ default: module.AccountStatePage })))
 const AccountSettingsPage = lazy(() => import('./screens/AccountSettingsPage.jsx').then((module) => ({ default: module.AccountSettingsPage })))
 const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => ({ default: module.AdminArea })))
 const AgentSignInPage = lazy(() => import('./screens/AgentSignInPage.jsx').then((module) => ({ default: module.AgentSignInPage })))
+const AgentSettingsPage = lazy(() => import('../go-product/AgentSettingsPage.jsx').then((module) => ({ default: module.AgentSettingsPage })))
 const AcademyPage = lazy(() => import('../go/GoLearn.jsx'))
 const AcademyDetailPage = lazy(() => import('../go/GoLearnDetail.jsx'))
 const AuthCallbackPage = lazy(() => import('./screens/AuthCallbackPage.jsx').then((module) => ({ default: module.AuthCallbackPage })))
@@ -56,7 +58,7 @@ function GoPlayerGate({ children }) {
 export function AuthApp() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<AccountStatePage kind="loading" />}><Routes>
+      <PageLoadBoundary><Suspense fallback={<AccountStatePage kind="loading" />}><Routes>
         <Route path="/" element={<PublicHomePage />} />
         <Route path="/privacy" element={<PublicLegalPage kind="privacy" />} />
         <Route path="/terms" element={<PublicLegalPage kind="terms" />} />
@@ -64,6 +66,7 @@ export function AuthApp() {
         <Route path={STAFF_REGISTER_PATH} element={<PublicOnly><RegisterPage /></PublicOnly>} />
         <Route path={STAFF_FORGOT_PASSWORD_PATH} element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
         <Route path={AGENT_SIGN_IN_PATH} element={<AgentSignInPage />} />
+        <Route path="/agent/settings" element={<GoPlayerGate><AgentSettingsPage /></GoPlayerGate>} />
         <Route path="/staff/signin" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
         <Route path="/staff/register" element={<Navigate to={STAFF_REGISTER_PATH} replace />} />
         <Route path="/staff/forgot-password" element={<Navigate to={STAFF_FORGOT_PASSWORD_PATH} replace />} />
@@ -94,7 +97,7 @@ export function AuthApp() {
         <Route path="/account-inactive" element={<RouteGate allow={[AUTH_STATES.INACTIVE]}><AccountStatePage kind="inactive" /></RouteGate>} />
         <Route path="/account-error" element={<RouteGate allow={[AUTH_STATES.ERROR, AUTH_STATES.MISSING_PROFILE]}><AccountStatePage kind="error" /></RouteGate>} />
         <Route path="*" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
-      </Routes></Suspense>
+      </Routes></Suspense></PageLoadBoundary>
     </BrowserRouter>
   )
 }

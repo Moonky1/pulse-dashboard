@@ -5,7 +5,7 @@ import test from 'node:test'
 import { agentReturnPath, AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, LEGACY_STAFF_PATH_REDIRECTS, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH, STAFF_SIGN_IN_PATH } from './authRoutes.js'
 
 test('Agent sign-in returns to the requested player profile, progress, game or Academy guide', () => {
-  for (const path of ['/go', '/go/practice', '/go/progress', '/profile/990001', '/academy', '/academy/product-knowledge',
+  for (const path of ['/go', '/go/practice', '/go/progress', '/profile/990001', '/academy', '/agent/settings', '/academy/product-knowledge',
     '/go/practice/11111111-1111-4111-8111-111111111111', '/go/room/11111111-1111-4111-8111-111111111111']) {
     assert.equal(agentReturnPath(path), path)
   }
