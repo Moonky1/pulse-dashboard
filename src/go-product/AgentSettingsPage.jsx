@@ -15,7 +15,7 @@ export function AgentSettingsPage() {
       <div className="pulse-account-page__overview">
         <section className="pulse-account-card pulse-account-card--intro">
           <StaffAvatar name={agent.display_name} size="lg" />
-          <div><p className="pulse-account-card__eyebrow">PROFILE</p><h2>{agent.display_name}</h2><p>{agent.team_name}</p><Link to={`/profile/${agent.agent_code}`}>View profile <span aria-hidden="true">↗</span></Link></div>
+          <div><p className="pulse-account-card__eyebrow">PROFILE</p><h2>{agent.display_name}</h2><p>Agent ID {agent.agent_code} · {agent.team_name}</p><Link to={`/profile/${agent.agent_code}`}>View profile <span aria-hidden="true">↗</span></Link></div>
         </section>
         <section className="pulse-account-card pulse-account-card--details">
           <p className="pulse-account-card__eyebrow">ACCOUNT DETAILS</p><h2>Signed in to Pulse</h2>

@@ -208,6 +208,7 @@
 .admin-agent-card h2{margin:0 0 .5rem;font-size:clamp(1.45rem,3vw,1.9rem)}
 .admin-agent-card p{color:var(--pulse-text-secondary)}
 .admin-agent-card form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.admin-agent-card__team{grid-column:1/-1}
 .admin-agent-card label{display:grid;gap:.45rem;color:var(--pulse-text-primary);font-size:var(--pulse-text-small);font-weight:700}
 .admin-agent-card input,.admin-agent-card select{width:100%;min-height:3rem;padding:.65rem .85rem;border:1px solid rgba(201,185,244,.2);border-radius:.8rem;outline:none;background:rgba(5,7,17,.75);color:var(--pulse-text-primary);color-scheme:dark;font:inherit}
 .admin-agent-card input:focus-visible,.admin-agent-card select:focus-visible{border-color:var(--pulse-focus);box-shadow:0 0 0 3px rgba(124,104,255,.17)}

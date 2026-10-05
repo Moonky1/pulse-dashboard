@@ -14,6 +14,7 @@ export function AdminAgentsPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [code, setCode] = useState('')
+  const [name, setName] = useState('')
   const [teamId, setTeamId] = useState('')
   const [reissueCode, setReissueCode] = useState('')
   const [profileCode, setProfileCode] = useState('')
@@ -55,11 +56,12 @@ export function AdminAgentsPage() {
     setError(null)
     setActivation(null)
     setCopyStatus('')
-    const result = await provisionAgent(supabase, { code, teamId })
+    const result = await provisionAgent(supabase, { code, name, teamId })
     setSubmitting(false)
     if (result.error) { setError(result.error); return }
-    setActivation(result.data)
+    setActivation({ ...result.data, name: name.trim() })
     setCode('')
+    setName('')
     setTeamId('')
   }
 
@@ -82,7 +84,7 @@ export function AdminAgentsPage() {
       <div className="admin-page-heading"><div><p>Pulse GO</p><h1>Agents</h1><span>Provision a company player without granting Staff access</span></div></div>
       {error && <p className="admin-operation-error" role="alert">{error.message}</p>}
       {activation && <section ref={activationPanel} className="admin-agent-card admin-agent-activation" tabIndex={-1} role="region" aria-labelledby="agent-activation-heading">
-        <div><p className="admin-agent-card__eyebrow">Agent access is ready</p><h2 id="agent-activation-heading">Activation code for Agent {activation.agent_code}</h2><p>Copy this code before leaving. It is shown only now and expires in 24 hours.</p></div>
+        <div><p className="admin-agent-card__eyebrow">Agent access is ready</p><h2 id="agent-activation-heading">Activation code for {activation.name || `Agent ${activation.agent_code}`}</h2><p>Agent ID {activation.agent_code} · Copy this code before leaving. It is shown only now and expires in 24 hours.</p></div>
         <code>{activation.activation_code}</code>
         <Button type="button" variant="secondary" onClick={() => void copyActivationCode()}>{copyStatus === 'copied' ? 'Code copied ✓' : 'Copy code'}</Button>
         {copyStatus === 'failed' && <p role="alert">Couldn’t copy automatically. Select the code above and copy it manually.</p>}
@@ -93,11 +95,12 @@ export function AdminAgentsPage() {
       {loading ? <AdminStatePanel kind="loading" title="Loading teams" body="Checking available teams…" />
         : loadError ? <AdminStatePanel kind="error" title="Teams unavailable" body={loadError.message} />
           : <section className="admin-agent-card" aria-label="Create Agent">
-            <div><p className="admin-agent-card__eyebrow">Staff-only operation</p><h2>Create Agent</h2><p>Enter the Agent ID and select their team. The player sets their own private PIN with a one-time activation code.</p></div>
+            <div><p className="admin-agent-card__eyebrow">Staff-only operation</p><h2>Create Agent</h2><p>Register their name, Agent ID and team. Share the one-time activation code privately; the Agent only needs to create their own PIN.</p></div>
             <form onSubmit={(event) => void submit(event)} autoComplete="off">
+              <label><span>Name</span><input value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={80} placeholder="María López" required /></label>
               <label><span>Agent ID</span><input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" pattern="[0-9]{4,12}" maxLength={12} placeholder="3248" required /></label>
-              <label><span>Team</span><select value={teamId} onChange={(event) => setTeamId(event.target.value)} required><option value="">Select team</option>{teamGroups.map((group) => <optgroup key={group.id} label={group.name}>{group.teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</optgroup>)}</select></label>
-              <div className="admin-agent-card__actions"><p>{teamGroups.length ? `The player will appear as Agent ${code || '3248'}. The activation code expires in 24 hours and appears only once.` : 'No active teams are available.'}</p><Button type="submit" loading={submitting} disabled={!teamGroups.length}>Create Agent</Button></div>
+              <label className="admin-agent-card__team"><span>Team</span><select value={teamId} onChange={(event) => setTeamId(event.target.value)} required><option value="">Select team</option>{teamGroups.map((group) => <optgroup key={group.id} label={group.name}>{group.teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</optgroup>)}</select></label>
+              <div className="admin-agent-card__actions"><p>{teamGroups.length ? 'Their name appears on their profile. They sign in with Agent ID + PIN, not their name. The activation code expires in 24 hours and appears only once.' : 'No active teams are available.'}</p><Button type="submit" loading={submitting} disabled={!teamGroups.length}>Create Agent</Button></div>
             </form>
           </section>}
       <section className="admin-agent-card" aria-label="Recover Agent access">

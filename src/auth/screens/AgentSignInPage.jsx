@@ -97,6 +97,7 @@ export function AgentSignInPage() {
       <Button loading={busy}>{activationMode ? 'Activate and continue' : 'Continue'}</Button>
       <button className="go-agent-entry__mode" type="button" onClick={() => { setActivationMode(!activationMode); setPin(''); setConfirmPin(''); setActivationCode(''); setError('') }}>{activationMode ? 'I already have a PIN' : 'First time here? Create your PIN'}</button>
       <p className="go-agent-entry__help">{activationMode ? 'Ask your Team Leader or Pulse administrator for your one-time code. It expires in 24 hours.' : 'Forgot your PIN? Ask your Team Leader or Pulse administrator for a new activation code.'}</p>
+      {activationMode && <p className="go-agent-entry__help">Staff has already registered your name and team. Use the Agent ID they gave you and choose your private PIN. Next time, sign in with Agent ID + PIN.</p>}
     </form>}
     {error && <p className="go-agent-entry__error" role="alert">{error}</p>}
   </section></GoShell>

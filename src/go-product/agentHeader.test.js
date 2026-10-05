@@ -25,6 +25,20 @@ test('Agent settings uses only verified account facts and existing game preferen
   assert.doesNotMatch(page, /AvatarControls|updateOwnStaffProfile|\.rpc\(|\.from\(|PIN|password/)
 })
 
+test('Agent name is primary with a smaller ID below, while activation and login keep the ID', async () => {
+  const header = await read('AgentGoHeader.jsx')
+  const css = await read('../components/ProductHeader.css')
+  const admin = await read('../admin/pages/AdminAgentsPage.jsx')
+  const entry = await read('../auth/screens/AgentSignInPage.jsx')
+  assert.match(header, /name--agent[^]*<strong title=\{agent.display_name\}>\{agent.display_name\}<\/strong><small>\{agent.agent_code\}<\/small>/)
+  assert.match(css, /name--agent small \{[^}]*font-size: \.68rem/)
+  assert.match(admin, /<span>Name<\/span><input[^]*minLength=\{2\} maxLength=\{80\}/)
+  assert.match(admin, /provisionAgent\(supabase, \{ code, name, teamId \}\)/)
+  assert.doesNotMatch(admin, /The player will appear as Agent/)
+  assert.match(entry, /signIn\(code.trim\(\), pin\)/)
+  assert.match(entry, /Staff has already registered your name and team/)
+})
+
 test('player landing centers two cards and does not advertise hosting', async () => {
   const landing = await read('GoLandingPage.jsx')
   const css = await read('goProduct.css')

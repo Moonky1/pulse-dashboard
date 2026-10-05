@@ -67,6 +67,9 @@
 .pulse-product-account summary:hover, .pulse-product-account summary:focus-visible { border-color: rgba(211, 189, 255, .55); }
 .pulse-product-account summary .admin-staff-avatar { width: 2.25rem; height: 2.25rem; }
 .pulse-product-account__name { max-width: 7.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pulse-product-account__name--agent { display: grid; gap: .15rem; line-height: 1.15; }
+.pulse-product-account__name--agent strong { overflow: hidden; text-overflow: ellipsis; font: inherit; }
+.pulse-product-account__name--agent small { color: #a9a2bc; font-size: .68rem; font-weight: 500; }
 .pulse-product-account__avatar { position: relative; display: inline-flex; flex: none; }
 .pulse-product-account__avatar > .pulse-product-account__dot { position: absolute; right: -.05rem; bottom: -.05rem; width: .72rem; height: .72rem; border: 2px solid #1c182a; }
 .pulse-product-account__dot { display: inline-block; flex: none; width: .8rem; height: .8rem; border-radius: 50%; background: #777488; }
