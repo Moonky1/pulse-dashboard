@@ -45,7 +45,7 @@ export function PendingApprovalDialog({ user, options, submitting, error, onCanc
       <form method="dialog" className="admin-dialog__surface" onSubmit={submit}>
         <span className="admin-dialog__eyebrow">Confirm approval</span>
         <h2 id="pending-approval-title">{PENDING_APPROVAL_ACTION.label}</h2>
-        <div className="admin-dialog__target"><strong>{user.fullName}</strong><span>{user.email} · Awaiting approval</span></div>
+        <div className="admin-dialog__target"><strong>{user.fullName}</strong><span>{user.email} · Pending</span></div>
         <div className="admin-role-form">
           <div className="admin-dialog__target"><strong>Work details</strong><span>Choose where this person works.</span></div>
           <label className="admin-role-field"><span>Department</span><select ref={departmentRef} value={departmentId} disabled={submitting} onChange={(event) => { setDepartmentId(event.target.value); setTeamId(''); setOptionKey('') }}><option value="">Select department</option>{choices.departments.map((option) => <option key={option.departmentId} value={option.departmentId}>{option.departmentName}</option>)}</select></label>

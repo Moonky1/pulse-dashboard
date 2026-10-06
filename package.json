@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:maintenance": "vite build --config vite.maintenance.config.js",
     "lint": "eslint .",
-    "lint:pulse": "eslint api src/auth src/admin src/training src/studio src/go-product src/profile src/components/StaffAvatar.jsx src/components/AvatarControls.jsx scripts/pulse-operator scripts/go-certification",
+    "lint:pulse": "eslint api src/auth src/admin src/training src/studio src/go-product src/profile src/components/StaffAvatar.jsx src/components/AvatarControls.jsx scripts/pulse-operator scripts/go-certification scripts/admin-certification",
     "preview": "vite preview",
     "operator": "node scripts/pulse-operator/cli.js",
     "test:operator": "node --test scripts/pulse-operator/*.test.js",
@@ -20,10 +20,11 @@
     "test:training": "node --test src/training/*.test.js",
     "test:go": "node --test src/go-product/*.test.js",
     "test:agent": "node --test scripts/go-certification/agentServer.test.js",
+    "test:admin:edge": "node --test scripts/admin-certification/removalEdge.test.js",
     "test:go:browser": "node scripts/go-certification/browser.mjs",
     "test:go:hosted-browser": "node scripts/go-certification/hosted-browser.mjs",
     "test:profile": "node --test src/profile/*.test.js",
-    "pulse:check": "npm run lint:pulse && npm run test:auth && npm run test:admin && npm run test:training && npm run test:go && npm run test:agent && npm run test:studio && npm run test:profile && npm run test:operator && npm run build",
+    "pulse:check": "npm run lint:pulse && npm run test:auth && npm run test:admin && npm run test:admin:edge && npm run test:training && npm run test:go && npm run test:agent && npm run test:studio && npm run test:profile && npm run test:operator && npm run build",
     "pulse:release-check": "npm run pulse:check && git diff --check"
   },
   "dependencies": {

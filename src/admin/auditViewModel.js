@@ -4,6 +4,8 @@ const ACTION_LABELS = Object.freeze({
   'account.blocked': 'Account blocked',
   'account.reactivated': 'Account reactivated',
   'account.inactivated': 'Account inactivated',
+  'account.removed': 'Removed from Pulse',
+  'staff_invitation.removed': 'Invitation removed',
   'account.joined_pulse_updated': 'Joined Pulse date updated',
   'role.assigned': 'Role assigned',
   'staff_invitation.created': 'Staff invitation created',
@@ -38,6 +40,11 @@ export function auditActionLabel(action = '') {
 export function auditSummary(event = {}) {
   const actor = event.actor?.name || 'Pulse system'
   const target = event.target?.name || 'a Pulse item'
+  if (event.action === 'role.assigned') return `${actor} assigned the ${event.role?.name || 'selected'} role to ${target}.`
+  if (event.action === 'role.removed') return `${actor} removed the ${event.role?.name || 'selected'} role from ${target}.`
+  if (event.action === 'account.approved') return `${actor} approved ${target}’s account.`
+  if (event.action === 'account.pending_created') return `Registration created for ${target}.`
+  if (event.action === 'account.removed') return `${actor} removed this person from Pulse. Required history is preserved.`
   return `${actor} · ${auditActionLabel(event.action)} · ${target}`
 }
 

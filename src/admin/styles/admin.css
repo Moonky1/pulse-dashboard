@@ -203,6 +203,38 @@
 @media(max-width:520px){.admin-position-member { flex-wrap: wrap; }.admin-position-member em { margin-left: auto; }}
 
 /* AGENT-1: compact, permission-gated Agent provisioning */
+/* ADMIN-2: current people, compact access and deliberate removal. */
+.admin-people-table .admin-role-list--compact{font-size:.72rem;opacity:.9}
+.admin-people-table .admin-role-list--compact .admin-role-badge{font-size:.67rem;padding:.2rem .55rem}
+.admin-access-card{align-self:start}
+.admin-access-card h2{font-size:1.1rem}
+.admin-access-card summary,.admin-audit-event__details summary{cursor:pointer;color:#d8c5ff;font-size:.8rem;padding:.7rem 0}
+.admin-access-editor .admin-role-actions{margin:0;padding:.75rem 0;background:none;border:0}
+.admin-access-editor .admin-role-actions__heading{align-items:start;gap:1rem;flex-wrap:wrap}
+.admin-access-editor .admin-role-actions h2{font-size:1rem}
+.admin-access-editor .admin-role-actions__assignments>li{flex-wrap:wrap;gap:.75rem}
+.admin-permissions-disclosure ul{padding-left:1.1rem;display:grid;gap:.5rem;font-size:.8rem;color:var(--pulse-text-secondary)}
+.admin-removal-action{display:flex;justify-content:space-between;align-items:center;gap:1.2rem;padding:1.2rem;border:1px solid #ab65733d;border-radius:1rem;margin-top:1.5rem}
+.admin-removal-action h2{font-size:1rem;margin:0 0 .5rem}.admin-removal-action p{margin:0;color:var(--pulse-text-secondary);font-size:.8rem}
+.admin-role-field>input{width:100%;padding:.8rem;border:1px solid #bcaff13d;border-radius:.7rem;background:#090b16;color:#f0f3ff;font:inherit}
+.admin-activity-disclosure>summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;cursor:pointer;list-style:none;padding:1.2rem}
+.admin-activity-disclosure>summary::-webkit-details-marker{display:none}
+.admin-activity-disclosure>summary span{display:grid;gap:.45rem}.admin-activity-disclosure>summary small{color:var(--pulse-text-secondary)}
+.admin-activity-disclosure>summary svg{width:20px;height:20px;fill:none;stroke:#d1c3f8;stroke-width:1.8;transition:transform .18s ease}
+.admin-activity-disclosure[open]>summary svg{transform:rotate(180deg)}
+.admin-activity-disclosure>div{padding:0 1.2rem 1.2rem}.admin-profile-bio{font-size:.9rem;max-width:45ch;color:var(--pulse-text-secondary)}
+.admin-invitation-menu{position:relative}.admin-invitation-menu>summary{cursor:pointer;list-style:none;padding:.5rem .85rem;border:1px solid #bdabef40;border-radius:.6rem}
+.admin-invitation-menu[open]{display:grid;gap:.4rem}.admin-invitation-menu .pulse-button{justify-content:start}
+.admin-agents-directory{display:grid;gap:1rem;margin-bottom:2rem}.admin-agents-directory .admin-user-row{grid-template-columns:1.3fr 1.2fr 1fr auto}
+.admin-agent-provisioning>summary{cursor:pointer;padding:1rem;color:#d6c5ff;font-weight:700}
+.admin-agent-status{justify-self:start;padding:.25rem .6rem;border:1px solid #69718255;border-radius:2rem;font-size:.75rem;color:#c7cfdf;background:#69718215}
+.admin-agent-status--active{color:#79dcab;border-color:#53b88c55;background:#53b88c18}
+.admin-agent-status--pending_activation{color:#d0b6ff;border-color:#a18aeb55;background:#a18aeb18}
+.admin-agent-status--blocked{color:#f2a8b4;border-color:#c7778555;background:#c7778518}
+.admin-permissions-disclosure h4{margin-bottom:.4rem;font-size:.75rem;color:#d6c5ff}
+@media(max-width:820px){.admin-removal-action{align-items:start;flex-direction:column}.admin-agents-directory .admin-user-row{grid-template-columns:1fr 1fr;gap:1rem}}
+@media(max-width:520px){.admin-agents-directory .admin-user-row{grid-template-columns:1fr}.admin-removal-action .pulse-button{width:100%}}
+@media(prefers-reduced-motion:reduce){.admin-activity-disclosure>summary svg{transition:none}}
 .admin-agent-card{display:grid;gap:1.6rem;max-width:48rem;margin-inline:auto;padding:clamp(1.25rem,3vw,2rem);border:1px solid rgba(201,185,244,.2);border-radius:1.4rem;background:linear-gradient(145deg,rgba(31,25,51,.95),rgba(11,12,25,.96) 68%);box-shadow:0 24px 70px rgba(0,0,0,.2)}
 .admin-agent-card__eyebrow{margin:0 0 .55rem;color:#c9a9ff;font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
 .admin-agent-card h2{margin:0 0 .5rem;font-size:clamp(1.45rem,3vw,1.9rem)}

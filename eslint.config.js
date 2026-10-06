@@ -26,4 +26,9 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    files: ['scripts/admin-certification/**/*.{js,mjs}'],
+    extends: [js.configs.recommended],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
+  },
 ])

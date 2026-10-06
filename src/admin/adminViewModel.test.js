@@ -4,8 +4,16 @@ import test from 'node:test'
 import { filterManagedUsers, formatPulseDate, lifecycleMeta, roleScopeLabel } from './adminViewModel.js'
 
 test('account states expose readable labels, not color alone', () => {
-  assert.equal(lifecycleMeta('pending_approval').label, 'Awaiting approval')
+  assert.equal(lifecycleMeta('pending_approval').label, 'Pending')
   assert.match(lifecycleMeta('blocked').description, /cannot enter Pulse/)
+})
+
+test('current People excludes Blocked and Inactive, but explicit filters preserve administrative inspection', () => {
+  const users = ['active', 'pending_approval', 'blocked', 'inactive'].map(status => ({ fullName: status, email: '', status, roles: [] }))
+  assert.deepEqual(filterManagedUsers(users, { status: 'current' }).map(user => user.status), ['active', 'pending_approval'])
+  assert.equal(filterManagedUsers(users, { status: '' }).length, 4)
+  assert.deepEqual(filterManagedUsers(users, { status: 'blocked' }).map(user => user.status), ['blocked'])
+  assert.deepEqual(filterManagedUsers(users, { status: 'inactive' }).map(user => user.status), ['inactive'])
 })
 
 test('role scopes clearly distinguish global, department, Campaign, and team access', () => {

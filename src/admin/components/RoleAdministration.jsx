@@ -8,7 +8,7 @@ import { roleCatalogMessage, roleMutationSuccessMessage } from '../roleActions.j
 import { runRoleMutation } from '../roleMutation.js'
 import { RoleActionDialog } from './RoleActionDialog.jsx'
 
-export function RoleAdministration({ user, directory, roleOptions, roleOptionsError, loading, allowed, onChanged }) {
+export function RoleAdministration({ user, directory, roleOptions, roleOptionsError, loading, allowed, onChanged, compact = false }) {
   const guard = useRef(false)
   const [selected, setSelected] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -44,7 +44,7 @@ export function RoleAdministration({ user, directory, roleOptions, roleOptionsEr
     setSelected(null)
   }
 
-  return (
+  const panel = (
     <section id="pulse-access-management" className="admin-role-actions" aria-labelledby="role-actions-title">
       <div className="admin-role-actions__heading"><div><p className="admin-section-label">Pulse access</p><h2 id="role-actions-title">Manage access</h2><span>Change the roles and access areas available to this person</span></div><Button type="button" disabled={!assignmentAvailable} onClick={openAssignment}>Add access</Button></div>
       {catalogMessage && <p className={roleOptionsError ? 'admin-dialog__error' : 'admin-role-actions__catalog-state'} role={roleOptionsError ? 'alert' : 'status'}>{catalogMessage}</p>}
@@ -55,4 +55,5 @@ export function RoleAdministration({ user, directory, roleOptions, roleOptionsEr
       {selected && <RoleActionDialog action={selected} user={user} directory={directory} roleOptions={roleOptions} submitting={submitting} error={error} onCancel={cancel} onConfirm={confirm} />}
     </section>
   )
+  return compact ? <details className="admin-access-editor"><summary>{user.roles.length ? 'Edit access' : 'Assign access'}</summary>{panel}</details> : panel
 }

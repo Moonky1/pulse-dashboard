@@ -17,7 +17,7 @@ test('Administration navigation and primary pages use staff-friendly product lan
   assert.match(shell, />Activity</)
   assert.match(people, /Find teammates and see where they work across Pulse/)
   assert.match(people, /All statuses/)
-  assert.match(approvals, /Awaiting approval/)
+  assert.match(approvals, /<h1>Pending<\/h1>/)
   assert.match(approvals, /Email verified/)
   assert.match(activity, /important account, access and organization changes/)
   assert.doesNotMatch(`${shell}\n${people}\n${approvals}\n${activity}`, /User governance|Identity & access|Protected read|Read-only workspace|server-authorized|Protected history/)

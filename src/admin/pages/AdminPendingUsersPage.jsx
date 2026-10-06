@@ -18,7 +18,7 @@ export function AdminPendingUsersPage() {
   return (
     <main className="admin-content">
       <div className="admin-page-heading">
-        <div><p>People</p><h1>Awaiting approval</h1><span>Review verified registrations and decide who can enter Pulse</span></div>
+        <div><p>People</p><h1>Pending</h1><span>Review verified registrations and decide who can enter Pulse</span></div>
         <Button type="button" variant="secondary" loading={loading} onClick={refresh}>Refresh</Button>
       </div>
       <section className="admin-filter-bar admin-filter-bar--pending" aria-label="Pending user filters">
@@ -27,7 +27,7 @@ export function AdminPendingUsersPage() {
       <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {users.length} awaiting approval</div>
       {!users.length ? <AdminStatePanel kind="empty" title="No approvals waiting" body="New verified registrations will appear here." />
         : !filtered.length ? <AdminStatePanel kind="empty" title="No matching registrations" body="Adjust the search to broaden these results." />
-          : <section className="admin-users" aria-label="Awaiting approval">
+          : <section className="admin-users" aria-label="Pending people">
             <div className="admin-table admin-table--pending" role="table">
               <div className="admin-table__head" role="row"><span>Person</span><span>Email verified</span><span>Status</span><span aria-label="Action" /></div>
               {filtered.map((user) => (

@@ -1,3 +1,12 @@
+export function canRemoveInvitation(invitation) {
+  return ['revoked', 'expired', 'failed'].includes(invitation.status)
+}
+
+export function filterCurrentInvitations(invitations, status, query = '') {
+  return invitations.filter(item => (status !== 'current' || ['pending_send', 'sent'].includes(item.status))
+    && `${item.fullName} ${item.email}`.toLowerCase().includes(query.trim().toLowerCase()))
+}
+
 export function invitationOptionKey(option = {}) {
   return [option.roleId, option.scopeType, option.departmentId, option.campaignId, option.teamId].map((value) => value ?? '').join(':')
 }

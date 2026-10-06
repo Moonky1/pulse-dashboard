@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 import { Button } from '../../components/ui/Button.jsx'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
@@ -9,22 +9,27 @@ import { StaffAvatar } from '../components/StaffAvatar.jsx'
 import { TeamBadge } from '../components/TeamBadge.jsx'
 import { directoryMaps, filterManagedUsers, roleOptions } from '../adminViewModel.js'
 import { useManagedUsers } from '../hooks/useManagedUsers.js'
+import { useAdminPermissions } from '../AdminAccessContext.js'
+import { PendingStaffCleanup } from '../components/PendingStaffCleanup.jsx'
 
 const STATUS_OPTIONS = [
+  ['current', 'Active + Pending'],
   ['', 'All statuses'],
-  ['pending_approval', 'Awaiting approval'],
+  ['pending_approval', 'Pending'],
   ['active', 'Active'],
   ['blocked', 'Blocked'],
   ['inactive', 'Inactive'],
 ]
 
 function Filter({ label, value, onChange, children }) {
-  return <label className="admin-filter"><span>{label}</span><select value={value} onChange={onChange}>{children}</select></label>
+  return <label className="admin-filter"><span>{label}</span><select aria-label={label} value={value} onChange={onChange}>{children}</select></label>
 }
 
 export function AdminUsersPage() {
+  const location = useLocation()
+  const { permissionKeys } = useAdminPermissions()
   const { users, directory, loading, error, refresh } = useManagedUsers({ includeDetails: true })
-  const [filters, setFilters] = useState({ query: '', status: '', departmentId: '', teamId: '', roleKey: '' })
+  const [filters, setFilters] = useState({ query: '', status: 'current', departmentId: '', teamId: '', roleKey: '' })
   const maps = useMemo(() => directoryMaps(directory), [directory])
   const roles = useMemo(() => roleOptions(users), [users])
   const teams = useMemo(() => {
@@ -57,8 +62,10 @@ export function AdminUsersPage() {
         <Filter label="Team" value={filters.teamId} onChange={update('teamId')}><option value="">All teams</option>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Filter>
         <Filter label="Role" value={filters.roleKey} onChange={update('roleKey')}><option value="">All roles</option>{roles.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</Filter>
       </section>
+      {location.state?.removed && <p className={location.state.cleanupPending ? 'admin-operation-error' : 'admin-operation-notice'} role="status">{location.state.cleanupPending ? 'Removed from People and Pulse access revoked. Auth or photo cleanup is pending; an operator must finish the recorded removal.' : 'Removed from Pulse. Required history, if any, remains protected internally.'}</p>}
+      {permissionKeys.includes('users.remove') && <PendingStaffCleanup />}
 
-      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> of {users.length} people</div>
+      <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> {filtered.length === 1 ? 'person' : 'people'}{filters.status === 'current' && <span> · Active and Pending</span>}</div>
       {!users.length ? <AdminStatePanel kind="empty" title="No people yet" body="Staff profiles will appear here." />
         : !filtered.length ? <AdminStatePanel kind="empty" title="No matching people" body="Adjust the search or filters to broaden these results." />
           : <section className="admin-users" aria-label="People">

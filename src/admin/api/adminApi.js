@@ -1172,7 +1172,7 @@ function normalizeStaffInvitation(row = {}) {
 }
 
 export async function listStaffInvitations(client, { status = null, limit = 50 } = {}) {
-  if ((status && !INVITATION_STATUSES.has(status)) || !Number.isInteger(limit) || limit < 1 || limit > 100) return { data: [], error: publicError('invalid_request', 'The requested invitation filters are invalid.') }
+  if ((status && status !== 'current' && !INVITATION_STATUSES.has(status)) || !Number.isInteger(limit) || limit < 1 || limit > 100) return { data: [], error: publicError('invalid_request', 'The requested invitation filters are invalid.') }
   const { data, error } = await client.rpc('list_staff_invitations', { requested_status: status, requested_limit: limit })
   return error ? { data: [], error: invitationError(error) } : { data: (data ?? []).map(normalizeStaffInvitation).filter(Boolean), error: null }
 }

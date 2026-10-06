@@ -11,12 +11,12 @@ function AuditEvent({ event }) {
       <div className="admin-audit-event__body">
         <div className="admin-audit-event__heading"><div><span>{category}</span><h3>{auditActionLabel(event.action)}</h3></div><time dateTime={event.occurredAt}>{formatAuditTime(event.occurredAt)}</time></div>
         <p>{auditSummary(event)}</p>
-        <div className="admin-audit-event__facts">
+        <details className="admin-audit-event__details"><summary>View details</summary><div className="admin-audit-event__facts">
           {event.actor?.employeeId && <span>Actor {event.actor.employeeId}</span>}
           {event.target?.employeeId && <span>Target {event.target.employeeId}</span>}
           {event.role?.name && <span>Role {event.role.name}</span>}
           {organization && <span>Access area {organization}</span>}
-        </div>
+        </div></details>
         {event.reason && <p className="admin-audit-event__reason"><strong>Note:</strong> {event.reason}</p>}
       </div>
     </article>

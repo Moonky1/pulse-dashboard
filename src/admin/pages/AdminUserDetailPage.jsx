@@ -14,6 +14,9 @@ import { OperationalAssignments } from '../components/OperationalAssignments.jsx
 import { PendingApprovalActions } from '../components/PendingApprovalActions.jsx'
 import { RoleAdministration } from '../components/RoleAdministration.jsx'
 import { RoleScopeList } from '../components/RoleScopeList.jsx'
+import { RolePermissions } from '../components/RolePermissions.jsx'
+import { RemoveStaffAction } from '../components/RemoveStaffAction.jsx'
+import { StaffPresentation } from '../components/StaffPresentation.jsx'
 import { StaffAvatar } from '../components/StaffAvatar.jsx'
 import { TeamBadge } from '../components/TeamBadge.jsx'
 import { UserAuditHistory } from '../components/UserAuditHistory.jsx'
@@ -51,7 +54,7 @@ export function AdminUserDetailPage({ pendingOnly = false }) {
       <Link className="admin-back-link" to={pendingOnly ? '/admin/pending' : '/admin/users'}>← Back to {pendingOnly ? 'approvals' : 'people'}</Link>
       <section className="admin-profile-hero">
         <div className="admin-profile-hero__avatar"><StaffAvatar name={user.fullName} customAvatarPath={user.customAvatarPath} googleAvatarUrl={user.googleAvatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} size="lg" />{profile?.id === user.id && <AvatarControls compact onChanged={refresh} />}</div>
-        <div className="admin-profile-hero__identity"><p>Staff profile</p><h1>{user.fullName}</h1><span>{user.employeeId || 'Employee ID pending'}</span></div>
+        <div className="admin-profile-hero__identity"><p>Staff profile</p><h1>{user.displayName || user.fullName}</h1><span>{user.employeeId || 'Employee ID pending'}</span><StaffPresentation userId={user.id} /></div>
         <dl className="admin-profile-hero__work"><Detail label="Position">{user.positionName}</Detail><Detail label="Team">{user.primaryTeamName ? <TeamBadge teamId={user.primaryTeamId} name={user.primaryTeamName} code={user.primaryTeamCode} campaignCode={user.primaryCampaignCode} /> : 'Not assigned'}</Detail><Detail label="Campaign">{user.primaryCampaignName}</Detail></dl>
         <LifecycleBadge status={user.status} />
       </section>
@@ -59,19 +62,19 @@ export function AdminUserDetailPage({ pendingOnly = false }) {
       {pendingOnly && <section className="admin-pending-readiness" aria-label="Approval readiness"><div><p>Approval readiness</p><h2>{user.authEmailConfirmed ? 'Identity verified' : 'Identity verification pending'}</h2><span>Review the person, then choose their work details and Pulse access in the approval step below.</span></div><dl><Detail label="Email">{user.email}</Detail><Detail label="Current access">Not assigned</Detail><Detail label="Work placement">Selected during approval</Detail></dl></section>}
       <div className="admin-detail-grid">
         <Card level={2} className="admin-detail-card"><p className="admin-section-label">Identity</p><h2>Contact and identity</h2><dl><Detail label="Display name">{user.displayName}</Detail><Detail label="Employee ID">{user.employeeId}</Detail><Detail label="Email">{user.email}</Detail><Detail label="Joined Pulse">{formatPulseDate(user.pulseJoinedOn)}</Detail></dl><JoinedPulseAdministration user={user} allowed={!pendingOnly && canManageUsers(permissionKeys)} onChanged={refresh} /></Card>
-        <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Work details</p><h2>Placement and Position</h2><dl className="admin-work-detail-list"><Detail label="Position">{user.positionName}</Detail><Detail label="Department">{maps.departments.get(user.departmentId)}</Detail><Detail label="Campaign">{user.primaryCampaignName}</Detail><Detail label="Operating unit">{user.primaryOperatingUnitName}</Detail><Detail label="Team">{user.primaryTeamName ? <TeamBadge teamId={user.primaryTeamId} name={user.primaryTeamName} code={user.primaryTeamCode} campaignCode={user.primaryCampaignCode} /> : 'Not assigned'}</Detail></dl></Card>
+        <Card level={2} className="admin-detail-card"><p className="admin-section-label">Work details</p><h2>Placement and Position</h2><dl className="admin-work-detail-list"><Detail label="Position">{user.positionName}</Detail><Detail label="Department">{maps.departments.get(user.departmentId)}</Detail><Detail label="Campaign">{user.primaryCampaignName}</Detail><Detail label="Team">{user.primaryTeamName ? <TeamBadge teamId={user.primaryTeamId} name={user.primaryTeamName} code={user.primaryTeamCode} campaignCode={user.primaryCampaignCode} /> : 'Not assigned'}</Detail></dl></Card>
         <Card level={2} className="admin-detail-card"><p className="admin-section-label">Account</p><h2>Account status</h2><div className="admin-account-row"><LifecycleBadge status={user.status} /><Badge tone={user.authEmailConfirmed ? 'success' : 'warning'} dot>{user.authEmailConfirmed ? 'Email verified' : 'Email not verified'}</Badge></div><p>{lifecycle.description}</p></Card>
+        <Card level={2} className="admin-detail-card admin-access-card"><p className="admin-section-label">Access & permissions</p><h2>Pulse access</h2><RoleScopeList roles={user.roles} directory={directory} /><RolePermissions roles={user.roles} /><RoleAdministration user={user} directory={directory} roleOptions={roleOptions} roleOptionsError={roleOptionsError} loading={loading} allowed={!pendingOnly && canAssignRoles(permissionKeys) && profile?.id !== user.id} onChanged={refresh} compact /></Card>
         {assignmentsAccess && <OperationalAssignments assignments={operationalAssignments.assignments} loading={operationalAssignments.loading} error={operationalAssignments.error} onRetry={operationalAssignments.refresh} />}
-        <Card level={2} className="admin-detail-card admin-detail-card--wide"><p className="admin-section-label">Pulse access</p><h2>Pulse access</h2><RoleScopeList roles={user.roles} directory={directory} /></Card>
       </div>
-      {canViewUserHistory(permissionKeys) && <UserAuditHistory userId={user.id} />}
       {user.status === 'pending_approval'
         ? <PendingApprovalActions user={user} canBlock={canBlockPendingUsers(permissionKeys)} canApprove={canApprovePendingUsers(permissionKeys)} approvalOptions={pendingApprovalOptions.options} approvalOptionsLoading={pendingApprovalOptions.loading} approvalOptionsError={pendingApprovalOptions.error} onReloadApprovalOptions={pendingApprovalOptions.refresh} onChanged={refresh} onApproved={() => navigate(`/admin/users/${user.id}`, { replace: true, state: { justApproved: true } })} />
         : <>
           <WorkDetailsAdministration user={user} allowed={canManageStaffWork(permissionKeys)} onChanged={refresh} />
-          <RoleAdministration user={user} directory={directory} roleOptions={roleOptions} roleOptionsError={roleOptionsError} loading={loading} allowed={canAssignRoles(permissionKeys)} onChanged={refresh} />
           <LifecycleActions user={user} allowed={canManageUsers(permissionKeys)} onChanged={refresh} />
         </>}
+      <RemoveStaffAction user={user} allowed={permissionKeys.includes('users.remove') && profile?.id !== user.id} onRemoved={(result) => navigate('/admin/users', { replace: true, state: { removed: true, cleanupPending: result.cleanupPending } })} />
+      {canViewUserHistory(permissionKeys) && <UserAuditHistory userId={user.id} />}
     </main>
   )
 }

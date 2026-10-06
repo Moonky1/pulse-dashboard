@@ -1,5 +1,5 @@
 export const LIFECYCLE = Object.freeze({
-  pending_approval: { label: 'Awaiting approval', tone: 'pending', description: 'The email is verified and the account is waiting for company approval.' },
+  pending_approval: { label: 'Pending', tone: 'pending', description: 'The email is verified and the account is waiting for company approval.' },
   active: { label: 'Active', tone: 'success', description: 'This person can enter Pulse with the access shown above.' },
   blocked: { label: 'Blocked', tone: 'error', description: 'This person cannot enter Pulse until the account is reactivated.' },
   inactive: { label: 'Inactive', tone: 'neutral', description: 'The profile is saved, but the account cannot currently enter Pulse.' },
@@ -36,7 +36,7 @@ export function filterManagedUsers(users, filters = {}) {
   return users.filter((user) => {
     const identity = [user.fullName, user.displayName, user.employeeId, user.email].filter(Boolean).join(' ').toLocaleLowerCase()
     return (!query || identity.includes(query))
-      && (!filters.status || user.status === filters.status)
+      && (filters.status === 'current' ? ['active', 'pending_approval'].includes(user.status) : !filters.status || user.status === filters.status)
       && (!filters.departmentId || user.departmentId === filters.departmentId)
       && (!filters.teamId || user.primaryTeamId === filters.teamId || user.teamId === filters.teamId)
       && (!filters.roleKey || user.roles.some((role) => role.key === filters.roleKey))
