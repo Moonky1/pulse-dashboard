@@ -86,8 +86,8 @@ SECURITY Y PRUEBAS
    aislado: 17 grupos pasaron, cero errores JS/API y cero operaciones Production.
    Revisados People, Staff Profile, Access editor, Activity, Team, Removal,
    Invitations y Agents en 1440x1000, 820x1180, 1180x820 y 390x844.
-42. pulse:release-check paso: 362 pruebas de producto, todas exitosas:
-   Auth 48; Admin 157; frontera de removal 7; Training 42; GO 48;
+42. pulse:release-check paso: 363 pruebas de producto, todas exitosas:
+   Auth 48; Admin 158; frontera de removal 7; Training 42; GO 48;
    Agent server 11; Studio 22; Profile 12; Operator 15.
    lint:pulse, build y git diff --check tambien pasaron.
    El test antiguo de avatar distingue ahora politicas restrictivas (no conceden
@@ -100,7 +100,7 @@ ESTADO REMOTO / REVISION PENDIENTE
    https://pulse-kk-git-pulse-admin-2-people-access-pulsekk.vercel.app/admin/users
    Backend: Pulse Preview sgshbawggqapuyqzkyhs. Dos migraciones ADMIN-2 instaladas
    con ledger y funcion pulse-staff-removal desplegada, JWT verificado y origen
-   restringido a esta rama. Lectura remota: cero Staff/invitaciones removidas;
+   restringido a esta rama. Las pruebas remotas retiraron solo fixtures ADMIN-2;
    anon no puede preparar removal; el navegador no puede ejecutar limpieza privilegiada.
 45. El usuario autorizo el release Production el 2026-10-05: las dos migraciones,
    desplegar esta funcion con el origen canonico de Production y publicar el frontend,
@@ -109,15 +109,22 @@ ESTADO REMOTO / REVISION PENDIENTE
    compatibles, politica users esperada y capacidad de revocar sesiones presentes.
    No requiere borrar personas reales ni invitaciones, cambiar OAuth/DNS/SMTP,
    puntajes GO o copiar cuentas ficticias.
-46. Pendientes: revision humana de Preview y pruebas destructivas exactas con
-   una cuenta ficticia sin historial, otra con historial e invitaciones ficticias
-   en el backend remoto Preview. No se confunden con las pruebas locales ya pasadas.
+46. El usuario inicio sesion en ADMIN-2 y confirmo ver People. Con su sesion
+   real Super Admin se ejecutaron los dos flujos de removal mediante la UI y Edge:
+   Disposable Preview fue purgado de Staff y Auth; Historical Preview quedo oculto
+   y sin roles/sesiones, Auth bloqueado y su evento historico ficticio preservado.
+   Ambas limpiezas persistidas quedaron completas; dos eventos de removal.
+   Las dos cuentas estan ausentes tambien en People All statuses + busqueda.
+   La invitacion ficticia revocada sin referencias fue purgada via UI; la aceptada
+   permanece visible sin acciones de removal. Ninguna persona real fue modificada.
+   La verificacion final de tokens antiguos y refresco sigue pendiente hasta cerrar
+   la invitacion activa ficticia. No se confunden estas pruebas con las locales.
    Tras la autorizacion se agrego solamente el callback Google de ADMIN-2 a Pulse
    Preview: se conservaron los doce retornos previos y todos los otros ajustes.
    PULSE_AGENT_SUPABASE_URL y PULSE_AGENT_SERVICE_ROLE_KEY quedaron como secretos
    solo de servidor Vercel Preview, limitados a pulse/admin-2-people-access.
    La clave se traslado en memoria, sin imprimirla ni crear archivos con secretos.
-   Preview fue reconstruido y verificado READY sobre 6ca67be; /api/agent ahora
+   Preview fue reconstruido y verificado READY sobre 54c2c36; /api/agent ahora
    responde 401 sign_in_required al visitante, no 503 not_configured.
    Lectura del bundle confirma Pulse Preview. No se tocaron secretos Production.
    Se crearon exactamente dos Staff ficticios: ADMIN-2 Disposable Preview,
@@ -125,14 +132,22 @@ ESTADO REMOTO / REVISION PENDIENTE
    Se crearon tres invitaciones ficticias: revocada, activa y aceptada. No se envio
    correo ni se crearon cuentas Staff privilegiadas. El ingreso real de los dos
    fixtures funciona y un Staff ordinario recibe 42501 al intentar inspeccionar
-   removal ajeno. Las eliminaciones via Edge esperan la sesion del administrador
-   en ADMIN-2, distinta del Preview antiguo AUTH-11 que el usuario tiene abierto.
-   Pruebas de producto repetidas: 362/362, lint, build y diff-check pasaron.
+   removal ajeno. Durante la prueba se reemplazo window.confirm de revocacion
+   por un dialogo accesible dentro de Pulse. Cancel mantiene la invitacion intacta;
+   el envio muestra el error del servidor y no anuncia un cambio inexistente.
+   Pruebas de producto repetidas tras ese ajuste: 363/363, lint, build y diff-check.
    Google muestra Ir a Pulse tanto en Preview como en Production, comprobado en
    ambas pantallas reales sin seleccionar cuentas. Son clientes Google distintos.
    No se necesita cambiar el nombre ahora y no se cambiaron planes ni OAuth de
    Production. Evidencia sin correos: review-evidence.local/admin2/google-production-pulse.jpg.
-47. NO-GO para Production hasta revisar Preview y cerrar esas pruebas remotas.
-   Autorizacion recibida; pendiente acceso humano a ADMIN-2 para cerrar la prueba
-   remota y luego aplicar exactamente el release autorizado. No se mezclo main,
+47. NO-GO para Production hasta cerrar el bloqueo de configuracion de Preview:
+   pulse-staff-invitations rechaza OPTIONS con 403 origin_not_allowed para la URL
+   https://pulse-kk-git-pulse-admin-2-people-access-pulsekk.vercel.app.
+   La invitacion ficticia activa permanece sent; revoke no llego al contrato SQL.
+   Se requiere autorizacion puntual para permitir este origen solamente en la
+   frontera de invitaciones de Pulse Preview, conservando los origenes previos y
+   sin cambiar SMTP, entrega, OAuth ni Production. No se invento un bypass.
+   Luego: revocar/retirar esa invitacion ficticia, verificar accesos antiguos y
+   aplicar exactamente las dos migraciones y el release Production ya autorizados.
+   No se mezclo main,
    no se desplego Production y no se removio ninguna cuenta real.
