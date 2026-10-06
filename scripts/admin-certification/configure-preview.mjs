@@ -2,8 +2,9 @@ import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 
 // Public frontend configuration only. Never uses env pull or a privileged key.
-const source = 'https://pulse-kk-git-pulse-agent-1-go-identity-pulsekk.vercel.app'
 const origin = 'https://pulse-kk-git-pulse-admin-2-people-access-pulsekk.vercel.app'
+const verifyOnly = process.argv.includes('--verify-only')
+const source = verifyOnly ? origin : 'https://pulse-kk-git-pulse-agent-1-go-identity-pulsekk.vercel.app'
 const branch = 'pulse/admin-2-people-access'
 const project = 'sgshbawggqapuyqzkyhs'
 function vercel(args, input) {
@@ -33,8 +34,10 @@ const values = {
   VITE_GO_HOSTED_ORIGIN: origin, VITE_GO_HOSTED_PROJECT_REF: project,
   VITE_TRAINING_AUTHORING_ORIGIN: origin, VITE_TRAINING_AUTHORING_PROJECT_REF: project,
 }
-for (const [name, value] of Object.entries(values)) {
-  vercel(['env', 'add', name, 'preview', '--git-branch', branch, '--no-sensitive', '--yes'], value)
-  console.log('Configured public variable ' + name + ' for ' + branch)
+if (!verifyOnly) {
+  for (const [name, value] of Object.entries(values)) {
+    vercel(['env', 'add', name, 'preview', '--git-branch', branch, '--no-sensitive', '--yes'], value)
+    console.log('Configured public variable ' + name + ' for ' + branch)
+  }
 }
-console.log(JSON.stringify({ branch, origin, backend: project, publicVariables: Object.keys(values).length, privilegedKeysCopied: 0, productionOperations: 0 }))
+console.log(JSON.stringify({ branch, origin, backend: project, publicVariables: Object.keys(values).length, verifyOnly, privilegedKeysCopied: 0, productionOperations: 0 }))

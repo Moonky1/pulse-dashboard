@@ -110,6 +110,10 @@ ESTADO REMOTO / REVISION PENDIENTE
    una cuenta ficticia sin historial, otra con historial e invitaciones ficticias
    en el backend remoto Preview. No se confunden con las pruebas locales ya pasadas.
    Para Google en esta rama se solicito autorizar solo su callback Preview;
-   no se cambiara OAuth sin esa respuesta. No se copiaron secretos Agent a Vercel.
+   no se cambiara OAuth sin esa respuesta. El directorio y el alta Staff de Agents
+   usan los RPC existentes; el ingreso/activacion del jugador en esta rama requiere
+   PULSE_AGENT_SUPABASE_URL y PULSE_AGENT_SERVICE_ROLE_KEY en su servidor Vercel.
+   Se solicito autorizacion especifica para ese enlace Preview; no se copio la clave
+   por iniciativa propia ni al navegador/repositorio/Production.
 47. NO-GO para Production hasta revisar Preview y cerrar esas pruebas remotas.
    No se mezclo main, no se desplego Production y no se removio ninguna cuenta real.
