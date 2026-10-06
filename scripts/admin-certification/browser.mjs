@@ -61,7 +61,7 @@ try {
   }
   const allowHeaders = { 'access-control-allow-origin': app, 'access-control-allow-headers': 'authorization,apikey,x-client-info,content-type,x-supabase-api-version,prefer,range,range-unit', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS', 'access-control-expose-headers': 'content-range', vary: 'Origin' }
   let removal
-  const edge = stripTypeScriptTypes(readFileSync(new URL('../../supabase/functions/pulse-staff-removal/index.ts',import.meta.url),'utf8')).replace(/^import .*\n/,'')
+  const edge = stripTypeScriptTypes(readFileSync(new URL('../../supabase/functions/pulse-staff-removal/index.ts',import.meta.url),'utf8')).replace(/^import[^\r\n]*\r?\n/,'')
   const edgeEnv = { PULSE_STAFF_REMOVAL_ALLOWED_ORIGINS: app, SUPABASE_URL: api, SUPABASE_ANON_KEY: anon, SUPABASE_SERVICE_ROLE_KEY: service }
   new Function('Deno','createClient',edge)({ env: { get: name => edgeEnv[name] }, serve: handler => { removal = handler } },createClient)
   proxy = createServer(async (request,response) => {

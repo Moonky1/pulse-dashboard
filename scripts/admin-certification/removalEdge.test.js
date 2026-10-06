@@ -7,7 +7,7 @@ const origin = 'https://pulse-preview.example.test'
 const operator = '11111111-1111-4111-8111-111111111111'
 const userId = '22222222-2222-4222-8222-222222222222'
 const requestKey = '33333333-3333-4333-8333-333333333333'
-const source = stripTypeScriptTypes(readFileSync(new URL('../../supabase/functions/pulse-staff-removal/index.ts', import.meta.url), 'utf8')).replace(/^import .*\n/, '')
+const source = stripTypeScriptTypes(readFileSync(new URL('../../supabase/functions/pulse-staff-removal/index.ts', import.meta.url), 'utf8')).replace(/^import[^\r\n]*\r?\n/, '')
 function runtime({ signedIn = true, prepareError = null, kind = 'purge', authError = null, avatar = null, alreadyDone = false, mediaError = null } = {}) {
   let handler
   const calls = []
