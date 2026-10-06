@@ -1,7 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.105.1'
 
 const localOrigins = new Set(['http://localhost:5173', 'http://127.0.0.1:5173'])
-const origins = () => new Set([...localOrigins, ...(Deno.env.get('PULSE_ALLOWED_ORIGINS') ?? '').split(',').map((value) => value.trim()).filter(Boolean)])
+// Invitation-only additions preserve the shared allowlist without expanding other functions.
+const origins = () => new Set([...localOrigins, ...['PULSE_ALLOWED_ORIGINS', 'PULSE_INVITATION_ADDITIONAL_ORIGINS']
+  .flatMap(name => (Deno.env.get(name) ?? '').split(',').map(value => value.trim()).filter(Boolean))])
 const cors = (origin: string | null) => ({
   'Access-Control-Allow-Origin': origin && origins().has(origin) ? origin : '',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

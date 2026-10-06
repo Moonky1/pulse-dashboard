@@ -20,7 +20,7 @@
     "test:training": "node --test src/training/*.test.js",
     "test:go": "node --test src/go-product/*.test.js",
     "test:agent": "node --test scripts/go-certification/agentServer.test.js",
-    "test:admin:edge": "node --test scripts/admin-certification/removalEdge.test.js",
+    "test:admin:edge": "node --test scripts/admin-certification/*Edge.test.js",
     "test:go:browser": "node scripts/go-certification/browser.mjs",
     "test:go:hosted-browser": "node scripts/go-certification/hosted-browser.mjs",
     "test:profile": "node --test src/profile/*.test.js",
