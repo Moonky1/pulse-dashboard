@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const dbContainer = 'supabase_db_auth-google-selector'
 const database = process.argv.find(value => value.startsWith('--database='))?.slice(11) || 'pulse_admin2_review_20261005'
-if (!/^pulse_admin2_(review|checks|browser)_review_20261005(_[0-9]{1,2})?$/.test(database) && database !== 'pulse_admin2_review_20261005') throw new Error('Only task-owned local review database names are accepted')
+if (!/^pulse_admin2_(review|checks|browser)_review_20261005(_[0-9]{1,2})?$/.test(database) && !/^pulse_admin2_purge_review_20261006(_[0-9]{1,2})?$/.test(database) && database !== 'pulse_admin2_review_20261005') throw new Error('Only task-owned local review database names are accepted')
 const api = 'http://127.0.0.1:54362', app = 'http://127.0.0.1:53663'
 const resume = process.argv.includes('--resume-owned-fixtures')
 const owned = [], passes = [], errors = [], apiErrors = []
@@ -219,16 +219,18 @@ try {
   await dialog.getByLabel('Type REMOVE to confirm').fill('REMOVE')
   await responsive('removal-modal')
   await dialog.getByRole('button',{ name:'Remove from Pulse',exact:true }).click()
-  await page.waitForURL('**/admin/users'); await page.getByText('Removed from Pulse. Required history, if any, remains protected internally.',{ exact:true }).waitFor()
+  await page.waitForURL('**/admin/users'); await page.getByText('Account permanently deleted. Its own account history and access have been removed.',{ exact:true }).waitFor()
   assert.equal(sql(`select count(*) from auth.users where id='${identities[1]}'`),'0'); pass('end-to-end dependency-free removal physically deletes Auth and Staff')
   await page.goto(app+'/admin/users/b2530000-0000-4000-8000-000000000003')
   await page.getByRole('button',{ name:'Remove from Pulse',exact:true }).click()
-  await page.getByRole('dialog').getByText('Required history will be preserved internally.',{ exact:false }).waitFor()
+  await page.getByRole('dialog').getByText('permanently deleted.',{ exact:false }).waitFor()
   await page.getByRole('dialog').getByLabel('Type REMOVE to confirm').fill('REMOVE')
   await page.getByRole('dialog').getByRole('button',{ name:'Remove from Pulse',exact:true }).click()
   await page.waitForURL('**/admin/users')
-  assert.equal(sql(`select (banned_until>now())::text from auth.users where id='${identities[2]}'`),'true')
-  assert.equal(sql("select count(*) from public.audit_events where target_id='b2530000-0000-4000-8000-000000000003'"),'2'); pass('end-to-end historical removal bans Auth while preserving audit')
+  assert.equal(sql(`select count(*) from auth.users where id='${identities[2]}'`),'0')
+  assert.equal(sql("select count(*) from public.users where id='b2530000-0000-4000-8000-000000000003'"),'0')
+  assert.equal(sql("select count(*) from public.audit_events where target_id='b2530000-0000-4000-8000-000000000003'"),'0')
+  assert.equal(sql("select count(*) from pulse_private.staff_removal_jobs where target_user_id='b2530000-0000-4000-8000-000000000003'"),'0'); pass('end-to-end own-history removal physically deletes Auth, Staff and completed job identifiers')
   await page.goto(app+'/admin/invitations')
   await page.getByRole('heading',{ name:'ADMIN-2 Invitation 2',exact:true }).waitFor()
   assert.equal(await page.locator('.admin-invitation-card').count(),1)

@@ -21,7 +21,7 @@ function RemoveDialog({ user, onCancel, onRemoved }) {
   }, [user.id])
   async function submit(event) {
     event.preventDefault()
-    if (busy || !plan || confirmation !== 'REMOVE') return
+    if (busy || !plan || plan.history_required || confirmation !== 'REMOVE') return
     setBusy(true); setError(null)
     const result = await removeStaffIdentity(supabase, user.id, plan, confirmation, requestKey.current)
     setBusy(false)
@@ -34,17 +34,17 @@ function RemoveDialog({ user, onCancel, onRemoved }) {
     <form className="admin-dialog__surface" onSubmit={submit}>
       <p className="admin-dialog__eyebrow">Remove from Pulse</p>
       <h2 id="remove-person-title">Remove {user.displayName || user.fullName} from Pulse?</h2>
-      <p>This removes their Pulse identity and access. This action cannot be undone from Administration.</p>
+      <p>Permanently delete this account, its access and its own account history. This cannot be undone. After cleanup finishes, the same email can receive a new invitation.</p>
       {!plan && !error && <p role="status">Checking account dependencies…</p>}
       {plan && <div className="admin-dialog__warning" role="note">{plan.history_required
-        ? 'Required history will be preserved internally. This person will disappear from People, Staff Tree and normal profiles, and their access will be revoked.'
-        : 'This account has no required history. Its Pulse profile and Auth identity will be permanently deleted.'}</div>}
+        ? 'This account has shared records. Permanent deletion is blocked until their impact is reviewed; no other person’s records will be deleted automatically.'
+        : 'Its Pulse profile, account activity, Auth identity and own profile photo will be permanently deleted. Existing sessions will stop working.'}</div>}
       <label className="admin-role-field"><span>Type REMOVE to confirm</span><input autoComplete="off" value={confirmation} disabled={busy} onChange={event => setConfirmation(event.target.value)} /></label>
       {error && <p className="admin-dialog__error" role="alert">{error.message}</p>}
       {pending && <p className="admin-dialog__warning" role="status">This person is already hidden and Pulse access is revoked. Auth or photo cleanup is still pending. Retry to finish the same removal safely.</p>}
       <div className="admin-dialog__actions admin-dialog__actions--destructive">
         <Button type="button" variant="secondary" disabled={busy} onClick={() => pending ? onRemoved({ cleanupPending: true }) : onCancel()}>{pending ? 'Return to People' : 'Keep person'}</Button>
-        <Button type="submit" variant="destructive" loading={busy} disabled={!plan || confirmation !== 'REMOVE'}>{pending ? 'Retry cleanup' : 'Remove from Pulse'}</Button>
+        <Button type="submit" variant="destructive" loading={busy} disabled={!plan || plan.history_required || confirmation !== 'REMOVE'}>{pending ? 'Retry cleanup' : 'Remove from Pulse'}</Button>
       </div>
     </form>
   </dialog>

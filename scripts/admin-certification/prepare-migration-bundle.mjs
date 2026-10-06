@@ -2,7 +2,11 @@ import { createHash } from 'node:crypto'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
 
 // Generates a reviewed transaction; it never connects to or changes a database.
-const files = ['20261005000100_admin2_people_removal.sql', '20261005000200_admin2_directory_and_invitations.sql']
+const permanentRemoval = process.argv.includes('--permanent-removal')
+const files = permanentRemoval
+  ? ['20261006000100_admin2_permanent_account_cleanup.sql', '20261006000200_remove_unapproved_to_unit.sql']
+  : ['20261005000100_admin2_people_removal.sql', '20261005000200_admin2_directory_and_invitations.sql']
+const output = `review-evidence.local/admin2/${permanentRemoval ? 'permanent-removal-bundle' : 'migration-bundle'}.sql`
 const statements = []
 const hashes = []
 for (const file of files) {
@@ -13,7 +17,7 @@ for (const file of files) {
   hashes.push({ file, sha256: createHash('sha256').update(source).digest('hex') })
 }
 await mkdir('review-evidence.local/admin2', { recursive: true })
-await writeFile('review-evidence.local/admin2/migration-bundle.sql',
+await writeFile(output,
   "begin;\nset local lock_timeout='5s';\nset local statement_timeout='120s';\n" + statements.join('\n') +
-  "\nnotify pgrst,'reload schema';\ncommit;\nselect version,name from supabase_migrations.schema_migrations where version in ('20261005000100','20261005000200') order by version;\n")
-console.log(JSON.stringify({ generated: 'review-evidence.local/admin2/migration-bundle.sql', migrations: hashes, databaseOperations: 0 }))
+  `\nnotify pgrst,'reload schema';\ncommit;\nselect version,name from supabase_migrations.schema_migrations where version in (${files.map(file => `'${file.split('_')[0]}'`).join(',')}) order by version;\n`)
+console.log(JSON.stringify({ generated: output, migrations: hashes, databaseOperations: 0 }))

@@ -65,7 +65,7 @@ select lives_ok($$select public.apply_org3a_business_catalog()$$,'Super Admin ma
 select is((select count(*) from public.business_areas where code in ('corporate','operations')),2::bigint,'two approved business areas exist');
 select is((select count(*) from public.departments where code in ('corporate','human_resources','legal','accounting','quality_assurance','customer_service')),6::bigint,'approved Departments exist and Corporate is preserved');
 select is((select count(*) from public.campaigns where code in ('auto_warranty_garrett','auto_warranty_joe')),2::bigint,'two approved Campaigns exist');
-select is((select count(*) from public.operating_units),5::bigint,'five approved Campaign operating units exist');
+select is((select count(*) from public.operating_units),4::bigint,'four approved Campaign operating units exist; unapproved TO is excluded');
 select is((select count(*) from public.teams where id::text like '34000000-0000-4000-8000-%'),24::bigint,'twenty-four approved Teams/functions exist');
 select is((select count(*) from public.positions where id::text like '35000000-0000-4000-8000-%'),12::bigint,'twelve approved Positions exist');
 select ok(not exists(select 1 from public.positions where code='support'),'generic Support Position remains deliberately held');

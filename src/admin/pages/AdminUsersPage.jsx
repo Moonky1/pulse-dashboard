@@ -62,7 +62,7 @@ export function AdminUsersPage() {
         <Filter label="Team" value={filters.teamId} onChange={update('teamId')}><option value="">All teams</option>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Filter>
         <Filter label="Role" value={filters.roleKey} onChange={update('roleKey')}><option value="">All roles</option>{roles.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</Filter>
       </section>
-      {location.state?.removed && <p className={location.state.cleanupPending ? 'admin-operation-error' : 'admin-operation-notice'} role="status">{location.state.cleanupPending ? 'Removed from People and Pulse access revoked. Auth or photo cleanup is pending; an operator must finish the recorded removal.' : 'Removed from Pulse. Required history, if any, remains protected internally.'}</p>}
+      {location.state?.removed && <p className={location.state.cleanupPending ? 'admin-operation-error' : 'admin-operation-notice'} role="status">{location.state.cleanupPending ? 'Removed from People and Pulse access revoked. Auth or photo cleanup is pending; an operator must finish the recorded removal before inviting this email again.' : 'Account permanently deleted. Its own account history and access have been removed.'}</p>}
       {permissionKeys.includes('users.remove') && <PendingStaffCleanup />}
 
       <div className="admin-list-meta" aria-live="polite"><strong>{filtered.length}</strong> {filtered.length === 1 ? 'person' : 'people'}{filters.status === 'current' && <span> · Active and Pending</span>}</div>
