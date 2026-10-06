@@ -102,18 +102,37 @@ ESTADO REMOTO / REVISION PENDIENTE
    con ledger y funcion pulse-staff-removal desplegada, JWT verificado y origen
    restringido a esta rama. Lectura remota: cero Staff/invitaciones removidas;
    anon no puede preparar removal; el navegador no puede ejecutar limpieza privilegiada.
-45. Production futura requiere autorizacion nueva: las dos migraciones,
-   desplegar esta funcion con el origen canonico de Production y publicar el frontend.
+45. El usuario autorizo el release Production el 2026-10-05: las dos migraciones,
+   desplegar esta funcion con el origen canonico de Production y publicar el frontend,
+   despues de cerrar la certificacion Preview. La comprobacion Production de lectura
+   paso: ledger hasta 20261004001000, ADMIN-2 ausente, contratos People/Invitations
+   compatibles, politica users esperada y capacidad de revocar sesiones presentes.
    No requiere borrar personas reales ni invitaciones, cambiar OAuth/DNS/SMTP,
    puntajes GO o copiar cuentas ficticias.
 46. Pendientes: revision humana de Preview y pruebas destructivas exactas con
    una cuenta ficticia sin historial, otra con historial e invitaciones ficticias
    en el backend remoto Preview. No se confunden con las pruebas locales ya pasadas.
-   Para Google en esta rama se solicito autorizar solo su callback Preview;
-   no se cambiara OAuth sin esa respuesta. El directorio y el alta Staff de Agents
-   usan los RPC existentes; el ingreso/activacion del jugador en esta rama requiere
-   PULSE_AGENT_SUPABASE_URL y PULSE_AGENT_SERVICE_ROLE_KEY en su servidor Vercel.
-   Se solicito autorizacion especifica para ese enlace Preview; no se copio la clave
-   por iniciativa propia ni al navegador/repositorio/Production.
+   Tras la autorizacion se agrego solamente el callback Google de ADMIN-2 a Pulse
+   Preview: se conservaron los doce retornos previos y todos los otros ajustes.
+   PULSE_AGENT_SUPABASE_URL y PULSE_AGENT_SERVICE_ROLE_KEY quedaron como secretos
+   solo de servidor Vercel Preview, limitados a pulse/admin-2-people-access.
+   La clave se traslado en memoria, sin imprimirla ni crear archivos con secretos.
+   Preview fue reconstruido y verificado READY sobre 6ca67be; /api/agent ahora
+   responde 401 sign_in_required al visitante, no 503 not_configured.
+   Lectura del bundle confirma Pulse Preview. No se tocaron secretos Production.
+   Se crearon exactamente dos Staff ficticios: ADMIN-2 Disposable Preview,
+   sin dependencias; y ADMIN-2 Historical Preview, con un evento historico ficticio.
+   Se crearon tres invitaciones ficticias: revocada, activa y aceptada. No se envio
+   correo ni se crearon cuentas Staff privilegiadas. El ingreso real de los dos
+   fixtures funciona y un Staff ordinario recibe 42501 al intentar inspeccionar
+   removal ajeno. Las eliminaciones via Edge esperan la sesion del administrador
+   en ADMIN-2, distinta del Preview antiguo AUTH-11 que el usuario tiene abierto.
+   Pruebas de producto repetidas: 362/362, lint, build y diff-check pasaron.
+   Google muestra Ir a Pulse tanto en Preview como en Production, comprobado en
+   ambas pantallas reales sin seleccionar cuentas. Son clientes Google distintos.
+   No se necesita cambiar el nombre ahora y no se cambiaron planes ni OAuth de
+   Production. Evidencia sin correos: review-evidence.local/admin2/google-production-pulse.jpg.
 47. NO-GO para Production hasta revisar Preview y cerrar esas pruebas remotas.
-   No se mezclo main, no se desplego Production y no se removio ninguna cuenta real.
+   Autorizacion recibida; pendiente acceso humano a ADMIN-2 para cerrar la prueba
+   remota y luego aplicar exactamente el release autorizado. No se mezclo main,
+   no se desplego Production y no se removio ninguna cuenta real.
