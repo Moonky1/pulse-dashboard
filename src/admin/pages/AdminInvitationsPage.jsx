@@ -7,6 +7,7 @@ import { removeStaffInvitation } from '../api/admin2Api.js'
 import { AdminStatePanel } from '../components/AdminStatePanel.jsx'
 import { StaffInvitationDialog } from '../components/StaffInvitationDialog.jsx'
 import { RemoveInvitationDialog } from '../components/RemoveInvitationDialog.jsx'
+import { RevokeInvitationDialog } from '../components/RevokeInvitationDialog.jsx'
 import { canRemoveInvitation, filterCurrentInvitations, invitationStatusLabel } from '../invitationActions.js'
 import { useStaffInvitations } from '../hooks/useStaffInvitations.js'
 
@@ -22,6 +23,7 @@ export function AdminInvitationsPage() {
   const [query, setQuery] = useState('')
   const [dialog, setDialog] = useState(null)
   const [removal, setRemoval] = useState(null)
+  const [revocation, setRevocation] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [mutationError, setMutationError] = useState(null)
   const [notice, setNotice] = useState(null)
@@ -33,14 +35,12 @@ export function AdminInvitationsPage() {
     const result = await operation()
     setSubmitting(false)
     if (result.error) { setMutationError(result.error); return }
-    setDialog(null); setRemoval(null); setNotice(success); await invitationState.refresh()
+    setDialog(null); setRemoval(null); setRevocation(null); setNotice(success); await invitationState.refresh()
   }
   const send = (proposal) => mutate(() => sendStaffInvitation(supabase, proposal), 'Invitation prepared. Delivery is pending.')
   const reinvite = (proposal) => mutate(() => reinviteStaffInvitation(supabase, dialog, proposal), 'A new invitation was created. The prior record remains unchanged.')
   const resend = (invitation) => mutate(() => resendStaffInvitation(supabase, invitation), 'Invitation renewed for 72 hours. Delivery is pending.')
-  const revoke = (invitation) => {
-    if (window.confirm(`Revoke the invitation for ${invitation.fullName}?`)) void mutate(() => revokeStaffInvitation(supabase, invitation), 'Invitation revoked.')
-  }
+  const revoke = (invitation) => { setMutationError(null); setRevocation(invitation) }
 
   if (invitationState.loading && !invitationState.invitations.length) return <main className="admin-content"><AdminStatePanel kind="loading" title="Loading invitations" body="Getting the latest invitations…" /></main>
   if (invitationState.error && !invitationState.invitations.length) return <main className="admin-content"><AdminStatePanel kind="error" title="Invitations unavailable" body={invitationState.error.message} onRetry={invitationState.refresh} /></main>
@@ -66,6 +66,7 @@ export function AdminInvitationsPage() {
         </details>}
       </article>)}</section>}
       {removal && <RemoveInvitationDialog invitation={removal} busy={submitting} error={mutationError} onCancel={() => setRemoval(null)} onConfirm={confirmation => void mutate(() => removeStaffInvitation(supabase, removal, confirmation), 'Invitation removed from the list. Required history remains protected.')} />}
+      {revocation && <RevokeInvitationDialog invitation={revocation} busy={submitting} error={mutationError} onCancel={() => setRevocation(null)} onConfirm={() => void mutate(() => revokeStaffInvitation(supabase, revocation), 'Invitation revoked.')} />}
       {dialog && <StaffInvitationDialog options={invitationState.options} initialValues={dialog.id ? { email: dialog.email, fullName: dialog.fullName, previousInvitationId: dialog.id } : null} submitting={submitting} error={mutationError} onCancel={() => { if (!submitting) setDialog(null) }} onConfirm={dialog.id ? reinvite : send} />}
     </main>
   )

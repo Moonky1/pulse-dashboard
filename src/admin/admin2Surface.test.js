@@ -5,6 +5,20 @@ import { canRemoveInvitation, filterCurrentInvitations } from './invitationActio
 import { teamVisual, teamBadgeStyle } from './visualIdentity.js'
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8')
+test('invitation revocation uses an accessible in-product confirmation without browser popups', async () => {
+  const [page, dialog] = await Promise.all([read('./pages/AdminInvitationsPage.jsx'), read('./components/RevokeInvitationDialog.jsx')])
+  assert.doesNotMatch(page, /window\.confirm/)
+  assert.match(page, /setRevocation\(invitation\)/)
+  assert.match(page, /revokeStaffInvitation\(supabase, revocation\)/)
+  assert.match(dialog, /aria-labelledby="revoke-invitation-title"/)
+  assert.match(dialog, /showModal\(\)/)
+  assert.match(dialog, /if \(!busy\) onCancel\(\)/)
+  assert.match(dialog, /if \(!busy\) onConfirm\(\)/)
+  assert.match(dialog, /disabled=\{busy\}/)
+  assert.match(dialog, /role="alert"/)
+  assert.match(dialog, />Keep invitation</)
+  assert.match(dialog, />Revoke invitation</)
+})
 test('invitation cleanup is deliberately limited to obsolete unaccepted states', () => {
   for (const status of ['revoked', 'expired', 'failed']) assert.equal(canRemoveInvitation({ status }), true)
   for (const status of ['accepted', 'sent', 'pending_send']) assert.equal(canRemoveInvitation({ status }), false)
