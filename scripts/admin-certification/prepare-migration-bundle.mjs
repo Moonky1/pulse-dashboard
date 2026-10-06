@@ -1,0 +1,19 @@
+import { createHash } from 'node:crypto'
+import { readFile, mkdir, writeFile } from 'node:fs/promises'
+
+// Generates a reviewed transaction; it never connects to or changes a database.
+const files = ['20261005000100_admin2_people_removal.sql', '20261005000200_admin2_directory_and_invitations.sql']
+const statements = []
+const hashes = []
+for (const file of files) {
+  const source = await readFile(new URL('../../supabase/migrations/' + file, import.meta.url), 'utf8')
+  const body = source.replace(/^begin;\s*/m, '').replace(/commit;\s*$/, '')
+  const [version, ...name] = file.replace(/\.sql$/, '').split('_')
+  statements.push(body, `insert into supabase_migrations.schema_migrations(version,name,statements) values('${version}','${name.join('_')}',array[$admin2_source$${body}$admin2_source$]);`)
+  hashes.push({ file, sha256: createHash('sha256').update(source).digest('hex') })
+}
+await mkdir('review-evidence.local/admin2', { recursive: true })
+await writeFile('review-evidence.local/admin2/migration-bundle.sql',
+  "begin;\nset local lock_timeout='5s';\nset local statement_timeout='120s';\n" + statements.join('\n') +
+  "\nnotify pgrst,'reload schema';\ncommit;\nselect version,name from supabase_migrations.schema_migrations where version in ('20261005000100','20261005000200') order by version;\n")
+console.log(JSON.stringify({ generated: 'review-evidence.local/admin2/migration-bundle.sql', migrations: hashes, databaseOperations: 0 }))

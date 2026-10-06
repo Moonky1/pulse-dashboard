@@ -1,0 +1,115 @@
+PULSE ADMIN-2 — INFORME DE IMPLEMENTACION Y CERTIFICACION
+Fecha: 2026-10-05. Alcance: rama y backend Preview; Production intacto.
+
+GIT
+1. Base actual: 61ccff3ab1b685ece521519cb2621c98b651d369. No se uso un SHA anterior.
+2. Rama: pulse/admin-2-people-access.
+3. Contratos: fe2d434a51989a1a14c5b144bf81274be108a59e.
+   UX: ff9dd46188b649d94ced98e1c3f0923899e479ef.
+   El commit posterior contiene los runners y este informe.
+4-7. SHA final, push, igualdad local/remoto y estado limpio: comprobar al cerrar
+   con git rev-parse HEAD, git ls-remote origin refs/heads/pulse/admin-2-people-access
+   y git status --short. Los resultados exactos se entregan en el mensaje final.
+
+PEOPLE
+8-9. Estados humanos: Active, Pending, Inactive y Blocked. El valor interno
+   pending_approval se conserva; la presentacion normal dice Pending.
+10-11. People inicia en Active + Pending, con el conteo de esa vista. Inactive
+   y Blocked solo aparecen si un operador autorizado elige su filtro o All.
+12. Remove from Pulse es distinto de Block/Inactivate: modal con inspeccion
+   del servidor y confirmacion escrita REMOVE; ningun borrado directo de tablas
+   desde el navegador.
+13. Una identidad sin dependencias requeridas se purga de Staff, roles,
+   asignaciones, Auth y su avatar canonico no compartido.
+14. Una identidad historica queda removida del producto: oculta en People,
+   Staff Tree, busquedas y perfiles normales; sin roles ni presentacion publica.
+   Conserva nombre/correo internos cuando la atribucion historica lo requiere,
+   conforme a la autorizacion del usuario. No se reescriben registros de auditoria.
+15. La transaccion revoca sesiones de refresco y acceso Staff vivo. La frontera
+   protegida elimina Auth o bloquea la identidad historica. Una limpieza fallida
+   permanece registrada y recuperable; no se anuncia falsamente como completa.
+
+TEAMS
+16-17. Un solo sistema de gradientes se reutiliza en People, Profile, Tree,
+   Team, Agents y GO. Asia A: cyan profundo/azul/violeta; Asia B: azul/indigo;
+   Colombia: ambar; Venezuela: amarillo oscuro/ambar; Mexico: verdes/teal;
+   Nicaragua: azul/cobalto; Central America: teal. Los nueve equipos Garrett
+   son distintos y cada parada cumple contraste de texto WCAG >=4.5.
+18-19. Team Profile muestra Area/Campaign/Team, con acento sutil del equipo.
+   Se omite Operating Unit redundante de las presentaciones normales de Team,
+   Staff e invitaciones. El modelo y los editores de relaciones se conservan.
+
+AGENTS
+20-21. Directorio real del servidor, paginas de 50, busqueda por nombre/ID,
+   filtros Team/Status y actualizacion al volver a la ventana o cada 30 segundos.
+   Pending activation refleja la credencial aun no activada; luego aparece Active.
+   Se mantienen tambien Inactive/Blocked. No muestra PIN, hashes, tokens ni UUID.
+22. Cada fila enlaza al perfil canonico /profile/{AgentID}. Administration sigue
+   reservada a Staff autorizado; no concede acceso Staff a Agents.
+
+ACCESS
+23. Access & permissions es una tarjeta compacta junto al estado de cuenta,
+   por debajo de identidad/trabajo; no domina el perfil.
+24-27. Edit access conserva los contratos actuales de concesion y reemplazo
+   atomico. Role y Access area vienen de la matriz de concesiones del servidor.
+   View permissions explica permisos reales por area con descripciones humanas;
+   Explore Pulse roles muestra el catalogo real. Position no se convierte en Role.
+   No se muestran claves de permisos como etiquetas normales ni se inventan scopes.
+28. La ausencia de roles dice No Pulse access; Assign access solo se ofrece
+   cuando el operador tiene permisos. Abrir el editor no genera eventos nuevos.
+
+INVITATIONS
+29-30. Menu Actions compacto y modal REMOVE para invitaciones obsoletas
+   revoked/expired/failed. Se purgan solo sin referencias; cadenas, Auth enlazado,
+   auditoria y otros FK requieren ocultar la presentacion conservando el registro.
+31. Una invitacion activa debe revocarse antes de retirarla. La vista inicial
+   lista Active + Pending; los estados historicos requieren un filtro explicito.
+32. Accepted no permite esta eliminacion ni funciona como borrado de Staff.
+
+ACTIVITY
+33-37. Activity log va al final del perfil, cerrado por defecto, con SVG que
+   gira y respeta reduced motion. Se carga al expandirse, usando paginacion
+   existente de diez eventos. Actor/accion/fecha tienen resumen humano; los
+   identificadores secundarios quedan dentro de View details. Auditoria append-only.
+
+SECURITY Y PRUEBAS
+38-39. Nuevo users.remove: concedido solo al rol Super Admin. Cada operacion
+   exige operador Staff activo, permisos globales, control de version y confirmacion.
+   Se niega autorremocion y remover el ultimo Super Admin activo. La inspeccion
+   recorre los FK actuales y falla de forma cerrada ante referencias nuevas.
+   La funcion Edge autentica de verdad, usa la clave privilegiada solo en servidor,
+   limita origen/tamano y admite reintentos con una solicitud persistida.
+40. 635 aserciones SQL pasaron en copia local de esquema sin personas reales:
+   73 nuevas ADMIN-2 y 562 regresiones de Staff/RBAC/Invitations/Profile/Agents.
+   Cada prueba SQL revierte sus fixtures; cero identidades/resultados sobrantes.
+41. Navegador con GoTrue, PostgREST y frontera Edge reales en entorno local
+   aislado: 17 grupos pasaron, cero errores JS/API y cero operaciones Production.
+   Revisados People, Staff Profile, Access editor, Activity, Team, Removal,
+   Invitations y Agents en 1440x1000, 820x1180, 1180x820 y 390x844.
+42. pulse:release-check paso: 362 pruebas de producto, todas exitosas:
+   Auth 48; Admin 157; frontera de removal 7; Training 42; GO 48;
+   Agent server 11; Studio 22; Profile 12; Operator 15.
+   lint:pulse, build y git diff --check tambien pasaron.
+   El test antiguo de avatar distingue ahora politicas restrictivas (no conceden
+   acceso) de permisivas. No se cambiaron permisos Storage del producto.
+43. Capturas y resultado local: review-evidence.local/admin2/. No se incluyen
+   builds, claves, archivos .env, datos de DB ni capturas privadas en Git.
+
+ESTADO REMOTO / REVISION PENDIENTE
+44. Preview objetivo:
+   https://pulse-kk-git-pulse-admin-2-people-access-pulsekk.vercel.app/admin/users
+   Backend: Pulse Preview sgshbawggqapuyqzkyhs. Dos migraciones ADMIN-2 instaladas
+   con ledger y funcion pulse-staff-removal desplegada, JWT verificado y origen
+   restringido a esta rama. Lectura remota: cero Staff/invitaciones removidas;
+   anon no puede preparar removal; el navegador no puede ejecutar limpieza privilegiada.
+45. Production futura requiere autorizacion nueva: las dos migraciones,
+   desplegar esta funcion con el origen canonico de Production y publicar el frontend.
+   No requiere borrar personas reales ni invitaciones, cambiar OAuth/DNS/SMTP,
+   puntajes GO o copiar cuentas ficticias.
+46. Pendientes: revision humana de Preview y pruebas destructivas exactas con
+   una cuenta ficticia sin historial, otra con historial e invitaciones ficticias
+   en el backend remoto Preview. No se confunden con las pruebas locales ya pasadas.
+   Para Google en esta rama se solicito autorizar solo su callback Preview;
+   no se cambiara OAuth sin esa respuesta. No se copiaron secretos Agent a Vercel.
+47. NO-GO para Production hasta revisar Preview y cerrar esas pruebas remotas.
+   No se mezclo main, no se desplego Production y no se removio ninguna cuenta real.
