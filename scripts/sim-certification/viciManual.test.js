@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import { createAgentHandler } from '../../api/agent.js'
-import { VICI_CASES, newViciPreview, previewViciCommand } from '../../src/simulations/viciModel.js'
+import { VICI_CASES, PAUSE_COMMANDS, newViciPreview, previewViciCommand } from '../../src/simulations/viciModel.js'
 
 test('the customer phone remains visible as scenario data without procedural hints', () => {
   const dialer=readFileSync(new URL('../../src/simulations/ViciDialer.jsx',import.meta.url),'utf8')
@@ -26,9 +26,11 @@ test('Dial Now starts a live call; only Hangup, disposition and Submit complete 
   state = previewViciCommand(state,'submit','active')
   assert.equal(state.status,'completed'); assert.equal(state.dialer.is_paused,false)
 })
-test('pause codes open only from unpaused status; checked Submit returns paused', () => {
+test('both Paused and Active open the six pause codes without automatically resuming', () => {
   let state = newViciPreview('callback')
   state = previewViciCommand(state,'status')
+  assert.equal(state.dialer.is_paused,true); assert.equal(state.dialer.pause_menu,true)
+  state = previewViciCommand(state,'resume')
   assert.equal(state.dialer.is_paused,false); assert.equal(state.dialer.pause_menu,false)
   state = previewViciCommand(state,'status')
   assert.equal(state.dialer.pause_menu,true)
@@ -36,6 +38,12 @@ test('pause codes open only from unpaused status; checked Submit returns paused'
   assert.equal(state.dialer.is_paused,true); assert.equal(state.mistakes,0)
   for (const [cmd,value] of [['manual'],['dial','2025550147'],['hangup'],['callDisposition','A'],['submit','paused']]) state=previewViciCommand(state,cmd,value)
   assert.equal(state.status,'completed'); assert.equal(state.dialer.is_paused,true)
+  for (const command of PAUSE_COMMANDS) {
+    state = previewViciCommand(state,'status')
+    state = previewViciCommand(state,command)
+    assert.equal(state.dialer.is_paused,true); assert.equal(state.dialer.pause_menu,false)
+    assert.equal(state.correct,null); assert.equal(state.mistakes,0)
+  }
 })
 test('Asia rejects SPXFER routing, then requires XFER and Submit with no goal or hints', () => {
   let state = newViciPreview('asia')
@@ -48,6 +56,22 @@ test('Asia rejects SPXFER routing, then requires XFER and Submit with no goal or
   state=previewViciCommand(state,'submit','active')
   assert.equal(state.status,'completed')
   assert.equal(Object.keys(VICI_CASES).length,2)
+})
+test('SPANIS is a supported Spanish Speaker wrap-up, not the forbidden SPXFER routing', () => {
+  let state = newViciPreview('asia')
+  for (const [cmd,value] of [['presets'],['language','Spanish'],['local'],['disposition','SPANISH SPEAKER'],['callDisposition','SPANIS'],['submit','active']]) state=previewViciCommand(state,cmd,value)
+  assert.equal(state.status,'completed'); assert.equal(state.mistakes,0); assert.equal(state.dialer.call_disposition,'SPANIS')
+  state=previewViciCommand(state,'status'); state=previewViciCommand(state,'closePause')
+  assert.equal(state.dialer.is_paused,false); assert.equal(state.dialer.pause_menu,false); assert.equal(state.correct,null)
+})
+
+test('pause codes replace the full dialer body and use the supplied six labels', () => {
+  const dialer=readFileSync(new URL('../../src/simulations/ViciDialer.jsx',import.meta.url),'utf8')
+  const styles=readFileSync(new URL('../../src/simulations/simulations.css',import.meta.url),'utf8')
+  assert.match(dialer,/YOU ARE ACTIVE/); assert.doesNotMatch(dialer,/YOU ARE UNPAUSED|vici-pause-menu/)
+  assert.match(dialer,/pauseMenu \? <section className="vici-pause-panel"/)
+  assert.match(styles,/\.vici-pause-columns \{ display: grid; grid-template-columns: repeat\(2/)
+  assert.equal(PAUSE_COMMANDS.length,6)
 })
 test('manual command and assignment derive identity only from the verified cookie', async () => {
   const id='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222',calls=[]
@@ -62,5 +86,9 @@ test('manual command and assignment derive identity only from the verified cooki
   assert.equal((await request('simulationCommand',{attemptId:other,version:2,requestId:other,command:'dial',value:'2025550147',requested_agent_id:other})).status,200)
   assert.equal(calls.at(-1)[1].requested_agent_id,id)
   assert.equal((await request('simulationCommand',{attemptId:other,version:2,requestId:other,command:'complete'})).status,400)
+  for (const command of [...PAUSE_COMMANDS,'status','resume','closePause']) {
+    assert.equal((await request('simulationCommand',{attemptId:other,version:2,requestId:other,command,requested_agent_id:other})).status,200)
+    assert.equal(calls.at(-1)[1].requested_agent_id,id)
+  }
   assert.equal((await request('simulationAssign',{},'https://other.test')).status,403)
 })

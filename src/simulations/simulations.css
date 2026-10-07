@@ -142,9 +142,26 @@ div.sim-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50
 .vici-webphone > div { color: #ddd; background: #567693; border: 2px solid #263b50; padding: 8px; }
 .vici-webphone input { margin: 10px 0; width: 100%; }
 .vici-phone-led { color: #38eb47; float: right; }
-.vici-pause-menu { position: absolute; right: 8px; top: 20px; z-index: 2; width: 420px; background: #c7f6c5; border: 1px solid #648863; padding: 15px; box-shadow: 2px 3px 6px #0004; box-sizing: border-box; }
-.vici-pause-menu strong { display: block; margin-bottom: 18px; }
-.vici-pause-menu .vici-button { margin: 0 15px 8px 0; }
+.vici-pause-panel { min-height: 535px; background: #caffc7; padding: 20px; }
+.vici-pause-panel h2 { margin: 0 0 22px; text-align: center; font: bold 20px Arial,sans-serif; }
+.vici-pause-panel > strong { display: block; margin: 0 0 12px; font-size: 18px; }
+.vici-pause-columns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.vici-pause-columns > div { background: #a3ff98; padding: 8px; min-height: 365px; }
+.vici-pause-panel footer { display: flex; justify-content: center; gap: 40px; margin-top: 24px; }
+.sim-shell .vici-agent-status.vici-active:hover:not(:disabled) { background: #26ef2e; color: #111; }
+.sim-shell .vici-agent-status.vici-paused:hover:not(:disabled) { background: #fff345; color: #111; }
+.vici-activity { margin-top: 24px; border-top: 1px solid #373044; padding-top: 22px; }
+.vici-activity h2 { font-size: 18px; margin: 0 0 14px; }
+.vici-activity > p { color: #aaa5b8; font-size: 13px; }
+.vici-activity ol { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow: auto; }
+.vici-activity li { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 12px 4px; border-bottom: 1px solid #282536; font-size: 14px; }
+.vici-action-number { color: #aaa5b8; font-variant-numeric: tabular-nums; }
+.vici-action-result { font-size: 12px; color: #aaa5b8; white-space: nowrap; }
+.vici-action-result--correct { color: #7de4b9; }
+.vici-action-result--incorrect { color: #ffc087; }
+.vici-action-result--unsaved { color: #ffadb8; }
+.vici-activity .vici-action-latest { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.sim-shell .vici-sound-toggle { font-size: 12px; }
 .vici-transfer { background: #d2cafa; margin-left: 165px; padding: 8px; font-size: 12px; }
 .vici-transfer-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
 .vici-transfer input { width: 170px; }

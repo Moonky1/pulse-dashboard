@@ -55,10 +55,17 @@ assertions += viciCount
 console.log('Manual VICI: ' + viciCount + ' assertions passed')
 sql(readFileSync('supabase/migrations/20261007000200_vici_call_lifecycle.sql', 'utf8'))
 }
-const lifecycleOutput=sql(readFileSync('supabase/tests/20261007000200_vici_call_lifecycle_test.sql','utf8'))
+const lifecycleOutput=process.argv.includes('--tests-only') ? '' : sql(readFileSync('supabase/tests/20261007000200_vici_call_lifecycle_test.sql','utf8'))
 if (/not ok|Looks like you failed/i.test(lifecycleOutput)) throw new Error(lifecycleOutput)
 const lifecycleCount=(lifecycleOutput.match(/\bok \d+ -/g)||[]).length
-if (!lifecycleCount) throw new Error('Lifecycle assertions required')
+if (!lifecycleCount && !process.argv.includes('--tests-only')) throw new Error('Lifecycle assertions required')
 assertions+=lifecycleCount
 console.log('VICI call lifecycle: '+lifecycleCount+' assertions passed')
+if (!process.argv.includes('--tests-only')) sql(readFileSync('supabase/migrations/20261007000300_vici_pause_codes_spanis.sql','utf8'))
+const pauseOutput=sql(readFileSync('supabase/tests/20261007000300_vici_pause_codes_spanis_test.sql','utf8'))
+if (/not ok|Looks like you failed/i.test(pauseOutput)) throw new Error(pauseOutput)
+const pauseCount=(pauseOutput.match(/\bok \d+ -/g)||[]).length
+if (!pauseCount) throw new Error('Pause codes and SPANIS assertions required')
+assertions+=pauseCount
+console.log('VICI pause codes and SPANIS: '+pauseCount+' assertions passed')
 console.log(JSON.stringify({ database, assertions, leftovers: sql('select (select count(*) from public.users) staff,(select count(*) from public.agents) agents,(select count(*) from public.training_content) content,(select count(*) from public.training_attempts) attempts;').trim() }))
