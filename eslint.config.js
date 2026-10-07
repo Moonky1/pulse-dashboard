@@ -27,7 +27,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['scripts/admin-certification/**/*.{js,mjs}'],
+    files: ['scripts/admin-certification/**/*.{js,mjs}', 'scripts/sim-certification/**/*.{js,mjs}'],
     extends: [js.configs.recommended],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
   },

@@ -1,6 +1,6 @@
 {
-  "checkpoint": "SIM-1 source ingestion and backend gap",
-  "implementation_status": "source_mapped_contract_required_not_a_working_simulator",
+  "checkpoint": "SIM-1 source ingestion and authorized Preview contract",
+  "implementation_status": "server_contract_certified_and_applied_preview_visual_simulator_pending",
   "base_sha": "9fc0521d50698e48228745752502da1ec9af4250",
   "planned_branch": "pulse/sim-1-interactive-training",
   "release_scope": "Preview only after isolated validation; no main merge or Production deployment before visual review",
@@ -45,6 +45,20 @@
         { "pages": [24], "topic": "Vehicle-condition verification reference" },
         { "pages": [25], "topic": "Spanish diagram points first to HANGUP CUSTOMER; unresolved, not an approved action sequence" }
       ]
+    },
+    {
+      "id": "asia_notes",
+      "name": "Asia Guide.docx",
+      "sha256": "928005a03c56fae1595af41d4590880330490b1cbe308582945966a347c59ba7",
+      "inspection": "All 121 paragraphs read; no tables; embedded image is a Teams profile example, not a dialer screen",
+      "paragraph_index": [
+        { "paragraphs": [63, 64, 65, 66], "topic": "SPANIS for blind Spanish routing; SPXFER only for direct Spanish transfers" },
+        { "paragraphs": [68, 69, 70, 71], "topic": "Asia English transfer requires advisor/customer English communication for at least 15 seconds during the three-way wait" },
+        { "paragraphs": [72, 73, 74, 75, 76, 77, 78], "topic": "Preset, English to Spanish, LOCAL CLOSER, SPANISH SPEAKER; never SPXFER" },
+        { "paragraphs": [109, 110, 111, 112], "topic": "Customer hangs up during three-way: HANGUP BOTH LINES then Call Back; do not LEAVE 3-WAY CALL" },
+        { "paragraphs": [113, 114, 115], "topic": "English understanding and team-scoped disposition guidance; do not pressure a Spanish-preferring customer" }
+      ],
+      "distribution": "Raw notes, real dialer links and customer examples are excluded from Git and public assets"
     }
   ],
   "attached_screenshots": [
@@ -58,11 +72,13 @@
     "date": "2026-10-06",
     "priority": "Overrides contradictory slides; does not establish unrelated pause policy",
     "spanish_handling_teams": ["Venezuela", "Central America", "Colombia"],
-    "spanish_handling_behavior": "Can handle Spanish calls; Spanish Speaker disposition is exclusively for these teams",
+    "spanish_handling_behavior": "Can handle Spanish calls. This does not make SPANISH SPEAKER exclusive to these teams; the latest Asia clarification also requires it for immediate routing",
     "immediate_spanish_routing_teams": ["Asia", "Philippines", "Mexico"],
     "immediate_spanish_routing_behavior": "Cannot handle Spanish calls; immediately route through LOCAL CLOSER, do not conduct the Spanish opening workflow",
     "implementation_note": "Use administrator-selected canonical campaign/team IDs and existing targeting; do not authorize by browser labels, inferred countries or invented team records",
-    "unresolved_after_local_closer": "Disposition after the immediate route and any subsequent wait/exit steps were not specified; never default to Spanish Speaker or English-only XFER"
+    "asia_routing_sequence": ["Advise the customer of the Spanish-speaking representative transfer", "PRESETS", "English to Spanish", "LOCAL CLOSER", "SPANISH SPEAKER"],
+    "asia_prohibited_disposition": "SPXFER",
+    "scope_note": "Latest direct user note resolves Asia. Do not silently impose every Asia policy on other teams; admin chooses canonical audience IDs"
   },
   "workflows": [
     {
@@ -96,17 +112,17 @@
       "title": "Spanish call handling and transfer",
       "sources": [{ "id": "juan_patricia", "pages": [5, 10] }, { "id": "mexico", "pages": [20, 27] }, { "id": "direct_user_clarification" }],
       "audience_labels": ["Venezuela", "Central America", "Colombia"],
-      "actions": ["Handle the Spanish call", "TRANSFER - CONF", "Select Spanish destination", "DIAL WITH CUSTOMER", "Allow specialist introduction", "LEAVE 3-WAY CALL after required wait", "Spanish Speaker disposition"],
-      "status": "Team split confirmed; exact Spanish dropdown option and wait trigger still require confirmation"
+      "actions": ["Handle the Spanish call", "TRANSFER - CONF", "Select Spanish destination", "DIAL WITH CUSTOMER", "Allow specialist introduction", "LEAVE 3-WAY CALL after required wait"],
+      "status": "Team split confirmed; direct Spanish destination, wait and terminal disposition require team-specific confirmation before publication"
     },
     {
       "id": "spanish_immediate_local_closer",
       "title": "Spanish call: immediate LOCAL CLOSER routing",
-      "sources": [{ "id": "mexico", "pages": [19, 26] }, { "id": "direct_user_clarification" }],
+      "sources": [{ "id": "mexico", "pages": [19, 26] }, { "id": "asia_notes", "paragraphs": [72, 73, 74, 75, 76, 77, 78] }, { "id": "direct_user_clarification" }],
       "audience_labels": ["Asia", "Philippines", "Mexico"],
-      "actions": ["Recognize a Spanish call", "TRANSFER - CONF", "LOCAL CLOSER immediately"],
-      "not_authorized_actions": ["Spanish opening workflow", "Spanish Speaker disposition", "English-only XFER assumed as fallback"],
-      "status": "Routing prefix supported; remaining steps/terminal disposition unresolved"
+      "actions": ["Advise the customer of the Spanish-speaking representative transfer", "PRESETS", "English to Spanish", "LOCAL CLOSER", "SPANISH SPEAKER"],
+      "not_authorized_actions": ["Spanish opening workflow", "SPXFER", "English-only XFER assumed as fallback"],
+      "status": "Complete Asia routing sequence resolved by latest direct note; exact preset popup geometry not supplied, no pixel-perfect claim"
     },
     {
       "id": "disposition_training",
@@ -166,7 +182,6 @@
   ],
   "unresolved": [
     { "id": "timing", "references": ["mexico pages 7/24: 15 seconds while introduction starts", "mexico pages 8/25: 15 seconds after introduction"], "question": "What exact event starts the 15-second requirement?" },
-    { "id": "local_terminal", "references": ["direct user clarification", "mexico pages 19/26"], "question": "After LOCAL CLOSER for Asia/Philippines/Mexico, what subsequent actions and disposition complete the workflow?" },
     { "id": "spanish_destination", "references": ["juan_patricia page 10"], "question": "Which exact select option represents the Spanish destination? The annotation says Select Spanish without showing its open menu." },
     { "id": "spanish_hangup", "references": ["juan_patricia page 25 versus mexico page 19"], "question": "Is HANGUP CUSTOMER annotation obsolete/incorrect? Do not teach it as an approved first action." },
     { "id": "pause_scope", "references": ["mexico pages 9/10", "juan_patricia page 14"], "question": "Which teams use Tech, and is personal pause RR or REST? Does the 20-minute rule apply only to Mexico?" },
@@ -189,15 +204,25 @@
       "media": "Private screenshot objects, membership-bound short signed URLs, safe image MIME/size verification and authorized references; no public bucket",
       "scoring_proposal_not_policy": "Server computes max(0, 100 - 5 * mistakes - 10 * hints); time is reported, not a score penalty; formula subject to implementation review",
       "production": "Unchanged; main merge and Production release remain forbidden until visual review",
-      "not_implemented": true
+      "not_implemented": false,
+      "authorized": "User explicitly approved local certification then Preview-only implementation on 2026-10-06; Production remains excluded"
+    },
+    "contract_checkpoint": {
+      "migration": "20261006000500_simulation_foundation",
+      "local": "247 database assertions passed: 64 SIM-1 plus 183 GO-4/Agent regression assertions; all synthetic data rolled back",
+      "preview_project_ref": "sgshbawggqapuyqzkyhs",
+      "preview_state": "Applied and registered; narrow RPC grants verified; zero simulation content or attempts created",
+      "implemented": ["Canonical simulation content and private screenshot catalog kind", "Bounded normalized hotspots, options, text/actions, hints and forward-only branches", "Server-owned start/resume/replay/current-step state and scoring", "Canonical append-only results and own history", "Revision cloning and version-pinned attempts", "Separate Staff/Agent eligibility, current-step screenshot authorization and bounded Agent API actions"],
+      "remaining": ["Studio visual builder and draft preview", "Academy catalog/player UI and profile integration", "Validated raster upload and protected signed-URL transport for Staff/Agents", "Sanitized screenshots and authored full Callback/Asia workflows", "Browser/responsive certification and human Preview visual review"],
+      "production": "Not queried or modified for this checkpoint; no main merge or Production deploy"
     }
   },
   "delivery": {
-    "engine": "Not implemented at this gate",
-    "studio_builder": "Not implemented at this gate",
-    "academy_player": "Not implemented at this gate",
+    "engine": "Server-side contract certified locally and installed only in Pulse Preview; browser experience pending",
+    "studio_builder": "Pending next visual checkpoint",
+    "academy_player": "Pending next visual checkpoint",
     "preview_url": null,
-    "production_review": "NO-GO: no simulator deployment or engine certification yet",
+    "production_review": "NO-GO: no finished visual simulator or human Preview review yet",
     "excluded": ["Live calls", "Microphone capture", "Transcription", "AI rebuttal scoring", "Vici integration", "Dashboard analytics", "Real user changes", "Production database/config changes"]
   }
 }

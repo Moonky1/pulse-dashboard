@@ -68,6 +68,21 @@ function requestArgs(action, args = {}) {
     case 'roomTiming': return uuid(args.sessionId) ? ['agent_get_go_hosted_timing', { requested_session_id: args.sessionId }] : null
     case 'roomAnswer': return uuid(args.sessionId) && uuid(args.questionId) && args.answer !== undefined && Number.isInteger(args.position) && args.position >= 1
       ? ['agent_submit_go_hosted_answer', { requested_session_id: args.sessionId, requested_question_id: args.questionId, requested_answer: args.answer, expected_question_position: args.position }] : null
+    case 'simulationCatalog': return Number.isInteger(args.limit) && args.limit >= 1 && args.limit <= 100
+      && Number.isInteger(args.offset) && args.offset >= 0 && args.offset <= 10000
+      ? ['agent_list_simulations', { requested_limit: args.limit, requested_offset: args.offset }] : null
+    case 'simulationHistory': return Number.isInteger(args.limit) && args.limit >= 1 && args.limit <= 100
+      ? ['agent_get_simulation_history', { requested_limit: args.limit }] : null
+    case 'simulationStart': return uuid(args.contentId) && typeof args.restart === 'boolean'
+      ? ['agent_start_simulation', { requested_content_id: args.contentId, requested_restart: args.restart }] : null
+    case 'simulationAttempt': return uuid(args.attemptId)
+      ? ['agent_get_simulation_attempt', { requested_attempt_id: args.attemptId }] : null
+    case 'simulationAction': return uuid(args.attemptId) && uuid(args.stepId) && uuid(args.requestId)
+      && Number.isInteger(args.version) && args.version >= 1 && args.version <= 20000
+      && ['hint', 'answer'].includes(args.kind) && (args.value == null || JSON.stringify(args.value).length <= 2000)
+      ? ['agent_submit_simulation_action', { requested_attempt_id: args.attemptId, requested_step_id: args.stepId,
+        expected_state_version: args.version, requested_request_id: args.requestId, requested_kind: args.kind,
+        requested_value: args.value ?? null }] : null
     default: return null
   }
 }
@@ -75,6 +90,7 @@ function requestArgs(action, args = {}) {
 function publicRpcError(error) {
   if (error?.code === 'P0002') return [404, 'This game is unavailable.', 'not_found']
   if (error?.code === '55000') return [409, 'This round has moved on. Refresh to continue.', 'invalid_state']
+  if (['40001', 'PT409'].includes(error?.code)) return [409, 'This activity changed. Reload to continue.', 'stale_state']
   if (error?.code === '42501' || error?.code === '28000') return [403, 'Your Pulse access is currently unavailable.', 'access_denied']
   if (['22023', '22P02'].includes(error?.code)) return [400, 'Check the details and try again.', 'invalid_request']
   return [503, 'Pulse GO is temporarily unavailable.', 'unavailable']

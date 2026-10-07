@@ -100,6 +100,13 @@ test('valid canonical game and attempt IDs reach the protected Agent contracts',
     ['roomSnapshot', { sessionId: OTHER_ID }, 'agent_get_go_hosted_session', { requested_session_id: OTHER_ID }],
     ['roomTiming', { sessionId: OTHER_ID }, 'agent_get_go_hosted_timing', { requested_session_id: OTHER_ID }],
     ['roomAnswer', { sessionId: OTHER_ID, questionId: AGENT_ID, answer: false, position: 1 }, 'agent_submit_go_hosted_answer', { requested_session_id: OTHER_ID, requested_question_id: AGENT_ID, requested_answer: false, expected_question_position: 1 }],
+    ['simulationCatalog', { limit: 50, offset: 0 }, 'agent_list_simulations', { requested_limit: 50, requested_offset: 0 }],
+    ['simulationHistory', { limit: 50 }, 'agent_get_simulation_history', { requested_limit: 50 }],
+    ['simulationStart', { contentId: OTHER_ID, restart: false }, 'agent_start_simulation', { requested_content_id: OTHER_ID, requested_restart: false }],
+    ['simulationAttempt', { attemptId: OTHER_ID }, 'agent_get_simulation_attempt', { requested_attempt_id: OTHER_ID }],
+    ['simulationAction', { attemptId: OTHER_ID, stepId: AGENT_ID, requestId: OTHER_ID, version: 2, kind: 'answer', value: 'continue' },
+      'agent_submit_simulation_action', { requested_attempt_id: OTHER_ID, requested_step_id: AGENT_ID, requested_request_id: OTHER_ID,
+        expected_state_version: 2, requested_kind: 'answer', requested_value: 'continue' }],
   ]
   for (const [action, args, name, forwarded] of operations) {
     const { request, calls } = setup()
@@ -139,4 +146,18 @@ test('logout revokes the server session and clears only the Agent cookie', async
   assert.equal(response.status, 200)
   assert.equal(calls[0].name, 'agent_logout')
   assert.match(response.headers['Set-Cookie'], /Max-Age=0$/)
+})
+
+test('simulation validation rejects spoofed completion, unbounded values and stale versions', async () => {
+  const { request, calls } = setup()
+  const valid = { attemptId: OTHER_ID, stepId: AGENT_ID, requestId: OTHER_ID, version: 1, kind: 'answer', value: 'continue' }
+  for (const invalid of [{ version: 0 }, { version: 1.5 }, { requestId: 'invalid' }, { kind: 'complete' }, { value: 'x'.repeat(2001) }]) {
+    assert.equal((await request('simulationAction', { ...valid, ...invalid, score: 100, completed: true })).status, 400)
+  }
+  assert.ok(calls.every(call => call.name === 'agent_session_profile'))
+  const stale = setup({ agent_submit_simulation_action: () => ({ data: null, error: { code: '40001', message: 'private diagnostics' } }) })
+  const response = await stale.request('simulationAction', valid)
+  assert.equal(response.status, 409)
+  assert.equal(response.payload.error.code, 'stale_state')
+  assert.doesNotMatch(JSON.stringify(response.payload), /private diagnostics/)
 })
