@@ -43,6 +43,25 @@ export async function acceptOwnStaffInvitation(client) {
   return { data: Array.isArray(data) ? (data[0] ?? null) : data, error }
 }
 
+export async function loadOwnInvitationSetup(client) {
+  const { data, error } = await client.rpc('get_own_staff_invitation_setup')
+  return { data: Array.isArray(data) ? (data[0] ?? null) : data, error }
+}
+
+export async function resolveOwnStaffProfile(client, authUser, { allowCreate = true } = {}) {
+  let result = await loadOwnProfile(client, authUser.id)
+  if (result.error || result.data && result.data.status !== 'pending_approval') return { ...result, invitationSetup: null }
+  if (authUser.email_confirmed_at) {
+    const setup = await loadOwnInvitationSetup(client)
+    // A missing secure contract is an error, never permission to auto-accept.
+    if (setup.error) return { data: result.data, error: setup.error, invitationSetup: null }
+    if (setup.data) return { ...result, invitationSetup: setup.data }
+    const name = getPendingProfileName(authUser)
+    if (!result.data && allowCreate && name) result = await createPendingProfile(client, name)
+  }
+  return { ...result, invitationSetup: null }
+}
+
 export function signInWithPassword(client, { email, password }) {
   return client.auth.signInWithPassword({ email: normalizeEmail(email), password })
 }

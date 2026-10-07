@@ -90,7 +90,7 @@ test('invitation acceptance has concise progress and a one-time workspace welcom
   ])
 
   assert.match(callback, /pulse_staff_invitation_id/)
-  assert.match(callback, /Accepting your invitation/)
+  assert.match(callback, /Checking your invitation/)
   assert.match(callback, /Preparing your place in Pulse/)
   assert.match(callback, /invitationAccepted: true/)
   assert.match(workspace, /Invitation accepted\. Welcome to Pulse\./)

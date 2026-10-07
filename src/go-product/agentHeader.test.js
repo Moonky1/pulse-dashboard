@@ -4,6 +4,10 @@ import test from 'node:test'
 
 const read = file => readFile(new URL(file, import.meta.url), 'utf8')
 
+test('decorative card glow never intercepts Join or other card actions', async () => {
+  assert.match(await read('goProduct.css'), /\.go-mode-card::after\s*\{\s*pointer-events:\s*none;\s*\}/)
+})
+
 test('Agent navigation reuses the Staff visual shell without Staff destinations or mutations', async () => {
   const header = await read('AgentGoHeader.jsx')
   assert.match(header, /ProductHeader\.css/)

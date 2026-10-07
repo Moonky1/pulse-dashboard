@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 // Schema-only copy. Never point this runner at a linked/remote or existing app DB.
 const container = process.env.PULSE_ADMIN2_LOCAL_CONTAINER || 'supabase_db_auth-google-selector'
 const database = process.argv.find(value => value.startsWith('--database='))?.slice(11) || 'pulse_admin2_review_20261005'
-if (!/^pulse_admin2_(review|checks|browser)_review_20261005(_[0-9]{1,2})?$/.test(database) && database !== 'pulse_admin2_review_20261005') throw new Error('Only task-owned local review database names are accepted')
+if (!/^pulse_admin2_(review|checks|browser)_review_20261005(_[0-9]{1,2})?$/.test(database) && !/^pulse_admin2_purge_review_20261006(_[0-9]{1,2})?$/.test(database) && database !== 'pulse_admin2_review_20261005') throw new Error('Only task-owned local review database names are accepted')
 const snapshot = process.env.PULSE_ADMIN2_SCHEMA_SNAPSHOT || 'review-evidence.local/production-schema.sql'
 function docker(args, input) {
   const result = spawnSync('docker', args, { input, encoding: 'utf8', maxBuffer: 40 * 1024 * 1024, windowsHide: true })
@@ -45,7 +45,7 @@ if (sql('select count(*) from public.role_grant_rules;').match(/\n\s*0\s*\n/)) {
 }
 let assertions = 0
 const relevantBaseline = /^(20260825000[12]00|20260826000[12]00|20260830000100|20260910000200|20260923000100|20260924000[124]00|20261002000200|2026100400\d{4})_/
-const tests = readdirSync('supabase/tests').filter(name => /^2026100500/.test(name) || process.argv.includes('--regressions') && relevantBaseline.test(name)).sort()
+const tests = readdirSync('supabase/tests').filter(name => /^2026100500/.test(name) || process.argv.includes('--invitation-recovery') && /^20261006000[13]00_/.test(name) || process.argv.includes('--regressions') && relevantBaseline.test(name)).sort()
 for (const name of tests) {
   const output = sql(readFileSync(`supabase/tests/${name}`, 'utf8'))
   if (/not ok|Looks like you failed/i.test(output)) throw new Error(`${name}\n${output}`)

@@ -6,10 +6,10 @@ import { stripTypeScriptTypes } from 'node:module'
 const existing = 'https://existing-preview.example.test'
 const additional = 'https://admin2-preview.example.test'
 const source = stripTypeScriptTypes(readFileSync(new URL('../../supabase/functions/pulse-staff-invitations/index.ts', import.meta.url), 'utf8')).replace(/^import[^\r\n]*\r?\n/, '')
-function runtime({ extraOrigin = additional, rpcError = null } = {}) {
+function runtime({ extraOrigin = additional, recoveryOrigin = '', rpcError = null } = {}) {
   let handler
   const calls = []
-  const env = { PULSE_ALLOWED_ORIGINS: existing, PULSE_INVITATION_ADDITIONAL_ORIGINS: extraOrigin,
+  const env = { PULSE_ALLOWED_ORIGINS: existing, PULSE_INVITATION_ADDITIONAL_ORIGINS: extraOrigin, PULSE_STAFF_RECOVERY_PREVIEW_ORIGIN: recoveryOrigin,
     SUPABASE_URL: 'https://supabase.example.test', SUPABASE_ANON_KEY: 'public-fixture', SUPABASE_SERVICE_ROLE_KEY: 'server-fixture' }
   new Function('Deno', 'createClient', source)({ env: { get: name => env[name] }, serve: callback => { handler = callback } },
     (_url, key, options) => {
@@ -22,6 +22,14 @@ function runtime({ extraOrigin = additional, rpcError = null } = {}) {
   }))
   return { invoke, calls }
 }
+
+test('recovery Preview is additive and does not allow arbitrary Preview domains', async () => {
+  const recoveryOrigin = 'https://recovery-preview.example.test'
+  const app = runtime({ recoveryOrigin })
+  for (const origin of [existing, additional, recoveryOrigin]) assert.equal((await app.invoke(origin)).status, 204)
+  assert.equal((await app.invoke('https://other-preview.example.test')).status, 403)
+  assert.equal(app.calls.length, 0)
+})
 test('invitation-only origin addition preserves existing and local origins', async () => {
   const app = runtime()
   for (const origin of [existing, additional, 'http://localhost:5173', 'http://127.0.0.1:5173']) {

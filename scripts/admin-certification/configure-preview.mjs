@@ -1,11 +1,13 @@
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 
-// Public frontend configuration only. Never uses env pull or a privileged key.
-const origin = 'https://pulse-kk-git-pulse-admin-2-people-access-pulsekk.vercel.app'
+// Branch-scoped configuration. Privileged server setup requires --agent-server.
+// Never uses env pull or writes secret values to files or tool output.
+const recovery = process.argv.includes('--recovery')
+const origin = recovery ? 'https://pulse-kk-git-pulse-auth-go-join-recovery-pulsekk.vercel.app' : 'https://pulse-kk-git-pulse-admin-2-people-access-pulsekk.vercel.app'
 const verifyOnly = process.argv.includes('--verify-only')
-const source = verifyOnly ? origin : 'https://pulse-kk-git-pulse-agent-1-go-identity-pulsekk.vercel.app'
-const branch = 'pulse/admin-2-people-access'
+const source = verifyOnly ? origin : 'https://pulse-kk-git-pulse-admin-2-people-access-pulsekk.vercel.app'
+const branch = recovery ? 'pulse/auth-go-join-recovery' : 'pulse/admin-2-people-access'
 const project = 'sgshbawggqapuyqzkyhs'
 function vercel(args, input) {
   if (args.some(value => /["&|<>\r\n]/.test(value))) throw new Error('Invalid CLI argument')
@@ -13,6 +15,21 @@ function vercel(args, input) {
   const result = spawnSync(process.execPath, [cli, ...args], { input, encoding: 'utf8', windowsHide: true, maxBuffer: 4 * 1024 * 1024 })
   if (result.status !== 0) throw new Error('Public Preview configuration operation failed: ' + (result.error?.code || (result.stderr + result.stdout).replace(/sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_.-]+/g,'[public-key]')).slice(-900))
   return result.stdout
+}
+if (process.argv.includes('--agent-server')) {
+  if (!recovery || verifyOnly) throw new Error('Server setup is restricted to the explicitly authorized recovery branch')
+  // Explicit checkpoint authorization required. Values stay only in process memory
+  // and Vercel server secrets; no env pull, file output or privileged browser key.
+  const result = spawnSync('cmd.exe', ['/d', '/c', 'npx', 'supabase', 'projects', 'api-keys', '--project-ref', project, '--output', 'json'], { encoding: 'utf8', windowsHide: true })
+  if (result.status !== 0) throw new Error('Authorized Preview key lookup failed; no key output is printed')
+  const entries = JSON.parse(result.stdout)
+  const serverKey = entries.find(entry => entry.name === 'service_role')?.api_key
+  if (!serverKey) throw new Error('Preview service key is unavailable')
+  const claims = JSON.parse(Buffer.from(serverKey.split('.')[1], 'base64url'))
+  if (claims.ref !== project || claims.role !== 'service_role') throw new Error('Unexpected server key scope')
+  vercel(['env', 'add', 'PULSE_AGENT_SUPABASE_URL', 'preview', '--git-branch', branch, '--sensitive', '--yes'], 'https://' + project + '.supabase.co')
+  vercel(['env', 'add', 'PULSE_AGENT_SERVICE_ROLE_KEY', 'preview', '--git-branch', branch, '--sensitive', '--yes'], serverKey)
+  console.log('Configured server-only Preview Agent secrets for the authorized branch; no values printed')
 }
 const html = vercel(['curl', '/', '--deployment', source, '--', '--silent', '--show-error'])
 const asset = html.match(/<script[^>]+src="(\/assets\/[A-Za-z0-9._-]+\.js)"/)?.[1]
@@ -40,4 +57,4 @@ if (!verifyOnly) {
     console.log('Configured public variable ' + name + ' for ' + branch)
   }
 }
-console.log(JSON.stringify({ branch, origin, backend: project, publicVariables: Object.keys(values).length, verifyOnly, privilegedKeysCopied: 0, productionOperations: 0 }))
+console.log(JSON.stringify({ branch, origin, backend: project, publicVariables: Object.keys(values).length, verifyOnly, privilegedKeysCopied: process.argv.includes('--agent-server') ? 1 : 0, productionOperations: 0 }))

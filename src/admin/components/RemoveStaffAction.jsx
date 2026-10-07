@@ -38,7 +38,7 @@ function RemoveDialog({ user, onCancel, onRemoved }) {
       {!plan && !error && <p role="status">Checking account dependencies…</p>}
       {plan && <div className="admin-dialog__warning" role="note">{plan.history_required
         ? 'This account has shared records. Permanent deletion is blocked until their impact is reviewed; no other person’s records will be deleted automatically.'
-        : 'Its Pulse profile, account activity, Auth identity and own profile photo will be permanently deleted. Existing sessions will stop working.'}</div>}
+        : 'Its Pulse profile, accepted invitations, account activity, Auth identity and own profile photo will be permanently deleted. Existing sessions will stop working.'}</div>}
       <label className="admin-role-field"><span>Type REMOVE to confirm</span><input autoComplete="off" value={confirmation} disabled={busy} onChange={event => setConfirmation(event.target.value)} /></label>
       {error && <p className="admin-dialog__error" role="alert">{error.message}</p>}
       {pending && <p className="admin-dialog__warning" role="status">This person is already hidden and Pulse access is revoked. Auth or photo cleanup is still pending. Retry to finish the same removal safely.</p>}

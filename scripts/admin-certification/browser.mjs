@@ -6,11 +6,14 @@ import { readFileSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { createClient } from '@supabase/supabase-js'
+import { invitationRecoveryBrowser, joinRecoveryBrowser } from './recovery-browser.mjs'
 
 const dbContainer = 'supabase_db_auth-google-selector'
 const database = process.argv.find(value => value.startsWith('--database='))?.slice(11) || 'pulse_admin2_review_20261005'
 if (!/^pulse_admin2_(review|checks|browser)_review_20261005(_[0-9]{1,2})?$/.test(database) && !/^pulse_admin2_purge_review_20261006(_[0-9]{1,2})?$/.test(database) && database !== 'pulse_admin2_review_20261005') throw new Error('Only task-owned local review database names are accepted')
-const api = 'http://127.0.0.1:54362', app = 'http://127.0.0.1:53663'
+// Keep GO's canonical local destination guard unchanged. Route browser HTTP to
+// this disposable copy, never to the existing shared service on port 54321.
+const api = 'http://127.0.0.1:54321', transport = 'http://127.0.0.1:54362', app = 'http://127.0.0.1:53663'
 const resume = process.argv.includes('--resume-owned-fixtures')
 const owned = [], passes = [], errors = [], apiErrors = []
 const pass = label => { passes.push(label); console.log('PASS ' + label) }
@@ -43,7 +46,7 @@ try {
   } else assert.equal(sql('select count(*) from auth.users'), '0', 'Only the empty task-owned schema copy can host these fixtures')
   sql('grant usage,create on schema auth to supabase_auth_admin; grant all on all tables in schema auth to supabase_auth_admin; grant all on all sequences in schema auth to supabase_auth_admin;', 'supabase_admin')
   sql(`do $$ declare item record; begin
-    for item in select relation.relname,relation.relkind from pg_class relation join pg_namespace namespace on namespace.oid=relation.relnamespace where namespace.nspname='auth' and relation.relkind in ('r','p','S','v') loop
+    for item in select relation.relname,relation.relkind from pg_class relation join pg_namespace namespace on namespace.oid=relation.relnamespace where namespace.nspname='auth' and relation.relkind in ('r','p','S','v') order by relation.relkind='S' loop
       execute format('alter %s auth.%I owner to supabase_auth_admin',case when item.relkind='S' then 'sequence' when item.relkind='v' then 'view' else 'table' end,item.relname);
     end loop;
     for item in select oid::regprocedure as signature from pg_proc where pronamespace='auth'::regnamespace loop execute 'alter function '||item.signature||' owner to supabase_auth_admin'; end loop;
@@ -62,7 +65,7 @@ try {
   const allowHeaders = { 'access-control-allow-origin': app, 'access-control-allow-headers': 'authorization,apikey,x-client-info,content-type,x-supabase-api-version,prefer,range,range-unit', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS', 'access-control-expose-headers': 'content-range', vary: 'Origin' }
   let removal
   const edge = stripTypeScriptTypes(readFileSync(new URL('../../supabase/functions/pulse-staff-removal/index.ts',import.meta.url),'utf8')).replace(/^import[^\r\n]*\r?\n/,'')
-  const edgeEnv = { PULSE_STAFF_REMOVAL_ALLOWED_ORIGINS: app, SUPABASE_URL: api, SUPABASE_ANON_KEY: anon, SUPABASE_SERVICE_ROLE_KEY: service }
+  const edgeEnv = { PULSE_STAFF_REMOVAL_ALLOWED_ORIGINS: app, SUPABASE_URL: transport, SUPABASE_ANON_KEY: anon, SUPABASE_SERVICE_ROLE_KEY: service }
   new Function('Deno','createClient',edge)({ env: { get: name => edgeEnv[name] }, serve: handler => { removal = handler } },createClient)
   proxy = createServer(async (request,response) => {
     try {
@@ -76,7 +79,7 @@ try {
       const isAuth = request.url.startsWith('/auth/v1/')
       const path = request.url.replace(isAuth ? '/auth/v1' : '/rest/v1','')
       const headers = { ...request.headers }; delete headers.host
-      const result = await fetch('http://127.0.0.1:'+(isAuth?'54364':'54365')+path,{ method: request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:body })
+      const result = await fetch('http://127.0.0.1:'+(isAuth?'54364':'54365')+path,{ method: request.method,headers,redirect:'manual',body:['GET','HEAD'].includes(request.method)?undefined:body })
       const responseHeaders=Object.fromEntries(result.headers)
       delete responseHeaders['content-encoding']; delete responseHeaders['content-length']
       response.writeHead(result.status,{ ...responseHeaders,...allowHeaders }); response.end(Buffer.from(await result.arrayBuffer()))
@@ -84,7 +87,7 @@ try {
   })
   await new Promise(resolve => proxy.listen(54362,'127.0.0.1',resolve))
   for (let attempt=0; attempt<100; attempt++) {
-    try { if ((await fetch(api+'/auth/v1/health')).ok && (await fetch(api+'/rest/v1/',{ headers:{ Authorization:'Bearer '+anon } })).ok) break } catch { /* startup */ }
+    try { if ((await fetch(transport+'/auth/v1/health')).ok && (await fetch(transport+'/rest/v1/',{ headers:{ Authorization:'Bearer '+anon } })).ok) break } catch { /* startup */ }
     if (attempt===99) {
       const statuses=owned.map(name=>{ try { return name+': '+inspect(name).State.Status } catch { return name+': stopped' } })
       const diagnostics=spawnSync('docker',['logs','pulse_admin2_auth_review'],{ encoding:'utf8',windowsHide:true })
@@ -97,7 +100,7 @@ try {
   // rather than GoTrue's compatibility bootstrap definitions.
   const claimReaders=run(['exec',dbContainer,'psql','-X','-qAt','-U','supabase_admin','-d','postgres','-c',"select pg_get_functiondef(oid)||';' from pg_proc where pronamespace='auth'::regnamespace and proname in ('uid','role','jwt','email');"])
   sql(claimReaders,'supabase_admin')
-  const admin = createClient(api,service,{ auth:{ persistSession:false,autoRefreshToken:false } })
+  const admin = createClient(transport,service,{ auth:{ persistSession:false,autoRefreshToken:false } })
   const password = randomBytes(24).toString('hex')
   const identities = []
   if (resume) {
@@ -119,8 +122,7 @@ try {
   }
   sql(`select set_config('request.jwt.claim.sub','${identities[0]}',false); select public.apply_org3a_business_catalog();
     insert into public.audit_events(actor_user_id,target_type,target_id,action,source) values('b2530000-0000-4000-8000-000000000001','user','b2530000-0000-4000-8000-000000000003','account.approved','server');
-    insert into public.agents(agent_code,display_name,team_id) select '992301','María Browser',team.id from public.teams team join public.campaigns campaign on campaign.id=team.campaign_id where team.code='asia_team_a' and campaign.code='auto_warranty_garrett';
-    insert into public.agent_credentials(agent_id,pin_hash) select id,null from public.agents where agent_code='992301';`)
+    select public.admin_prepare_agent_activation('992301','María Browser','34000000-0000-4000-8000-000000000011');`)
   }
   // Extra fixtures remain inside the local copy: no email delivery or real people.
   sql(`update public.users set profile_bio='A fictional Opener used only for ADMIN-2 review.',profile_presence='available',profile_visible_to_staff=true where id='b2530000-0000-4000-8000-000000000003';
@@ -144,9 +146,11 @@ try {
   const { chromium } = createRequire(root+'/package.json')('playwright')
   browser = await chromium.launch({ channel:'chrome',headless:true })
   const context = await browser.newContext({ viewport:{ width:1440,height:1000 },serviceWorkers:'block' })
-  await context.route('**/*',route => {
+  await context.routeWebSocket('**/*', socket => socket.close())
+  await context.route('**/*',async route => {
     const url=new URL(route.request().url())
     if (![app,api].includes(url.origin)) { errors.push('Unexpected network destination '+url.origin); return route.abort() }
+    if (url.origin === api) return route.fulfill({ response: await route.fetch({ url: transport + url.pathname + url.search, maxRedirects: 0 }) })
     return route.continue()
   })
   page=await context.newPage(); page.setDefaultTimeout(12000)
@@ -179,6 +183,15 @@ try {
   await page.getByLabel('Password',{ exact:true }).fill(password)
   await page.getByRole('button',{ name:'Sign in',exact:true }).click()
   await page.waitForURL('**/workspace'); pass('real isolated Supabase Staff sign-in')
+  if (process.argv.includes('--join-recovery-only')) {
+    await mkdir('review-evidence.local/admin2', { recursive: true })
+    sql("update public.agent_credentials set pin_hash=extensions.crypt('731482',extensions.gen_salt('bf',4)) where agent_id=(select id from public.agents where agent_code='992301');")
+    await joinRecoveryBrowser({ browser, admin, app, api, sql, operatorAuth: identities[0], pass })
+  } else {
+  if (process.argv.includes('--invitation-recovery')) {
+    await mkdir('review-evidence.local/admin2', { recursive: true })
+    await invitationRecoveryBrowser({ browser, admin, app, api, sql, page, operatorAuth: identities[0], pass })
+  }
   await page.goto(app+'/admin/users'); await page.getByRole('heading',{ name:'People',exact:true }).waitFor()
   await page.locator('.admin-user-row').filter({ hasText:'Disposable Person' }).waitFor()
   await peopleCount(4)
@@ -233,8 +246,8 @@ try {
   assert.equal(sql("select count(*) from pulse_private.staff_removal_jobs where target_user_id='b2530000-0000-4000-8000-000000000003'"),'0'); pass('end-to-end own-history removal physically deletes Auth, Staff and completed job identifiers')
   await page.goto(app+'/admin/invitations')
   await page.getByRole('heading',{ name:'ADMIN-2 Invitation 2',exact:true }).waitFor()
-  assert.equal(await page.locator('.admin-invitation-card').count(),1)
-  await page.locator('.admin-invitation-menu>summary').click()
+  assert.equal(await page.locator('.admin-invitation-card').count(),process.argv.includes('--invitation-recovery') ? 2 : 1)
+  await page.locator('.admin-invitation-card').filter({ has:page.getByRole('heading',{ name:'ADMIN-2 Invitation 2',exact:true }) }).locator('.admin-invitation-menu>summary').click()
   assert.equal(await page.getByRole('button',{ name:'Remove invitation',exact:true }).count(),0)
   await responsive('active-invitation')
   await page.getByLabel('Status',{ exact:true }).selectOption('accepted')
@@ -262,6 +275,8 @@ try {
   await page.locator('.admin-agent-status').getByText('Active',{ exact:true }).waitFor()
   assert.equal(await page.locator('a[href="/profile/992301"]').count(),1)
   await responsive('agents-directory'); pass('live Agent activation status and canonical profile link')
+  if (process.argv.includes('--invitation-recovery')) await joinRecoveryBrowser({ browser, admin, app, api, sql, operatorAuth: identities[0], pass })
+  }
   assert.deepEqual(errors,[])
   const report={ passes,errors,apiErrors,evidence:'review-evidence.local/admin2',productionOperations:0 }
   await writeFile('review-evidence.local/admin2/browser-result.json',JSON.stringify(report,null,2))

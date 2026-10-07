@@ -1,0 +1,73 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=extensions,public;
+select no_plan();
+select ok(not has_function_privilege('anon','public.get_own_staff_invitation_setup()','EXECUTE'),'anonymous invitation reads denied');
+select ok(not has_function_privilege('service_role','public.get_own_staff_invitation_setup()','EXECUTE'),'service role cannot impersonate invitation recipient');
+select ok(not has_function_privilege('authenticated','pulse_private.staff_owned_invitation_ids(uuid)','EXECUTE'),'private ownership helper cannot enumerate people');
+select ok(not has_table_privilege('authenticated','pulse_private.staff_audit_purge_context','INSERT'),'browser cannot manufacture invitation audit purge authority');
+
+insert into public.departments(id,code,name) values('d2630000-0000-4000-8000-000000000001','invitation_recovery','Invitation recovery');
+insert into auth.users(id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
+select ('a2630000-0000-4000-8000-'||lpad(number::text,12,'0'))::uuid,'authenticated','authenticated',
+  'invited.'||number||'@example.test','',case when number<>4 then now() end,'{}','{}',now(),now() from generate_series(1,4) number;
+insert into public.users(id,auth_user_id,email,full_name,employee_id,status,department_id,approved_at)
+values('b2630000-0000-4000-8000-000000000001','a2630000-0000-4000-8000-000000000001','invited.1@example.test','Recovery operator','KK-926301','active','d2630000-0000-4000-8000-000000000001',now());
+insert into public.user_roles(user_id,role_id,scope_type) values('b2630000-0000-4000-8000-000000000001','10000000-0000-0000-0000-000000000010','global');
+select set_config('request.jwt.claim.sub','a2630000-0000-4000-8000-000000000001',true);
+select lives_ok($$select public.claim_staff_invitation_send_v2('invited.2@example.test','Invited Person','d2630000-0000-4000-8000-000000000001',null,null,null,null,'10000000-0000-0000-0000-000000000001','global',null,null,null,'e2630000-0000-4000-8000-000000000002',null)$$,'canonical invitation claim succeeds');
+select set_config('review.invitation_id',(select id::text from public.staff_invitations where request_key='e2630000-0000-4000-8000-000000000002'),true);
+select lives_ok($$select public.complete_staff_invitation_delivery((select id from public.staff_invitations where request_key='e2630000-0000-4000-8000-000000000002'),(select delivery_claim_id from public.staff_invitations where request_key='e2630000-0000-4000-8000-000000000002'),true,'a2630000-0000-4000-8000-000000000002',null)$$,'local delivery completes against exact Auth identity, without sending mail');
+select set_config('request.jwt.claim.sub','a2630000-0000-4000-8000-000000000003',true);
+select is(public.get_own_staff_invitation_setup(),null::jsonb,'different verified account cannot see invitation');
+update auth.users set raw_user_meta_data=jsonb_build_object('pulse_staff_invitation_id',current_setting('review.invitation_id')) where id='a2630000-0000-4000-8000-000000000003';
+select is(public.get_own_staff_invitation_setup(),null::jsonb,'forged metadata does not confer ownership');
+select set_config('request.jwt.claim.sub','a2630000-0000-4000-8000-000000000004',true);
+select throws_ok($$select public.get_own_staff_invitation_setup()$$,'42501',null,'unverified email cannot read setup');
+select set_config('request.jwt.claim.sub','a2630000-0000-4000-8000-000000000002',true);
+set local role authenticated;
+select is(public.get_own_staff_invitation_setup()->>'status','ready','verified invite opens provider chooser');
+select is(public.get_own_staff_invitation_setup()->>'email','invited.2@example.test','chooser email comes from canonical invitation');
+reset role;
+select is((select count(*) from public.users where auth_user_id='a2630000-0000-4000-8000-000000000002'),0::bigint,'reading invitation does not create profile');
+select is((select count(*) from public.user_roles),1::bigint,'reading invitation grants no role');
+update public.staff_invitations set expires_at=now()-interval '1 second' where id=current_setting('review.invitation_id')::uuid;
+select is(public.get_own_staff_invitation_setup()->>'status','reissue_required','expired invitation cannot proceed');
+update public.staff_invitations set expires_at=now()+interval '72 hours' where id=current_setting('review.invitation_id')::uuid;
+set local role authenticated;
+select ok((select accepted from public.accept_own_staff_invitation()),'explicit acceptance uses original trusted proposal');
+reset role;
+select set_config('review.staff_id',(select id::text from public.users where auth_user_id='a2630000-0000-4000-8000-000000000002'),true);
+select is(public.get_own_staff_invitation_setup(),null::jsonb,'accepted active Staff no longer sees chooser');
+select is((select status from public.users where id=current_setting('review.staff_id')::uuid),'active','only explicit acceptance activates Staff');
+select is((select count(*) from public.audit_events where actor_user_id=current_setting('review.staff_id')::uuid and target_type='staff_invitation'),1::bigint,'real acceptance creates the previously blocking audit event');
+update public.users set status='inactive' where id=current_setting('review.staff_id')::uuid;
+select set_config('request.jwt.claim.sub','a2630000-0000-4000-8000-000000000001',true);
+select is(public.inspect_staff_removal(current_setting('review.staff_id')::uuid)->>'kind','purge','inactive invited account and its own acceptance history are removable');
+
+create table pulse_private.recovery_unknown_invitation_ref(invitation_id uuid references public.staff_invitations(id));
+insert into pulse_private.recovery_unknown_invitation_ref values(current_setting('review.invitation_id')::uuid);
+select is(public.inspect_staff_removal(current_setting('review.staff_id')::uuid)->>'kind','historical','unknown shared invitation reference fails closed');
+delete from pulse_private.recovery_unknown_invitation_ref;
+drop table pulse_private.recovery_unknown_invitation_ref;
+insert into public.staff_invitations(id,email_normalized,full_name,status,expires_at,created_by_user_id,department_id,role_id,scope_type,request_key,revoked_at,previous_invitation_id)
+values('f2630000-0000-4000-8000-000000000003','other@example.test','Other person','revoked',now()+interval '72 hours','b2630000-0000-4000-8000-000000000001','d2630000-0000-4000-8000-000000000001','10000000-0000-0000-0000-000000000001','global',gen_random_uuid(),now(),current_setting('review.invitation_id')::uuid);
+select is(public.inspect_staff_removal(current_setting('review.staff_id')::uuid)->>'kind','historical','cross-person reissue chain is protected');
+alter table public.staff_invitations add column recovery_unknown_auth uuid references auth.users(id);
+update public.staff_invitations set recovery_unknown_auth='a2630000-0000-4000-8000-000000000002',previous_invitation_id=null where id='f2630000-0000-4000-8000-000000000003';
+select is(public.inspect_staff_removal(current_setting('review.staff_id')::uuid)->>'kind','historical','additional Auth FK in invitation table is not mistaken for own invitation');
+alter table public.staff_invitations drop column recovery_unknown_auth;
+delete from public.staff_invitations where id='f2630000-0000-4000-8000-000000000003';
+select throws_ok($$delete from public.audit_events where target_id=current_setting('review.invitation_id')::uuid$$,'P0001',null,'direct invitation audit deletion still denied');
+select lives_ok($$select public.prepare_staff_removal(current_setting('review.staff_id')::uuid,(select updated_at from public.users where id=current_setting('review.staff_id')::uuid),'REMOVE','e2630000-0000-4000-8000-000000000009')$$,'REMOVE succeeds on realistic accepted invitation account');
+select is((select count(*) from public.staff_invitations where email_normalized='invited.2@example.test'),0::bigint,'accepted invitations are physically purged, not merely hidden');
+select is((select count(*) from public.audit_events where target_id in(current_setting('review.staff_id')::uuid,current_setting('review.invitation_id')::uuid) or actor_user_id=current_setting('review.staff_id')::uuid),0::bigint,'own account and invitation histories are gone');
+select is((select count(*) from public.users where id=current_setting('review.staff_id')::uuid),0::bigint,'profile physically purged');
+select is((select count(*) from pulse_private.staff_audit_purge_context),0::bigint,'purge authority cleared');
+select lives_ok($$delete from auth.users where id='a2630000-0000-4000-8000-000000000002'; select public.complete_staff_removal_cleanup('e2630000-0000-4000-8000-000000000009','a2630000-0000-4000-8000-000000000001',true,true)$$,'Auth identity can be physically deleted and cleanup completed');
+select lives_ok($$select public.claim_staff_invitation_send_v2('invited.2@example.test','Invited Again','d2630000-0000-4000-8000-000000000001',null,null,null,null,'10000000-0000-0000-0000-000000000001','global',null,null,null,'e2630000-0000-4000-8000-000000000010',null)$$,'same email can be freshly invited after accepted-account purge');
+select is((select count(*) from public.staff_invitations where email_normalized='invited.2@example.test'),1::bigint,'one clean fresh invitation remains');
+select is((select count(*) from public.users),1::bigint,'operator identity preserved');
+select is((select count(*) from public.user_roles),1::bigint,'operator role preserved');
+select * from finish();
+rollback;

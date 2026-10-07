@@ -10,19 +10,28 @@ export function admin2Error(error) {
 
 export async function inspectStaffRemoval(client, userId) {
   if (!UUID.test(userId)) return { data: null, error: admin2Error({ code: 'P0002' }) }
-  const { data, error } = await client.rpc('inspect_staff_removal', { target_user_id: userId })
-  return { data, error: admin2Error(error) }
+  try {
+    const { data, error } = await client.rpc('inspect_staff_removal', { target_user_id: userId })
+    return { data, error: admin2Error(error) }
+  } catch { return { data: null, error: admin2Error({}) } }
 }
 
 export async function removeStaffIdentity(client, userId, plan, confirmation, requestKey) {
   if (!UUID.test(userId) || !UUID.test(requestKey) || confirmation !== 'REMOVE' || !plan?.version) {
     return { data: null, error: { code: 'confirmation', message: 'Type REMOVE to confirm.' } }
   }
-  const { data, error } = await client.functions.invoke('pulse-staff-removal', {
-    body: { userId, version: plan.version, confirmation, requestKey },
-  })
-  if (error || !data?.removed) return { data: null, error: admin2Error(error || {}) }
-  return { data, error: null }
+  try {
+    const { data, error } = await client.functions.invoke('pulse-staff-removal', {
+      body: { userId, version: plan.version, confirmation, requestKey },
+    })
+    if (error) {
+      let response
+      try { response = await error.context?.json() } catch { /* unavailable response body */ }
+      return { data: null, error: admin2Error({ code: response?.code || error.code }) }
+    }
+    if (!data?.removed) return { data: null, error: admin2Error({}) }
+    return { data, error: null }
+  } catch { return { data: null, error: admin2Error({}) } }
 }
 
 export async function removeStaffInvitation(client, invitation, confirmation) {

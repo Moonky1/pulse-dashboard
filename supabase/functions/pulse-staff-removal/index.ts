@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.105.1'
 
-const allowed = () => new Set((Deno.env.get('PULSE_STAFF_REMOVAL_ALLOWED_ORIGINS') ?? '').split(',').map(v => v.trim()).filter(Boolean))
+const allowed = () => new Set(['PULSE_STAFF_REMOVAL_ALLOWED_ORIGINS', 'PULSE_STAFF_RECOVERY_PREVIEW_ORIGIN']
+  .flatMap(name => (Deno.env.get(name) ?? '').split(',').map(v => v.trim()).filter(Boolean)))
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 Deno.serve(async request => {

@@ -1,12 +1,21 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { hostedAnswerReady, languagePresentation, normalizeHostedRoom, normalizeRoomCode, resultMedal, roomPath } from './goHostedModel.js'
+import { hostedAnswerReady, languagePresentation, normalizeHostedRoom, normalizeRoomCode, resultMedal, roomPath, validRoomCode } from './goHostedModel.js'
 
 test('room codes normalize only to the canonical visible format', () => {
   assert.equal(normalizeRoomCode('kk-1234'), 'KK 1234')
   assert.equal(normalizeRoomCode(' KK 9876 '), 'KK 9876')
-  assert.equal(normalizeRoomCode('not-a-code'), 'NOTACO')
+  assert.equal(normalizeRoomCode('not-a-code'), 'NOTACODE')
+  for (const code of ['1234', 'kk1234', 'KK  1234', 'kk-1234']) {
+    assert.equal(normalizeRoomCode(code), 'KK 1234')
+    assert.equal(validRoomCode(code), true)
+  }
+  assert.equal(normalizeRoomCode('0007'), 'KK 0007')
+  for (const code of ['', '123', '12345', 'KK12345', 'KK1234other', 'AB1234']) {
+    assert.equal(validRoomCode(code), false, code)
+  }
+  assert.equal(normalizeRoomCode('KK12345'), 'KK12345', 'never truncate a wrong room into a valid room')
 })
 
 test('hosted room normalization rejects unsafe or malformed snapshots', () => {

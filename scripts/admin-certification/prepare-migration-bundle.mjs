@@ -3,10 +3,13 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises'
 
 // Generates a reviewed transaction; it never connects to or changes a database.
 const permanentRemoval = process.argv.includes('--permanent-removal')
-const files = permanentRemoval
+const invitationRecovery = process.argv.includes('--invitation-recovery')
+const files = invitationRecovery
+  ? ['20261006000300_invited_account_removal.sql', '20261006000400_verified_invitation_setup.sql']
+  : permanentRemoval
   ? ['20261006000100_admin2_permanent_account_cleanup.sql', '20261006000200_remove_unapproved_to_unit.sql']
   : ['20261005000100_admin2_people_removal.sql', '20261005000200_admin2_directory_and_invitations.sql']
-const output = `review-evidence.local/admin2/${permanentRemoval ? 'permanent-removal-bundle' : 'migration-bundle'}.sql`
+const output = `review-evidence.local/admin2/${invitationRecovery ? 'invitation-recovery-bundle' : permanentRemoval ? 'permanent-removal-bundle' : 'migration-bundle'}.sql`
 const statements = []
 const hashes = []
 for (const file of files) {

@@ -33,3 +33,13 @@ test('Agent reads are capped, validated and send only directory filters', async 
 test('backend errors never expose technical details or private identifiers', () => {
   for (const code of ['42501', '55000', 'P0002', 'XX000']) assert.doesNotMatch(admin2Error({ code, message: 'sensitive backend secret' }).message, /sensitive|secret/)
 })
+
+test('network failures and Edge errors are retryable without leaving Remove busy', async () => {
+  const offline = { rpc: async () => { throw new Error('offline') }, functions: { invoke: async () => { throw new Error('offline') } } }
+  assert.equal((await inspectStaffRemoval(offline, id)).error.code, 'unavailable')
+  assert.equal((await removeStaffIdentity(offline, id, { version: 'version' }, 'REMOVE', key)).error.code, 'unavailable')
+  const conflict = { functions: { invoke: async () => ({ error: { context: new Response(JSON.stringify({ code: '55000', message: 'private data' })) } }) } }
+  const result = await removeStaffIdentity(conflict, id, { version: 'version' }, 'REMOVE', key)
+  assert.equal(result.error.code, 'protected')
+  assert.doesNotMatch(result.error.message, /private data/)
+})

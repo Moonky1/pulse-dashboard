@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button.jsx'
 import { joinGoHostedSession } from '../training/trainingApi.js'
 import { canHost, canPractice } from './goAccess.js'
-import { normalizeRoomCode, roomPath } from './goHostedModel.js'
+import { normalizeRoomCode, roomPath, validRoomCode } from './goHostedModel.js'
 import { GoAccessState, GoShell } from './GoShell.jsx'
 import { GO_ART } from './goVisualAssets.js'
 import { useGoAccess } from './useGoAccess.js'
@@ -23,15 +23,21 @@ export function GoLandingPage() {
 
   async function joinRoom(event) {
     event.preventDefault()
+    if (joining || !validRoomCode(roomCode)) return
     if (identity.kind === 'anonymous') {
       navigate(`/agent/signin?code=${encodeURIComponent(roomCode)}`)
       return
     }
     setJoining(true); setJoinError(null)
-    const { data, error } = await joinGoHostedSession(identity.client, roomCode)
-    setJoining(false)
-    if (error) return setJoinError(error.message)
-    navigate(roomPath(data))
+    try {
+      const { data, error } = await joinGoHostedSession(identity.client, normalizeRoomCode(roomCode))
+      if (error) return setJoinError(error.message)
+      navigate(roomPath(data))
+    } catch {
+      setJoinError('Pulse could not join this room. Please try again.')
+    } finally {
+      setJoining(false)
+    }
   }
   return <GoShell>
     <section className="go-mode-heading">
@@ -52,7 +58,7 @@ export function GoLandingPage() {
       <article className="go-mode-card go-mode-card--join" aria-labelledby="go-join-title">
         <div className="go-mode-art"><img src={GO_ART.classic} alt="" /><span>Room code</span></div>
         <div><p className="go-eyebrow">Join a game</p><h2 id="go-join-title">Join a round</h2><p>Enter your code and play with the team</p></div>
-        <form onSubmit={joinRoom}><label htmlFor="go-room-code">Game code</label><input id="go-room-code" inputMode="text" autoComplete="off" value={roomCode} onChange={event => setRoomCode(normalizeRoomCode(event.target.value))} placeholder="KK 1234" maxLength="7" aria-describedby={joinError ? 'go-join-error' : undefined} /><Button loading={joining} disabled={!/^KK \d{4}$/.test(roomCode)}>Join</Button>{joinError && <p id="go-join-error" className="go-join-error" role="alert">{joinError}</p>}</form>
+        <form onSubmit={joinRoom}><label htmlFor="go-room-code">Game code · 4 digits or KK 1234</label><input id="go-room-code" inputMode="text" autoComplete="off" value={roomCode} onChange={event => { setRoomCode(normalizeRoomCode(event.target.value)); setJoinError(null) }} placeholder="KK 1234" maxLength="16" aria-describedby={joinError ? 'go-join-error' : undefined} /><Button loading={joining} disabled={joining || !validRoomCode(roomCode)}>Join</Button>{joinError && <p id="go-join-error" className="go-join-error" role="alert">{joinError}</p>}</form>
       </article>
     </section>
     <GoGlobalRanking />

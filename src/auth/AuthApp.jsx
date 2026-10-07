@@ -14,6 +14,7 @@ const AgentSettingsPage = lazy(() => import('../go-product/AgentSettingsPage.jsx
 const AcademyPage = lazy(() => import('../go/GoLearn.jsx'))
 const AcademyDetailPage = lazy(() => import('../go/GoLearnDetail.jsx'))
 const AuthCallbackPage = lazy(() => import('./screens/AuthCallbackPage.jsx').then((module) => ({ default: module.AuthCallbackPage })))
+const InvitationSetupPage = lazy(() => import('./screens/InvitationSetupPage.jsx').then((module) => ({ default: module.InvitationSetupPage })))
 const ForgotPasswordPage = lazy(() => import('./screens/ForgotPasswordPage.jsx').then((module) => ({ default: module.ForgotPasswordPage })))
 const GoLandingPage = lazy(() => import('../go-product/GoLandingPage.jsx').then((module) => ({ default: module.GoLandingPage })))
 const GoHostSelection = lazy(() => import('../go-product/GoHostSelection.jsx').then((module) => ({ default: module.GoHostSelection })))
@@ -71,6 +72,7 @@ export function AuthApp() {
         <Route path="/staff/register" element={<Navigate to={STAFF_REGISTER_PATH} replace />} />
         <Route path="/staff/forgot-password" element={<Navigate to={STAFF_FORGOT_PASSWORD_PATH} replace />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/auth/invitation" element={<InvitationSetupPage />} />
         <Route path="/auth/verify" element={<VerifyEmailPage />} />
         <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/pending-approval" element={<RouteGate allow={[AUTH_STATES.PENDING]}><PendingApprovalPage /></RouteGate>} />

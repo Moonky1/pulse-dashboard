@@ -2,7 +2,12 @@ const STATES = new Set(['lobby', 'active', 'completed', 'cancelled', 'expired'])
 
 export function normalizeRoomCode(value) {
   const compact = String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  return /^KK\d{4}$/.test(compact) ? `KK ${compact.slice(2)}` : compact.slice(0, 6)
+  const match = /^(?:KK)?(\d{4})$/.exec(compact)
+  return match ? `KK ${match[1]}` : compact
+}
+
+export function validRoomCode(value) {
+  return /^KK \d{4}$/.test(normalizeRoomCode(value))
 }
 
 export function normalizeHostedRoom(value) {

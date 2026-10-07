@@ -8,10 +8,11 @@ const operator = '11111111-1111-4111-8111-111111111111'
 const userId = '22222222-2222-4222-8222-222222222222'
 const requestKey = '33333333-3333-4333-8333-333333333333'
 const source = stripTypeScriptTypes(readFileSync(new URL('../../supabase/functions/pulse-staff-removal/index.ts', import.meta.url), 'utf8')).replace(/^import[^\r\n]*\r?\n/, '')
-function runtime({ signedIn = true, prepareError = null, kind = 'purge', authError = null, avatar = null, alreadyDone = false, mediaError = null } = {}) {
+function runtime({ signedIn = true, prepareError = null, kind = 'purge', authError = null, avatar = null, alreadyDone = false, mediaError = null, extraOrigin = '' } = {}) {
   let handler
   const calls = []
   const environment = { PULSE_STAFF_REMOVAL_ALLOWED_ORIGINS: origin, SUPABASE_URL: 'https://supabase.example.test', SUPABASE_ANON_KEY: 'public-fixture', SUPABASE_SERVICE_ROLE_KEY: 'server-fixture' }
+  environment.PULSE_STAFF_RECOVERY_PREVIEW_ORIGIN = extraOrigin
   const user = {
     auth: { getUser: async () => ({ data: { user: signedIn ? { id: operator } : null }, error: signedIn ? null : {} }) },
     rpc: async (name, args) => { calls.push([name, args]); return { data: { kind, removed: true }, error: prepareError } },
@@ -37,6 +38,12 @@ test('wrong origin and invalid Auth are rejected before any destructive contract
   const deniedIdentity = runtime({ signedIn: false })
   assert.equal((await deniedIdentity.invoke()).status, 401)
   assert.equal(deniedIdentity.calls.length, 0)
+})
+test('explicit recovery Preview origin preserves the existing origin and does not allow any other Preview', async () => {
+  const app = runtime({ extraOrigin: 'https://recovery-preview.example.test' })
+  assert.equal((await app.invoke()).status, 200)
+  assert.equal((await app.invoke(undefined, { headers: { Origin: 'https://recovery-preview.example.test' } })).status, 200)
+  assert.equal((await app.invoke(undefined, { headers: { Origin: 'https://other-preview.example.test' } })).status, 403)
 })
 test('malformed, unconfirmed and oversized requests cannot prepare removal', async () => {
   const app = runtime()

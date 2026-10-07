@@ -73,6 +73,7 @@ test('staff and agent surfaces have no chooser or cross-link', () => {
   assert.doesNotMatch(agentSource, /Google|OAuth|signInGoogle/)
   assert.match(callbackSource, /Google sign-in was not completed/)
   assert.match(callbackSource, /readStaffReturnPath/)
-  assert.match(providerSource, /createPendingProfile/)
+  assert.match(providerSource, /resolveOwnStaffProfile/)
+  assert.match(readFileSync(new URL('./pulseAuthService.js', import.meta.url), 'utf8'), /createPendingProfile/)
   assert.doesNotMatch(`${signInSource}\n${registerSource}\n${providerSource}`, /endsWith\([^)]*kampaignkings|assign.*role|service_role/i)
 })

@@ -9,6 +9,8 @@ test('derives every supported lifecycle state from trusted session and profile',
   assert.equal(deriveAuthState({ loading: true }), AUTH_STATES.LOADING)
   assert.equal(deriveAuthState({ loading: false, session: null }), AUTH_STATES.ANONYMOUS)
   assert.equal(deriveAuthState({ loading: false, session, profile: null }), AUTH_STATES.MISSING_PROFILE)
+  assert.equal(deriveAuthState({ loading: false, session, profile: null, invitationSetup: { status: 'ready' } }), AUTH_STATES.INVITED)
+  assert.equal(deriveAuthState({ loading: false, session, profile: { status: 'inactive' }, invitationSetup: { status: 'ready' } }), AUTH_STATES.INACTIVE)
   assert.equal(deriveAuthState({ loading: false, session, profile: { status: 'pending_approval' } }), AUTH_STATES.PENDING)
   assert.equal(deriveAuthState({ loading: false, session, profile: { status: 'active' } }), AUTH_STATES.ACTIVE)
   assert.equal(deriveAuthState({ loading: false, session, profile: { status: 'blocked' } }), AUTH_STATES.BLOCKED)
@@ -18,6 +20,7 @@ test('derives every supported lifecycle state from trusted session and profile',
 
 test('routes lifecycle states to isolated destinations', () => {
   assert.equal(routeForAuthState(AUTH_STATES.PENDING), '/pending-approval')
+  assert.equal(routeForAuthState(AUTH_STATES.INVITED), '/auth/invitation')
   assert.equal(routeForAuthState(AUTH_STATES.ACTIVE), '/workspace')
   assert.equal(routeForAuthState(AUTH_STATES.BLOCKED), '/account-blocked')
   assert.equal(routeForAuthState(AUTH_STATES.INACTIVE), '/account-inactive')
