@@ -1,0 +1,203 @@
+{
+  "checkpoint": "SIM-1 source ingestion and backend gap",
+  "implementation_status": "source_mapped_contract_required_not_a_working_simulator",
+  "base_sha": "9fc0521d50698e48228745752502da1ec9af4250",
+  "planned_branch": "pulse/sim-1-interactive-training",
+  "release_scope": "Preview only after isolated validation; no main merge or Production deployment before visual review",
+  "sources": [
+    {
+      "id": "mexico",
+      "name": "Copia de Diseño sin título.pdf",
+      "pages": 38,
+      "sha256": "1a0d9028ceae8f7496ab9130d89656a6045f8c60a431258346e777233ec0420a",
+      "inspection": "All pages rendered and visually inventoried; workflow pages reviewed at full resolution",
+      "page_index": [
+        { "pages": [1], "topic": "Training cover" },
+        { "pages": [2, 3, 4], "topic": "Support, schedule and responsibilities; reference, not a continuous simulation" },
+        { "pages": [5, 6], "topic": "Opening Script and XFER Process" },
+        { "pages": [7, 8], "topic": "English Transfer Process and introduction/wait guidance" },
+        { "pages": [9, 10], "topic": "Pause codes; internally different RR/REST labels and Tech guidance" },
+        { "pages": [11], "topic": "Disposition overview" },
+        { "pages": [12, 13, 14, 15, 16, 17, 18], "topic": "Answering Machine, Call Back, Dead Air, Disconnected Number, Do Not Call, Language Barrier, Not Interested" },
+        { "pages": [19, 20], "topic": "Spanish LOCAL CLOSER routing and Spanish Speaker; team scope overridden by direct user clarification" },
+        { "pages": [21, 22, 23], "topic": "Wrong Number, Wrong Vehicle Info, English Call Transferred" },
+        { "pages": [24, 25, 26, 27, 28], "topic": "Repeated English/Spanish transfer and disposition references, not new workflows" },
+        { "pages": [29], "topic": "Dispo Time and Dead Call Time" },
+        { "pages": [30, 31], "topic": "Callback Process: pause menu then Manual Dial" },
+        { "pages": [32, 33], "topic": "Dead Air to Service Advisor: cover and five decision scenarios" },
+        { "pages": [34, 35, 36, 37, 38], "topic": "Quality review, invalidations, disciplinary references and closing; no automatic personnel actions" }
+      ]
+    },
+    {
+      "id": "juan_patricia",
+      "name": "TRAINING AW GARRETT JUAN AND PATRICIA.pdf",
+      "pages": 25,
+      "sha256": "79463fbc6f22ddf5da0faf16afe744c0ae9bee45f6987fefa82936f84d320942",
+      "inspection": "All pages rendered and visually inventoried; available text extracted; transfer discrepancies reviewed at full resolution",
+      "page_index": [
+        { "pages": [1, 2, 3], "topic": "Warranty/company knowledge reference; no independently verified coverage claims" },
+        { "pages": [4, 5], "topic": "English and Spanish opening scripts" },
+        { "pages": [6], "topic": "IP validation; contains credentials, excluded from distribution and implementation" },
+        { "pages": [7, 8], "topic": "Agent Login, Phone Login, Campaign Login and Go Active" },
+        { "pages": [9, 10, 11], "topic": "English transfer, Spanish transfer and dialer field meanings" },
+        { "pages": [12, 13, 14], "topic": "Disposition options and pause codes; do not combine silently with Mexico rules" },
+        { "pages": [15, 16, 17, 18, 19, 20, 21, 22, 23], "topic": "Objection/purpose guidance; structured future knowledge, no live AI scoring" },
+        { "pages": [24], "topic": "Vehicle-condition verification reference" },
+        { "pages": [25], "topic": "Spanish diagram points first to HANGUP CUSTOMER; unresolved, not an approved action sequence" }
+      ]
+    }
+  ],
+  "attached_screenshots": [
+    { "file": "codex-clipboard-107ed562-159c-4aff-8c66-1ca20557cb99.png", "topic": "English transfer", "source": "juan_patricia page 9" },
+    { "file": "codex-clipboard-9e81d362-fba5-4c84-893a-e7f9f9eb1577.png", "topic": "Dialer fields", "source": "juan_patricia page 11" },
+    { "file": "codex-clipboard-e3f7cbe3-347c-4f54-b929-6e0ac2b160c2.png", "topic": "English transfer", "source": "mexico page 7" },
+    { "file": "codex-clipboard-994fb863-73e4-42ca-863e-b3c31be93716.png", "topic": "Spanish LOCAL CLOSER", "source": "mexico page 19" },
+    { "file": "codex-clipboard-4077ad27-8668-4129-b1e8-8e0ae35c89a0.png", "topic": "Phone Login then Campaign Login", "source": "Separate supplied login capture; corroborates juan_patricia page 7" }
+  ],
+  "direct_user_clarification": {
+    "date": "2026-10-06",
+    "priority": "Overrides contradictory slides; does not establish unrelated pause policy",
+    "spanish_handling_teams": ["Venezuela", "Central America", "Colombia"],
+    "spanish_handling_behavior": "Can handle Spanish calls; Spanish Speaker disposition is exclusively for these teams",
+    "immediate_spanish_routing_teams": ["Asia", "Philippines", "Mexico"],
+    "immediate_spanish_routing_behavior": "Cannot handle Spanish calls; immediately route through LOCAL CLOSER, do not conduct the Spanish opening workflow",
+    "implementation_note": "Use administrator-selected canonical campaign/team IDs and existing targeting; do not authorize by browser labels, inferred countries or invented team records",
+    "unresolved_after_local_closer": "Disposition after the immediate route and any subsequent wait/exit steps were not specified; never default to Spanish Speaker or English-only XFER"
+  },
+  "workflows": [
+    {
+      "id": "callback_manual_dial",
+      "priority": 1,
+      "title": "Callback Process",
+      "sources": [{ "id": "mexico", "pages": [30, 31] }],
+      "source_screens": 2,
+      "steps": [
+        { "order": 1, "screen_page": 30, "interaction": "informational", "expected": "Verify YOU ARE PAUSED", "target": "Status area", "success": "Learner acknowledges paused state" },
+        { "order": 2, "screen_page": 30, "interaction": "click_hotspot", "expected": "CB - Callbacks", "target": "Pause code menu", "success": "Continue on correct target only" },
+        { "order": 3, "screen_page": 30, "interaction": "click_hotspot", "expected": "VICIdial logo", "target": "Upper-left logo", "success": "Continue on correct target only" },
+        { "order": 4, "screen_page": 30, "interaction": "click_hotspot", "expected": "MANUAL DIAL", "target": "Bottom dialer link", "success": "Advance to Manual Dial screen" },
+        { "order": 5, "screen_page": 31, "interaction": "text_input", "expected": "Enter the provided fictitious customer phone number, digits only", "target": "Phone Number field", "validation": "Exact digits matching the synthetic exercise value; no live number and no inferred company length policy", "success": "Correct exercise value entered" },
+        { "order": 6, "screen_page": 31, "interaction": "confirmation_action", "expected": "Verify the number and click Dial Now", "target": "Dial Now link", "success": "Terminal success for this manual-dial exercise; no real dialing and no invented next call-handling/disposition step" }
+      ],
+      "branching": "Incorrect click/input retries the current step; the supplied main sequence has no alternative branch",
+      "source_feedback": "No explicit wrong-action response specified; neutral UI feedback is product behavior, not training policy",
+      "status": "Source-supported first workflow; private media and persistent simulation contracts required"
+    },
+    {
+      "id": "english_transfer",
+      "title": "English Transfer Process",
+      "sources": [{ "id": "mexico", "pages": [5, 6, 7, 8, 23, 24, 25] }, { "id": "juan_patricia", "pages": [4, 9] }],
+      "actions": ["Opening and vehicle/loan context", "Customer consent", "Verify STATUS: Incoming number", "TRANSFER CONFIG / TRANSFER - CONF", "DIAL WITH CUSTOMER", "Allow Service Advisor introduction", "Required wait", "LEAVE 3-WAY CALL", "XFER - Call Transferred for successful English transfer only"],
+      "interaction_types": ["informational", "multiple_choice", "click_hotspot", "confirmation_action"],
+      "status": "Wait trigger must be clarified before timer-based scoring/publication"
+    },
+    {
+      "id": "spanish_handling",
+      "title": "Spanish call handling and transfer",
+      "sources": [{ "id": "juan_patricia", "pages": [5, 10] }, { "id": "mexico", "pages": [20, 27] }, { "id": "direct_user_clarification" }],
+      "audience_labels": ["Venezuela", "Central America", "Colombia"],
+      "actions": ["Handle the Spanish call", "TRANSFER - CONF", "Select Spanish destination", "DIAL WITH CUSTOMER", "Allow specialist introduction", "LEAVE 3-WAY CALL after required wait", "Spanish Speaker disposition"],
+      "status": "Team split confirmed; exact Spanish dropdown option and wait trigger still require confirmation"
+    },
+    {
+      "id": "spanish_immediate_local_closer",
+      "title": "Spanish call: immediate LOCAL CLOSER routing",
+      "sources": [{ "id": "mexico", "pages": [19, 26] }, { "id": "direct_user_clarification" }],
+      "audience_labels": ["Asia", "Philippines", "Mexico"],
+      "actions": ["Recognize a Spanish call", "TRANSFER - CONF", "LOCAL CLOSER immediately"],
+      "not_authorized_actions": ["Spanish opening workflow", "Spanish Speaker disposition", "English-only XFER assumed as fallback"],
+      "status": "Routing prefix supported; remaining steps/terminal disposition unresolved"
+    },
+    {
+      "id": "disposition_training",
+      "title": "Call Disposition",
+      "sources": [{ "id": "mexico", "pages": [11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 27, 28] }, { "id": "juan_patricia", "pages": [12, 13] }],
+      "scenarios": [
+        { "condition": "Voicemail or answering machine", "target": "A - Answering Machine", "source_page": 12 },
+        { "condition": "Customer requests a later call", "target": "CALLBK - Call Back", "source_page": 13 },
+        { "condition": "Silence and no customer response", "target": "DAIR - Dead Air", "source_page": 14 },
+        { "condition": "Disconnected/out-of-service number", "target": "DC - Disconnected Number", "source_page": 15 },
+        { "condition": "Explicit do-not-call request", "target": "DNC - DO NOT CALL", "source_page": 16 },
+        { "condition": "Cannot communicate in English and not Spanish", "target": "LANG - Language Barrier", "source_page": 17 },
+        { "condition": "Not interested", "target": "NI - Not Interested", "source_page": 18 },
+        { "condition": "Wrong number/information belongs to someone else", "target": "WRGNUM - Wrong Number", "source_page": 21 },
+        { "condition": "Wrong vehicle/no longer owns vehicle", "target": "WRGVEH - Wrong Vehicle Info", "source_page": 22 },
+        { "condition": "Successful English transfer", "target": "XFER - Call Transferred", "source_page": 23 }
+      ],
+      "status": "Individual documented scenarios supported; team-scoped Spanish rule comes only from direct clarification; do not infer BLANK policy or obsolete SPXFER permission"
+    },
+    {
+      "id": "pause_codes",
+      "title": "Pause Codes",
+      "sources": [{ "id": "mexico", "pages": [9, 10] }, { "id": "juan_patricia", "pages": [14] }],
+      "supported_common_labels": ["Break - Break", "CB - Callbacks", "Lunch - Lunch", "Manage - Talking with Manager"],
+      "status": "Tech allowed/prohibited and RR/REST label/limit conflict; do not publish a universal policy"
+    },
+    {
+      "id": "dialer_reading",
+      "title": "How to read the dialer",
+      "sources": [{ "id": "juan_patricia", "pages": [11] }],
+      "field_map": { "LOAN MONTHLY COST": "Monthly Payments", "ORIGINATION DATE": "Date of loan (month, day, year)", "LOAN BALANCE": "Total amount of the loan" },
+      "interaction_types": ["click_hotspot", "multiple_choice", "text_input"],
+      "status": "Source-supported; fictitious financial/customer values only"
+    },
+    {
+      "id": "dialer_login",
+      "title": "Login Process",
+      "sources": [{ "id": "juan_patricia", "pages": [7, 8] }, { "id": "attached_login_capture" }],
+      "actions": ["Phone Login", "Phone Password", "SUBMIT", "User Login", "User Password", "Campaign selection", "SUBMIT", "Go Active"],
+      "interaction_types": ["text_input", "dropdown", "confirmation_action", "click_hotspot"],
+      "status": "Demonstration credentials and explicit exercise campaign only; no real sign-in or IP-validation integration"
+    },
+    {
+      "id": "dead_air_service_advisor",
+      "title": "Dead Air to Service Advisor",
+      "sources": [{ "id": "mexico", "pages": [32, 33] }],
+      "scenarios": [
+        { "condition": "Customer hangs up before advisor joins", "expected": "HANGUP BOTH LINES" },
+        { "condition": "Customer disconnects after advisor joins", "expected": "Notify advisor of disconnect; HANGUP BOTH LINES" },
+        { "condition": "Customer speaks during hold", "expected": "Do not leave until advisor takes over; close transfer with LEAVE 3-WAY CALL" },
+        { "condition": "No customer consent", "expected": "HANGUP BOTH LINES" },
+        { "condition": "Customer remains silent after handoff", "expected": "Stay and check whether customer is present or notify advisor; do not assume disconnect" }
+      ],
+      "interaction_types": ["multiple_choice", "confirmation_action"],
+      "status": "Decision outcomes documented; no live call capture or AI speech evaluation"
+    }
+  ],
+  "unresolved": [
+    { "id": "timing", "references": ["mexico pages 7/24: 15 seconds while introduction starts", "mexico pages 8/25: 15 seconds after introduction"], "question": "What exact event starts the 15-second requirement?" },
+    { "id": "local_terminal", "references": ["direct user clarification", "mexico pages 19/26"], "question": "After LOCAL CLOSER for Asia/Philippines/Mexico, what subsequent actions and disposition complete the workflow?" },
+    { "id": "spanish_destination", "references": ["juan_patricia page 10"], "question": "Which exact select option represents the Spanish destination? The annotation says Select Spanish without showing its open menu." },
+    { "id": "spanish_hangup", "references": ["juan_patricia page 25 versus mexico page 19"], "question": "Is HANGUP CUSTOMER annotation obsolete/incorrect? Do not teach it as an approved first action." },
+    { "id": "pause_scope", "references": ["mexico pages 9/10", "juan_patricia page 14"], "question": "Which teams use Tech, and is personal pause RR or REST? Does the 20-minute rule apply only to Mexico?" },
+    { "id": "clean_media", "references": ["Customer form screenshots", "juan_patricia page 6"], "question": "Prepare sanitized training-only screenshots before distribution; credentials and real customer records cannot be copied into public bundles or Git." }
+  ],
+  "backend_gap": {
+    "gate": "AGENTS.md requires stopping when a missing backend/security contract is discovered; no frontend/localStorage bypass",
+    "verified_current_support": ["Canonical training_content, audiences/topics/positions", "Canonical training_learners with separate Staff and Agent links", "training_attempts/training_results", "Published content revision identities/version_number", "Private training-media bucket and Staff-authorized question_audio function"],
+    "missing": [
+      "training_content currently permits lesson/quiz/assessment only; no simulation content type or step configuration contract",
+      "No authorized simulation start/resume/step-action/hint/replay/completion contracts; no server-evaluated step mistakes/hints or simple branching state",
+      "Existing revision RPC copies questions/topics, not simulation steps; needs immutable published steps and version-pinned attempts",
+      "Existing private media function accepts question audio only, authenticates Staff JWT, and rejects Agent cookies; screenshot upload/read needs explicit scoped Staff/Agent contracts",
+      "Existing Agent API allowlist exposes GO operations only; requires bounded simulation operations derived from trusted session identity, never browser-provided Agent identity"
+    ],
+    "proposed_next_checkpoint": {
+      "scope": "Create and certify the smallest additive simulation contract locally, then apply only reviewed migrations/functions to Pulse Preview",
+      "reuse": "Existing Training content, learners, audience and version identity; simulation step/state/result extension rather than a second learner/RBAC ecosystem",
+      "authorization": "Existing scoped Studio permissions for authoring; published targeted content for learners; own attempts only; no new roles or broad table grants",
+      "media": "Private screenshot objects, membership-bound short signed URLs, safe image MIME/size verification and authorized references; no public bucket",
+      "scoring_proposal_not_policy": "Server computes max(0, 100 - 5 * mistakes - 10 * hints); time is reported, not a score penalty; formula subject to implementation review",
+      "production": "Unchanged; main merge and Production release remain forbidden until visual review",
+      "not_implemented": true
+    }
+  },
+  "delivery": {
+    "engine": "Not implemented at this gate",
+    "studio_builder": "Not implemented at this gate",
+    "academy_player": "Not implemented at this gate",
+    "preview_url": null,
+    "production_review": "NO-GO: no simulator deployment or engine certification yet",
+    "excluded": ["Live calls", "Microphone capture", "Transcription", "AI rebuttal scoring", "Vici integration", "Dashboard analytics", "Real user changes", "Production database/config changes"]
+  }
+}
