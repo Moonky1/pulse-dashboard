@@ -24,6 +24,7 @@ export function SimulationBuilder() {
   const [revision, setRevision] = useState(0), [screenUrl, setScreenUrl] = useState(null), [screenError, setScreenError] = useState(null)
   const [preview, setPreview] = useState(false), [previewIndex, setPreviewIndex] = useState(0), [previewFeedback, setPreviewFeedback] = useState('')
   const [confirmation, setConfirmation] = useState(null)
+  const [scenario, setScenario] = useState(null)
   const lock = useRef(false), savedDestination = useRef(null), previewDialog = useRef(null)
   const base = details ? draftFromDetails(details) : blank()
   const basicsDirty = !same(base, draft), stepsDirty = !same(serializableSteps(steps), savedSteps)
@@ -49,7 +50,8 @@ export function SimulationBuilder() {
         contentId ? simulationRpc('get_simulation_authoring', { requested_content_id: contentId }) : Promise.resolve({ data: null }),
       ])
       if (!active) return
-      setOptions(filters.data); setDetails(read.data); setDraft(read.data ? draftFromDetails(read.data) : blank())
+      setOptions(filters.data); setDetails(read.data); setDraft(read.data ? { ...draftFromDetails(read.data), positionIds: [] } : blank())
+      setScenario(simulation.data?.scenario || null)
       const next = serializableSteps(simulation.data?.steps || [])
       setSteps(next); setSavedSteps(next); setIndex(0); setError(filters.error || read.error || simulation.error); setLoading(false)
     }, 0)
@@ -80,10 +82,10 @@ export function SimulationBuilder() {
     const invalid = draft.title.trim().length < 2 || draft.title.length > 180 ? 'Add a title (2–180 characters).' : !draft.topicIds.length ? 'Choose at least one topic.' : validateAudience(draft, options, capabilities)
     if (invalid) { setError({ message: invalid }); return }
     await run(async () => {
-      const result = contentId ? await updateTrainingContentDraft(supabase, contentId, { ...draft, expectedUpdatedAt: details.content.updated_at }) : await simulationRpc('create_simulation_draft', {
+      const result = contentId ? await updateTrainingContentDraft(supabase, contentId, { ...draft, positionIds: [], expectedUpdatedAt: details.content.updated_at }) : await simulationRpc('create_simulation_draft', {
         requested_title: draft.title.trim(), requested_description: draft.description.trim() || null, requested_language: draft.language,
         requested_topic_ids: draft.topicIds, requested_scope_type: draft.scopeType, requested_campaign_id: draft.campaignId || null,
-        requested_team_id: draft.teamId || null, requested_position_ids: draft.positionIds,
+        requested_team_id: draft.teamId || null, requested_position_ids: [],
       }, { authoring: true })
       if (result.error) { setError(result.error); return }
       const id = contentId || result.data.id
@@ -101,7 +103,7 @@ export function SimulationBuilder() {
         if (!media.has(step.screen)) media.set(step.screen, await uploadSimulationScreen(contentId, await viciScreenFile(step.screen)))
         step.screen_media_id = media.get(step.screen)
       }
-      setSteps(next); setIndex(0); setNotice('Synthetic screens uploaded privately. Review the steps, then Save steps. ' + TEMPLATE_INFO[name].scope + '.')
+      setSteps(next); setScenario(name); setIndex(0); setNotice('Synthetic screens uploaded privately. Review the steps, then Save steps. ' + TEMPLATE_INFO[name].scope + '.')
     })
   }
   async function upload(file) {
@@ -109,11 +111,14 @@ export function SimulationBuilder() {
     await run(async () => { const id = await uploadSimulationScreen(contentId, await cleanRaster(file)); setSteps(s => s.map((step, i) => i === index ? { ...step, screen_media_id: id, screen: undefined } : step)); setNotice('Private screen uploaded. Save steps to bind it to this step.') })
   }
   async function saveSteps() {
+    if (!scenario) { setError({ message: 'Choose a source-backed Callback or Asia template first.' }); return }
     const invalid = validateSimulationSteps(steps)
     if (invalid) { setError({ message: invalid }); return }
     await run(async () => {
       const result = await simulationRpc('replace_simulation_steps', { requested_content_id: contentId, requested_steps: serializableSteps(steps), expected_updated_at: details.content.updated_at }, { authoring: true })
       if (result.error) { setError(result.error); return }
+      const configured = await simulationRpc('configure_vici_challenge', { requested_content_id: contentId, requested_scenario: scenario, expected_updated_at: result.data.updated_at }, { authoring: true })
+      if (configured.error) { setError(configured.error); setRevision(v => v + 1); return }
       const [read, simulation] = await Promise.all([getTrainingContentAuthoringDetails(supabase, contentId), simulationRpc('get_simulation_authoring', { requested_content_id: contentId })])
       if (read.error || simulation.error) { setError({ message: 'Saved, but reload is required before continuing.' }); return }
       setDetails(read.data); const next = serializableSteps(simulation.data.steps); setSteps(next); setSavedSteps(next); setNotice('All steps saved. Review the draft preview before publishing.')
@@ -136,7 +141,7 @@ export function SimulationBuilder() {
   }
   if (access.state !== 'allowed') return <StudioAccessState access={access} />
   return <StudioShell confirmLeave={confirmLeave}><div className="sim-builder">
-    <Link to="/studio" className="sim-back">← Studio library</Link>
+    <Link to="/academy/simulations" className="sim-back">← Open VICI Simulator · manual dialer</Link>
     <header className="sim-heading"><div><p className="sim-eyebrow">Interactive training · Studio</p><h1>{draft.title || 'Build a simulation'}</h1><p>Familiar screens. Clear steps. Safe practice.</p></div><span className="studio-status">{details?.content.status || 'New draft'} · {busy ? 'Saving…' : dirty ? 'Unsaved changes' : 'Saved'}</span></header>
     {loading ? <p role="status">Opening the simulation…</p> : <>
       {error && <div className="sim-error" role="alert"><p>{error.message}</p><button onClick={() => { if (confirmLeave()) setRevision(v => v + 1) }}>Reload saved version</button></div>}
@@ -147,13 +152,13 @@ export function SimulationBuilder() {
         <label>Description<textarea rows={2} value={draft.description} maxLength={2000} onChange={e => changeDraft({ description: e.target.value })} /></label>
         <label>Language<select aria-label="Language" value={draft.language} disabled={!!contentId && Number(details?.content.version_number) > 1} onChange={e => changeDraft({ language: e.target.value })}><option value="en">English</option><option value="es">Español</option></select></label>
         <fieldset className="studio-checks"><legend>Topics</legend>{options?.topics?.map(t => <label key={t.id}><input type="checkbox" checked={draft.topicIds.includes(t.id)} onChange={e => changeDraft({ topicIds: e.target.checked ? [...draft.topicIds, t.id] : draft.topicIds.filter(id => id !== t.id) })} />{t.name}</label>)}</fieldset>
-        <label>Audience<select aria-label="Audience" value={draft.scopeType} onChange={e => changeDraft({ scopeType: e.target.value, campaignId: '', teamId: '' })}><option value="">Choose an audience</option>{capabilities?.can_create_global && <option value="global">Everyone</option>}{!!options?.campaigns?.length && <option value="campaign">A campaign</option>}{!!options?.teams?.length && <option value="team">A team</option>}</select></label>
-        {draft.scopeType === 'team' && <label>Team<select aria-label="Team" value={draft.teamId} onChange={e => changeDraft({ teamId: e.target.value })}><option value="">Choose a team</option>{options?.teams?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
+        <p className="sim-hint">Learners: Openers only. Staff prepares and reviews. Callback uses the Mexico source; Spanish routing uses the Asia source.</p>
+        <label>Audience<select aria-label="Audience" value={draft.scopeType} onChange={e => changeDraft({ scopeType: e.target.value, campaignId: '', teamId: '' })}><option value="">Choose an audience</option>{!!options?.teams?.length && <option value="team">An Opener team</option>}</select></label>
+        {draft.scopeType === 'team' && <label>Team<select aria-label="Team" value={draft.teamId} onChange={e => changeDraft({ teamId: e.target.value })}><option value="">Choose a team</option>{options?.teams?.filter(t => ['asia_team_a','asia_team_b','mexico_team_group_a','mexico_team_group_b'].includes(t.code)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
         {draft.scopeType === 'campaign' && <label>Campaign<select aria-label="Campaign" value={draft.campaignId} onChange={e => changeDraft({ campaignId: e.target.value })}><option value="">Choose a campaign</option>{options?.campaigns?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
-        <fieldset className="studio-checks"><legend>Positions · optional</legend>{options?.positions?.map(p => <label key={p.id}><input type="checkbox" checked={draft.positionIds.includes(p.id)} onChange={e => changeDraft({ positionIds: e.target.checked ? [...draft.positionIds, p.id] : draft.positionIds.filter(id => id !== p.id) })} />{p.name}</label>)}</fieldset>
       </fieldset><button className="sim-primary" disabled={!editable || (!!contentId && !basicsDirty)} onClick={() => void saveBasics()}>{contentId ? 'Save basics & audience' : 'Save draft & add steps'} →</button></details>
       {contentId && <>
-        <section className="sim-panel"><div className="sim-section-title"><div><h2>Workflow</h2><p>Keep team-specific processes separate. Nothing here places a real call.</p></div><button disabled={busy || !steps.length} onClick={() => { const invalid = validateSimulationSteps(steps); if (invalid) { setError({ message: invalid }); return } setPreviewIndex(0); setPreviewFeedback(''); setPreview(true) }}>Draft preview →</button></div>
+        <section className="sim-panel"><div className="sim-section-title"><div><h2>Workflow</h2><p>Keep team-specific processes separate. Nothing here places a real call.</p>{scenario && <Link to={'/academy/simulations/preview/'+scenario}>Open manual dialer reference →</Link>}</div><button disabled={busy || !steps.length} onClick={() => { const invalid = validateSimulationSteps(steps); if (invalid) { setError({ message: invalid }); return } setPreviewIndex(0); setPreviewFeedback(''); setPreview(true) }}>Draft preview →</button></div>
           {editable && <div className="sim-template-picker"><button onClick={() => void loadTemplate('callback')}>Use Callback template</button><button onClick={() => void loadTemplate('asia')}>Use Asia Spanish-routing template</button><button disabled={steps.length >= 100} onClick={() => { setSteps(s => [...s, { ...simulationTemplate('callback')[0], screen: undefined, screen_media_id: null, prompt: '', source_note: '' }]); setIndex(steps.length) }}>+ Add step</button></div>}
           {editable && <p className="sim-caption">Templates use sanitized reconstructions. The Asia Presets panel is approximate; confirm its layout before final visual approval.</p>}
           {!!steps.length && <div className="sim-step-layout"><nav className="sim-step-list" aria-label="Simulation steps">{steps.map((step, i) => <button key={i} aria-current={index === i ? 'step' : undefined} onClick={() => setIndex(i)}><span>{String(i + 1).padStart(2, '0')}</span><div>{step.prompt || 'New step'}<small>{step.interaction}</small></div></button>)}</nav><section>

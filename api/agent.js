@@ -77,6 +77,13 @@ function requestArgs(action, args = {}) {
       ? ['agent_start_simulation', { requested_content_id: args.contentId, requested_restart: args.restart }] : null
     case 'simulationAttempt': return uuid(args.attemptId)
       ? ['agent_get_simulation_attempt', { requested_attempt_id: args.attemptId }] : null
+    case 'simulationAssign': return ['agent_assign_vici_challenge', {}]
+    case 'simulationCommand': return uuid(args.attemptId) && uuid(args.requestId)
+      && Number.isInteger(args.version) && args.version >= 1 && args.version <= 20000
+      && ['hint','callbacks','break','lunch','logo','manual','fast','log','dial','preview','back','presets','language','local','disposition','blind','hangup','leave','both','park'].includes(args.command)
+      && (args.value == null || typeof args.value === 'string' && args.value.length <= 100)
+      ? ['agent_submit_vici_command', { requested_attempt_id: args.attemptId, expected_state_version: args.version,
+        requested_request_id: args.requestId, requested_command: args.command, requested_value: args.value ?? null }] : null
     case 'simulationAction': return uuid(args.attemptId) && uuid(args.stepId) && uuid(args.requestId)
       && Number.isInteger(args.version) && args.version >= 1 && args.version <= 20000
       && ['hint', 'answer'].includes(args.kind) && (args.value == null || JSON.stringify(args.value).length <= 2000)

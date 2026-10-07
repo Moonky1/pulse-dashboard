@@ -2,7 +2,7 @@ import { region } from './viciScreens.js'
 
 const base = (interaction, prompt, screen, expected, regions = [], options = [], hint = '') => ({
   interaction, prompt, screen, screen_media_id: null, expected_value: expected, regions, options, hint,
-  success_feedback: 'That is the correct next step.', retry_feedback: 'Not quite. Read the instruction and try again.', branches: {}, source_note: '',
+  success_feedback: 'Dialer updated.', retry_feedback: 'Not quite. Try another dialer action or request a hint.', branches: {}, source_note: '',
 })
 export const TEMPLATE_INFO = {
   callback: { title: 'Callback · manual dial', description: 'Practice the Callback sequence, from the paused screen to Dial Now. Synthetic number only; no live call.', source: 'Copia de Diseño sin título.pdf · pages 30–31', scope: 'Mexico source · confirm the intended team before publishing' },

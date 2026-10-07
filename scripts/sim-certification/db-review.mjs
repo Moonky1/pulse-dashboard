@@ -35,8 +35,8 @@ sql('create extension if not exists pgcrypto with schema extensions;')
 let assertions = 0
 // Historical TRAIN-1 fixture files predate private-media lifecycle constraints.
 // Use the current GO-4/Agent regression fixtures against the current baseline.
-const tests = readdirSync('supabase/tests').filter(name => name === '20261006000500_simulation_foundation_test.sql' || process.argv.includes('--regressions') && /^(20261003000100|2026100400\d{4})_/.test(name)).sort()
-if (!tests.includes('20261006000500_simulation_foundation_test.sql')) throw new Error('SIM contract test is required')
+const tests = readdirSync('supabase/tests').filter(name => !process.argv.includes('--tests-only') && name === '20261006000500_simulation_foundation_test.sql' || process.argv.includes('--regressions') && /^(20261003000100|2026100400\d{4})_/.test(name)).sort()
+if (!process.argv.includes('--tests-only') && !tests.includes('20261006000500_simulation_foundation_test.sql')) throw new Error('SIM contract test is required')
 for (const name of tests) {
   const output = sql(readFileSync('supabase/tests/' + name, 'utf8'))
   if (/not ok|Looks like you failed/i.test(output)) throw new Error(name + '\n' + output)
@@ -45,4 +45,11 @@ for (const name of tests) {
   assertions += count
   console.log(name + ': ' + count + ' assertions passed')
 }
+if (!process.argv.includes('--tests-only')) sql(readFileSync('supabase/migrations/20261007000100_vici_opener_challenges.sql', 'utf8'))
+const viciOutput = sql(readFileSync('supabase/tests/20261007000100_vici_opener_challenges_test.sql', 'utf8'))
+if (/not ok|Looks like you failed/i.test(viciOutput)) throw new Error(viciOutput)
+const viciCount = (viciOutput.match(/\bok \d+ -/g) || []).length
+if (!viciCount) throw new Error('Manual VICI contract assertions are required')
+assertions += viciCount
+console.log('Manual VICI: ' + viciCount + ' assertions passed')
 console.log(JSON.stringify({ database, assertions, leftovers: sql('select (select count(*) from public.users) staff,(select count(*) from public.agents) agents,(select count(*) from public.training_content) content,(select count(*) from public.training_attempts) attempts;').trim() }))

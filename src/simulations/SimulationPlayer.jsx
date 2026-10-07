@@ -4,6 +4,7 @@ import { AcademyHeader } from '../go/AcademyHeader.jsx'
 import { useGoIdentity } from '../go-product/useGoIdentity.js'
 import { simulationRequest, simulationScreenUrl } from './simulationApi.js'
 import { SimulationStage } from './SimulationStage.jsx'
+import { ViciDialer } from './ViciDialer.jsx'
 import './simulations.css'
 
 export function SimulationPlayer() {
@@ -62,11 +63,27 @@ export function SimulationPlayer() {
       setFeedback(null); setSnapshot(result.data); setSearch({ attempt: result.data.attempt_id }, { replace: true })
     } finally { lock.current = false; setBusy(false) }
   }
+  async function command(name, value = null) {
+    if (lock.current || !snapshot?.challenge || snapshot.status !== 'started') return
+    lock.current = true; setBusy(true); setError(null)
+    try {
+      const result = await simulationRequest(kind,'Command',{attemptId:snapshot.attempt_id,version:snapshot.state_version,requestId:crypto.randomUUID(),command:name,value})
+      if (result.error) { setError(result.error); return }
+      setSnapshot(result.data); setFeedback({text:result.data.feedback,correct:result.data.correct})
+    } finally { lock.current = false; setBusy(false) }
+  }
   return <div className="sim-shell pulse-product-surface"><AcademyHeader /><main className="sim-main sim-main--player">
     <div className="sim-topline"><Link to="/academy/simulations">← Simulations · progress is saved</Link><span className="sim-safety">Simulation only · No live calls</span></div>
     {!snapshot && !error && <p role="status">Opening your saved practice…</p>}
     {error && <div className="sim-error" role="alert"><p>{error.message}</p><button onClick={() => { setFeedback(null); setReload(v => v + 1) }} disabled={busy}>Reload saved progress</button></div>}
-    {snapshot && (snapshot.status === 'completed' ? <section className="sim-result"><p className="sim-eyebrow">Practice complete</p><h1 ref={heading} tabIndex={-1}>You completed the workflow.</h1><div className="sim-result-score">{snapshot.result?.score_percent}<small>/ 100</small></div><p>A training result, not a personnel evaluation. Nothing was dialed.</p><div className="sim-result-stats"><div><strong>{snapshot.completed_steps}</strong><span>Steps completed</span></div><div><strong>{snapshot.mistakes}</strong><span>Mistakes</span></div><div><strong>{snapshot.hints}</strong><span>Hints used</span></div><div><strong>{snapshot.duration_seconds}s</strong><span>Practice time</span></div></div><p className="sim-score-note">100 − 5 per mistake − 10 per hint. Time does not lower your score.</p><div className="sim-result-actions"><button className="sim-primary" disabled={busy} onClick={() => void restart()}>Practice again →</button><Link to="/academy/simulations">View history</Link></div></section> : snapshot.step ? <>
+    {snapshot && (snapshot.status === 'completed' ? <section className="sim-result"><p className="sim-eyebrow">Practice complete</p><h1 ref={heading} tabIndex={-1}>You completed the workflow.</h1><div className="sim-result-score">{snapshot.result?.score_percent}<small>/ 100</small></div><p>A training result, not a personnel evaluation. Nothing was dialed.</p><div className="sim-result-stats"><div><strong>{snapshot.completed_steps}</strong><span>Steps completed</span></div><div><strong>{snapshot.mistakes}</strong><span>Mistakes</span></div><div><strong>{snapshot.hints}</strong><span>Hints used</span></div><div><strong>{snapshot.duration_seconds}s</strong><span>Practice time</span></div></div><p className="sim-score-note">100 − 5 per mistake − 10 per hint. Time does not lower your score.</p><div className="sim-result-actions"><button className="sim-primary" disabled={busy} onClick={() => void restart()}>Practice again →</button><Link to="/academy/simulations">View history</Link></div></section> : snapshot.challenge ? <>
+      <div className="sim-player-title"><div><p className="sim-eyebrow">{snapshot.title} · {snapshot.challenge.selection_mode === 'assigned' ? 'Pulse challenge' : 'Your practice'}</p><h1 ref={heading} tabIndex={-1}>{snapshot.challenge.goal}</h1></div></div>
+      <div className="sim-player-metrics"><span>{snapshot.mistakes} mistakes · {snapshot.hints} hints · Saved progress</span><button disabled={busy} onClick={() => void command('hint')}>Show hint</button><button disabled={busy} onClick={() => setConfirmRestart(true)}>Restart</button></div>
+      {feedback?.text && <p className={'sim-feedback'+(feedback.correct === false ? ' sim-feedback--retry' : '')} role="status">{feedback.text}</p>}
+      {snapshot.hint && <p className="sim-hint" role="note">Hint: {snapshot.hint}</p>}
+      <ViciDialer key={snapshot.attempt_id} dialer={snapshot.dialer} busy={busy} onCommand={(name,value) => void command(name,value)} />
+      <p className="sim-caption">Use the actual controls to complete the challenge. Synthetic data only; no live calls. Asia Presets is reconstructed pending an exact reference screenshot.</p>
+    </> : snapshot.step ? <>
       <div className="sim-player-title"><div><p className="sim-eyebrow">{snapshot.title} · Version {snapshot.version_number}</p><h1 ref={heading} tabIndex={-1}>{snapshot.step.prompt}</h1></div><span>Step {snapshot.position} / {snapshot.step_count}</span></div>
       <progress value={snapshot.completed_steps} max={snapshot.step_count} aria-label="Completed steps" />
       <div className="sim-player-metrics"><span>{snapshot.mistakes} mistakes · {snapshot.hints} hints</span><button disabled={busy} onClick={() => void act('hint')}>Show hint</button><button disabled={busy} onClick={() => setConfirmRestart(true)}>Restart</button></div>

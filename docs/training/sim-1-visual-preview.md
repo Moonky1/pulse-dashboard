@@ -82,3 +82,42 @@ fidelity. Other team-specific dialer workflows and disposition rules require
 source/policy validation before publication. Unused private media management,
 additional scenarios and Dashboard/performance integration are later work.
 Production requires its own review and explicit checkpoint authorization.
+
+## Opener/manual challenge correction (2026-10-07)
+
+The user clarified that this product is a manual VICIdial simulator for Openers,
+not a generic multi-position step quiz. The separately authorized Preview-only
+migration `20261007000100_vici_opener_challenges` was applied and registered in
+Pulse Preview. No Production changes are authorized by this checkpoint.
+
+- Active canonical Opener team/unit/campaign membership is rechecked for every
+  learner call. Staff cannot start or act on official simulation attempts;
+  existing Staff history remains read-only. Staff has explicitly unrecorded
+  reference previews under `/academy/simulations/preview/{callback|asia}`.
+- `/academy/simulations` is now the VICI Simulator entry, not the Studio creation
+  form. Openers choose a published practice or receive a server-selected eligible
+  challenge. No optional position list is displayed in Studio.
+- A constant goal replaces automatic current-step instructions. Real buttons,
+  menus and the editable Phone Number field drive server-validated commands.
+  Callback Phone Number + Dial Now is atomic; no separate Confirm Entry button.
+  Asia uses Presets → Spanish → Local Closer → Spanish Speaker, never SPXFER.
+  Hints are optional and charged once per internal step. This does not assess
+  spoken customer advice; there is no microphone, call or speech scoring.
+- Source-backed publication is limited to the canonical Mexico Opener teams for
+  Callback and Asia Opener teams for Spanish routing. These are initial cases,
+  not proof of a universal regional policy. New cases require reviewed sources.
+- Legacy direct actions cannot bypass manual challenges. Browser callers cannot
+  access the internal foundation helpers. Attempts/results/revision pinning and
+  previous result retention reuse the reviewed canonical Training engine.
+- Fresh local certification: 247 foundation/GO/Agent assertions before upgrade,
+  then 42 current manual-contract assertions (289 total). Five real-browser flows
+  pass using isolated Auth/REST/private tmpfs Storage and synthetic identities,
+  at 1440/820/390px without page overflow or console errors. Test services and the
+  owned successful database were disposed. Release-check, lint and build pass.
+- Cloud read verification confirms the contract exists, trusted server commands
+  are allowed, browser Agent execution/internal bypass are denied. No cloud
+  destructive tests or real-person fixture changes were run.
+
+Next: review the manual learner interaction in this branch Preview, supply an
+exact sanitized Asia Presets capture, then source and certify further workflows.
+Production and Dashboard integration remain separate checkpoints.

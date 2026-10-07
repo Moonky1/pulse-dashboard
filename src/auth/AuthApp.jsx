@@ -35,6 +35,7 @@ const StudioBuilder = lazy(() => import('../studio/StudioBuilder.jsx').then((mod
 const SimulationBuilder = lazy(() => import('../simulations/SimulationBuilder.jsx').then(module => ({ default: module.SimulationBuilder })))
 const SimulationCatalog = lazy(() => import('../simulations/SimulationCatalog.jsx').then(module => ({ default: module.SimulationCatalog })))
 const SimulationPlayer = lazy(() => import('../simulations/SimulationPlayer.jsx').then(module => ({ default: module.SimulationPlayer })))
+const ViciPreview = lazy(() => import('../simulations/ViciPreview.jsx').then(module => ({ default: module.ViciPreview })))
 const StaffPublicProfilePage = lazy(() => import('./screens/StaffPublicProfilePage.jsx').then((module) => ({ default: module.StaffPublicProfilePage })))
 const VerifyEmailPage = lazy(() => import('./screens/VerifyEmailPage.jsx').then((module) => ({ default: module.VerifyEmailPage })))
 const WorkspacePage = lazy(() => import('./screens/WorkspacePage.jsx').then((module) => ({ default: module.WorkspacePage })))
@@ -86,6 +87,7 @@ export function AuthApp() {
         <Route path="/staff/:profileId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StaffPublicProfilePage /></RouteGate>} />
         <Route path="/academy" element={<GoPlayerGate><AcademyPage /></GoPlayerGate>} />
         <Route path="/academy/simulations" element={<GoPlayerGate><SimulationCatalog /></GoPlayerGate>} />
+        <Route path="/academy/simulations/preview/:scenario" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><ViciPreview /></RouteGate>} />
         <Route path="/academy/simulations/:contentId" element={<GoPlayerGate><SimulationPlayer /></GoPlayerGate>} />
         <Route path="/academy/:id" element={<GoPlayerGate><AcademyDetailPage /></GoPlayerGate>} />
         <Route path="/go" element={<GoLandingPage />} />
