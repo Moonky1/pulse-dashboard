@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFileSync } from 'node:fs'
 import { createAgentHandler } from '../../api/agent.js'
 import { VICI_CASES, newViciPreview, previewViciCommand } from '../../src/simulations/viciModel.js'
+
+test('the customer phone remains visible as scenario data without procedural hints', () => {
+  const dialer=readFileSync(new URL('../../src/simulations/ViciDialer.jsx',import.meta.url),'utf8')
+  assert.match(dialer,/\[\['Phone','2025550147'\]\]/)
+  assert.doesNotMatch(dialer,/Show hint|challenge\.goal/)
+})
 
 test('Dial Now starts a live call; only Hangup, disposition and Submit complete it', () => {
   let state = newViciPreview('callback')

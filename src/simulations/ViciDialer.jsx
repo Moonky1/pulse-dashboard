@@ -5,6 +5,7 @@ const rows = [
   [['First Name','Taylor'],['Last Name','Example']],
   [['Address','100 Training Ave'],['City','Example City'],['State','DC']],
   [['Zip','20001'],['Email','']], [['Vehicle Year',''],['Vehicle Make',''],['Vehicle Model','']],
+  [['Phone','2025550147']],
   [['Odometer',''],['VIN','']], [['IP Address',''],['Vendor Lead Code','']],
   [['Loan Balance','25000'],['Loan Monthly Cost','400'],['Loan Term Length','72']],
   [['Origination Date','01/01/2025'],['APR Estimate','7.5']], [['Date of Birth','01/01/1990'],['Close Date','']],
