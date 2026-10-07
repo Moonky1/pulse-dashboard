@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AcademyHeader } from './AcademyHeader.jsx'
-import PulseBrandTitle from '../components/PulseBrandTitle'
 import {
   scripts,
   objections,
@@ -231,25 +230,7 @@ export default function GoLearn() {
   return (
     <div className="ac-page pulse-product-surface">
       <AcademyHeader />
-      <div className="ac-language-bar"><div className="ac-lang-switch" aria-label="Academy language">
-          {LANG_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              className={lang === option.id ? 'active' : ''}
-              onClick={() => changeLang(option.id)}
-            >
-              <span>{option.icon}</span>
-              {option.short}
-            </button>
-          ))}
-      </div></div>
-
-      <main className="ac-home">
-<section className="ac-hero">
-  <PulseBrandTitle suffix="ACADEMY" />
-  <p>{copy.subtitle}</p>
-  <button className="sim-primary" onClick={() => navigate('/academy/simulations')}>{lang === 'es' ? 'Simulaciones · Practica en el dialer →' : 'Simulations · Practice in the dialer →'}</button>
-</section>
+      <main className="ac-home ac-home--search">
 
         <section className="ac-wiki-grid">
           <aside className="ac-sidebar">
@@ -270,7 +251,9 @@ export default function GoLearn() {
 
           <section className="ac-main-panel">
             <div className="ac-search-card">
-              <span className="ac-kicker">{copy.searchLabel}</span>
+              <div className="ac-search-heading"><span className="ac-kicker">{copy.searchLabel}</span>
+                <div className="ac-lang-switch" aria-label="Academy language">{LANG_OPTIONS.map(option => <button key={option.id} className={lang === option.id ? 'active' : ''} onClick={() => changeLang(option.id)}>{option.short}</button>)}</div>
+              </div>
 
               <div className="ac-search-box">
                 <span>⌕</span>
@@ -278,6 +261,7 @@ export default function GoLearn() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={copy.searchPlaceholder}
+                  aria-label={copy.searchLabel}
                   autoComplete="off"
                 />
 
@@ -288,6 +272,7 @@ export default function GoLearn() {
                 )}
               </div>
 
+              <button className="sim-primary ac-vici-entry" onClick={() => navigate('/academy/simulations')}>Vici Simulator →</button>
             </div>
 
             {query.trim() ? (

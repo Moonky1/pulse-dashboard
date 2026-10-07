@@ -105,15 +105,19 @@ div.sim-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50
 .sim-confirm p { color: #b7adc9; line-height: 1.7; }
 .sim-confirm > div { display: flex; justify-content: flex-end; gap: 12px; }
 .vici-scroll { overflow: auto; max-width: 100%; border: 1px solid #6c6c75; border-radius: 12px; background: #ededed; }
-.vici-dialer { position: relative; min-width: 1060px; min-height: 650px; padding: 12px 10px; box-sizing: border-box; color: #171717; background: #ededed; font: 14px Arial, sans-serif; }
+.vici-dialer { position: relative; min-width: 1260px; min-height: 650px; padding: 12px 10px; box-sizing: border-box; color: #171717; background: #ededed; font: 14px Arial, sans-serif; }
 .vici-session { display: flex; justify-content: space-between; font-size: 12px; padding-bottom: 8px; }
 .vici-header { display: flex; align-items: center; gap: 8px; padding-bottom: 5px; border-bottom: 1px solid #bbb; }
 .sim-shell .vici-logo { border: 0; background: transparent; color: #343434; font: bold 29px Arial, sans-serif; padding: 1px 5px 1px 0; border-radius: 0; }
 .vici-logo span { color: #2929ba; font-size: 26px; letter-spacing: -10px; margin-right: 13px; }
 .vici-logo b { font-weight: 500; color: #777; }
 .sim-shell .vici-tab { color: #111; font: bold 18px Arial, sans-serif; padding: 3px 8px; border-radius: 0; background: #ddd; border: 0; }
-.vici-paused, .vici-live { margin-left: auto; padding: 3px 12px; color: #111; font-size: 18px; background: #fff345; }
+.vici-live, .vici-no-call { margin-left: auto; padding: 3px 12px; color: #888; font-size: 18px; }
 .vici-live { background: #26ef2e; }
+.sim-shell .vici-agent-status { border: 1px solid #aaa; border-radius: 0; color: #111; padding: 2px 8px; font: bold 18px Arial,sans-serif; }
+.sim-shell .vici-agent-status.vici-paused { background: #fff345; }
+.sim-shell .vici-agent-status.vici-active { background: #26ef2e; }
+.sim-shell .vici-agent-status:disabled { opacity: 1; }
 .vici-status { display: flex; justify-content: space-between; padding: 6px 2px; font-size: 14px; border-bottom: 1px solid #aaa; }
 .vici-status span { font-size: 11px; color: #555; }
 .vici-body { display: flex; position: relative; min-height: 405px; }
@@ -131,7 +135,13 @@ div.sim-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50
 .vici-field-row { display: flex; align-items: center; justify-content: center; gap: 25px; }
 .vici-fields label { display: flex; align-items: center; justify-content: flex-end; gap: 7px; font: bold 14px Georgia,serif; white-space: nowrap; }
 .vici-dialer input, .vici-dialer select { color: #171717; background: #fff; border: 1px solid #999; border-radius: 0; height: 24px; padding: 1px 4px; box-sizing: border-box; font: 14px Arial,sans-serif; min-width: 0; }
-.vici-fields input { width: 145px; }
+.vici-fields input { width: 125px; }
+.vici-webphone { flex: 0 0 185px; margin-left: 8px; background: linear-gradient(#6a8198,#334b61); border: 5px solid #333; align-self: flex-start; padding: 10px; margin-top: 14px; }
+.vici-webphone h3 { background: #fafafa; margin: 0 0 12px; font-size: 24px; color: #365e83; }
+.vici-webphone h3 span { font-weight: normal; font-style: italic; }
+.vici-webphone > div { color: #ddd; background: #567693; border: 2px solid #263b50; padding: 8px; }
+.vici-webphone input { margin: 10px 0; width: 100%; }
+.vici-phone-led { color: #38eb47; float: right; }
 .vici-pause-menu { position: absolute; right: 8px; top: 20px; z-index: 2; width: 420px; background: #c7f6c5; border: 1px solid #648863; padding: 15px; box-shadow: 2px 3px 6px #0004; box-sizing: border-box; }
 .vici-pause-menu strong { display: block; margin-bottom: 18px; }
 .vici-pause-menu .vici-button { margin: 0 15px 8px 0; }
@@ -140,12 +150,31 @@ div.sim-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50
 .vici-transfer input { width: 170px; }
 .vici-bottom { display: flex; gap: 40px; align-items: center; justify-content: center; padding-top: 16px; }
 .vici-bottom small { font-size: 10px; }
-.vici-manual { position: absolute; inset: 130px 14% 55px 18%; z-index: 3; padding: 20px 32px; background: #caffc7; border: 1px solid #729773; box-shadow: 3px 4px 12px #0006; }
-.vici-manual h2 { margin: 0 0 20px; font-size: 20px; }
+.vici-manual { min-height: 535px; padding: 20px 32px; background: #caffc7; }
+.vici-manual h2 { margin: 0 0 20px; font-size: 20px; text-align: center; }
 .vici-manual p { font-size: 12px; }
 .vici-manual label { display: flex; justify-content: flex-start; align-items: center; gap: 20px; margin: 24px 0; font-weight: bold; }
 .vici-manual input { width: 245px; height: 28px; }
-.vici-manual > div { display: flex; justify-content: space-between; margin-top: 35px; }
+.vici-manual input[type="checkbox"] { width: 18px; height: 18px; }
+.vici-manual-override { margin-top: 105px; }
+.vici-green-actions { display: flex; justify-content: center; gap: 100px; margin-top: 35px; }
+.vici-dispositions { background: #caffc7; min-height: 550px; padding: 20px; }
+.vici-dispositions header { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 25px; font-size: 20px; }
+.vici-dispositions header > span { width: 100%; margin: 20px 0 12px; font-weight: bold; }
+.vici-disposition-columns { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.vici-disposition-columns > div { min-height: 340px; background: #a3ff98; padding: 6px; }
+.sim-shell .vici-link { display: block; border: 0; border-radius: 0; color: #51217f; background: none; padding: 7px 0; text-decoration: underline; font: bold 18px Arial,sans-serif; text-align: left; box-shadow: none; }
+.sim-shell .vici-link[aria-pressed="true"] { background: #77dc6f; outline: 2px solid #377333; }
+.vici-dialer { color-scheme: light; }
+.sim-shell .vici-link:hover, .sim-shell .vici-link:focus-visible { background: #a3ee98; color: #51217f; }
+.vici-green-actions .vici-button { background: none; border: 0; box-shadow: none; color: #51217f; text-decoration: underline; font-weight: bold; }
+.vici-dispositions footer { display: flex; flex-direction: column; align-items: center; margin-top: 25px; gap: 8px; font-weight: bold; }
+.vici-dispositions input[type="checkbox"] { width: 18px; height: 18px; vertical-align: middle; }
+.sim-toolbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.sim-toolbar h1 { margin: 0 auto 0 0; font-size: 26px; letter-spacing: -.03em; }
+.sim-toolbar label { font-size: 13px; display: flex; align-items: center; gap: 10px; }
+.sim-toolbar select { max-width: min(380px,70vw); background: #14141f; color: #f4f3fc; border: 1px solid #45405c; padding: 11px; border-radius: 9px; font: inherit; }
+.sim-manage { font-size: 12px; }
 .vici-presets { position: absolute; right: 26px; top: 235px; z-index: 3; background: #dfd7fa; border: 1px solid #8573ae; width: 345px; padding: 20px; box-shadow: 2px 3px 10px #0005; }
 .vici-presets h2 { font-size: 16px; margin-top: 0; }
 .vici-presets label { display: block; margin-bottom: 20px; font-weight: bold; }

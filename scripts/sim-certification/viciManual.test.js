@@ -3,23 +3,43 @@ import test from 'node:test'
 import { createAgentHandler } from '../../api/agent.js'
 import { VICI_CASES, newViciPreview, previewViciCommand } from '../../src/simulations/viciModel.js'
 
-test('manual Callback uses the actual Dial Now command with typed digits, not Confirm Entry', () => {
+test('Dial Now starts a live call; only Hangup, disposition and Submit complete it', () => {
   let state = newViciPreview('callback')
-  for (const command of ['callbacks','logo','manual']) state = previewViciCommand(state,command)
+  assert.equal(state.dialer.pause_menu,false)
+  state = previewViciCommand(state,'manual')
   assert.equal(state.dialer.phase,'manual')
   state = previewViciCommand(state,'dial','202-555-0147')
   assert.equal(state.status,'started'); assert.equal(state.mistakes,1)
   state = previewViciCommand(state,'dial','2025550147')
-  assert.equal(state.status,'completed'); assert.equal(state.state_version,6)
+  assert.equal(state.status,'started'); assert.equal(state.dialer.phase,'live')
+  state = previewViciCommand(state,'hangup')
+  assert.equal(state.dialer.phase,'call_disposition')
+  state = previewViciCommand(state,'callDisposition','NI')
+  assert.equal(state.status,'started')
+  state = previewViciCommand(state,'submit','active')
+  assert.equal(state.status,'completed'); assert.equal(state.dialer.is_paused,false)
 })
-test('Asia is a manual routing task with a constant goal and optional, charged-once hints', () => {
-  let state = newViciPreview('asia'), goal = state.challenge.goal
-  state = previewViciCommand(state,'hint'); state = previewViciCommand(state,'hint')
-  assert.equal(state.hints,1)
+test('pause codes open only from unpaused status; checked Submit returns paused', () => {
+  let state = newViciPreview('callback')
+  state = previewViciCommand(state,'status')
+  assert.equal(state.dialer.is_paused,false); assert.equal(state.dialer.pause_menu,false)
+  state = previewViciCommand(state,'status')
+  assert.equal(state.dialer.pause_menu,true)
+  state = previewViciCommand(state,'callbacks')
+  assert.equal(state.dialer.is_paused,true); assert.equal(state.mistakes,0)
+  for (const [cmd,value] of [['manual'],['dial','2025550147'],['hangup'],['callDisposition','A'],['submit','paused']]) state=previewViciCommand(state,cmd,value)
+  assert.equal(state.status,'completed'); assert.equal(state.dialer.is_paused,true)
+})
+test('Asia rejects SPXFER routing, then requires XFER and Submit with no goal or hints', () => {
+  let state = newViciPreview('asia')
+  assert.equal(state.challenge.goal,undefined); assert.equal(state.hints,undefined)
   for (const [command,value] of [['presets'],['language','Spanish'],['local'],['disposition','SPXFER']]) state = previewViciCommand(state,command,value)
   assert.equal(state.status,'started'); assert.equal(state.mistakes,1)
   state = previewViciCommand(state,'disposition','SPANISH SPEAKER')
-  assert.equal(state.status,'completed'); assert.equal(state.challenge.goal,goal)
+  assert.equal(state.status,'started'); assert.equal(state.dialer.phase,'call_disposition')
+  state=previewViciCommand(state,'callDisposition','XFER')
+  state=previewViciCommand(state,'submit','active')
+  assert.equal(state.status,'completed')
   assert.equal(Object.keys(VICI_CASES).length,2)
 })
 test('manual command and assignment derive identity only from the verified cookie', async () => {

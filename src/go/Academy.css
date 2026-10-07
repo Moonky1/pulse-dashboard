@@ -208,6 +208,9 @@
   margin: 0 auto;
   padding: 70px 0 110px;
 }
+.ac-home--search { padding-top: 28px; }
+.ac-search-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.ac-search-card .ac-vici-entry { margin-top: 18px; font-size: 14px; cursor: pointer; }
 
 .ac-hero {
   text-align: center;

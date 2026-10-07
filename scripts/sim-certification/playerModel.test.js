@@ -3,17 +3,18 @@ import test from 'node:test'
 import { simulationTemplate, serializableSteps, validateSimulationSteps } from '../../src/simulations/templates.js'
 import { viciScreenSvg } from '../../src/simulations/viciScreens.js'
 
-test('Callback is six source-backed steps, paused acknowledgement first and manual dial final', () => {
+test('Manual call is seven source-backed steps, with result only after disposition Submit', () => {
   const steps = simulationTemplate('callback')
-  assert.equal(steps.length, 6); assert.equal(steps[0].interaction, 'info'); assert.equal(steps[5].expected_value, 'dial')
-  assert.equal(steps[4].expected_value, '2025550147'); assert.equal(steps[4].interaction, 'text')
+  assert.equal(steps.length, 7); assert.equal(steps[0].interaction, 'info')
+  assert.deepEqual(steps.map(s => s.expected_value), [null,'manual','2025550147','dial','hangup','NI','submit'])
+  assert.equal(steps[2].interaction, 'text')
   assert.equal(validateSimulationSteps(steps, { screens: false }), null)
   assert.match(validateSimulationSteps(steps), /upload a private screen/)
-  for (const step of steps) assert.match(step.source_note, /30–31/)
+  for (const step of steps) assert.match(step.source_note, /eS428vg7gxA/)
 })
 test('Asia routing is not SPXFER, not a generic Latin process', () => {
   const steps = simulationTemplate('asia')
-  assert.deepEqual(steps.map(s => s.expected_value), [null, 'presets', 'Spanish', 'local', 'SPANISH SPEAKER'])
+  assert.deepEqual(steps.map(s => s.expected_value), [null, 'presets', 'Spanish', 'local', 'SPANISH SPEAKER','XFER','submit'])
   assert.equal(steps[4].options.includes('SPXFER'), true); assert.equal(validateSimulationSteps(steps, { screens: false }), null)
   assert.equal(steps.every(s => s.source_note.includes('Asia')), true)
 })

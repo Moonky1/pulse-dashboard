@@ -9,6 +9,7 @@ const button = (x, y, w, label, color = '#ddd') => rect(x, y, w, 25, color, '#99
 const link = (x, y, label) => text(x, y, label, 17, '#39218a', 'bold', 'text-decoration="underline"')
 export const region = (id, label, x, y, w, h) => ({ id, label, x: x / SCREEN_WIDTH, y: y / SCREEN_HEIGHT, w: w / SCREEN_WIDTH, h: h / SCREEN_HEIGHT })
 export function viciScreenSvg(mode = 'paused') {
+  if (mode === 'call_disposition') return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760"><g font-family="Arial,sans-serif">${rect(0,0,1200,760,'#caffc7')}${text(340,40,'DISPOSITION CALL : 2025550147',21,'#111','bold')}${text(30,100,'CALL DISPOSITION',20,'#111','bold')}${[0,1,2].map(index=>rect(30+index*390,125,380,500,'#a3ff98')).join('')}${[['A - Answering Machine','BLANK - No Info on File','CALLBK - Call Back','DAIR - Dead Air','DC - Disconnected Number'],['DNC - DO NOT CALL','LANG - Language Barrier','NI - Not Interested','SPXFER - Spanish Xfer'],['WRGNUM - Wrong Number','WRGVEH - Wrong Vehicle Info','XFER - Call Transferred']].map((column,index)=>column.map((label,row)=>link(40+index*390,155+row*43,label)).join('')).join('')}${text(440,660,'PAUSE AGENT DIALING',18,'#111','bold')}${link(555,700,'SUBMIT')}</g></svg>`
   const manual = mode === 'manual' || mode === 'manual-filled', live = !manual && !['paused', 'callback', 'home'].includes(mode)
   let svg = rect(0, 0, 1200, 760, '#ededed', '#bbb')
   if (manual) {

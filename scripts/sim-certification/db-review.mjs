@@ -45,11 +45,20 @@ for (const name of tests) {
   assertions += count
   console.log(name + ': ' + count + ' assertions passed')
 }
-if (!process.argv.includes('--tests-only')) sql(readFileSync('supabase/migrations/20261007000100_vici_opener_challenges.sql', 'utf8'))
+if (!process.argv.includes('--tests-only')) {
+sql(readFileSync('supabase/migrations/20261007000100_vici_opener_challenges.sql', 'utf8'))
 const viciOutput = sql(readFileSync('supabase/tests/20261007000100_vici_opener_challenges_test.sql', 'utf8'))
 if (/not ok|Looks like you failed/i.test(viciOutput)) throw new Error(viciOutput)
 const viciCount = (viciOutput.match(/\bok \d+ -/g) || []).length
 if (!viciCount) throw new Error('Manual VICI contract assertions are required')
 assertions += viciCount
 console.log('Manual VICI: ' + viciCount + ' assertions passed')
+sql(readFileSync('supabase/migrations/20261007000200_vici_call_lifecycle.sql', 'utf8'))
+}
+const lifecycleOutput=sql(readFileSync('supabase/tests/20261007000200_vici_call_lifecycle_test.sql','utf8'))
+if (/not ok|Looks like you failed/i.test(lifecycleOutput)) throw new Error(lifecycleOutput)
+const lifecycleCount=(lifecycleOutput.match(/\bok \d+ -/g)||[]).length
+if (!lifecycleCount) throw new Error('Lifecycle assertions required')
+assertions+=lifecycleCount
+console.log('VICI call lifecycle: '+lifecycleCount+' assertions passed')
 console.log(JSON.stringify({ database, assertions, leftovers: sql('select (select count(*) from public.users) staff,(select count(*) from public.agents) agents,(select count(*) from public.training_content) content,(select count(*) from public.training_attempts) attempts;').trim() }))
