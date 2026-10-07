@@ -24,4 +24,8 @@ test('public sitemap excludes every account, invitation and private product page
   const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url),'utf8'))
   const rule=config.headers.find(rule=>rule.headers.some(h=>h.key==='X-Robots-Tag'))
   assert.ok(rule)
+  const build=readFileSync(new URL('../../vite.config.js',import.meta.url),'utf8')
+  assert.match(build,/publicDir: false/)
+  assert.match(build,/\['robots\.txt', 'sitemap\.xml'\]/)
+  assert.match(build,/this\.emitFile/)
 })
