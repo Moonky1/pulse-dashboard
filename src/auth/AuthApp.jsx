@@ -5,6 +5,7 @@ import { AUTH_STATES, routeForAuthState } from './authState.js'
 import { AGENT_SIGN_IN_PATH, AUTH_ENTRY_PATH, STAFF_FORGOT_PASSWORD_PATH, STAFF_REGISTER_PATH } from './authRoutes.js'
 import { useAuth } from './AuthProvider.jsx'
 import { PageLoadBoundary } from './components/PageLoadBoundary.jsx'
+import { SearchMetadata } from './components/SearchMetadata.jsx'
 import { useGoIdentity } from '../go-product/useGoIdentity.js'
 const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').then((module) => ({ default: module.AccountStatePage })))
 const AccountSettingsPage = lazy(() => import('./screens/AccountSettingsPage.jsx').then((module) => ({ default: module.AccountSettingsPage })))
@@ -63,6 +64,7 @@ function GoPlayerGate({ children }) {
 export function AuthApp() {
   return (
     <BrowserRouter>
+      <SearchMetadata />
       <PageLoadBoundary><Suspense fallback={<AccountStatePage kind="loading" />}><Routes>
         <Route path="/" element={<PublicHomePage />} />
         <Route path="/privacy" element={<PublicLegalPage kind="privacy" />} />

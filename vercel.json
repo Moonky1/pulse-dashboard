@@ -4,6 +4,12 @@
       "auth-9c-lifecycle-source-normalization": false
     }
   },
+  "headers": [
+    { "source": "/((?!privacy$|terms$).+)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] },
+    { "source": "/", "headers": [{ "key": "Link", "value": "<https://www.pulse-kk.com/>; rel=\"canonical\"" }] },
+    { "source": "/privacy", "headers": [{ "key": "Link", "value": "<https://www.pulse-kk.com/privacy>; rel=\"canonical\"" }] },
+    { "source": "/terms", "headers": [{ "key": "Link", "value": "<https://www.pulse-kk.com/terms>; rel=\"canonical\"" }] }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
