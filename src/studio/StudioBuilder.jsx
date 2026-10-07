@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button.jsx'
 import { supabase } from '../utils/supabase.js'
 import { deleteTrainingQuestionAudio } from '../training/trainingMediaApi.js'
@@ -170,6 +170,7 @@ export function StudioBuilder() {
     })
   }
   if (access.state !== 'allowed') return <StudioAccessState access={access} />
+  if (details?.content.content_type === 'simulation') return <Navigate to={'/studio/simulations/' + contentId} replace />
   const topics = options?.topics?.filter(t => draft.topicIds.includes(t.id)) || []
   return <StudioShell confirmLeave={confirmLeave}>
     <div className="studio-builder-heading"><Link to="/studio">← Your library</Link><span className="studio-status">{isUpdateDraft ? `Editing update · Version ${versions.version_number}` : details?.content.status === 'published' ? `Published · Version ${versions?.version_number ?? 1}` : details?.content.status || 'New item'}</span></div>

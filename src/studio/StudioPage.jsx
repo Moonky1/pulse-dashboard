@@ -8,6 +8,7 @@ import { useStudioAccess } from './hooks/useStudioAccess.js'
 import { StudioShell, StudioAccessState } from './StudioShell.jsx'
 import { audienceLabel, languageLabel, typeLabel } from './builderModel.js'
 import './studio.css'
+import '../simulations/simulations.css'
 
 const PAGE_SIZE = 24
 export function StudioPage() {
@@ -56,12 +57,12 @@ export function StudioPage() {
     if (result.error) { setActionError(result.error.message); return }
     const updateId = result.data?.[0]?.id
     if (!updateId) { setActionError('Studio could not open this update.'); return }
-    navigate('/studio/content/' + updateId)
+    navigate((item.content_type === 'simulation' ? '/studio/simulations/' : '/studio/content/') + updateId)
   }
   return <StudioShell>
     <section className="studio-heading">
       <div><p className="studio-eyebrow">Make room for a good idea</p><h1>Pulse Studio</h1><p>Create training your teams will actually use</p></div>
-      {access.capabilities?.can_create && <Link className="studio-primary" to="/studio/create">+ Create</Link>}
+      {access.capabilities?.can_create && <div className="sim-template-picker"><Link className="studio-primary" to="/studio/simulations/create">+ Simulation</Link><Link className="studio-primary" to="/studio/create">+ Create</Link></div>}
     </section>
     <section className="studio-library">
       <div className="studio-library-bar">
@@ -85,9 +86,9 @@ export function StudioPage() {
       <div className="studio-grid" aria-busy={catalog.loading}>
         {!catalog.loading && !catalog.error && catalog.items.map(item => <article className="studio-card" key={item.id}>
           <div className="studio-card__meta"><span>{typeLabel(item.content_type)}</span><span>{languageLabel(item.language)}</span></div>
-          <h2>{item.can_open ? <Link to={'/studio/content/' + item.id}>{item.title}</Link> : item.title}</h2>
+          <h2>{item.can_open ? <Link to={(item.content_type === 'simulation' ? '/studio/simulations/' : '/studio/content/') + item.id}>{item.title}</Link> : item.title}</h2>
           <p>{item.description || 'A little knowledge goes a long way.'}</p>
-          {item.can_open && <div className="studio-card__actions"><Link to={'/studio/content/' + item.id}>Open</Link>{item.can_edit_update && <Button variant="secondary" loading={editing === item.id} disabled={editing !== null} onClick={() => void editPublished(item)}>Edit</Button>}</div>}
+          {item.can_open && <div className="studio-card__actions"><Link to={(item.content_type === 'simulation' ? '/studio/simulations/' : '/studio/content/') + item.id}>Open</Link>{item.can_edit_update && <Button variant="secondary" loading={editing === item.id} disabled={editing !== null} onClick={() => void editPublished(item)}>Edit</Button>}</div>}
           <div className="studio-card__topics">{item.topics?.map(t => <span key={t.id}>{t.name}</span>)}</div>
           <footer><span>{audienceLabel(item.audience)}</span><span className={'studio-status studio-status--' + item.status}>{item.status}</span></footer>
           <small>Updated {new Date(item.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</small>

@@ -21,6 +21,7 @@ import {
   trimText,
 } from './academyData'
 import './Academy.css'
+import '../simulations/simulations.css'
 
 const FEATURED_IDS = ['script', 'qa-invalid', 'product', 'dispositions']
 
@@ -247,6 +248,7 @@ export default function GoLearn() {
 <section className="ac-hero">
   <PulseBrandTitle suffix="ACADEMY" />
   <p>{copy.subtitle}</p>
+  <button className="sim-primary" onClick={() => navigate('/academy/simulations')}>{lang === 'es' ? 'Simulaciones · Practica en el dialer →' : 'Simulations · Practice in the dialer →'}</button>
 </section>
 
         <section className="ac-wiki-grid">

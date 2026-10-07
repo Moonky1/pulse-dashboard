@@ -185,6 +185,20 @@ export function createAgentHandler(makeClient = serviceClient) {
       })
     }
     if (action === 'profile') return send(response, 200, { data: profile, error: null })
+    if (action === 'simulationScreen') {
+      const args = body.args
+      if (!args || !UUID.test(args.contentId || '') || !UUID.test(args.mediaId || '') || !UUID.test(args.attemptId || '')) return fail(response, 400, 'Screen unavailable.', 'invalid_request')
+      const { data: allowed, error: permissionError } = await client.rpc('agent_can_read_simulation_screen', {
+        requested_agent_id: profile.agent_id, requested_content_id: args.contentId,
+        requested_media_id: args.mediaId, requested_attempt_id: args.attemptId,
+      })
+      if (permissionError || allowed !== true) return fail(response, 403, 'Screen unavailable.', 'access_denied')
+      const { data: media, error: mediaError } = await client.from('training_media').select('storage_bucket,storage_path,status,media_kind,mime_type').eq('id', args.mediaId).maybeSingle()
+      if (mediaError || !media || media.status !== 'ready' || media.media_kind !== 'simulation_screen' || media.storage_bucket !== 'training-media' || media.mime_type !== 'image/png') return fail(response, 404, 'Screen unavailable.', 'not_found')
+      const { data: signed, error: signedError } = await client.storage.from('training-media').createSignedUrl(media.storage_path, 120)
+      if (signedError || !signed?.signedUrl) return fail(response, 503, 'Screen unavailable.', 'unavailable')
+      return send(response, 200, { data: { url: signed.signedUrl }, error: null })
+    }
     const operation = requestArgs(action, body.args)
     if (!operation) return fail(response, 400, 'Check the details and try again.', 'invalid_request')
     const [name, args] = operation

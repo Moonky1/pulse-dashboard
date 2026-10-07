@@ -1,4 +1,4 @@
-export const typeLabel = value => ({ quiz: 'Quiz', assessment: 'Assessment' }[value] || 'Lesson')
+export const typeLabel = value => ({ quiz: 'Quiz', assessment: 'Assessment', simulation: 'Simulation' }[value] || 'Lesson')
 export const languageLabel = value => value === 'es' ? 'Español' : 'English'
 export const audienceLabel = audience => audience?.scope_type === 'campaign' ? audience.campaign_name : audience?.scope_type === 'team' ? audience.team_name : 'Everyone'
 export const emptyDraft = () => ({ contentType: '', title: '', description: '', language: 'en', topicIds: [], scopeType: '', campaignId: '', teamId: '', positionIds: [] })

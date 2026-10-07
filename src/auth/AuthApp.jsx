@@ -32,6 +32,9 @@ const ResetPasswordPage = lazy(() => import('./screens/ResetPasswordPage.jsx').t
 const SignInPage = lazy(() => import('./screens/SignInPage.jsx').then((module) => ({ default: module.SignInPage })))
 const StudioPage = lazy(() => import('../studio/StudioPage.jsx').then((module) => ({ default: module.StudioPage })))
 const StudioBuilder = lazy(() => import('../studio/StudioBuilder.jsx').then((module) => ({ default: module.StudioBuilder })))
+const SimulationBuilder = lazy(() => import('../simulations/SimulationBuilder.jsx').then(module => ({ default: module.SimulationBuilder })))
+const SimulationCatalog = lazy(() => import('../simulations/SimulationCatalog.jsx').then(module => ({ default: module.SimulationCatalog })))
+const SimulationPlayer = lazy(() => import('../simulations/SimulationPlayer.jsx').then(module => ({ default: module.SimulationPlayer })))
 const StaffPublicProfilePage = lazy(() => import('./screens/StaffPublicProfilePage.jsx').then((module) => ({ default: module.StaffPublicProfilePage })))
 const VerifyEmailPage = lazy(() => import('./screens/VerifyEmailPage.jsx').then((module) => ({ default: module.VerifyEmailPage })))
 const WorkspacePage = lazy(() => import('./screens/WorkspacePage.jsx').then((module) => ({ default: module.WorkspacePage })))
@@ -82,6 +85,8 @@ export function AuthApp() {
         <Route path="/settings/profile" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AccountSettingsPage section="profile" /></RouteGate>} />
         <Route path="/staff/:profileId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StaffPublicProfilePage /></RouteGate>} />
         <Route path="/academy" element={<GoPlayerGate><AcademyPage /></GoPlayerGate>} />
+        <Route path="/academy/simulations" element={<GoPlayerGate><SimulationCatalog /></GoPlayerGate>} />
+        <Route path="/academy/simulations/:contentId" element={<GoPlayerGate><SimulationPlayer /></GoPlayerGate>} />
         <Route path="/academy/:id" element={<GoPlayerGate><AcademyDetailPage /></GoPlayerGate>} />
         <Route path="/go" element={<GoLandingPage />} />
         <Route path="/go/host" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><GoHostSelection /></RouteGate>} />
@@ -92,6 +97,8 @@ export function AuthApp() {
         <Route path="/go/progress" element={<GoPlayerGate><GoPlayerProgress /></GoPlayerGate>} />
         <Route path="/profile/:agentCode" element={<GoPlayerGate><AgentProfilePage /></GoPlayerGate>} />
         <Route path="/studio" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioPage /></RouteGate>} />
+        <Route path="/studio/simulations/create" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><SimulationBuilder /></RouteGate>} />
+        <Route path="/studio/simulations/:contentId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><SimulationBuilder /></RouteGate>} />
         <Route path="/studio/create" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />
         <Route path="/studio/content/:contentId" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><StudioBuilder /></RouteGate>} />
         <Route path="/admin/*" element={<RouteGate allow={[AUTH_STATES.ACTIVE]}><AdminArea /></RouteGate>} />

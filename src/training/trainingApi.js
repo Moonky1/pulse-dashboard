@@ -6,7 +6,7 @@ import { validateQuestions } from './questionValidation.js'
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const LANGUAGES = new Set(['en', 'es'])
 const SCOPES = new Set(['global', 'campaign', 'team'])
-const CONTENT_TYPES = new Set(['lesson', 'quiz', 'assessment'])
+const CONTENT_TYPES = new Set(['lesson', 'quiz', 'assessment', 'simulation'])
 
 function publicError(code, message) {
   return { code, message }

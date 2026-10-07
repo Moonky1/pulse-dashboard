@@ -71,6 +71,10 @@ unexpected pre-existing result validator.
 
 ## Next checkpoint (within the already authorized Preview work)
 
+This section records the plan at the original backend checkpoint. The subsequent
+visual implementation and its verification are tracked in
+[SIM-1 visual Preview](sim-1-visual-preview.md); it does not authorize Production.
+
 Implement the Studio visual builder/draft preview, validated private raster
 upload/signed-URL transport, and Academy Simulations catalog/player. Produce
 sanitized training screens with synthetic values, author complete Callback and

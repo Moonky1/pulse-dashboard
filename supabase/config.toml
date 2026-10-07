@@ -9,6 +9,9 @@ verify_jwt = true
 [functions.pulse-training-media]
 verify_jwt = true
 
+[functions.pulse-simulation-media]
+verify_jwt = true
+
 [functions.pulse-staff-removal]
 verify_jwt = true
 
