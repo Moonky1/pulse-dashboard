@@ -204,7 +204,7 @@ div.sim-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50
 .sim-shell .vici-link { display: block; border: 0; border-radius: 0; color: #51217f; background: none; padding: 7px 0; text-decoration: underline; font: bold 18px Arial,sans-serif; text-align: left; box-shadow: none; }
 .sim-shell .vici-link[aria-pressed="true"] { background: #77dc6f; outline: 2px solid #377333; }
 .vici-dialer { color-scheme: light; }
-.sim-shell .vici-link:hover, .sim-shell .vici-link:focus-visible { background: #a3ee98; color: #51217f; }
+.sim-shell button.vici-link:hover:not(:disabled), .sim-shell button.vici-link:focus-visible { background: #a3ee98; color: #51217f; }
 .vici-green-actions .vici-button { background: none; border: 0; box-shadow: none; color: #51217f; text-decoration: underline; font-weight: bold; }
 .vici-dispositions footer { display: flex; flex-direction: column; align-items: center; margin-top: 25px; gap: 8px; font-weight: bold; }
 .vici-dispositions input[type="checkbox"] { width: 18px; height: 18px; vertical-align: middle; }
@@ -243,3 +243,4 @@ div.sim-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50
   .sim-challenge-choice { flex-direction: column; align-items: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) { .sim-shell *, .sim-builder * { scroll-behavior: auto; } }
+.vici-dispositions--random { min-width: 900px; color-scheme: light; color: #000; font-family: Arial, sans-serif; }

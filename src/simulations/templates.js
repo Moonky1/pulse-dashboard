@@ -2,6 +2,15 @@ import { region } from './viciScreens.js'
 import { DISPOSITION_CODES } from './viciModel.js'
 import { VICI_PRACTICES } from './viciPractice.js'
 
+export const RANDOM_DISPOSITIONS = ['A','DAIR','DNC','NI','CALLBK','SPANIS']
+export function randomDispositionTemplate(disposition='A') {
+  if(!RANDOM_DISPOSITIONS.includes(disposition))throw new Error('Choose a reviewed disposition')
+  return [base('info','Listen to the customer call.','call_disposition',null,[],[],'Private authoring notes.'),
+    base('select','Choose the call disposition.','call_disposition',disposition,[region('call_disposition','Call disposition',30,130,1100,400)],RANDOM_DISPOSITIONS,'Private authoring notes.'),
+    base('click','Submit the selected disposition.','call_disposition','submit',[region('submit','SUBMIT',550,670,110,30)],[],'Private authoring notes.')]
+    .map(step=>({...step,source_note:'Authorized private call clip and reviewed training policy.'}))
+}
+
 export const OPENER_TEAMS = ['asia_team_a','asia_team_b','philippines','mexico_team_group_a','mexico_team_group_b','colombia','central_america','venezuela']
 export function practiceTemplate(name) {
   const practice=VICI_PRACTICES[name]

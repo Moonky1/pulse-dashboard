@@ -47,7 +47,7 @@ export function assertTrainingAuthoringDestination(destination, options) {
 }
 
 export const AUTHORING_MUTATIONS = new Set([
-  'create_simulation_draft', 'replace_simulation_steps', 'configure_vici_challenge', 'configure_vici_practice', 'configure_vici_audio',
+  'create_simulation_draft', 'replace_simulation_steps', 'configure_vici_challenge', 'configure_vici_practice', 'configure_vici_audio', 'configure_vici_random_case',
   'create_training_content_draft', 'update_training_content_draft',
   'replace_training_questions', 'replace_training_questions_v2', 'replace_training_questions_v3',
   'publish_training_content', 'archive_training_content',

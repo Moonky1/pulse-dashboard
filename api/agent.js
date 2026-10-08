@@ -78,6 +78,7 @@ function requestArgs(action, args = {}) {
     case 'simulationAttempt': return uuid(args.attemptId)
       ? ['agent_get_simulation_attempt', { requested_attempt_id: args.attemptId }] : null
     case 'simulationAssign': return ['agent_assign_vici_challenge', {}]
+    case 'simulationRandom': return ['agent_assign_vici_random', {}]
     case 'simulationCommand': return uuid(args.attemptId) && uuid(args.requestId)
       && Number.isInteger(args.version) && args.version >= 1 && args.version <= 20000
       && ['hint','callbacks','break','lunch','manage','restroom','tech','resume','closePause','logo','manual','fast','log','dial','preview','back','presets','language','local','disposition','blind','hangup','leave','both','park','status','callDisposition','submit','transfer','connect','newCustomer','agentLogin','phoneLogin','campaignLogin','advisorIntro'].includes(args.command)

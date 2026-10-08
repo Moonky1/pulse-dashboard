@@ -14,10 +14,10 @@ function OpenerCatalog({ kind }) {
   const navigate = useNavigate(), [assigning,setAssigning] = useState(false)
   const [state, setState] = useState({ loading: true, items: [], history: [], error: null })
   const [revision, setRevision] = useState(0), [offset, setOffset] = useState(0)
-  async function assign() {
+  async function assign(action='Assign') {
     if (assigning) return
     setAssigning(true)
-    const result = await simulationRequest(kind,'Assign')
+    const result = await simulationRequest(kind,action)
     setAssigning(false)
     if (result.error) { setState(s => ({...s,error:result.error})); return }
     navigate('/academy/simulations/'+result.data.content_id+'?attempt='+result.data.attempt_id)
@@ -35,6 +35,7 @@ function OpenerCatalog({ kind }) {
     <Link className="sim-back" to="/academy">← Academy</Link>
     <header className="sim-heading"><h1>Vici Simulator</h1><button onClick={() => setRevision(v => v + 1)}>Refresh</button></header>
     {state.loading ? <p role="status">Loading your simulations…</p> : state.error ? <p role="alert" className="sim-error">{state.error.message}</p> : <>
+      <div className="sim-toolbar"><button className="sim-primary" disabled={assigning} onClick={()=>void assign('Random')}>Random Dispositions →</button></div>
       {!!state.items.length && <div className="sim-toolbar"><label>Practice<select defaultValue="" onChange={e => navigate('/academy/simulations/'+e.target.value)}><option value="" disabled>Choose a practice</option>{state.items.map(item => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label><button className="sim-primary" disabled={assigning} onClick={() => void assign()}>{assigning ? 'Choosing…' : 'Let Pulse choose →'}</button></div>}
       {!state.items.length && <section className="sim-empty"><h2>Your next practice starts here</h2><p>No published simulations are available for your team yet. Staff can prepare them in Studio.</p>{kind === 'staff' && <Link to="/studio">Open Studio →</Link>}</section>}
       <div className="sim-catalog">{state.items.map(item => <article key={item.id}><span className="sim-mini-dialer" aria-hidden="true">▦</span><div className="sim-card-meta"><span>{item.language === 'es' ? 'Español' : 'English'}</span><span>{item.step_count} steps · v{item.version_number}</span></div><h2>{item.title}</h2><p>{item.description}</p><footer>{item.latest_attempt?.score_percent != null && <span>Last result: {item.latest_attempt.score_percent}%</span>}<Link className="sim-primary" to={'/academy/simulations/' + item.id}>{item.latest_attempt?.status === 'started' ? 'Resume' : 'Start practice'} →</Link></footer></article>)}</div>

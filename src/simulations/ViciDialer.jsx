@@ -49,3 +49,13 @@ export function ViciDialer({ dialer, busy, onCommand, onLocalAction = () => {} }
     </>}
   </section></div>
 }
+
+export function ViciDispositionPanel({ selected,phone,busy,onSelect,onSubmit }) {
+  const [pause,setPause]=useState(false)
+  return <div className="vici-scroll" tabIndex={0} aria-label="Call dispositions" onClickCapture={e=>{const button=e.target.closest?.('button');if(button&&!button.disabled)playViciClick()}}>
+    <section className="vici-dispositions vici-dispositions--random" aria-label="Call disposition panel"><header><strong>DISPOSITION CALL : {phone}</strong><span>CALL DISPOSITION</span></header>
+      <div className="vici-disposition-columns">{CALL_DISPOSITIONS.map((column,index)=><div key={index}>{column.map(([code,label])=><button type="button" className="vici-link" key={code} aria-pressed={selected===code} disabled={busy} onClick={()=>onSelect(code)}>{code} - {label}{code==='CALLBK'?' *':''}</button>)}</div>)}</div>
+      <footer><label><input type="checkbox" checked={pause} disabled={busy} onChange={e=>{playViciClick();setPause(e.target.checked)}}/> PAUSE AGENT DIALING</label><button type="button" className="vici-link" disabled={busy||!selected} onClick={()=>onSubmit(pause?'paused':'active')}>SUBMIT</button></footer>
+    </section>
+  </div>
+}

@@ -13,8 +13,10 @@ export const VICI_PRACTICES = {
 export const VICI_CUSTOMER_NAMES = ['Taylor Example','Jordan Sample','Morgan Demo','Casey Practice','Riley Example','Avery Sample','Cameron Demo','Jamie Practice','Drew Example','Alex Sample','Quinn Demo','Robin Practice','Skyler Example','Reese Sample','Parker Demo','Rowan Practice','Blake Example','Finley Sample','Emerson Demo','Sage Practice']
 export function viciCustomer(index = 0) {
   const n = ((index % 20) + 20) % 20, [first,last] = VICI_CUSTOMER_NAMES[n].split(' ')
-  return { index:n, first, last, address:`${100+n} Training Ave`, city:'Example City', state:'DC', zip:'20001', email:'', year:String(2017+n%7), make:['Toyota','Honda','Ford','Chevrolet'][n%4], model:['Camry','Civic','Escape','Malibu'][n%4], phone:String(2025550147+n), odometer:String(30000+n*2500), vin:'', balance:String(25000+n*350), payment:[4,9,14,19].includes(n)?'':String(400+n*7), term:'72', origination:[2,7,12,17].includes(n)?'':`01/${String(1+n).padStart(2,'0')}/2025`, apr:'7.5', birth:'01/01/1990', close:'' }
+  return { index:n, first, last, address:`${100+n} Training Ave`, city:'Example City', state:'DC', zip:'20001', email:'', year:'', make:'', model:'', phone:String(2025550147+n), odometer:'', vin:'', balance:String(25000+n*350), payment:[4,9,14,19].includes(n)?'':String(400+n*7), term:'72', origination:[2,7,12,17].includes(n)?'':`01/${String(1+n).padStart(2,'0')}/2025`, apr:'7.5', birth:'01/01/1990', close:'' }
 }
+// Audio identification belongs to Random, never a named/spoiler menu item.
+export const VICI_MENU = { random: { title:'Random Dispositions' }, ...Object.fromEntries(['english','spxfer','asia','callback','login','mock'].map(key=>[key,VICI_PRACTICES[key]])) }
 export function newViciPractice(scenario, customerIndex = 0) {
   const item = VICI_PRACTICES[scenario]
   if (!item) throw new Error('Practice unavailable')

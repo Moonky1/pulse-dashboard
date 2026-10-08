@@ -4,7 +4,7 @@ import { AcademyHeader } from '../go/AcademyHeader.jsx'
 import { useGoIdentity } from '../go-product/useGoIdentity.js'
 import { simulationRequest, simulationScreenUrl } from './simulationApi.js'
 import { SimulationStage } from './SimulationStage.jsx'
-import { ViciDialer } from './ViciDialer.jsx'
+import { ViciDialer, ViciDispositionPanel } from './ViciDialer.jsx'
 import { ViciActivity } from './ViciActivity.jsx'
 import { ViciAudio } from './ViciAudio.jsx'
 import { appendViciActivity } from './viciActivity.js'
@@ -20,6 +20,12 @@ export function SimulationPlayer() {
   const [confirmRestart, setConfirmRestart] = useState(false)
   const [actionLog,setActionLog] = useState({ attemptId: null, entries: [] })
   const entries = actionLog.attemptId === snapshot?.attempt_id ? actionLog.entries : []
+  const random=snapshot?.challenge?.workflow_version===4
+  async function nextRandom() {
+    if(lock.current)return
+    lock.current=true;setBusy(true);setError(null)
+    try{const result=await simulationRequest(kind,'Random');if(result.error){setError(result.error);return}setFeedback(null);setSnapshot(result.data);navigate('/academy/simulations/'+result.data.content_id+'?attempt='+result.data.attempt_id)}finally{lock.current=false;setBusy(false)}
+  }
   function recordAction(name,value,result) {
     setActionLog(current => ({ attemptId: snapshot.attempt_id, entries: appendViciActivity(current.attemptId === snapshot.attempt_id ? current.entries : [],name,value,result) }))
   }
@@ -93,13 +99,13 @@ export function SimulationPlayer() {
     {!snapshot && !error && <p role="status">Opening your saved practice…</p>}
     {error && <div className="sim-error" role="alert"><p>{error.message}</p><button onClick={() => { setFeedback(null); setReload(v => v + 1) }} disabled={busy}>Reload saved progress</button></div>}
     {snapshot && (snapshot.status === 'completed' && !snapshot.challenge ? <section className="sim-result"><p className="sim-eyebrow">Practice complete</p><h1 ref={heading} tabIndex={-1}>You completed the workflow.</h1><div className="sim-result-score">{snapshot.result?.score_percent}<small>/ 100</small></div><p>A training result, not a personnel evaluation. Nothing was dialed.</p><div className="sim-result-stats"><div><strong>{snapshot.completed_steps}</strong><span>Steps completed</span></div><div><strong>{snapshot.mistakes}</strong><span>Mistakes</span></div><div><strong>{snapshot.hints}</strong><span>Hints used</span></div><div><strong>{snapshot.duration_seconds}s</strong><span>Practice time</span></div></div><p className="sim-score-note">100 − 5 per mistake − 10 per hint. Time does not lower your score.</p><div className="sim-result-actions"><button className="sim-primary" disabled={busy} onClick={() => void restart()}>Practice again →</button><Link to="/academy/simulations">View history</Link></div></section> : snapshot.challenge ? <>
-      <div className="sim-toolbar"><h1 ref={heading} tabIndex={-1}>Vici Simulator</h1><label>Practice<select value={contentId} disabled={busy} onChange={e=>navigate('/academy/simulations/'+e.target.value)}>{!practices.some(item=>item.id===contentId)&&<option value={contentId}>{snapshot.title}</option>}{practices.map(item=><option value={item.id} key={item.id}>{item.title}</option>)}</select></label>{snapshot.challenge.workflow_version===3&&<button disabled={busy||!snapshot.dialer.can_change_customer} onClick={()=>void command('newCustomer')}>New customer</button>}<button disabled={busy} onClick={()=>setConfirmRestart(true)}>Restart</button></div>
+      <div className="sim-toolbar"><h1 ref={heading} tabIndex={-1}>Vici Simulator</h1><label>Practice<select value={random?'random':contentId} disabled={busy} onChange={e=>e.target.value==='random'?void nextRandom():navigate('/academy/simulations/'+e.target.value)}><option value="random">Random Dispositions</option>{!random&&!practices.some(item=>item.id===contentId)&&<option value={contentId}>{snapshot.title}</option>}{practices.filter(item=>!['dead_air','answering','mailbox_full'].includes(item.scenario)).map(item=><option value={item.id} key={item.id}>{item.title}</option>)}</select></label>{snapshot.challenge.workflow_version===3&&<button disabled={busy||!snapshot.dialer.can_change_customer} onClick={()=>void command('newCustomer')}>New customer</button>}{random?<button disabled={busy} onClick={()=>void nextRandom()}>Next call</button>:<button disabled={busy} onClick={()=>setConfirmRestart(true)}>Restart</button>}</div>
       {snapshot.situation&&<p className="sim-situation">{snapshot.situation}</p>}
       {snapshot.audio?.map(clip=><ViciAudio key={clip.media_id} kind={kind} contentId={contentId} attemptId={snapshot.attempt_id} clip={clip} startedAt={snapshot.dialer.intro_started_at} busy={busy} onIntro={()=>void command('advisorIntro')}/>)}
       {feedback?.text && <p className={'sim-feedback'+(feedback.correct===false?' sim-feedback--retry':'')} role="status">{feedback.text}</p>}
-      <ViciDialer key={snapshot.attempt_id} dialer={snapshot.dialer} busy={busy} onCommand={(name,value)=>void command(name,value)} onLocalAction={name=>recordAction(name)} />
+      {random?<ViciDispositionPanel key={snapshot.attempt_id} selected={snapshot.dialer.call_disposition} phone={snapshot.dialer.customer.phone} busy={busy||snapshot.status==='completed'} onSelect={code=>void command('callDisposition',code)} onSubmit={value=>void command('submit',value)}/>:<ViciDialer key={snapshot.attempt_id} dialer={snapshot.dialer} busy={busy} onCommand={(name,value)=>void command(name,value)} onLocalAction={name=>recordAction(name)} />}
       <ViciActivity entries={entries} />
-      {snapshot.status==='completed'&&<div className="sim-player-metrics"><span>Practice complete · {snapshot.result?.score_percent}%</span><button disabled={busy} onClick={()=>void restart()}>Practice again →</button><Link to="/academy/simulations">History</Link></div>}
+      {snapshot.status==='completed'&&<div className="sim-player-metrics"><span>Practice complete · {snapshot.result?.score_percent}%</span>{!random&&<button disabled={busy} onClick={()=>void restart()}>Practice again →</button>}<Link to="/academy/simulations">History</Link></div>}
     </> : snapshot.step ? <>
       <div className="sim-player-title"><div><p className="sim-eyebrow">{snapshot.title} · Version {snapshot.version_number}</p><h1 ref={heading} tabIndex={-1}>{snapshot.step.prompt}</h1></div><span>Step {snapshot.position} / {snapshot.step_count}</span></div>
       <progress value={snapshot.completed_steps} max={snapshot.step_count} aria-label="Completed steps" />

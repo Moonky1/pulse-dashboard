@@ -82,4 +82,11 @@ const audioCount=(audioOutput.match(/\bok \d+ -/g)||[]).length
 if (!audioCount) throw new Error('Private audio assertions required')
 assertions+=audioCount
 console.log('VICI private audio: '+audioCount+' assertions passed')
+if (!process.argv.includes('--tests-only') || process.argv.includes('--add-random')) sql(readFileSync('supabase/migrations/20261008000100_vici_random_dispositions.sql','utf8'))
+const randomOutput=sql(readFileSync('supabase/tests/20261008000100_vici_random_dispositions_test.sql','utf8'))
+if (/not ok|Looks like you failed/i.test(randomOutput)) throw new Error(randomOutput)
+const randomCount=(randomOutput.match(/\bok \d+ -/g)||[]).length
+if(!randomCount)throw new Error('Blind random assertions required')
+assertions+=randomCount
+console.log('VICI random dispositions: '+randomCount+' assertions passed')
 console.log(JSON.stringify({ database, assertions, leftovers: sql('select (select count(*) from public.users) staff,(select count(*) from public.agents) agents,(select count(*) from public.training_content) content,(select count(*) from public.training_attempts) attempts;').trim() }))

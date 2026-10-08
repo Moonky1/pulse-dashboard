@@ -10,7 +10,7 @@ import { resolveTrainingAuthoringDestination } from '../training/authoringDestin
 import { simulationRpc, simulationScreenUrl, uploadSimulationScreen, uploadSimulationAudio, cleanRaster } from './simulationApi.js'
 import { ViciAudioEditor } from './ViciAudioEditor.jsx'
 import { ViciAudio } from './ViciAudio.jsx'
-import { simulationTemplate, practiceTemplate, OPENER_TEAMS, serializableSteps, validateSimulationSteps } from './templates.js'
+import { simulationTemplate, practiceTemplate, randomDispositionTemplate, OPENER_TEAMS, serializableSteps, validateSimulationSteps } from './templates.js'
 import { viciScreenFile, viciScreenSvg } from './viciScreens.js'
 import { VICI_PRACTICES } from './viciPractice.js'
 import { SimulationStage } from './SimulationStage.jsx'
@@ -103,12 +103,12 @@ export function SimulationBuilder() {
   async function loadTemplate(name) {
     if (!editable || !contentId || (steps.length && !window.confirm('Replace these draft steps with this template? Saved published versions are not changed.'))) return
     await run(async () => {
-      const next = practiceTemplate(name), media = new Map()
+      const next = name==='random'?randomDispositionTemplate():practiceTemplate(name), media = new Map()
       for (const step of next) {
         if (!media.has(step.screen)) media.set(step.screen, await uploadSimulationScreen(contentId, await viciScreenFile(step.screen)))
         step.screen_media_id = media.get(step.screen)
       }
-      setSteps(next); setScenario(name); setProtocol(3); setIndex(0); setNotice('Practice loaded. Review its team and steps, then save.')
+      setSteps(next); setScenario(name); setProtocol(name==='random'?4:3); setIndex(0); setNotice('Practice loaded. Review its team and steps, then save.')
     })
   }
   async function upload(file) {
@@ -122,11 +122,11 @@ export function SimulationBuilder() {
     await run(async () => {
       const result = await simulationRpc('replace_simulation_steps', { requested_content_id: contentId, requested_steps: serializableSteps(steps), expected_updated_at: details.content.updated_at }, { authoring: true })
       if (result.error) { setError(result.error); return }
-      const configured = await simulationRpc(protocol===3?'configure_vici_practice':'configure_vici_challenge', { requested_content_id: contentId, requested_scenario: scenario, expected_updated_at: result.data.updated_at }, { authoring: true })
+      const configured = await simulationRpc(protocol===4?'configure_vici_random_case':protocol===3?'configure_vici_practice':'configure_vici_challenge', { requested_content_id: contentId, ...(protocol===4?{requested_disposition:steps[1].expected_value,requested_explanation:steps[1].success_feedback}:{requested_scenario:scenario}), expected_updated_at: result.data.updated_at }, { authoring: true })
       if (configured.error) { setError(configured.error); setRevision(v => v + 1); return }
       const [read, simulation] = await Promise.all([getTrainingContentAuthoringDetails(supabase, contentId), simulationRpc('get_simulation_authoring', { requested_content_id: contentId })])
       if (read.error || simulation.error) { setError({ message: 'Saved, but reload is required before continuing.' }); return }
-      setDetails(read.data); const next = serializableSteps(simulation.data.steps); setSteps(next); setSavedSteps(next); setNotice('All steps saved. Review the draft preview before publishing.')
+      setDetails(read.data); setDraft({...draftFromDetails(read.data),positionIds:[]}); const next = serializableSteps(simulation.data.steps); setSteps(next); setSavedSteps(next); setNotice('All steps saved. Review the draft preview before publishing.')
     })
   }
   async function publish() {
@@ -172,7 +172,8 @@ export function SimulationBuilder() {
       </fieldset><button className="sim-primary" disabled={!editable || (!!contentId && !basicsDirty)} onClick={() => void saveBasics()}>{contentId ? 'Save basics & audience' : 'Save draft & add steps'} →</button></details>
       {contentId && <>
         <section className="sim-panel"><div className="sim-section-title"><div><h2>Workflow</h2><p>Keep team-specific processes separate. Nothing here places a real call.</p>{scenario && <Link to={'/academy/simulations/preview/'+scenario}>Open manual dialer reference →</Link>}</div><button disabled={busy || !steps.length} onClick={() => { const invalid = validateSimulationSteps(steps); if (invalid) { setError({ message: invalid }); return } setPreviewIndex(0); setPreviewFeedback(''); setPreview(true) }}>Draft preview →</button></div>
-          {editable && <div className="sim-template-picker">{Object.entries(VICI_PRACTICES).map(([key,item])=><button key={key} onClick={()=>void loadTemplate(key)}>{item.title}</button>)}<button disabled={steps.length >= 100} onClick={() => { setSteps(s => [...s, { ...simulationTemplate('callback')[0], screen: undefined, screen_media_id: null, prompt: '', source_note: '' }]); setIndex(steps.length) }}>+ Add step</button></div>}
+          {editable && <div className="sim-template-picker"><button onClick={()=>void loadTemplate('random')}>Random Dispositions · private clip</button>{Object.entries(VICI_PRACTICES).map(([key,item])=><button key={key} onClick={()=>void loadTemplate(key)}>{item.title}</button>)}<button disabled={steps.length >= 100} onClick={() => { setSteps(s => [...s, { ...simulationTemplate('callback')[0], screen: undefined, screen_media_id: null, prompt: '', source_note: '' }]); setIndex(steps.length) }}>+ Add step</button></div>}
+          {scenario==='random'&&<p className="sim-caption">Each draft holds one private clip. In step 2, choose its reviewed disposition and write the explanation in Correct feedback. All published clips appear as Random Dispositions; learners see the answer only after Submit. SPANIS is limited to local-transfer teams.</p>}
           {editable && <p className="sim-caption">Use fictitious data only. Published versions and learner history stay unchanged.</p>}
           {!!steps.length && <div className="sim-step-layout"><nav className="sim-step-list" aria-label="Simulation steps">{steps.map((step, i) => <button key={i} aria-current={index === i ? 'step' : undefined} onClick={() => setIndex(i)}><span>{String(i + 1).padStart(2, '0')}</span><div>{step.prompt || 'New step'}<small>{step.interaction}</small></div></button>)}</nav><section>
             <StepEditor key={index} step={steps[index]} steps={steps} index={index} disabled={!editable} url={screenUrl} screenError={screenError} onChange={changeStep} onUpload={file => void upload(file)} />
@@ -180,7 +181,7 @@ export function SimulationBuilder() {
           </section></div>}
           <div className="studio-savebar"><span>{steps.length} steps · {stepsDirty ? 'Unsaved' : 'Saved'}</span><button className="sim-primary" disabled={!editable || !stepsDirty || !steps.length || basicsDirty} onClick={() => void saveSteps()}>Save steps</button>{capabilities?.can_publish && <button disabled={busy || dirty || !!validateSimulationSteps(steps)} onClick={() => setConfirmation('publish')}>Review & publish →</button>}</div>
         </section>
-        {protocol===3&&scenario&&<><ViciAudioEditor key={scenario} scenario={scenario} clips={audio} disabled={!editable||dirty} onAttach={attachAudio} onRemove={cue=>void attachAudio(cue,null,false)}/>{audio.map(clip=><ViciAudio key={clip.media_id} kind="staff" contentId={contentId} clip={clip} startedAt="author-preview" onIntro={()=>{}}/>)}</>}
+        {[3,4].includes(protocol)&&scenario&&<><ViciAudioEditor key={scenario} scenario={scenario} clips={audio} disabled={!editable||dirty} onAttach={attachAudio} onRemove={cue=>void attachAudio(cue,null,false)}/>{audio.map(clip=><ViciAudio key={clip.media_id} kind="staff" contentId={contentId} clip={clip} startedAt="author-preview" onIntro={()=>{}}/>)}</>}
         {details?.content.status === 'published' && enabled && <p className="sim-update"><span>This version is preserved. Edit in a new draft update.</span><button disabled={busy} onClick={() => void createUpdate()}>Edit update</button></p>}
         {capabilities?.can_archive && enabled && <button disabled={busy} onClick={() => setConfirmation('archive')}>Archive simulation</button>}
       </>}
