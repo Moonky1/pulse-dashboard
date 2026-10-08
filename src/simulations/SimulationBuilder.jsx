@@ -10,6 +10,7 @@ import { resolveTrainingAuthoringDestination } from '../training/authoringDestin
 import { simulationRpc, simulationScreenUrl, uploadSimulationScreen, uploadSimulationAudio, cleanRaster } from './simulationApi.js'
 import { ViciAudioEditor } from './ViciAudioEditor.jsx'
 import { ViciAudio } from './ViciAudio.jsx'
+import { ViciClipImporter } from './ViciClipImporter.jsx'
 import { simulationTemplate, practiceTemplate, randomDispositionTemplate, OPENER_TEAMS, serializableSteps, validateSimulationSteps } from './templates.js'
 import { viciScreenFile, viciScreenSvg } from './viciScreens.js'
 import { VICI_PRACTICES } from './viciPractice.js'
@@ -160,6 +161,7 @@ export function SimulationBuilder() {
       {error && <div className="sim-error" role="alert"><p>{error.message}</p><button onClick={() => { if (confirmLeave()) setRevision(v => v + 1) }}>Reload saved version</button></div>}
       {notice && <p className="sim-hint" role="status">{notice}</p>}
       {!enabled && <p className="sim-hint">Read-only: authoring is not enabled for this destination.</p>}
+      {!contentId&&capabilities?.can_create&&<ViciClipImporter options={options} disabled={!editable}/>}
       <details className="sim-panel" open={!contentId}><summary>Basics & audience</summary><fieldset disabled={!editable} className="studio-fields">
         <label>Title<input value={draft.title} maxLength={180} onChange={e => changeDraft({ title: e.target.value })} /></label>
         <label>Description<textarea rows={2} value={draft.description} maxLength={2000} onChange={e => changeDraft({ description: e.target.value })} /></label>
