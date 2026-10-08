@@ -1,5 +1,19 @@
 import { region } from './viciScreens.js'
 import { DISPOSITION_CODES } from './viciModel.js'
+import { VICI_PRACTICES } from './viciPractice.js'
+
+export const OPENER_TEAMS = ['asia_team_a','asia_team_b','philippines','mexico_team_group_a','mexico_team_group_b','colombia','central_america','venezuela']
+export function practiceTemplate(name) {
+  const practice=VICI_PRACTICES[name]
+  if (!practice) throw new Error('Unknown practice')
+  return [base('info',practice.situation,practice.phases[0],null,[],[],'Use the dialer manually.'),...practice.commands.map((command,i)=>{
+    const selected=['language','disposition','callDisposition','campaignLogin'].includes(command)
+    const action=['agentLogin','phoneLogin'].includes(command)
+    const expected=selected||command==='dial'?practice.values[command]:command
+    const options=command==='callDisposition'?DISPOSITION_CODES:command==='language'?['English','Spanish']:command==='disposition'?['SPANISH SPEAKER','SPXFER']:command==='campaignLogin'?['OPENERS2','OPENERS3','OPENERS4']:action?[command]:[]
+    return base(command==='dial'?'text':selected?'select':action?'action':'click',command==='dial'?'Enter the current customer phone number and click Dial Now.':command==='leave'?'Leave after 15 seconds of advisor introduction.':`Use ${command}.`,practice.phases[i],expected,[region(action?'login':command.toLowerCase(),command,30,130,500,50)],options,'Use the dialer manually.')
+  })].map(step=>({...step,source_note:'User screenshots and confirmed Opener training policy.'}))
+}
 
 const base = (interaction, prompt, screen, expected, regions = [], options = [], hint = '') => ({
   interaction, prompt, screen, screen_media_id: null, expected_value: expected, regions, options, hint,

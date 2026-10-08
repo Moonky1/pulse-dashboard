@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
 import { deflateSync } from 'node:zlib'
 import { inspectPng, MAX_BYTES } from '../../supabase/functions/pulse-simulation-media/png.mjs'
+import { inspectWav } from '../../supabase/functions/pulse-simulation-media/wav.mjs'
+import { encodePcmWav } from '../../src/training/audioClip.js'
 
 function crc(bytes) { let c = 0xffffffff; for (const byte of bytes) { c ^= byte; for (let i = 0; i < 8; i++) c = (c >>> 1) ^ ((c & 1) ? 0xedb88320 : 0) } return (c ^ 0xffffffff) >>> 0 }
 function chunk(type, data) { const b = Buffer.alloc(data.length + 12); b.writeUInt32BE(data.length); b.write(type, 4); data.copy(b, 8); b.writeUInt32BE(crc(b.subarray(4, b.length - 4)), b.length - 4); return b }
@@ -20,20 +22,20 @@ test('static PNG validates actual CRC, pixels and dimensions', async () => {
   await assert.rejects(inspectPng(array(Buffer.alloc(MAX_BYTES + 1))), /invalid_png/)
 })
 const source = stripTypeScriptTypes(readFileSync(new URL('../../supabase/functions/pulse-simulation-media/index.ts',import.meta.url),'utf8')).replace(/^import[^\r\n]*\r?\n/gm,'')
-function runtime({ allowed = true, verified = true, uploadFails = false, finalizeFails = false } = {}) {
+function runtime({ allowed = true, verified = true, uploadFails = false, finalizeFails = false, audio = false } = {}) {
   let handler; const calls = []
   const env = { PULSE_SIMULATION_MEDIA_ALLOWED_ORIGINS:'https://sim.preview.test', SUPABASE_URL:'https://backend.test', SUPABASE_ANON_KEY:'public-test', SUPABASE_SERVICE_ROLE_KEY:'server-test' }
-  new Function('Deno','createClient','inspectPng','MAX_BYTES',source)({ env: { get: name => env[name] }, serve: cb => { handler = cb } }, (_url,key) => ({
+  new Function('Deno','createClient','inspectPng','MAX_BYTES','inspectWav',source)({ env: { get: name => env[name] }, serve: cb => { handler = cb } }, (_url,key) => ({
     auth: { getUser: async () => ({ data:{ user: verified ? { id:'auth-test' } : null } }) },
     rpc: async (name,args) => { calls.push([name,args,key]); return { data:allowed,error:null } },
     from: name => {
       const query = { select() { return this }, eq() { return this }, async maybeSingle() {
-        calls.push(['read',name,key]); return { data: name==='users' ? { id:'staff-test' } : name==='training_content' ? { content_type:'simulation',status:'draft' } : { status:'ready',media_kind:'simulation_screen',storage_bucket:'training-media',storage_path:'private/test.png',mime_type:'image/png' } }
+        calls.push(['read',name,key]); return { data: name==='users' ? { id:'staff-test' } : name==='training_content' ? { content_type:'simulation',status:'draft' } : { status:'ready',media_kind:audio?'simulation_audio':'simulation_screen',storage_bucket:'training-media',storage_path:audio?'private/test.wav':'private/test.png',mime_type:audio?'audio/wav':'image/png' } }
       }, async insert(value) { calls.push(['insert',name,value,key]); return { error:null } }, update(value) { calls.push(['update',value,key]); return { eq() { return this }, then(resolve) { resolve({ error:value.status==='ready' && finalizeFails ? {} : null }) } } } }
       return query
     },
     storage: { from: () => ({ async createSignedUrl(path,ttl) { calls.push(['sign',path,ttl,key]); return { data:{ signedUrl:'https://backend.test/storage/v1/object/sign/training-media/private/test.png?token=fixture' } } }, async upload(path,bytes,options) { calls.push(['upload',path,options,key]); return { error:uploadFails ? {} : null } }, async remove(paths) { calls.push(['remove',paths,key]); return { error:null } } }) },
-  }),inspectPng,MAX_BYTES)
+  }),inspectPng,MAX_BYTES,inspectWav)
   return { calls, async request(body,{ origin='https://sim.preview.test',auth=true }={}) {
     const multipart = body instanceof FormData
     return handler(new Request('https://backend.test/functions/v1/pulse-simulation-media',{ method:'POST',headers:{ origin,...(auth?{ authorization:'Bearer staff-test' }:{}),...(!multipart?{ 'content-type':'application/json' }: {}) },body:multipart?body:JSON.stringify(body) }))
@@ -58,4 +60,25 @@ test('upload checks writable simulation, validates bytes, registers pending then
 })
 test('failed finalization removes only the new object and marks its pending row deleted', async () => {
   const r=runtime({ finalizeFails:true }); assert.equal((await r.request(upload())).status,503); assert.equal(r.calls.filter(c=>c[0]==='remove').length,1); assert.equal(r.calls.at(-1)[1].status,'deleted')
+})
+test('audio accepts only bounded canonical PCM with no extra metadata, malformed rate or trailing bytes',()=>{
+  const wav=encodePcmWav(new Float32Array(22050))
+  assert.deepEqual(inspectWav(wav),{duration:1})
+  for(const size of [0,2204,22050*60+1])assert.throws(()=>inspectWav(encodePcmWav(new Float32Array(size))))
+  for(const offset of [0,12,20,22,24,28,32,34,36,40]){const bad=wav.slice(0);new Uint8Array(bad)[offset]^=1;assert.throws(()=>inspectWav(bad))}
+  assert.throws(()=>inspectWav(Buffer.concat([Buffer.from(wav),Buffer.from('metadata')]).buffer))
+})
+test('audio upload requires attestation and verifies bytes before private registration',async()=>{
+  const uploadClip=(confirmed=true,bytes=encodePcmWav(new Float32Array(22050)))=>{const f=new FormData();f.set('action','uploadAudio');f.set('contentId',id);if(confirmed)f.set('confirmed','yes');f.set('file',new File([bytes],'private.wav',{type:'audio/wav'}));return f}
+  const r=runtime({audio:true});assert.equal((await r.request(uploadClip(false))).status,400)
+  assert.equal((await r.request(uploadClip(true,new Uint8Array([1,2,3])))).status,400)
+  assert.equal((await r.request(uploadClip())).status,200)
+  const row=r.calls.find(c=>c[0]==='insert')[2];assert.equal(row.media_kind,'simulation_audio');assert.equal(row.media_type,'audio');assert.equal(row.width_px,null)
+  assert.deepEqual(r.calls.find(c=>c[0]==='upload')[2],{contentType:'audio/wav',upsert:false,cacheControl:'120'})
+})
+test('audio signs only after Staff authoring authorization and never as a screenshot',async()=>{
+  const readAudio={action:'readAudio',contentId:id,mediaId:id}
+  const deny=runtime({audio:true,allowed:false});assert.equal((await deny.request(readAudio)).status,403);assert.deepEqual(deny.calls.map(c=>c[0]),['can_read_vici_audio'])
+  const yes=runtime({audio:true});assert.equal((await yes.request(readAudio)).status,200);assert.deepEqual(yes.calls.at(-1),['sign','private/test.wav',120,'server-test'])
+  assert.equal((await yes.request(read)).status,404)
 })

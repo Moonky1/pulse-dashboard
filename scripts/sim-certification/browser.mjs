@@ -8,6 +8,7 @@ import { createServer } from 'node:http'
 import { createClient } from '@supabase/supabase-js'
 import { createAgentHandler } from '../../api/agent.js'
 import { inspectPng, MAX_BYTES } from '../../supabase/functions/pulse-simulation-media/png.mjs'
+import { inspectWav } from '../../supabase/functions/pulse-simulation-media/wav.mjs'
 import { runViciBrowser } from './vici-browser-flow.mjs'
 
 const database = process.argv.find(v => v.startsWith('--database='))?.slice(11)
@@ -62,7 +63,7 @@ try {
   let media
   const edgeSource=stripTypeScriptTypes(readFileSync('supabase/functions/pulse-simulation-media/index.ts','utf8')).replace(/^import[^\r\n]*\r?\n/gm,'')
   const edgeEnv={ PULSE_SIMULATION_MEDIA_ALLOWED_ORIGINS:app,SUPABASE_URL:transport,SUPABASE_ANON_KEY:anon,SUPABASE_SERVICE_ROLE_KEY:service }
-  new Function('Deno','createClient','inspectPng','MAX_BYTES',edgeSource)({ env:{get:n=>edgeEnv[n]},serve:cb=>{media=cb} },localClient,inspectPng,MAX_BYTES)
+  new Function('Deno','createClient','inspectPng','MAX_BYTES','inspectWav',edgeSource)({ env:{get:n=>edgeEnv[n]},serve:cb=>{media=cb} },localClient,inspectPng,MAX_BYTES,inspectWav)
   proxy=createServer(async(req,res)=>{
     try {
       if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end()}
@@ -89,7 +90,7 @@ try {
     select public.admin_prepare_agent_activation('992611','María Practice','34000000-0000-4000-8000-000000000011');`)
   sql(`update public.agent_credentials set pin_hash=extensions.crypt('${agentPin}',extensions.gen_salt('bf',4)) where agent_id=(select id from public.agents where agent_code='992611');`)
   const existingBucket=await admin.storage.getBucket('training-media')
-  const bucket=existingBucket.data ? existingBucket : await admin.storage.createBucket('training-media',{public:false,allowedMimeTypes:['image/png'],fileSizeLimit:MAX_BYTES});assert.equal(bucket.error,null)
+  const bucket=existingBucket.data ? existingBucket : await admin.storage.createBucket('training-media',{public:false,allowedMimeTypes:['image/png','audio/wav'],fileSizeLimit:MAX_BYTES});assert.equal(bucket.error,null)
   const build=spawnSync(process.execPath,['node_modules/vite/bin/vite.js','build'],{encoding:'utf8',windowsHide:true,env:{...process.env,VITE_SUPABASE_URL:api,VITE_SUPABASE_ANON_KEY:anon,VITE_SUPABASE_PUBLISHABLE_KEY:anon}})
   if(build.status!==0)throw new Error('Local build failed: '+build.stderr.slice(-1000))
   preview=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','53673','--strictPort'],{windowsHide:true,stdio:'ignore'})

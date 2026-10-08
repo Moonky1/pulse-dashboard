@@ -11,6 +11,16 @@ const button = (x, y, w, label, color = '#ddd') => rect(x, y, w, 25, color, '#99
 const link = (x, y, label) => text(x, y, label, 17, '#39218a', 'bold', 'text-decoration="underline"')
 export const region = (id, label, x, y, w, h) => ({ id, label, x: x / SCREEN_WIDTH, y: y / SCREEN_HEIGHT, w: w / SCREEN_WIDTH, h: h / SCREEN_HEIGHT })
 export function viciScreenSvg(mode = 'paused') {
+  if (['welcome','phone_login','campaign_login'].includes(mode)) {
+    let login=rect(0,0,1200,760,'#f6f6f6')+rect(270,180,660,370,'#dce7ff')+rect(270,180,660,66,'#005b89')+text(288,224,'VICIdial',32,'#fff','bold')+text(710,220,mode==='welcome'?'Welcome':mode==='phone_login'?'phone login':'Campaign Login',22,'#fff','bold')
+    if(mode==='welcome')login+=['Agent Login','Timeclock','HCI Screen','Administration'].map((name,i)=>link(540,305+i*52,name)).join('')
+    else {
+      login+=field(520,290,250,mode==='phone_login'?'Phone Login:':'User Login:','0001')+field(520,340,250,mode==='phone_login'?'Phone Password:':'User Password:','••••••••')
+      if(mode==='campaign_login')login+=field(520,390,330,'Campaign:','-- PLEASE SELECT A CAMPAIGN --')
+      login+=button(540,mode==='campaign_login'?455:415,110,'SUBMIT')
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760"><g font-family="Arial,sans-serif">${login}</g></svg>`
+  }
   if (mode === 'call_disposition') return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760"><g font-family="Arial,sans-serif">${rect(0,0,1200,760,'#caffc7')}${text(340,40,'DISPOSITION CALL : 2025550147',21,'#111','bold')}${text(30,100,'CALL DISPOSITION',20,'#111','bold')}${[0,1,2].map(index=>rect(30+index*390,125,380,500,'#a3ff98')).join('')}${CALL_DISPOSITIONS.map((column,index)=>column.map(([code,label],row)=>link(40+index*390,155+row*43,code+' - '+label)).join('')).join('')}${text(440,660,'PAUSE AGENT DIALING',18,'#111','bold')}${link(555,700,'SUBMIT')}</g></svg>`
   if (mode === 'pause_codes') return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760"><g font-family="Arial,sans-serif">${rect(0,0,1200,760,'#caffc7')}${text(600,40,'SELECT A PAUSE CODE :',21,'#111','bold','text-anchor="middle"')}${text(30,100,'PAUSE CODE',20,'#111','bold')}${[0,1].map(index=>rect(30+index*575,125,565,500,'#a3ff98')).join('')}${PAUSE_CODES.map((column,index)=>column.map(([,label],row)=>link(40+index*575,155+row*60,label)).join('')).join('')}</g></svg>`
   const manual = mode === 'manual' || mode === 'manual-filled', live = !manual && !['paused', 'callback', 'home'].includes(mode)

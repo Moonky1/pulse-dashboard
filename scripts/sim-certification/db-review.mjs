@@ -68,4 +68,18 @@ const pauseCount=(pauseOutput.match(/\bok \d+ -/g)||[]).length
 if (!pauseCount) throw new Error('Pause codes and SPANIS assertions required')
 assertions+=pauseCount
 console.log('VICI pause codes and SPANIS: '+pauseCount+' assertions passed')
+if (!process.argv.includes('--tests-only')) sql(readFileSync('supabase/migrations/20261007000400_vici_call_practice.sql','utf8'))
+const practiceOutput=sql(readFileSync('supabase/tests/20261007000400_vici_call_practice_test.sql','utf8'))
+if (/not ok|Looks like you failed/i.test(practiceOutput)) throw new Error(practiceOutput)
+const practiceCount=(practiceOutput.match(/\bok \d+ -/g)||[]).length
+if (!practiceCount) throw new Error('Practice contract assertions required')
+assertions+=practiceCount
+console.log('VICI practice: '+practiceCount+' assertions passed')
+if (!process.argv.includes('--tests-only') || process.argv.includes('--add-audio')) sql(readFileSync('supabase/migrations/20261007000500_vici_private_audio.sql','utf8'))
+const audioOutput=sql(readFileSync('supabase/tests/20261007000500_vici_private_audio_test.sql','utf8'))
+if (/not ok|Looks like you failed/i.test(audioOutput)) throw new Error(audioOutput)
+const audioCount=(audioOutput.match(/\bok \d+ -/g)||[]).length
+if (!audioCount) throw new Error('Private audio assertions required')
+assertions+=audioCount
+console.log('VICI private audio: '+audioCount+' assertions passed')
 console.log(JSON.stringify({ database, assertions, leftovers: sql('select (select count(*) from public.users) staff,(select count(*) from public.agents) agents,(select count(*) from public.training_content) content,(select count(*) from public.training_attempts) attempts;').trim() }))

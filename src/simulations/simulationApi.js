@@ -44,6 +44,22 @@ export async function uploadSimulationScreen(contentId, file) {
   if (error || !data?.mediaId) throw new Error('The screen could not be uploaded. Your draft is kept.')
   return data.mediaId
 }
+export async function simulationAudioUrl(kind,contentId,mediaId,attemptId=null) {
+  const result=kind==='agent'?await agentRequest('simulationAudio',{contentId,mediaId,attemptId}):await supabase.functions.invoke('pulse-simulation-media',{body:{action:'readAudio',contentId,mediaId}})
+  const url=result.data?.url
+  if(result.error||typeof url!=='string')throw new Error('Practice audio is unavailable. Reload to retry.')
+  const parsed=new URL(url)
+  if(parsed.origin!==new URL(supabase.supabaseUrl).origin||!parsed.pathname.startsWith('/storage/v1/object/sign/training-media/'))throw new Error('Audio unavailable.')
+  return url
+}
+export async function uploadSimulationAudio(contentId,file,confirmed) {
+  assertTrainingAuthoringDestination(supabase.supabaseUrl)
+  if(!confirmed||!(file instanceof File)||file.type!=='audio/wav'||file.size>2646044)throw new Error('Use an authorized, anonymized clip of up to 60 seconds.')
+  const body=new FormData();body.set('action','uploadAudio');body.set('contentId',contentId);body.set('confirmed','yes');body.set('file',file)
+  const {data,error}=await supabase.functions.invoke('pulse-simulation-media',{body})
+  if(error||!data?.mediaId)throw new Error('The private clip could not be uploaded.')
+  return data.mediaId
+}
 // Re-encode a permitted local raster, not SVG/HTML, to strip ancillary metadata.
 export async function cleanRaster(file) {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file?.type) || file.size > 4_194_304) throw new Error('Choose a PNG, JPEG or WebP under 4 MB, without real customer data.')

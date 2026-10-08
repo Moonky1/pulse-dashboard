@@ -1,6 +1,10 @@
 import { CALL_DISPOSITIONS, PAUSE_CODES } from './viciModel.js'
 
 const labels = {
+  transfer:'TRANSFER - CONF', connect:'DIAL WITH CUSTOMER', newCustomer:'New customer', advisorIntro:'Advisor introduction started',
+  agentLogin:'Agent Login', phoneLogin:'Phone Login · SUBMIT', campaignLogin:'Campaign Login · SUBMIT',
+  timeclock:'Timeclock', hci:'HCI Screen', administration:'Administration', keypad:'Webphone keypad',
+  phoneConnect:'Connect simulated phone',phoneDisconnect:'Disconnect simulated phone',phoneClear:'Clear keypad',dtmf:'Send DTMF',volumeUp:'Volume up',volumeDown:'Volume down',
   status: 'Open pause codes', resume: 'Resume dialing', closePause: 'Close pause codes', logo: 'VICIdial logo',
   manual: 'MANUAL DIAL', dial: 'Dial Now', preview: 'Preview Call', back: 'Go Back', fast: 'FAST DIAL', log: 'VIEW CALL LOG',
   presets: 'PRESETS / TRANSFER - CONF', local: 'LOCAL CLOSER', blind: 'BLIND TRANSFER / SEND DTMF',

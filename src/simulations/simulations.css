@@ -161,7 +161,28 @@ div.sim-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50
 .vici-action-result--incorrect { color: #ffc087; }
 .vici-action-result--unsaved { color: #ffadb8; }
 .vici-activity .vici-action-latest { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.sim-shell .vici-sound-toggle { font-size: 12px; }
+.sim-situation { color: #c7c1d5; line-height: 1.6; margin: 0 0 18px; }
+.sim-audio { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 16px 0; }
+.sim-audio audio { max-width: 100%; }
+.vici-login { color-scheme: light; color: #111; background: #dce7ff; width: min(700px,100%); min-height: 300px; margin: 60px auto; font: 14px Arial,sans-serif; }
+.vici-login header { background: #005b89; color: white; display: flex; justify-content: space-between; align-items: center; padding: 12px; }
+.vici-login header strong { font-size: 30px; background: white; color: #333; }
+.vici-login header span { color: #2929ba; }
+.vici-login nav, .vici-login form { display: flex; flex-direction: column; align-items: center; gap: 15px; padding: 30px 15px; }
+.vici-login form label { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+.vici-login input, .vici-login select { color: #111; background: white; border: 1px solid #888; padding: 5px; border-radius: 0; }
+.vici-login footer { padding: 5px; font-size: 11px; }
+.vici-advisor { margin-top: 10px; font-weight: bold; }
+.vici-webphone { display: flex; flex: 0 0 260px; gap: 6px; padding: 7px; }
+.vici-webphone .vici-phone-left { background: transparent; padding: 0; border: 0; flex: 1; min-width: 0; }
+.vici-webphone .vici-keypad { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; background: transparent; padding: 0; border: 0; width: 100px; }
+.sim-shell .vici-keypad button, .sim-shell .vici-phone-session button { color: #fff; background: linear-gradient(#7097bb,#42637f); border: 1px solid #263b50; border-radius: 4px; padding: 5px; font: 12px Arial,sans-serif; }
+.vici-keypad button:last-child { grid-column: span 2; }
+.vici-webphone h3 { font-size: 22px; margin-bottom: 6px; }
+.vici-phone-session, .vici-phone-display { font-size: 10px; background: #567693; border: 2px solid #263b50; padding: 3px; white-space: nowrap; }
+.vici-webphone input { margin: 3px 0; }
+.vici-phone-controls { display: flex; gap: 3px; align-items: center; margin-top: 4px; }
+.vici-phone-controls .vici-button { padding: 3px; font-size: 10px; }
 .vici-transfer { background: #d2cafa; margin-left: 165px; padding: 8px; font-size: 12px; }
 .vici-transfer-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
 .vici-transfer input { width: 170px; }
