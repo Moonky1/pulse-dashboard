@@ -110,10 +110,22 @@ try {
   }
   const c=await context();page=await c.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message))
   await mkdir('review-evidence.local/sim-1/browser',{recursive:true})
-  async function responsive(label) {if(await page.locator('.sim-step-editor').count())await page.waitForFunction(()=>document.querySelector('.sim-screen img')?.naturalWidth>0);for(const [width,height] of [[1440,1100],[820,1180],[390,844]]){await page.setViewportSize({width,height});await page.screenshot({path:`review-evidence.local/sim-1/browser/${label}-${width}.png`,fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),label+' overflow '+width)}await page.setViewportSize({width:1440,height:1100})}
+  async function responsive(label) {
+    if(await page.locator('.sim-step-editor').count())await page.waitForFunction(()=>document.querySelector('.sim-screen img')?.naturalWidth>0)
+    for(const [width,height] of [[1440,1100],[1304,1100],[820,1180],[390,844]]){
+      await page.setViewportSize({width,height})
+      await page.screenshot({path:`review-evidence.local/sim-1/browser/${label}-${width}.png`,fullPage:true})
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),label+' overflow '+width)
+      if(width>=1304)assert.ok(await page.evaluate(()=>{
+        const phone=document.querySelector('.vici-webphone'),scroll=document.querySelector('.vici-scroll')
+        return !phone||phone.getBoundingClientRect().right<=scroll.getBoundingClientRect().right-1
+      }),label+' webphone clipped '+width)
+    }
+    await page.setViewportSize({width:1440,height:1100})
+  }
   await page.goto(app+'/signin');await page.getByLabel('Email address').fill('sim1.author@example.test');await page.getByLabel('Password',{exact:true}).fill(password);await page.getByRole('button',{name:'Sign in',exact:true}).click();await page.waitForURL('**/workspace')
   await runViciBrowser({page,context,app,sql,responsive,pass,agentPin,errors})
   assert.deepEqual(errors,[]);passed=true
   await writeFile('review-evidence.local/sim-1/browser/result.json',JSON.stringify({passes,errors,database,privateStorage:'isolated tmpfs',productionOperations:0},null,2));console.log(JSON.stringify({passes:passes.length,errors:errors.length,productionOperations:0}))
-}catch(error){console.log('FAIL '+error.message);if(page){await mkdir('review-evidence.local/sim-1/browser',{recursive:true});await page.screenshot({path:'review-evidence.local/sim-1/browser/failure.png',fullPage:true});console.log((await page.locator('body').innerText()).slice(-1800))}throw error}
+}catch(error){console.log('FAIL '+error.message);console.log('Browser errors: '+JSON.stringify(errors.map(message=>message.replace(/eyJ[\w.-]{60,}/g,'[redacted]').slice(0,600))));if(page){await mkdir('review-evidence.local/sim-1/browser',{recursive:true});await page.screenshot({path:'review-evidence.local/sim-1/browser/failure.png',fullPage:true});console.log((await page.locator('body').innerText()).slice(-1800))}throw error}
 finally {await browser?.close();preview?.kill();await new Promise(r=>proxy?proxy.close(r):r());for(const name of owned.reverse())run(['rm','-f',name]);if(passed){sql(`drop database ${database};`,'supabase_admin','postgres');console.log('Disposed only the verified SIM-owned synthetic database and its tmpfs objects.')}}

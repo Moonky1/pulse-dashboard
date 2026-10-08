@@ -105,7 +105,7 @@ div.sim-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50
 .sim-confirm p { color: #b7adc9; line-height: 1.7; }
 .sim-confirm > div { display: flex; justify-content: flex-end; gap: 12px; }
 .vici-scroll { overflow: auto; max-width: 100%; border: 1px solid #6c6c75; border-radius: 12px; background: #ededed; }
-.vici-dialer { position: relative; min-width: 1260px; min-height: 650px; padding: 12px 10px; box-sizing: border-box; color: #171717; background: #ededed; font: 14px Arial, sans-serif; }
+.vici-dialer { position: relative; min-width: 1240px; min-height: 650px; padding: 12px 10px; box-sizing: border-box; color: #171717; background: #ededed; font: 14px Arial, sans-serif; }
 .vici-session { display: flex; justify-content: space-between; font-size: 12px; padding-bottom: 8px; }
 .vici-header { display: flex; align-items: center; gap: 8px; padding-bottom: 5px; border-bottom: 1px solid #bbb; }
 .sim-shell .vici-logo { border: 0; background: transparent; color: #343434; font: bold 29px Arial, sans-serif; padding: 1px 5px 1px 0; border-radius: 0; }
@@ -130,12 +130,12 @@ div.sim-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50
 .sim-shell .vici-button.purple { background: linear-gradient(#ddaafa,#ae7ed6); }
 .sim-shell .vici-button.red { background: linear-gradient(#ffadad,#f17b7b); }
 .sim-shell .vici-button.blue { background: linear-gradient(#b2c9ff,#74a0e6); }
-.vici-form { background: white; flex: 1; padding: 20px 24px; }
+.vici-form { background: white; flex: 1; min-width: 0; padding: 20px 16px; }
 .vici-fields { display: flex; flex-direction: column; gap: 12px; }
-.vici-field-row { display: flex; align-items: center; justify-content: center; gap: 25px; }
+.vici-field-row { display: flex; align-items: center; justify-content: center; gap: 18px; }
 .vici-fields label { display: flex; align-items: center; justify-content: flex-end; gap: 7px; font: bold 14px Georgia,serif; white-space: nowrap; }
 .vici-dialer input, .vici-dialer select { color: #171717; background: #fff; border: 1px solid #999; border-radius: 0; height: 24px; padding: 1px 4px; box-sizing: border-box; font: 14px Arial,sans-serif; min-width: 0; }
-.vici-fields input { width: 125px; }
+.vici-fields input { width: 115px; }
 .vici-webphone { flex: 0 0 185px; margin-left: 8px; background: linear-gradient(#6a8198,#334b61); border: 5px solid #333; align-self: flex-start; padding: 10px; margin-top: 14px; }
 .vici-webphone h3 { background: #fafafa; margin: 0 0 12px; font-size: 24px; color: #365e83; }
 .vici-webphone h3 span { font-weight: normal; font-style: italic; }

@@ -72,7 +72,7 @@ and whitespace checks. The SIM suite has 51 passing checks. Fresh disposable
 database certification has 486 passing assertions, including 183 existing
 GO/Agent regressions; rolled-back fixtures leave zero people/content/attempts.
 All 14 browser flows pass without browser errors, using isolated local Auth/REST
-and tmpfs Storage with fictional identities. Screens at 1440, 820 and 390 pixels
+and tmpfs Storage with fictional identities. Screens at 1440, 1304, 820 and 390 pixels
 have no page overflow. This includes fake login, callback, all transfer processes,
 private synthetic clip upload/read, wrong-disposition retry and immutable replay.
 The successful owned database and tmpfs objects were disposed after certification.
