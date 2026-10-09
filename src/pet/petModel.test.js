@@ -2,11 +2,11 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 
-import { anchorFromPosition, clampPetPosition, gazeTarget, movedEnough, PET_STORAGE_KEY, PET_VISIBILITY_KEY, PET_SETTLE_DELAY_MS, petActions, petMenuPosition, petRouteMode, petSize, positionFromAnchor, readPetPreferences, savePetPreferences, readPetVisibility, savePetVisibility, smoothGaze } from './petModel.js'
+import { anchorFromPosition, clampPetPosition, gazeTarget, movedEnough, PET_STORAGE_KEY, PET_VISIBILITY_KEY, PET_SETTLE_DELAY_MS, PET_TOOLBAR_SPACE, petActions, petFootprint, petRouteMode, petSize, positionFromAnchor, readPetPreferences, savePetPreferences, readPetVisibility, savePetVisibility, smoothGaze } from './petModel.js'
 
 const read = name => readFile(new URL(name, import.meta.url), 'utf8')
 const desktop = { width: 1440, height: 900 }
-const size = petSize(desktop.width)
+const size = petFootprint(petSize(desktop.width))
 
 test('three shortcuts reuse existing routes and only verified Staff host capability enables Host', () => {
   assert.deepEqual(petActions('staff', { can_host: true }).map(item => item.to), ['/go/host', '/dashboard', '/academy'])
@@ -39,21 +39,21 @@ test('normal product browsing keeps the companion and forms/games use quiet cont
 })
 
 test('default home is safely inside the bottom-right corner', () => {
-  assert.deepEqual(positionFromAnchor(null, desktop, size), { x: 1312, y: 736 })
-  assert.deepEqual(anchorFromPosition({ x: 1312, y: 736 }, desktop, size), { x: 1, y: 1 })
+  assert.deepEqual(positionFromAnchor(null, desktop, size), { x: 1312, y: 688 })
+  assert.deepEqual(anchorFromPosition({ x: 1312, y: 688 }, desktop, size), { x: 1, y: 1 })
 })
 
 test('drag clamps extreme and invalid positions to visible bounds', () => {
-  assert.deepEqual(clampPetPosition({ x: -500, y: 5000 }, desktop, size), { x: 16, y: 736 })
+  assert.deepEqual(clampPetPosition({ x: -500, y: 5000 }, desktop, size), { x: 16, y: 688 })
   assert.deepEqual(clampPetPosition({ x: NaN, y: Infinity }, desktop, size), { x: 16, y: 16 })
-  assert.deepEqual(positionFromAnchor({ x: -10, y: 90 }, desktop, size), { x: 16, y: 736 })
+  assert.deepEqual(positionFromAnchor({ x: -10, y: 90 }, desktop, size), { x: 16, y: 688 })
 })
 
 test('normalized saved position survives responsive resize and sleep without stranding the pet', () => {
   const anchor = anchorFromPosition({ x: 700, y: 400 }, desktop, size)
   for (const viewport of [desktop, { width: 390, height: 844 }, { width: 320, height: 200 }]) {
     for (const compact of [false, true]) {
-      const dimensions = petSize(viewport.width, compact)
+      const dimensions = petFootprint(petSize(viewport.width, compact), compact)
       const position = positionFromAnchor(anchor, viewport, dimensions)
       assert.ok(position.x >= 0 && position.x + dimensions.width <= viewport.width)
       assert.ok(position.y >= 0 && position.y + dimensions.height <= viewport.height)
@@ -63,15 +63,17 @@ test('normalized saved position survives responsive resize and sleep without str
   assert.ok(Math.abs(anchor.x - roundTrip.x) < 1e-10 && Math.abs(anchor.y - roundTrip.y) < 1e-10)
 })
 
-test('menus at every edge remain fully inside phone and desktop viewports', () => {
+test('icon strip stays below the unchanged robot and inside every viewport edge', () => {
   for (const viewport of [desktop, { width: 390, height: 844 }, { width: 320, height: 240 }]) {
     for (const x of [0, 0.5, 1]) for (const y of [0, 0.5, 1]) {
-      const dimensions = petSize(viewport.width)
-      const menu = { width: Math.min(264, viewport.width - 32), height: Math.min(280, viewport.height - 32) }
-      const point = petMenuPosition(positionFromAnchor({ x, y }, viewport, dimensions), viewport, dimensions, menu)
+      const robot = petSize(viewport.width)
+      const dimensions = petFootprint(robot)
+      const point = positionFromAnchor({ x, y }, viewport, dimensions)
+      assert.equal(dimensions.width, robot.width)
+      assert.equal(dimensions.height - robot.height, PET_TOOLBAR_SPACE)
       assert.ok(point.x >= 16 && point.y >= 16)
-      assert.ok(point.x + menu.width <= viewport.width - 16)
-      assert.ok(point.y + menu.height <= viewport.height - 16)
+      assert.ok(point.x + dimensions.width <= viewport.width - 16)
+      assert.ok(point.y + robot.height + 6 + 40 <= viewport.height - 16)
     }
   }
 })
@@ -129,9 +131,19 @@ test('integration is a single lazy layer inside the router and isolates mascot f
 
 test('optional navigation never performs mutations, and draft/game quiet mode renders no shortcut links', async () => {
   const component = await read('PulsePet.jsx')
-  assert.match(component, /mode === 'normal' \? <div className="pulse-pet__links"/)
+  assert.match(component, /open && mode === 'normal' && <nav/)
   assert.match(component, /<Link key=\{action.id\} to=\{action.to\}/)
   assert.doesNotMatch(component, /supabase|fetch\(|\.rpc\(|createGoHostedSession|updateOwnStaffProfile|password|access_token/)
+})
+
+test('shortcuts are icon-only links with names, not a card or extra controls', async () => {
+  const component = await read('PulsePet.jsx'), css = await read('pulsePet.css')
+  assert.match(component, /aria-label=\{action.label\} title=\{action.label\}/)
+  assert.match(component, /<ShortcutIcon kind=\{action.id\} \/><\/Link>/)
+  assert.doesNotMatch(component + css, /pulse-pet__panel|pulse-pet__controls|pulse-pet__quiet-copy|Reset position|Let me rest|action.detail/)
+  assert.match(component, /style=\{\{ height: size.height \}\}/)
+  assert.match(css, /top: calc\(var\(--pet-body-height\) \+ 6px\)/)
+  assert.deepEqual(petFootprint(petSize(1440, true), true), { width: 56, height: 64 })
 })
 
 test('animation respects motion preference, visibility, and cleans up pointer/frame/blink work', async () => {

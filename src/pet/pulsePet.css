@@ -4,13 +4,14 @@
   left: 16px;
   top: 16px;
   isolation: isolate;
+  pointer-events: none;
   --pet-eye-x: 0px;
   --pet-eye-y: 0px;
   --pet-head-turn: 0deg;
   --pet-blink: 1;
   color: #f5f4fa;
 }
-.pulse-pet__trigger { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 24px; background: transparent; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pulse-pet__trigger { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 24px; background: transparent; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; pointer-events: auto; }
 .pulse-pet__trigger:hover { background: transparent; }
 .pulse-pet__trigger:focus-visible { outline: 2px solid #ffc37a; outline-offset: 5px; }
 .pulse-pet--dragging .pulse-pet__trigger { cursor: grabbing; }
@@ -45,23 +46,11 @@
 .pulse-pet--compact .pulse-pet__trigger { cursor: grab; }
 .pulse-pet__zzz { position: absolute; left: 82px; top: 3px; color: #ffb64d; font: 700 14px/1 monospace; rotate: -12deg; }
 .pulse-pet__zzz span { display: inline-block; font-size: 10px; translate: 2px -8px; }
-.pulse-pet__panel { position: fixed; width: min(264px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 14px; border: 1px solid #ffd0a32c; border-radius: 20px; background: #14121cf7; box-shadow: 0 18px 56px #0006, inset 0 1px #ffffff07; backdrop-filter: blur(18px); text-align: left; font-family: var(--pulse-font-sans, system-ui, sans-serif); animation: pet-panel-enter 180ms ease-out; }
-.pulse-pet__panel-heading { display: flex; align-items: start; gap: 8px; justify-content: space-between; padding: 2px 2px 12px; }
-.pulse-pet__panel-heading strong { display: block; font-size: 14px; font-weight: 700; color: #ffcc8d; }
-.pulse-pet__panel-heading span { display: block; margin-top: 5px; color: #a8a1b8; font-size: 11px; line-height: 1.4; }
-.pulse-pet__panel-heading button { width: 28px; height: 28px; flex: 0 0 28px; padding: 0; border: 0; border-radius: 9px; background: #ffffff07; color: #cfcad9; font-size: 20px; cursor: pointer; }
-.pulse-pet__links { display: grid; gap: 4px; }
-.pulse-pet__links a { display: flex; min-height: 54px; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid transparent; border-radius: 12px; color: #f6f3ff; text-decoration: none; transition: background 150ms, border-color 150ms; }
-.pulse-pet__links a:hover, .pulse-pet__links a:focus-visible { background: #ffac1910; border-color: #ffbf6324; }
-.pulse-pet__links svg { width: 22px; height: 22px; flex: 0 0 22px; color: #ffbc69; }
-.pulse-pet__links strong { display: block; font-size: 13px; font-weight: 650; }
-.pulse-pet__links small { display: block; margin-top: 3px; font-size: 10px; color: #a8a1b8; }
-.pulse-pet__arrow { margin-left: auto; color: #c1b3a6; font-size: 16px; }
-.pulse-pet__controls { display: flex; gap: 6px; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ffffff0c; }
-.pulse-pet__controls button { min-height: 36px; padding: 7px 8px; border: 0; border-radius: 9px; background: transparent; color: #bfb7cf; font: inherit; font-size: 11px; cursor: pointer; }
-.pulse-pet__controls button:hover { background: #ffffff08; color: #ffe0b5; }
-.pulse-pet__controls span { margin-left: 4px; }
-.pulse-pet__quiet-copy { margin: 4px 2px 8px; color: #bfb7cf; font-size: 12px; line-height: 1.65; }
+.pulse-pet__toolbar { position: absolute; top: calc(var(--pet-body-height) + 6px); left: 0; display: flex; align-items: center; width: 100%; height: 40px; box-sizing: border-box; padding: 3px; border: 1px solid #ffffff15; border-radius: 20px; background: #14121cf7; box-shadow: 0 6px 20px #0004; backdrop-filter: blur(18px); animation: pet-toolbar-enter 180ms ease-out; pointer-events: auto; }
+.pulse-pet__toolbar a { display: grid; place-items: center; flex: 1; min-width: 0; height: 32px; border-radius: 50%; color: #f2edf7; text-decoration: none; transition: color 150ms, background 150ms; }
+.pulse-pet__toolbar a:hover { color: #ffcc8d; background: #ffffff0b; }
+.pulse-pet__toolbar a:focus-visible { outline: 2px solid #ffc37a; outline-offset: -2px; color: #ffcc8d; }
+.pulse-pet__toolbar svg { width: 19px; height: 19px; }
 .pulse-pet--still .pulse-pet__rig, .pulse-pet.pulse-pet--still .pulse-pet__arm, .pulse-pet.pulse-pet--still .pulse-pet__standing, .pulse-pet.pulse-pet--still .pulse-pet__head { animation: none; }
 .pulse-pet--still .pulse-pet__arm, .pulse-pet--still .pulse-pet__eyes { transition: none; }
 .pulse-pet--still .pulse-pet__pose { transition: none; }
@@ -69,7 +58,7 @@
 @keyframes pet-stand { 0% { transform: translate(0, 8px); } 35% { transform: translate(4px, 5px); } 72% { transform: translate(2px, -1px); } 100% { transform: none; } }
 @keyframes pet-head-rise { 0% { translate: 0 0; rotate: 0deg; } 35% { translate: 4px 4px; rotate: 2.5deg; } 72% { translate: 2px -1px; rotate: -.5deg; } 100% { translate: 0 0; rotate: 0deg; } }
 @keyframes pet-wave { 0% { transform: rotate(0deg); } 34% { transform: rotate(118deg); } 50% { transform: rotate(100deg); } 68% { transform: rotate(120deg); } 84% { transform: rotate(105deg); } 100% { transform: rotate(112deg); } }
-@keyframes pet-panel-enter { from { opacity: 0; translate: 0 4px; } to { opacity: 1; translate: 0 0; } }
+@keyframes pet-toolbar-enter { from { opacity: 0; translate: 0 -3px; } to { opacity: 1; translate: 0 0; } }
 @media (prefers-reduced-motion: reduce) {
   .pulse-pet *, .pulse-pet *::before, .pulse-pet *::after { animation: none !important; transition: none !important; }
   .pulse-pet__head, .pulse-pet__face { transform: none; }

@@ -4,6 +4,7 @@ export const PET_VISIBILITY_KEY = 'pulse_pet_visible_v1'
 export const PET_MARGIN = 16
 export const DRAG_THRESHOLD = 6
 export const PET_SETTLE_DELAY_MS = 3000
+export const PET_TOOLBAR_SPACE = 48
 
 const bounded = (value, min, max) => Math.min(max, Math.max(min, value))
 const finite = (value, fallback) => Number.isFinite(value) ? value : fallback
@@ -13,6 +14,11 @@ export function petSize(viewportWidth, compact = false) {
   return viewportWidth < 480
     ? { width: 96, height: 127, scale: 96 / 112 }
     : { width: 112, height: 148, scale: 1 }
+}
+
+export function petFootprint(size, compact = false) {
+  // Reserve the strip even when closed so opening it never moves or scales the robot.
+  return { width: size.width, height: size.height + (compact ? 0 : PET_TOOLBAR_SPACE) }
 }
 
 export function clampPetPosition(position, viewport, size) {
@@ -36,17 +42,6 @@ export function anchorFromPosition(position, viewport, size) {
   return {
     x: bounded((point.x - PET_MARGIN) / Math.max(1, viewport.width - size.width - PET_MARGIN * 2), 0, 1),
     y: bounded((point.y - PET_MARGIN) / Math.max(1, viewport.height - size.height - PET_MARGIN * 2), 0, 1),
-  }
-}
-
-export function petMenuPosition(position, viewport, size, menu) {
-  const width = Math.min(menu.width, viewport.width - PET_MARGIN * 2)
-  const height = Math.min(menu.height, viewport.height - PET_MARGIN * 2)
-  const above = position.y - height - 8
-  const below = position.y + size.height + 8
-  return {
-    x: bounded(position.x + size.width - width, PET_MARGIN, Math.max(PET_MARGIN, viewport.width - width - PET_MARGIN)),
-    y: bounded(above >= PET_MARGIN ? above : below, PET_MARGIN, Math.max(PET_MARGIN, viewport.height - height - PET_MARGIN)),
   }
 }
 

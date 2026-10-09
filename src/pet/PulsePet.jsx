@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 
-import { anchorFromPosition, clampPetPosition, gazeTarget, movedEnough, petMenuPosition, petSize, positionFromAnchor, readPetPreferences, savePetPreferences, smoothGaze, PET_SETTLE_DELAY_MS } from './petModel.js'
+import { anchorFromPosition, clampPetPosition, gazeTarget, movedEnough, petFootprint, petSize, positionFromAnchor, readPetPreferences, savePetPreferences, smoothGaze, PET_SETTLE_DELAY_MS } from './petModel.js'
 import robot from './assets/pulse-pet-neutral-v1.png'
 import workingRobot from './assets/pulse-pet-working-v1.png'
 import './pulsePet.css'
@@ -11,7 +11,7 @@ function preferencesStorage() {
 }
 
 function viewportSize() {
-  return { width: window.innerWidth, height: Math.min(window.innerHeight, window.visualViewport?.height || window.innerHeight) }
+  return { width: Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth), height: Math.min(window.innerHeight, window.visualViewport?.height || window.innerHeight) }
 }
 
 const motionQuery = '(prefers-reduced-motion: reduce)'
@@ -58,20 +58,21 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   const [dragging, setDragging] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const [assetFailed, setAssetFailed] = useState(false)
-  const root = useRef(null), trigger = useRef(null), menu = useRef(null)
+  const root = useRef(null), trigger = useRef(null)
   const position = useRef({ x: 0, y: 0 }), drag = useRef(null), suppressClick = useRef(false)
   const pointer = useRef(null)
   const settleTimer = useRef(null)
   const cursorInside = useRef(false), keyboardFocus = useRef(false)
   const compact = preferences.asleep || mode === 'quiet'
   const size = useMemo(() => petSize(viewport.width, compact), [viewport.width, compact])
-  const open = panel.open && panel.pathname === pathname
+  const footprint = useMemo(() => petFootprint(size, compact), [size, compact])
+  const open = panel.open && panel.pathname === pathname && !compact && actions.length > 0
   const paused = hidden || reducedMotion || compact || assetFailed
   const working = !compact && !hovered && !open && !dragging
 
   function engage(event) {
     if (event?.type === 'pointerenter') cursorInside.current = true
-    if (event?.type === 'focus') keyboardFocus.current = event.currentTarget.matches(':focus-visible')
+    if (event?.type === 'focus') keyboardFocus.current = event.target.matches(':focus-visible')
     window.clearTimeout(settleTimer.current)
     setHovered(true)
   }
@@ -89,7 +90,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   useEffect(() => () => window.clearTimeout(settleTimer.current), [])
 
   function place(point) {
-    position.current = clampPetPosition(point, viewport, size)
+    position.current = clampPetPosition(point, viewport, footprint)
     if (root.current) {
       root.current.style.left = position.current.x + 'px'
       root.current.style.top = position.current.y + 'px'
@@ -107,18 +108,10 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   }
 
   useLayoutEffect(() => {
-    position.current = positionFromAnchor(preferences.position, viewport, size)
+    position.current = positionFromAnchor(preferences.position, viewport, footprint)
     root.current?.style.setProperty('left', position.current.x + 'px')
     root.current?.style.setProperty('top', position.current.y + 'px')
-  }, [preferences.position, viewport, size])
-
-  useLayoutEffect(() => {
-    if (!open || !menu.current) return
-    const box = menu.current.getBoundingClientRect()
-    const point = petMenuPosition(position.current, viewport, size, box)
-    menu.current.style.left = point.x + 'px'
-    menu.current.style.top = point.y + 'px'
-  }, [open, viewport, size, actions.length, mode])
+  }, [preferences.position, viewport, footprint])
 
   useEffect(() => {
     const resize = () => setViewport(viewportSize())
@@ -236,7 +229,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
     setDragging(false)
     if (cancelled) place(gesture.origin)
     else if (gesture.moved) {
-      save({ ...preferences, position: anchorFromPosition(position.current, viewport, size) })
+      save({ ...preferences, position: anchorFromPosition(position.current, viewport, footprint) })
       setAnnouncement('Pulse Pet moved. Position saved on this browser.')
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
@@ -249,7 +242,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
       setAnnouncement('Pulse Pet is awake.')
       return
     }
-    setPanel({ open: !open, pathname })
+    if (mode === 'normal') setPanel({ open: !open, pathname })
   }
 
   function moveByKeyboard(event) {
@@ -262,7 +255,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
     closePanel()
     const amount = event.shiftKey ? 40 : 10
     place({ x: position.current.x + offset[0] * amount, y: position.current.y + offset[1] * amount })
-    save({ ...preferences, position: anchorFromPosition(position.current, viewport, size) })
+    save({ ...preferences, position: anchorFromPosition(position.current, viewport, footprint) })
     setAnnouncement('Pulse Pet moved.')
   }
 
@@ -270,8 +263,8 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   const expression = compact ? 'sleep' : dragging ? 'curious' : hovered || open ? 'happy' : 'neutral'
   return <aside ref={root} className={`pulse-pet${compact ? ' pulse-pet--compact' : ''}${dragging ? ' pulse-pet--dragging' : ''}${hovered || open ? ' pulse-pet--engaged' : ''}${paused ? ' pulse-pet--still' : ''}`}
     aria-label="Pulse Pet" data-expression={expression} data-mode={mode} data-pose={working ? 'working' : 'standing'}
-    style={{ width: size.width, height: size.height, '--pet-scale': size.scale }}>
-    <button ref={trigger} className="pulse-pet__trigger" type="button" aria-label={preferences.asleep && mode !== 'quiet' ? 'Wake Pulse Pet' : 'Pulse Pet · Open shortcuts'}
+    style={{ width: footprint.width, height: footprint.height, '--pet-scale': size.scale, '--pet-body-height': size.height + 'px' }}>
+    <button ref={trigger} className="pulse-pet__trigger" type="button" style={{ height: size.height }} aria-label={preferences.asleep && mode !== 'quiet' ? 'Wake Pulse Pet' : mode === 'quiet' ? 'Pulse Pet' : 'Pulse Pet · Open shortcuts'}
       aria-expanded={open} aria-controls={open ? 'pulse-pet-shortcuts' : undefined} aria-describedby="pulse-pet-instructions"
       onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={event => finishDrag(event)} onPointerCancel={event => finishDrag(event, true)} onLostPointerCapture={event => finishDrag(event, true)}
       onPointerEnter={engage} onPointerLeave={settle} onFocus={engage} onBlur={settle} onClick={activate} onKeyDown={moveByKeyboard}>
@@ -295,12 +288,9 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
     </button>
     <span id="pulse-pet-instructions" className="pulse-sr-only">Click for shortcuts. Drag to move, or use arrow keys while focused. Shift and arrow keys move farther.</span>
     <span className="pulse-sr-only" role="status" aria-live="polite">{announcement}</span>
-    {open && <nav ref={menu} id="pulse-pet-shortcuts" className="pulse-pet__panel" aria-label="Pulse Pet shortcuts">
-      <div className="pulse-pet__panel-heading"><div><strong>Pulse Pet</strong><span>{mode === 'quiet' ? 'Resting while you work' : 'A little company. A quick way there.'}</span></div><button type="button" aria-label="Close Pulse Pet shortcuts" onClick={() => closePanel(true)}>×</button></div>
-      {mode === 'normal' ? <div className="pulse-pet__links">{actions.map(action => <Link key={action.id} to={action.to} onClick={() => closePanel()}><ShortcutIcon kind={action.id} /><span><strong>{action.label}</strong><small>{action.detail}</small></span><span className="pulse-pet__arrow" aria-hidden="true">↗</span></Link>)}</div>
-        : <p className="pulse-pet__quiet-copy">Your game or draft stays right here. Shortcuts return when you finish.</p>}
-      <div className="pulse-pet__controls"><button type="button" onClick={() => { save({ ...preferences, position: { x: 1, y: 1 } }); closePanel(true); setAnnouncement('Pulse Pet returned to the bottom-right corner.') }}>Reset position</button>
-        {mode === 'normal' && <button type="button" onClick={() => { save({ ...preferences, asleep: true }); closePanel(true); setAnnouncement('Pulse Pet is resting. Click to wake.') }}>Let me rest <span aria-hidden="true">☾</span></button>}</div>
+    {open && mode === 'normal' && <nav id="pulse-pet-shortcuts" className="pulse-pet__toolbar" aria-label="Pulse Pet shortcuts"
+      onPointerEnter={engage} onPointerLeave={settle} onFocus={engage} onBlur={settle}>
+      {actions.map(action => <Link key={action.id} to={action.to} aria-label={action.label} title={action.label} onClick={() => closePanel()}><ShortcutIcon kind={action.id} /></Link>)}
     </nav>}
   </aside>
 }
