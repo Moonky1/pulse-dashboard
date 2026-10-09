@@ -1,0 +1,70 @@
+.pulse-pet {
+  position: fixed;
+  z-index: 80;
+  left: 16px;
+  top: 16px;
+  isolation: isolate;
+  --pet-eye-x: 0px;
+  --pet-eye-y: 0px;
+  --pet-head-turn: 0deg;
+  --pet-blink: 1;
+  color: #f5f4fa;
+}
+.pulse-pet__trigger { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 24px; background: transparent; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pulse-pet__trigger:hover { background: transparent; }
+.pulse-pet__trigger:focus-visible { outline: 2px solid #ffc37a; outline-offset: 5px; }
+.pulse-pet--dragging .pulse-pet__trigger { cursor: grabbing; }
+.pulse-pet__scene { position: absolute; top: 0; left: 0; width: 112px; height: 148px; transform: scale(var(--pet-scale)); transform-origin: top left; pointer-events: none; }
+.pulse-pet__rig, .pulse-pet__part, .pulse-pet__head, .pulse-pet__pose { position: absolute; inset: 0; }
+.pulse-pet__rig { animation: pet-breathe 4.8s ease-in-out infinite; transform-origin: 50% 94%; }
+.pulse-pet__pose { transform-origin: 50% 98%; transition: opacity 230ms ease, transform 420ms cubic-bezier(.2,.7,.2,1); }
+.pulse-pet__working { opacity: 0; transform: translateY(5px); }
+.pulse-pet[data-pose="working"] .pulse-pet__working { opacity: 1; transform: none; }
+.pulse-pet[data-pose="working"] .pulse-pet__standing { opacity: 0; transform: translateY(8px); }
+.pulse-pet__working-body { clip-path: inset(52% 0 0); transform: translateY(-4px); }
+.pulse-pet__part img { position: absolute; left: -25%; top: -17.5%; width: 150%; max-width: none; height: auto; image-rendering: pixelated; pointer-events: none; }
+.pulse-pet__body { clip-path: polygon(36% 52%, 100% 52%, 100% 100%, 0 100%, 0 82%, 36% 82%); }
+.pulse-pet__arm { clip-path: polygon(4% 53%, 36% 53%, 36% 82%, 4% 82%); transform-origin: 29% 57%; transition: transform 420ms cubic-bezier(.2,.7,.2,1); }
+.pulse-pet__helmet { clip-path: inset(0 0 44% 0); }
+.pulse-pet__head { transform: rotate(var(--pet-head-turn)); transform-origin: 50% 55%; }
+.pulse-pet__face { position: absolute; left: 22%; top: 26%; width: 56%; height: 21%; transform: translate(var(--pet-eye-x), var(--pet-eye-y)); }
+.pulse-pet__eyes { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 2px #ff950052); transform: scaleY(var(--pet-blink)); transform-origin: center; transition: transform 65ms ease-out; }
+.pulse-pet__eyes-happy, .pulse-pet__eyes-sleep { display: none; }
+.pulse-pet[data-expression="happy"] .pulse-pet__eyes-open, .pulse-pet[data-expression="sleep"] .pulse-pet__eyes-open { display: none; }
+.pulse-pet[data-expression="happy"] .pulse-pet__eyes-happy, .pulse-pet[data-expression="sleep"] .pulse-pet__eyes-sleep { display: block; }
+.pulse-pet[data-expression="curious"] .pulse-pet__eyes { scale: 1 1.15; }
+.pulse-pet--engaged:not(.pulse-pet--compact) .pulse-pet__arm { animation: pet-wave 1.4s ease-in-out 1 both; }
+.pulse-pet--dragging .pulse-pet__arm { animation: none; transform: rotate(16deg); }
+.pulse-pet__shadow { position: absolute; width: 66px; height: 7px; left: 23px; bottom: 1px; border-radius: 50%; background: #0006; filter: blur(3px); }
+.pulse-pet--compact .pulse-pet__body, .pulse-pet--compact .pulse-pet__arm, .pulse-pet--compact .pulse-pet__shadow { display: none; }
+.pulse-pet--compact .pulse-pet__scene { top: 5px; }
+.pulse-pet--compact .pulse-pet__trigger { cursor: grab; }
+.pulse-pet__zzz { position: absolute; left: 82px; top: 3px; color: #ffb64d; font: 700 14px/1 monospace; rotate: -12deg; }
+.pulse-pet__zzz span { display: inline-block; font-size: 10px; translate: 2px -8px; }
+.pulse-pet__panel { position: fixed; width: min(264px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 14px; border: 1px solid #ffd0a32c; border-radius: 20px; background: #14121cf7; box-shadow: 0 18px 56px #0006, inset 0 1px #ffffff07; backdrop-filter: blur(18px); text-align: left; font-family: var(--pulse-font-sans, system-ui, sans-serif); animation: pet-panel-enter 180ms ease-out; }
+.pulse-pet__panel-heading { display: flex; align-items: start; gap: 8px; justify-content: space-between; padding: 2px 2px 12px; }
+.pulse-pet__panel-heading strong { display: block; font-size: 14px; font-weight: 700; color: #ffcc8d; }
+.pulse-pet__panel-heading span { display: block; margin-top: 5px; color: #a8a1b8; font-size: 11px; line-height: 1.4; }
+.pulse-pet__panel-heading button { width: 28px; height: 28px; flex: 0 0 28px; padding: 0; border: 0; border-radius: 9px; background: #ffffff07; color: #cfcad9; font-size: 20px; cursor: pointer; }
+.pulse-pet__links { display: grid; gap: 4px; }
+.pulse-pet__links a { display: flex; min-height: 54px; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid transparent; border-radius: 12px; color: #f6f3ff; text-decoration: none; transition: background 150ms, border-color 150ms; }
+.pulse-pet__links a:hover, .pulse-pet__links a:focus-visible { background: #ffac1910; border-color: #ffbf6324; }
+.pulse-pet__links svg { width: 22px; height: 22px; flex: 0 0 22px; color: #ffbc69; }
+.pulse-pet__links strong { display: block; font-size: 13px; font-weight: 650; }
+.pulse-pet__links small { display: block; margin-top: 3px; font-size: 10px; color: #a8a1b8; }
+.pulse-pet__arrow { margin-left: auto; color: #c1b3a6; font-size: 16px; }
+.pulse-pet__controls { display: flex; gap: 6px; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ffffff0c; }
+.pulse-pet__controls button { min-height: 36px; padding: 7px 8px; border: 0; border-radius: 9px; background: transparent; color: #bfb7cf; font: inherit; font-size: 11px; cursor: pointer; }
+.pulse-pet__controls button:hover { background: #ffffff08; color: #ffe0b5; }
+.pulse-pet__controls span { margin-left: 4px; }
+.pulse-pet__quiet-copy { margin: 4px 2px 8px; color: #bfb7cf; font-size: 12px; line-height: 1.65; }
+.pulse-pet--still .pulse-pet__rig, .pulse-pet.pulse-pet--still .pulse-pet__arm { animation: none; }
+.pulse-pet--still .pulse-pet__arm, .pulse-pet--still .pulse-pet__eyes { transition: none; }
+.pulse-pet--still .pulse-pet__pose { transition: none; }
+@keyframes pet-breathe { 0%, 100% { translate: 0 0; rotate: -.5deg; } 42% { translate: 0 -2px; rotate: .45deg; } 72% { translate: 0 -.6px; rotate: 0deg; } }
+@keyframes pet-wave { 0% { transform: rotate(0deg); } 34% { transform: rotate(118deg); } 50% { transform: rotate(100deg); } 68% { transform: rotate(120deg); } 84% { transform: rotate(105deg); } 100% { transform: rotate(112deg); } }
+@keyframes pet-panel-enter { from { opacity: 0; translate: 0 4px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .pulse-pet *, .pulse-pet *::before, .pulse-pet *::after { animation: none !important; transition: none !important; }
+  .pulse-pet__head, .pulse-pet__face { transform: none; }
+}

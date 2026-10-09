@@ -13,6 +13,7 @@ dist-maintenance
 dist-ui-preview
 dist-ssr
 *.local
+/pet-review.local.*
 
 # Editor directories and files
 .vscode/*

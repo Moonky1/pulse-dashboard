@@ -1,0 +1,4 @@
+PET-1 asset, built-in image generation/editing tool, 2026-10-08.
+Source identity reference: user-supplied Pulse Pet options.png (15-pose sheet).
+Prompt: Extract only the neutral upright front-facing robot at the top-left. Preserve its white/gray helmet, orange stripe and ear pieces, dark outlined pixel art, short white/orange body and feet and proportions. One centered full-body character, head front-facing, arms relaxed. Remove the background with true alpha transparency. Empty dark face screen with no eyes, so code can animate the orange gaze. Crisp pixel art, no text, props, scene, opaque rectangle, redesign or 3D restyling.
+Output: pulse-pet-neutral-v1.png. Transparent alpha verified; 1182 x 1330, 600506 bytes. Source originals unchanged. The renderer reuses this one asset for articulated body/head/arm layers, with independent code-native eyes.

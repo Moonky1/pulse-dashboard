@@ -8,6 +8,7 @@ import { supabase } from '../utils/supabase.js'
 import { StaffAvatar } from './StaffAvatar.jsx'
 import { Button } from './ui/Button.jsx'
 import { PulseOrb } from './ui/PulseOrb.jsx'
+import { PetVisibilityButton } from '../pet/PetVisibilityButton.jsx'
 import './ProductHeader.css'
 
 const links = [
@@ -79,6 +80,7 @@ export function ProductHeader({ confirmLeave = () => true }) {
           <Link to="/settings/profile" onClick={guardNavigation}>Profile <span aria-hidden="true">↗</span></Link>
           <Link to="/settings" onClick={guardNavigation}>Settings <span aria-hidden="true">↗</span></Link>
           {adminAccess.state === 'allowed' && <Link to="/admin/users" onClick={guardNavigation}>Administration <span aria-hidden="true">↗</span></Link>}
+          <PetVisibilityButton />
         </nav>
         <Button type="button" variant="ghost" onClick={() => { if (confirmLeave('signout')) void signOut() }}>Sign out</Button>
       </div>

@@ -40,6 +40,7 @@ const ViciPreview = lazy(() => import('../simulations/ViciPreview.jsx').then(mod
 const StaffPublicProfilePage = lazy(() => import('./screens/StaffPublicProfilePage.jsx').then((module) => ({ default: module.StaffPublicProfilePage })))
 const VerifyEmailPage = lazy(() => import('./screens/VerifyEmailPage.jsx').then((module) => ({ default: module.VerifyEmailPage })))
 const WorkspacePage = lazy(() => import('./screens/WorkspacePage.jsx').then((module) => ({ default: module.WorkspacePage })))
+const PulsePetLayer = lazy(() => import('../pet/PulsePetLayer.jsx').then((module) => ({ default: module.PulsePetLayer })))
 
 function RouteGate({ allow, children }) {
   const { authState } = useAuth()
@@ -65,6 +66,7 @@ export function AuthApp() {
   return (
     <BrowserRouter>
       <SearchMetadata />
+      <Suspense fallback={null}><PulsePetLayer /></Suspense>
       <PageLoadBoundary><Suspense fallback={<AccountStatePage kind="loading" />}><Routes>
         <Route path="/" element={<PublicHomePage />} />
         <Route path="/privacy" element={<PublicLegalPage kind="privacy" />} />

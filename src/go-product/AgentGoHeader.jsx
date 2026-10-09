@@ -9,6 +9,7 @@ import { useAgentSession } from './agentSessionContext.js'
 import { useGoIdentity } from './useGoIdentity.js'
 import { goPlayerName } from './goPlayerIdentity.js'
 import { GoTeamBadge } from './GoTeamBadge.jsx'
+import { PetVisibilityButton } from '../pet/PetVisibilityButton.jsx'
 
 export function AgentGoHeader({ entry = false }) {
   const { agent, kind } = useGoIdentity()
@@ -39,6 +40,7 @@ export function AgentGoHeader({ entry = false }) {
         <nav className="pulse-product-account__items" aria-label="Account menu">
           <Link to={`/profile/${agent.agent_code}`}>Profile <span aria-hidden="true">↗</span></Link>
           <Link to="/agent/settings">Settings <span aria-hidden="true">↗</span></Link>
+          <PetVisibilityButton />
         </nav>
         {logoutError && <p role="alert" className="pulse-product-account__error">Couldn’t sign out. Try again.</p>}
         <Button type="button" variant="ghost" onClick={() => void leave()}>Sign out</Button>
