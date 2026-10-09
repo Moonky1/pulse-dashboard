@@ -3,6 +3,7 @@ export const PET_STORAGE_KEY = 'pulse_pet_preferences_v1'
 export const PET_VISIBILITY_KEY = 'pulse_pet_visible_v1'
 export const PET_MARGIN = 16
 export const DRAG_THRESHOLD = 6
+export const PET_SETTLE_DELAY_MS = 3000
 
 const bounded = (value, min, max) => Math.min(max, Math.max(min, value))
 const finite = (value, fallback) => Number.isFinite(value) ? value : fallback
@@ -62,7 +63,7 @@ export function gazeTarget(pointer, position, scale = 1) {
 
 export function smoothGaze(current, target, elapsedMs) {
   // Time based damping: the same comfortable response at 30, 60 and 120 Hz.
-  const amount = 1 - Math.exp(-bounded(elapsedMs, 0, 64) / 145)
+  const amount = 1 - Math.exp(-bounded(elapsedMs, 0, 64) / 165)
   return { x: current.x + (target.x - current.x) * amount, y: current.y + (target.y - current.y) * amount }
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 
-import { anchorFromPosition, clampPetPosition, gazeTarget, movedEnough, petMenuPosition, petSize, positionFromAnchor, readPetPreferences, savePetPreferences, smoothGaze } from './petModel.js'
+import { anchorFromPosition, clampPetPosition, gazeTarget, movedEnough, petMenuPosition, petSize, positionFromAnchor, readPetPreferences, savePetPreferences, smoothGaze, PET_SETTLE_DELAY_MS } from './petModel.js'
 import robot from './assets/pulse-pet-neutral-v1.png'
 import workingRobot from './assets/pulse-pet-working-v1.png'
 import './pulsePet.css'
@@ -62,20 +62,28 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   const position = useRef({ x: 0, y: 0 }), drag = useRef(null), suppressClick = useRef(false)
   const pointer = useRef(null)
   const settleTimer = useRef(null)
+  const cursorInside = useRef(false), keyboardFocus = useRef(false)
   const compact = preferences.asleep || mode === 'quiet'
   const size = useMemo(() => petSize(viewport.width, compact), [viewport.width, compact])
   const open = panel.open && panel.pathname === pathname
   const paused = hidden || reducedMotion || compact || assetFailed
   const working = !compact && !hovered && !open && !dragging
 
-  function engage() {
+  function engage(event) {
+    if (event?.type === 'pointerenter') cursorInside.current = true
+    if (event?.type === 'focus') keyboardFocus.current = event.currentTarget.matches(':focus-visible')
     window.clearTimeout(settleTimer.current)
     setHovered(true)
   }
 
-  function settle() {
+  function settle(event) {
+    if (event.type === 'pointerleave') cursorInside.current = false
+    if (event.type === 'blur') keyboardFocus.current = false
     window.clearTimeout(settleTimer.current)
-    settleTimer.current = window.setTimeout(() => setHovered(false), 850)
+    if (cursorInside.current || keyboardFocus.current) return
+    settleTimer.current = window.setTimeout(() => {
+      if (!cursorInside.current && !keyboardFocus.current) setHovered(false)
+    }, PET_SETTLE_DELAY_MS)
   }
 
   useEffect(() => () => window.clearTimeout(settleTimer.current), [])
@@ -199,6 +207,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
 
   function pointerDown(event) {
     if (event.button !== 0 || !event.isPrimary) return
+    keyboardFocus.current = false
     drag.current = { id: event.pointerId, start: { x: event.clientX, y: event.clientY }, origin: { ...position.current }, moved: false }
     suppressClick.current = false
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -248,6 +257,8 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
     const offset = offsets[event.key]
     if (!offset) return
     event.preventDefault()
+    keyboardFocus.current = true
+    engage()
     closePanel()
     const amount = event.shiftKey ? 40 : 10
     place({ x: position.current.x + offset[0] * amount, y: position.current.y + offset[1] * amount })
@@ -268,19 +279,15 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
         <span className="pulse-pet__shadow" />
         <span className="pulse-pet__rig">
           <span className="pulse-pet__pose pulse-pet__standing">
-          <span className="pulse-pet__body pulse-pet__part"><img src={robot} alt="" draggable="false" onError={() => setAssetFailed(true)} /></span>
-          <span className="pulse-pet__arm pulse-pet__part"><img src={robot} alt="" draggable="false" /></span>
-          <span className="pulse-pet__head">
-            <span className="pulse-pet__helmet pulse-pet__part"><img src={robot} alt="" draggable="false" /></span>
-            <span className="pulse-pet__face"><RobotEyes /></span>
-          </span>
+            <span className="pulse-pet__body pulse-pet__part"><img src={robot} alt="" draggable="false" onError={() => setAssetFailed(true)} /></span>
+            <span className="pulse-pet__arm pulse-pet__part"><img src={robot} alt="" draggable="false" /></span>
           </span>
           <span className="pulse-pet__pose pulse-pet__working">
             <span className="pulse-pet__working-body pulse-pet__part"><img src={workingRobot} alt="" draggable="false" onError={() => setAssetFailed(true)} /></span>
-            <span className="pulse-pet__head">
-              <span className="pulse-pet__helmet pulse-pet__part"><img src={robot} alt="" draggable="false" /></span>
-              <span className="pulse-pet__face"><RobotEyes /></span>
-            </span>
+          </span>
+          <span className="pulse-pet__head">
+            <span className="pulse-pet__helmet pulse-pet__part"><img src={robot} alt="" draggable="false" /></span>
+            <span className="pulse-pet__face"><RobotEyes /></span>
           </span>
         </span>
         {compact && <span className="pulse-pet__zzz">z<span>z</span></span>}

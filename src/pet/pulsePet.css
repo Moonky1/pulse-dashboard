@@ -17,7 +17,7 @@
 .pulse-pet__scene { position: absolute; top: 0; left: 0; width: 112px; height: 148px; transform: scale(var(--pet-scale)); transform-origin: top left; pointer-events: none; }
 .pulse-pet__rig, .pulse-pet__part, .pulse-pet__head, .pulse-pet__pose { position: absolute; inset: 0; }
 .pulse-pet__rig { animation: pet-breathe 4.8s ease-in-out infinite; transform-origin: 50% 94%; }
-.pulse-pet__pose { transform-origin: 50% 98%; transition: opacity 230ms ease, transform 420ms cubic-bezier(.2,.7,.2,1); }
+.pulse-pet__pose { transform-origin: 50% 98%; transition: opacity 360ms ease, transform 640ms cubic-bezier(.22,.75,.24,1); }
 .pulse-pet__working { opacity: 0; transform: translateY(5px); }
 .pulse-pet[data-pose="working"] .pulse-pet__working { opacity: 1; transform: none; }
 .pulse-pet[data-pose="working"] .pulse-pet__standing { opacity: 0; transform: translateY(8px); }
@@ -29,12 +29,16 @@
 .pulse-pet__head { transform: rotate(var(--pet-head-turn)); transform-origin: 50% 55%; }
 .pulse-pet__face { position: absolute; left: 22%; top: 26%; width: 56%; height: 21%; transform: translate(var(--pet-eye-x), var(--pet-eye-y)); }
 .pulse-pet__eyes { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 2px #ff950052); transform: scaleY(var(--pet-blink)); transform-origin: center; transition: transform 65ms ease-out; }
-.pulse-pet__eyes-happy, .pulse-pet__eyes-sleep { display: none; }
-.pulse-pet[data-expression="happy"] .pulse-pet__eyes-open, .pulse-pet[data-expression="sleep"] .pulse-pet__eyes-open { display: none; }
-.pulse-pet[data-expression="happy"] .pulse-pet__eyes-happy, .pulse-pet[data-expression="sleep"] .pulse-pet__eyes-sleep { display: block; }
+.pulse-pet__eyes g { transition: opacity 160ms ease; }
+.pulse-pet__eyes-happy, .pulse-pet__eyes-sleep { opacity: 0; }
+.pulse-pet[data-expression="happy"] .pulse-pet__eyes-open, .pulse-pet[data-expression="sleep"] .pulse-pet__eyes-open { opacity: 0; }
+.pulse-pet[data-expression="happy"] .pulse-pet__eyes-happy, .pulse-pet[data-expression="sleep"] .pulse-pet__eyes-sleep { opacity: 1; }
 .pulse-pet[data-expression="curious"] .pulse-pet__eyes { scale: 1 1.15; }
-.pulse-pet--engaged:not(.pulse-pet--compact) .pulse-pet__arm { animation: pet-wave 1.4s ease-in-out 1 both; }
+.pulse-pet--engaged:not(.pulse-pet--compact) .pulse-pet__standing { animation: pet-stand 720ms cubic-bezier(.22,.75,.24,1) 1 both; }
+.pulse-pet--engaged:not(.pulse-pet--compact) .pulse-pet__head { animation: pet-head-rise 720ms cubic-bezier(.22,.75,.24,1) 1 both; }
+.pulse-pet--engaged:not(.pulse-pet--compact) .pulse-pet__arm { animation: pet-wave 1.4s ease-in-out 560ms 1 both; }
 .pulse-pet--dragging .pulse-pet__arm { animation: none; transform: rotate(16deg); }
+.pulse-pet.pulse-pet--dragging .pulse-pet__standing, .pulse-pet.pulse-pet--dragging .pulse-pet__head { animation: none; }
 .pulse-pet__shadow { position: absolute; width: 66px; height: 7px; left: 23px; bottom: 1px; border-radius: 50%; background: #0006; filter: blur(3px); }
 .pulse-pet--compact .pulse-pet__body, .pulse-pet--compact .pulse-pet__arm, .pulse-pet--compact .pulse-pet__shadow { display: none; }
 .pulse-pet--compact .pulse-pet__scene { top: 5px; }
@@ -58,10 +62,12 @@
 .pulse-pet__controls button:hover { background: #ffffff08; color: #ffe0b5; }
 .pulse-pet__controls span { margin-left: 4px; }
 .pulse-pet__quiet-copy { margin: 4px 2px 8px; color: #bfb7cf; font-size: 12px; line-height: 1.65; }
-.pulse-pet--still .pulse-pet__rig, .pulse-pet.pulse-pet--still .pulse-pet__arm { animation: none; }
+.pulse-pet--still .pulse-pet__rig, .pulse-pet.pulse-pet--still .pulse-pet__arm, .pulse-pet.pulse-pet--still .pulse-pet__standing, .pulse-pet.pulse-pet--still .pulse-pet__head { animation: none; }
 .pulse-pet--still .pulse-pet__arm, .pulse-pet--still .pulse-pet__eyes { transition: none; }
 .pulse-pet--still .pulse-pet__pose { transition: none; }
 @keyframes pet-breathe { 0%, 100% { translate: 0 0; rotate: -.5deg; } 42% { translate: 0 -2px; rotate: .45deg; } 72% { translate: 0 -.6px; rotate: 0deg; } }
+@keyframes pet-stand { 0% { transform: translate(0, 8px); } 35% { transform: translate(4px, 5px); } 72% { transform: translate(2px, -1px); } 100% { transform: none; } }
+@keyframes pet-head-rise { 0% { translate: 0 0; rotate: 0deg; } 35% { translate: 4px 4px; rotate: 2.5deg; } 72% { translate: 2px -1px; rotate: -.5deg; } 100% { translate: 0 0; rotate: 0deg; } }
 @keyframes pet-wave { 0% { transform: rotate(0deg); } 34% { transform: rotate(118deg); } 50% { transform: rotate(100deg); } 68% { transform: rotate(120deg); } 84% { transform: rotate(105deg); } 100% { transform: rotate(112deg); } }
 @keyframes pet-panel-enter { from { opacity: 0; translate: 0 4px; } to { opacity: 1; translate: 0 0; } }
 @media (prefers-reduced-motion: reduce) {

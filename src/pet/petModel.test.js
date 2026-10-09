@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 
-import { anchorFromPosition, clampPetPosition, gazeTarget, movedEnough, PET_STORAGE_KEY, PET_VISIBILITY_KEY, petActions, petMenuPosition, petRouteMode, petSize, positionFromAnchor, readPetPreferences, savePetPreferences, readPetVisibility, savePetVisibility, smoothGaze } from './petModel.js'
+import { anchorFromPosition, clampPetPosition, gazeTarget, movedEnough, PET_STORAGE_KEY, PET_VISIBILITY_KEY, PET_SETTLE_DELAY_MS, petActions, petMenuPosition, petRouteMode, petSize, positionFromAnchor, readPetPreferences, savePetPreferences, readPetVisibility, savePetVisibility, smoothGaze } from './petModel.js'
 
 const read = name => readFile(new URL(name, import.meta.url), 'utf8')
 const desktop = { width: 1440, height: 900 }
@@ -194,10 +194,25 @@ test('idle laptop pose stands on pointer or keyboard engagement, then settles wi
   assert.match(component, /onFocus=\{engage\}/)
   assert.match(component, /onPointerLeave=\{settle\}/)
   assert.match(component, /clearTimeout\(settleTimer.current\)/)
-  assert.match(component, /setTimeout\(\(\) => setHovered\(false\), 850\)/)
+  assert.match(component, /\}, PET_SETTLE_DELAY_MS\)/)
+  assert.match(component, /if \(cursorInside.current \|\| keyboardFocus.current\) return/)
+  assert.match(component, /if \(!cursorInside.current && !keyboardFocus.current\) setHovered\(false\)/)
+  assert.equal(PET_SETTLE_DELAY_MS, 3000)
   assert.match(css, /pulse-pet\[data-pose="working"\]/)
   assert.match(css, /pulse-pet--still .pulse-pet__pose \{ transition: none/)
   assert.doesNotMatch(css, /scale\(\.9(?:0|6)?\)/)
   assert.match(css, /pulse-pet\[data-pose="working"\] .pulse-pet__working \{ opacity: 1; transform: none; \}/)
-  assert.equal((component.match(/className="pulse-pet__helmet pulse-pet__part"><img src=\{robot\}/g) || []).length, 2)
+  assert.equal((component.match(/className="pulse-pet__helmet pulse-pet__part"><img src=\{robot\}/g) || []).length, 1)
+  assert.equal((component.match(/<RobotEyes\s*\/>/g) || []).length, 1)
+})
+
+test('standing leans forward with easing and a delayed wave, never a pose zoom or duplicated face', async () => {
+  const css = await read('pulsePet.css')
+  assert.match(css, /pet-stand 720ms/)
+  assert.match(css, /pet-head-rise 720ms/)
+  assert.match(css, /pet-wave 1.4s ease-in-out 560ms/)
+  assert.match(css, /35% \{ translate: 4px 4px; rotate: 2.5deg/)
+  const riseFrames = css.slice(css.indexOf('@keyframes pet-stand'), css.indexOf('@keyframes pet-wave'))
+  assert.doesNotMatch(riseFrames, /scale\(/)
+  assert.match(css, /pulse-pet.pulse-pet--still .pulse-pet__head \{ animation: none/)
 })
