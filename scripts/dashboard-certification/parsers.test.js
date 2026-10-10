@@ -215,5 +215,7 @@ test('parser is server-only and does not expose source data to the mounted app',
   const app = readFileSync(new URL('../../src/auth/AuthApp.jsx', import.meta.url), 'utf8')
   const page = readFileSync(new URL('../../src/auth/screens/ProductDashboardPage.jsx', import.meta.url), 'utf8')
   assert.ok(!/viciReportParsers|VICI_REPORT_PASSWORD|VICI_REPORT_USER|VICI_BASE_URL/.test(app + page))
-  assert.match(page, /IN DEVELOPMENT/)
+  const adapter = readFileSync(new URL('../../src/dashboard/dashboardApi.js', import.meta.url), 'utf8')
+  assert.ok(!/viciReportParsers|VICI_REPORT_PASSWORD|VICI_REPORT_USER|VICI_BASE_URL/.test(adapter))
+  assert.match(adapter, /client\.rpc\('get_vici_dashboard'/)
 })

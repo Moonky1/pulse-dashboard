@@ -97,6 +97,9 @@ and every running/leased run. Retain sanitized failed/duplicate run metadata for
 No rollup is presented as a sum of cumulative daily report snapshots. This policy
 is documented, not activated: no source history was deleted during this checkpoint.
 
+The Dashboard screen and responsive UI validation are documented in
+[dashboard-vici-ui.md](dashboard-vici-ui.md).
+
 Remaining: resolve Preview-to-Vici connectivity with the provider, confirm timezone,
-build the Dashboard screen and responsive QA, then prove multiple remote minute
-cycles and failure freshness. Production still requires separate review/approval.
+then prove multiple remote minute cycles and failure freshness. Production still
+requires separate review/approval.

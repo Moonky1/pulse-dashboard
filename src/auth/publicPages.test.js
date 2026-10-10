@@ -155,6 +155,7 @@ test('active products share a centered Pulse navigation and keep Studio leave pr
   for (const surface of [dashboard, studio]) assert.match(surface, /<ProductHeader/)
   for (const surface of [academy, academyDetail]) assert.match(surface, /<AcademyHeader/)
   assert.match(academyHeader, /identity\.kind === 'agent' \? <AgentGoHeader \/> : <ProductHeader \/>/)
-  assert.match(dashboard, /IN DEVELOPMENT/)
+  assert.match(dashboard, /<DashboardView client=\{supabase\}/)
+  assert.doesNotMatch(dashboard, /IN DEVELOPMENT/)
   assert.match(studio, /confirmLeave=\{confirmLeave\}/)
 })

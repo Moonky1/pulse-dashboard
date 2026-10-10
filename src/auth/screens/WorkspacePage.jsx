@@ -67,7 +67,7 @@ export function WorkspacePage() {
         {goAccess.state === 'allowed' && (canPractice(goAccess.capabilities) || canHost(goAccess.capabilities)) && <WorkspaceApp className="pulse-launcher-app--go" to="/go" eyebrow="INTERACTIVE LEARNING" title="Pulse GO" description="Practice your skills and bring the team together in live games." image={GO_ART.classic} />}
         {studioAccess.state === 'allowed' && <WorkspaceApp className="pulse-launcher-app--studio" to="/studio" eyebrow="MAKE IT YOURS" title="Studio" description={canCreateStudioContent(studioAccess.permissionKeys) ? 'Create games and manage training content.' : 'Explore training content from your team.'} image={GO_ART.goal2} />}
         <WorkspaceApp className="pulse-launcher-app--academy" to="/academy" eyebrow="KNOWLEDGE LIBRARY" title="Academy" description="Guides, scripts and standards for better conversations." icon={<AcademyIcon />} />
-        <WorkspaceApp className="pulse-launcher-app--dashboard" to="/dashboard" eyebrow="A CLEARER VIEW" title="Dashboard" description="Operational performance, teams and insights." icon={<DashboardIcon />} status="IN DEVELOPMENT" />
+        <WorkspaceApp className="pulse-launcher-app--dashboard" to="/dashboard" eyebrow="A CLEARER VIEW" title="Dashboard" description="VICIdial calls, transfers and agent time." icon={<DashboardIcon />} status="PREVIEW" />
         {adminAccess.state === 'allowed' && <WorkspaceApp className="pulse-launcher-app--admin" to="/admin/users" eyebrow="TEAM OPERATIONS" title="Administration" description="People, access and organization." image={GO_ART.valid} />}
         </>}
       </section>
