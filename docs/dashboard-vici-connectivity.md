@@ -40,6 +40,18 @@ unmapped rather than receiving an invented pause-code meaning.
 
 ## Private direct-HTTP proof
 
+Authenticated direct HTTP succeeded from the local server runtime for the
+2026-10-09 full-day range. No browser session or cookies were used. Each export
+contained 50 agents, both ID sets agreed, and all 23 Performance plus 15 Pause
+additive checks matched. Source generation clocks were `2026-10-09 21:13:24`
+and `2026-10-09 21:13:34`; ingestion completed at `2026-10-10T04:13:34.089Z`
+and `2026-10-10T04:13:49.663Z`. The only parser warning was the already-known
+unnamed Pause columns. No raw source was persisted by the probe.
+
+This proves authentication and report reads from this local runtime, not access
+from a deployed Preview collector or its outbound IP. Source timezone remains
+unconfirmed; the observed clock difference is not a timezone configuration.
+
 `supabase/functions/_shared/viciReportClient.mjs` uses HTTPS GET with a Basic auth
 header, no browser session and no automatic redirects. It reads at most 5 MiB,
 aborts slow requests, validates the returned range, and returns normalized rows
@@ -83,7 +95,7 @@ Classification tests do not prove that a live IP-validation failure was encounte
 
 ## Remaining release gates
 
-- Successful authenticated direct-HTTP proof using private Reports credentials.
+- Repeat the successful local direct-HTTP proof from the intended Preview collector.
 - Confirm source timezone and isolated Preview backend before scheduling/persistence.
 - Add and test schema, protected Staff reads, collector and snapshot idempotency.
 - Explicit configurable group-to-team mapping; keep unmapped Vici groups honest.
