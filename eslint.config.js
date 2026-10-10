@@ -27,7 +27,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['scripts/admin-certification/**/*.{js,mjs}', 'scripts/sim-certification/**/*.{js,mjs}'],
+    files: ['scripts/admin-certification/**/*.{js,mjs}', 'scripts/sim-certification/**/*.{js,mjs}', 'scripts/dashboard-certification/**/*.{js,mjs}', 'supabase/functions/_shared/viciReportParsers.mjs'],
     extends: [js.configs.recommended],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
   },
