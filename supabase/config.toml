@@ -15,6 +15,9 @@ verify_jwt = true
 [functions.pulse-staff-removal]
 verify_jwt = true
 
+[functions.pulse-vici-collector]
+verify_jwt = true
+
 [auth.email.template.invite]
 subject = "Your Pulse invitation is ready"
 content_path = "./supabase/templates/invite.html"

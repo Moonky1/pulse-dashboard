@@ -27,7 +27,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['scripts/admin-certification/**/*.{js,mjs}', 'scripts/sim-certification/**/*.{js,mjs}', 'scripts/dashboard-certification/**/*.{js,mjs}', 'supabase/functions/_shared/viciReportParsers.mjs', 'supabase/functions/_shared/viciReportClient.mjs'],
+    files: ['scripts/admin-certification/**/*.{js,mjs}', 'scripts/sim-certification/**/*.{js,mjs}', 'scripts/dashboard-certification/**/*.{js,mjs}', 'supabase/functions/_shared/vici*.mjs', 'supabase/functions/pulse-vici-collector/*.mjs'],
     extends: [js.configs.recommended],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: { ...globals.node, ...globals.browser } },
   },

@@ -148,6 +148,22 @@ test('server unavailability preserves a structured backoff error', async () => {
   await assert.rejects(client.read('performance', request), error => error.category === 'source_unavailable' && error.retry_after_seconds === 60 && !JSON.stringify(error).includes('private server'))
 })
 
+test('network diagnostics expose only a bounded reason, never raw private messages', async () => {
+  for (const [message, code, reason] of [
+    ['invalid peer certificate: UnknownIssuer PRIVATE', '', 'tls_certificate'],
+    ['PRIVATE', 'ENOTFOUND', 'dns'], ['connection refused PRIVATE', '', 'connection_refused'],
+  ]) {
+    const client = createViciReportClient(config, { fetchImpl: async () => { throw Object.assign(new Error(message), { code }) } })
+    await assert.rejects(client.read('performance', request), error => {
+      assert.equal(error.category, 'source_network_error')
+      assert.equal(error.network_reason, reason)
+      assert.equal(error.network_phase, 'connect')
+      assert.equal(JSON.stringify(error).includes('PRIVATE'), false)
+      return true
+    })
+  }
+})
+
 test('fetch failures cannot expose raw URLs, credentials, stacks or response bodies', async () => {
   const client = createViciReportClient(config, { fetchImpl: async () => { throw new Error(`https://${config.user}:${config.password}@reports.example PRIVATE-BODY`) } })
   await assert.rejects(client.read('performance', request), error => {

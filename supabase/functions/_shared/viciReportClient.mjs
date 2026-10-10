@@ -7,16 +7,30 @@ const EXPORTS = Object.freeze({ performance: '1', pause: '2' })
 const OPTIONS = ['show_percentages', 'live_agents', 'time_in_sec', 'search_archived_data', 'show_defunct_users', 'breakdown_by_date']
 
 export class ViciClientError extends Error {
-  constructor(category, { retryAfterSeconds = null } = {}) {
+  constructor(category, { retryAfterSeconds = null, networkReason = null, networkPhase = null } = {}) {
     super(category)
     this.name = 'ViciClientError'
     this.category = category
     this.requires_ip_validation = category === 'requires_ip_validation'
     this.retry_after_seconds = retryAfterSeconds
+    this.network_reason = networkReason
+    this.network_phase = networkPhase
   }
 }
 
 const fail = (category, options) => { throw new ViciClientError(category, options) }
+
+function networkReason(error) {
+  // Inspect privately and return only a fixed enum, never the message/URL/cause.
+  const diagnostic = String(error?.cause?.code ?? error?.code ?? '') + ' ' + String(error?.message ?? '')
+  if (/certificate|UnknownIssuer|CertExpired|CERT_|TLS handshake/i.test(diagnostic)) return 'tls_certificate'
+  if (/ENOTFOUND|EAI_AGAIN|failed to lookup address|name or service not known|dns error/i.test(diagnostic)) return 'dns'
+  if (/ECONNREFUSED|connection refused/i.test(diagnostic)) return 'connection_refused'
+  if (/ECONNRESET|connection reset|connection closed|unexpected end|unexpected eof/i.test(diagnostic)) return 'connection_closed'
+  if (/ENETUNREACH|network is unreachable/i.test(diagnostic)) return 'network_unreachable'
+  if (/ETIMEDOUT|timed out/i.test(diagnostic)) return 'connection_timeout'
+  return 'unspecified'
+}
 
 function origin(value) {
   let parsed
@@ -131,11 +145,13 @@ export function createViciReportClient({ baseUrl, user, password, sourceTimeZone
     const url = buildViciReportUrl(base, reportType, spec)
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)
+    let networkPhase = 'connect'
     try {
       const response = await fetchImpl(url, {
         method: 'GET', redirect: 'manual', cache: 'no-store', signal: controller.signal,
         headers: { Accept: 'text/csv, text/plain, application/octet-stream', Authorization: auth },
       })
+      networkPhase = 'read_response'
       if (response.status >= 300 && response.status < 400) {
         await response.body?.cancel()
         fail(validationRedirect(response.headers.get('location'), base) ? 'requires_ip_validation' : 'unexpected_redirect')
@@ -150,6 +166,7 @@ export function createViciReportClient({ baseUrl, user, password, sourceTimeZone
       if (!response.ok) fail('source_http_error', { retryAfterSeconds: 60 })
       if (classification) fail(classification)
       if (/html/i.test(response.headers.get('content-type') ?? '')) fail('unexpected_html_response')
+      networkPhase = 'parse_response'
       const parsed = (reportType === 'performance' ? parseAgentPerformance : parsePauseBreakdown)(body, { ingestedAt: now() })
       if (parsed.source_range.from !== spec.range.from || parsed.source_range.to !== spec.range.to) fail('source_range_mismatch')
       return { ...parsed, requested_range: spec.range, requested_scope: spec.scope, source_time_zone: sourceTimeZone }
@@ -158,7 +175,7 @@ export function createViciReportClient({ baseUrl, user, password, sourceTimeZone
       if (error instanceof ViciClientError) throw error
       if (error instanceof ViciReportError) fail(error.category)
       // Fetch errors may contain full URLs or sensitive proxy details. Never retain causes.
-      fail('source_network_error', { retryAfterSeconds: 60 })
+      fail('source_network_error', { retryAfterSeconds: 60, networkReason: networkReason(error), networkPhase })
     } finally { clearTimeout(timer) }
   }
 

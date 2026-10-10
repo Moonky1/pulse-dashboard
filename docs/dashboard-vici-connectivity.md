@@ -1,7 +1,8 @@
 # DASHBOARD-1: VICIdial report connectivity
 
-This checkpoint adds server-only parsing and the direct HTTP report client. It does
-not yet install a collector, scheduler, database migration or operational Dashboard.
+Server-only parsing, direct HTTP, storage, protected reads and the collector are
+implemented. See [backend proof](dashboard-vici-backend.md) for local and Preview
+results. There is no enabled schedule or operational Dashboard UI yet.
 
 ## Observed contract (9 October 2026)
 
@@ -89,15 +90,15 @@ in the operator's Downloads folder and are not copied into the repository.
 | `source_unavailable`, `source_network_error`, `request_timeout` | Back off at least 60 seconds |
 | Invalid HTML, CSV, range or oversized response | Reject; never replace the last success with an empty report |
 
-The client makes no retries. Persistent health, recovery scheduling, preserving
-the last committed snapshot, idempotency and RLS are still collector/database work.
+The client makes no retries. The database now enforces leases, cooldown, backoff,
+auth/IP halts, atomic pairs, idempotency, protected reads and last-success retention.
+Scheduling and the user-facing freshness UI remain pending.
 Classification tests do not prove that a live IP-validation failure was encountered.
 
 ## Remaining release gates
 
-- Repeat the successful local direct-HTTP proof from the intended Preview collector.
-- Confirm source timezone and isolated Preview backend before scheduling/persistence.
-- Add and test schema, protected Staff reads, collector and snapshot idempotency.
+- Resolve the Preview runtime's source connection failure, then repeat its live proof.
+- Confirm the IANA source timezone before scheduling. Pulse Preview is identified.
 - Explicit configurable group-to-team mapping; keep unmapped Vici groups honest.
 - Implement Dashboard UI, responsive QA, sequential 60-second sync proof and
   last-success preservation after a simulated failure.
