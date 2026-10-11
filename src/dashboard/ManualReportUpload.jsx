@@ -42,7 +42,7 @@ export function ManualReportUpload({ client, scope, date, onImported }) {
     <form ref={form} onSubmit={submit}>
       <p>Upload either report or both.{ready && !mismatch && <> Date: <strong>{reportDate}</strong>.</>}</p>
       <div className="dash-upload-files">{[['performance', 'Call Stats Breakdown'], ['pause', 'Pause Code Breakdown']].map(([key, label]) => <label key={key}>{label}<input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => void select(key, e.target.files?.[0] || null)} /></label>)}</div>
-      <label className="dash-upload-confirm"><input type="checkbox" required checked={confirmed} disabled={busy} onChange={e => setConfirmed(e.target.checked)} /><span>Filters: {scope.user_groups.join(', ')} · {scope.campaigns.join(', ')} · all users.</span></label>
+      <label className="dash-upload-confirm"><input type="checkbox" required checked={confirmed} disabled={busy} onChange={e => setConfirmed(e.target.checked)} /><span>Complete report for {scope.label.split(' · ')[0]} · all users and campaigns in this scope.</span></label>
       {mismatch && <p role="alert">The reports must be from the same date.</p>}
       <button className="dash-refresh" disabled={busy || !confirmed || !ready || mismatch}>{busy ? 'Saving…' : 'Upload reports'}</button>
       {result && <p role={result.error ? 'alert' : 'status'} className="dash-import-result">{result.error || (result.status === 'duplicate' ? 'Already saved.' : `Saved ${result.agents} agents · ${result.report_date}`)}</p>}

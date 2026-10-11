@@ -58,6 +58,18 @@ const client = { async rpc(name, args) {
   if (mode === 'denied') return { error: { code: '42501' } }
   if (mode === 'failure') return { error: { code: 'NETWORK' } }
   const data = testReport(args.report_date)
+  if (mode === 'coaching') {
+    data.performance.forEach((row, i) => {
+      row.current_user_group = 'ReviewGroupA'; row.calls = 300
+      row.talk_avg_seconds = i === 0 ? 4 : 25; row.dead_avg_seconds = i === 1 ? 12 : 4
+      row.dispositions.NI = i === 0 ? 258 : 30; row.dispositions.CALLBK = i === 2 ? 51 : 2
+    })
+    data.pause.forEach((row, i) => {
+      row.current_user_group = 'ReviewGroupA'; row.break_seconds = i === 0 ? 1501 : 1500
+      row.lunch_seconds = 3600; row.rr_seconds = i === 0 ? 1201 : 1200
+      row.cb_seconds = i === 2 ? 3600 : 300
+    })
+  }
   if (mode === 'staff-upload') {
     if (independentReports.has(args.report_date)) return { data: independentReports.get(args.report_date) }
     data.snapshot = null; data.performance = []; data.pause = []

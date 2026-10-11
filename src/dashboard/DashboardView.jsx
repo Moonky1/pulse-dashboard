@@ -9,9 +9,13 @@ import { RetentionPreview } from './RetentionPreview.jsx'
 import { AlertPanel } from './AlertPanel.jsx'
 import { RankingPanel, Goal } from './RankingPanel.jsx'
 import { AgentJourney } from './AgentJourney.jsx'
-import { contribution, medal, percent, ratio } from './performanceInsights.js'
+import { contribution, percent, ratio } from './performanceInsights.js'
 import { confirmedTargetReference, isEnglishXfer, teamCounts, teamLabel, transferLabel } from './reportingPolicy.js'
 import { PERFORMANCE_COLUMNS } from './dashboardModel.js'
+import { RankMedal } from './RankMedal.jsx'
+import { DispositionExplorer } from './DispositionExplorer.jsx'
+import { CoachingPanel } from './CoachingPanel.jsx'
+import { pauseOverage, DAILY_PAUSE_LIMITS } from './dispositionInsights.js'
 import './dashboard.css'
 
 const TIMES = PERFORMANCE_COLUMNS
@@ -55,7 +59,7 @@ function AgentTable({ rows, view, onOpen, sort, setSort, xferLabel, scope }) {
     </tr></thead><tbody>{rows.map(row => <tr key={row.agent_code} onClick={() => onOpen(row.agent_code)}>
       <td><AgentName row={row} onOpen={onOpen} /></td><td><span className="dash-group-name">{teamLabel(scope, row)}</span>{teamLabel(scope, row) !== groupName(row) && <small className="dash-team-name">{groupName(row)}</small>}</td>
       {!pause && <><td>{number(row.calls)}</td><td className="dash-xfer">{number(row.xfer_count)}</td></>}
-      {columns.map(([key]) => <td key={key}>{duration(row[key])}</td>)}
+      {columns.map(([key]) => <td key={key} className={pause && pauseOverage(key, row[key]) !== null ? 'dash-over-limit' : undefined}>{duration(row[key])}{pause && pauseOverage(key, row[key]) !== null && <small>+{duration(pauseOverage(key, row[key]))} over</small>}</td>)}
     </tr>)}</tbody></table>
   </div>
 }
@@ -85,15 +89,15 @@ function AgentDetail({ code, data, onClose, client, reference }) {
     <header><div><p className="dash-eyebrow">AGENT DETAIL · {data.date}</p><h2 id="dash-agent-title">{row.vici_user_name}</h2><p>ID {row.agent_code} <span aria-hidden="true">/</span> {groupName(row)}</p></div><button className="dash-close" aria-label="Close agent detail" onClick={onClose}>×</button></header>
     <div className="dash-detail__body">{historyDenied ? <p role="alert">Report access needs review. Close this detail and refresh the Dashboard before continuing.</p> : <>
       <div className="dash-identity-note">{profile ? <Link to={profile}>Open Pulse Agent profile ↗</Link> : <span>VICIdial identity{performance?.linked ? ' · Profile unavailable' : ' · Not linked to a Pulse Agent'}</span>}</div>
-      {share && <><dl className="dash-insight-metrics"><div><dt>Group {xferLabel} position</dt><dd>{medal(share.rank)}</dd><small>of {share.agents} reported agents · ties share position</small></div><div><dt>Conversion</dt><dd>{percent(ratio(performance.xfer_count, performance.calls))}</dd><small>Group: {percent(share.groupConversion)}</small></div><div><dt>Group {xferLabel} contribution</dt><dd>{percent(share.xferShare)}</dd><small>{number(performance.xfer_count)} of {number(share.groupXfer)} {xferLabel}</small></div><div><dt>Group call contribution</dt><dd>{percent(share.callShare)}</dd><small>{number(performance.calls)} of {number(share.groupCalls)} calls</small></div></dl>{(automatic || reference) && <div className="dash-goal-reference"><span>{automatic ? 'Current daily English goal' : 'Selected target reference'}:</span><Goal count={performance.xfer_count} reference={targetReference} automatic={automatic} />{automatic && <small>Current target applied to this saved report, not a historical target record.</small>}</div>}</>}
+      {share && <><dl className="dash-insight-metrics"><div><dt>Group {xferLabel} position</dt><dd><RankMedal rank={share.rank} /></dd><small>of {share.agents} reported agents · ties share position</small></div><div><dt>Conversion</dt><dd>{percent(ratio(performance.xfer_count, performance.calls))}</dd><small>Group: {percent(share.groupConversion)}</small></div><div><dt>Group {xferLabel} contribution</dt><dd>{percent(share.xferShare)}</dd><small>{number(performance.xfer_count)} of {number(share.groupXfer)} {xferLabel}</small></div><div><dt>Group call contribution</dt><dd>{percent(share.callShare)}</dd><small>{number(performance.calls)} of {number(share.groupCalls)} calls</small></div></dl>{(automatic || reference) && <div className="dash-goal-reference"><span>{automatic ? 'Current daily English goal' : 'Selected target reference'}:</span><Goal count={performance.xfer_count} reference={targetReference} automatic={automatic} /></div>}</>}
       {client && <AgentJourney key={data.scope.id + '/' + data.date + '/' + code} client={client} scope={data.scope.id} date={data.date} code={code} onDenied={() => setHistoryDenied(true)} />}
       <h3>Call performance</h3>
       <p className="dash-caption">Current group: {row.current_user_group || 'Unavailable'} · Most recent group: {row.most_recent_user_group || 'Unavailable'}. All averages are reported by Vici.</p>
       {performance ? <dl className="dash-detail-grid">{[['calls', 'Calls'], ['xfer_count', xferLabel], ...TIMES].map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key.endsWith('seconds') ? duration(performance[key]) : number(performance[key])}</dd></div>)}</dl> : <p>There is no performance observation for this agent in this snapshot.</p>}
       <h3>Time &amp; Pause</h3>
-      {pause ? <><dl className="dash-detail-grid dash-detail-grid--three">{[['total_seconds', 'Logged'], ['nonpause_seconds', 'Nonpause'], ['pause_seconds', 'Total pause']].map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{duration(pause[key])}</dd></div>)}</dl><div className="dash-pause-bars">{pauseValues.map(item => <div key={item.key}><span>{item.label}</span><div aria-hidden="true"><i style={{ width: `${100 * item.value / maximum}%` }} /></div><strong>{duration(item.value)}</strong></div>)}</div><p className="dash-caption">Pause totals come from Pause Code Breakdown and may differ from the call-performance report.</p></> : <p>No pause observation is available for this agent.</p>}
-      <h3>Dispositions</h3><p className="dash-caption">Original VICIdial codes. SPANIS is not counted as Spanish XFER.</p>
-      <dl className="dash-dispositions">{Object.entries(performance?.dispositions || {}).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{number(value)}</dd></div>)}</dl>
+      {pause ? <><dl className="dash-detail-grid dash-detail-grid--three">{[['total_seconds', 'Logged'], ['nonpause_seconds', 'Nonpause'], ['pause_seconds', 'Total pause']].map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{duration(pause[key])}</dd></div>)}</dl><div className="dash-pause-bars">{pauseValues.map(item => <div key={item.key} className={pauseOverage(item.key, item.value) !== null ? 'dash-over-limit' : undefined}><span>{item.label}</span><div aria-hidden="true"><i style={{ width: `${100 * (item.value || 0) / maximum}%` }} /></div><strong>{duration(item.value)}{DAILY_PAUSE_LIMITS[item.key] && <small> / {duration(DAILY_PAUSE_LIMITS[item.key])}</small>}{pauseOverage(item.key, item.value) !== null && <small> +{duration(pauseOverage(item.key, item.value))} over</small>}</strong></div>)}</div></> : <p>No pause observation is available for this agent.</p>}
+      <h3>Dispositions</h3>
+      {performance && <DispositionExplorer key={data.snapshot.id + '/' + code} rows={data.performance} agent={performance} />}
     </>}</div>
   </dialog>
 }
@@ -125,6 +129,7 @@ function ReportContent({ data, loading, error, client }) {
   const denied = error?.code === 'access_denied'
   const teams = teamCounts(data?.scope, view === 'pause' || !allPerformance.length ? allPause : allPerformance)
   return <>
+    {hasData && !denied && <CoachingPanel key={data.snapshot.id} data={data} readError={error} onOpen={setAgent} />}
     <Metrics rows={scopedRows} pauseRows={scopedPause} available={hasData && !denied} scope={data?.scope} />
     {hasData && !denied && teams.length > 0 && <section className="dash-team-counts" aria-label="Agents by team">{teams.map(team => <button key={team.group} aria-pressed={selectedGroup === team.group} onClick={() => { setGroup(selectedGroup === team.group ? '' : team.group); setReference(''); setPage(0) }}><strong>{team.label}</strong><span>{number(team.agents)} agents</span>{team.label !== team.group && <small>{team.group}</small>}</button>)}</section>}
     <div className="dash-workspace-bar"><nav aria-label="Dashboard views">{[['overview', 'Overview'], ['rankings', 'Rankings & goals'], ['agents', 'Agents'], ['pause', 'Time & Pause']].map(([key, label]) => <button key={key} aria-pressed={view === key} onClick={() => { setView(key); setPage(0); setSort({ key: key === 'pause' ? 'pause_seconds' : 'calls', descending: true }) }}>{label}{key === 'agents' && hasData && <span>{scopedRows.length}</span>}</button>)}</nav><label className="dash-group-filter"><span className="dash-sr">VICIdial user group</span><select aria-label="VICIdial user group" value={selectedGroup} onChange={e => { setGroup(e.target.value); setReference(''); setPage(0) }}><option value="">All user groups</option>{groups.map(name => <option key={name}>{name}</option>)}</select></label></div>
@@ -134,7 +139,7 @@ function ReportContent({ data, loading, error, client }) {
         {rows.length ? <><AgentTable rows={visibleRows} view={view} sort={sort} setSort={next => { setSort(next); setPage(0) }} onOpen={setAgent} xferLabel={transferLabel(data.scope)} scope={data.scope} /><MobileAgents rows={visibleRows} pause={view === 'pause'} onOpen={setAgent} xferLabel={transferLabel(data.scope)} /><footer className="dash-table-footer"><span>{currentPage * 25 + 1}–{Math.min((currentPage + 1) * 25, rows.length)} of {rows.length} agents</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button><span>{currentPage + 1} / {pages}</span><button disabled={currentPage + 1 === pages} onClick={() => setPage(currentPage + 1)}>Next</button></div></footer></> : <Blank title="No agents match these filters">Try another name, Agent ID or user group.</Blank>}
       </section>}
       {agent && [...allPerformance, ...allPause].some(row => row.agent_code === agent) && <AgentDetail key={agent} code={agent} data={data} client={!error ? client : null} reference={reference} onClose={() => setAgent(null)} />}
-      <details className="dash-panel dash-breakdown-disclosure"><summary>Full breakdown</summary><ReportBreakdown performance={scopedRows} pause={scopedPause} snapshot={data.snapshot} filtered={Boolean(selectedGroup)} /></details>
+      <details className="dash-panel dash-breakdown-disclosure"><summary>Full breakdown</summary><ReportBreakdown key={data.snapshot.id + '/' + selectedGroup} onOpen={setAgent} performance={scopedRows} pause={scopedPause} snapshot={data.snapshot} filtered={Boolean(selectedGroup)} /></details>
     </>}
   </>
 }
@@ -154,10 +159,10 @@ export function DashboardView({ client }) {
     {(error || catalog.error) && <div className="dash-notice" role="alert"><strong>{(error || catalog.error).code === 'access_denied' ? 'Report access unavailable' : 'Report could not refresh'}</strong><p>{(error || catalog.error).message}</p></div>}
     {!catalog.loading && !catalog.error && !catalog.data.length && <div className="dash-notice"><strong>No reporting scopes available</strong><p>Your account has no accessible reporting scope. Ask your Pulse administrator to review configuration and access.</p></div>}
 
-    {scope && !catalog.error && error?.code !== 'access_denied' && <AlertPanel key={'alerts/' + scope.id} client={client} scope={scope} data={data} readError={error} />}
     <ReportContent key={report.key || 'no-scope'} data={data} client={client} loading={catalog.loading || loading} error={error || catalog.error} />
     {scope && !catalog.error && error?.code !== 'access_denied' && <ReportHistory key={'history/' + report.key} client={client} scope={scope} date={date} revision={revision} SnapshotView={ReportContent} />}
     {scope?.can_manage_reports && !catalog.error && error?.code !== 'access_denied' && <RetentionPreview key={'retention/' + scope.id + '/' + revision} client={client} scope={scope} />}
+    {scope && !catalog.error && error?.code !== 'access_denied' && <AlertPanel key={'alerts/' + scope.id} client={client} scope={scope} data={data} readError={error} />}
     <footer className="dash-provenance"><span><Mark /> VICIdial</span>{data?.snapshot ? <details><summary>Report details · {data.date}</summary><p>Performance generated: {data.snapshot.performance_generated_at?.replace('T', ' ')}<br />Pause generated: {data.snapshot.pause_generated_at?.replace('T', ' ')}<br />Performance ingested: {data.snapshot.performance_ingested_at ? new Date(data.snapshot.performance_ingested_at).toLocaleString() : 'Not available'}<br />Pause ingested: {data.snapshot.pause_ingested_at ? new Date(data.snapshot.pause_ingested_at).toLocaleString() : 'Not available'}</p>{Boolean(data.snapshot.warnings?.length) && <p>{data.snapshot.warnings.length} source validation warning(s). Values are shown as reported; report totals may differ.</p>}</details> : <span>No report snapshot loaded</span>}</footer>
   </main>
 }

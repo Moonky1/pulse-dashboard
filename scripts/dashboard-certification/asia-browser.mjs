@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react'
 
 const root = process.env.PULSE_PLAYWRIGHT_ROOT || 'C:/Users/simon/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
 const { chromium } = createRequire(root + '/package.json')('playwright')
-const server = await createServer({ configFile: false, plugins: [react()], server: { host: '127.0.0.1', port: 53956, strictPort: true } })
+const server = await createServer({ configFile: false, publicDir: false, plugins: [react()], server: { host: '127.0.0.1', port: 53956, strictPort: true } })
 await server.listen()
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, serviceWorkers: 'block' })

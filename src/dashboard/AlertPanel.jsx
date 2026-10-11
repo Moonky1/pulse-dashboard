@@ -75,8 +75,8 @@ function AlertWorkspace({ client, scope, data, readError }) {
     if (response.code === 'access_denied') { request.current++; setConfig(null); setDraft(null); setError(response.error); setBusy(false) }
   }
   return <div className="dash-alert-body">
-    <div className="dash-panel-heading"><div><h2>Shared alert rules</h2><p>{scope.label} · rule matches for human review, not performance verdicts.</p></div><button disabled={busy} onClick={reload}>Reload rules{dirty ? ' · discard draft' : ''}</button></div>
-    <p className="dash-caption">No defaults are activated. Limits use whole seconds. Talk Avg matches strictly below its limit; other metrics strictly above. Equality does not trigger. Pause limits apply to each agent’s cumulative report, not to individual pause events. No notifications or automated actions are sent.</p>
+    <div className="dash-panel-heading"><div><h2>Additional checks</h2><p>{scope.label}</p></div><button disabled={busy} onClick={reload}>Reload rules{dirty ? ' · discard draft' : ''}</button></div>
+    <p className="dash-caption">Optional checks, in addition to the daily limits shown in Coaching & support.</p>
     {busy && <p role="status">{config ? 'Saving shared rules…' : 'Loading shared rules…'}</p>}
     {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
     {config && <>
@@ -102,5 +102,5 @@ function AlertWorkspace({ client, scope, data, readError }) {
 }
 export function AlertPanel(props) {
   const [open, setOpen] = useState(false)
-  return <details className="dash-panel dash-alerts" onToggle={e => setOpen(e.currentTarget.open)}><summary>Alerts & rules</summary>{open && <AlertWorkspace {...props} />}</details>
+  return <details className="dash-panel dash-alerts" onToggle={e => setOpen(e.currentTarget.open)}><summary>Additional review rules</summary>{open && <AlertWorkspace {...props} />}</details>
 }

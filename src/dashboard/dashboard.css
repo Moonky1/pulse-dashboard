@@ -211,10 +211,9 @@
 .dash-rank-medal { font-size: 21px; min-width: 27px; }
 .dash-insight-agent { text-align: left; }
 .dash-insight-agent small { color: #aaaeca; }
-.dash-goal { display: grid; gap: 5px; color: #e7bf91; font-size: 11px; min-width: 135px; }
+.dash-goal { display: inline-flex; align-items: center; justify-content: center; gap: 9px; color: #e7bf91; font-size: 14px; white-space: nowrap; }
 .dash-goal--reached { color: #8de0c0; }
-.dash-goal progress { width: 100%; max-width: 160px; height: 5px; accent-color: #b49be6; }
-.dash-goal--reached progress { accent-color: #75c8ab; }
+.dash-pixel-medal, .dash-goal img { object-fit: contain; image-rendering: pixelated; vertical-align: middle; flex-shrink: 0; }
 .dash-journey { border-block: 1px solid #3c3a52; margin: 24px 0; padding: 8px 0 24px; }
 .dash-journey .dash-insights-heading h3 { margin: 0; font-size: 20px; color: #eee4fb; }
 .dash-journey-extremes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
@@ -284,6 +283,40 @@
 .dash-upload-files label { flex: 1; min-width: min(250px, 100%); }
 .dash-upload-files input { display: block; margin: 10px 0; width: 100%; }
 .dash-upload-files small { color: #9daac4; }
+.dash-coaching { margin: 20px 0; color: #c4cbdd; font-size: 13px; }
+.dash-coaching > summary { padding: 20px; cursor: pointer; font-weight: 650; color: #efe5ff; }
+.dash-coaching summary > span { margin-left: 12px; color: #f0bd88; font-size: 12px; }
+.dash-coaching-body { padding: 0 22px 22px; }
+.dash-coaching-limits, .dash-coaching-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+.dash-coaching-limits > span { background: #1e2336; padding: 9px 14px; border-radius: 8px; }
+.dash-coaching button, .dash-dispo-explorer button, .dash-dispo-explorer select { background: #1e2034; color: #e3d9f5; border: 1px solid #46445c; border-radius: 8px; padding: 9px 12px; font: inherit; cursor: pointer; }
+.dash-coaching-tabs button[aria-pressed="true"] { background: #332848; border-color: #bca0ee; }
+.dash-coaching-agent { border: 1px solid #373548; border-radius: 10px; padding: 14px; margin-top: 12px; }
+.dash-coaching-agent header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.dash-coaching-agent header button { font-weight: 650; }
+.dash-coaching-agent small { color: #a4b1ce; }
+.dash-coaching-agent ul { padding: 0; list-style: none; margin-bottom: 0; }
+.dash-coaching-agent li { display: flex; flex-wrap: wrap; gap: 14px; padding: 9px 0; border-top: 1px solid #2d3245; }
+.dash-over-limit, .dash-table td.dash-over-limit { color: #ff8e9b; }
+.dash-pause-bars > .dash-over-limit > div > i { background: #f36f82; }
+.dash-pause-bars > .dash-over-limit strong, .dash-pause-bars > .dash-over-limit > span { color: #ff8e9b; }
+.dash-pause-bars strong small { display: block; font-size: 10px; font-weight: 450; }
+.dash-pause-bars > div { grid-template-columns: 90px 1fr 150px; }
+.dash-dispo-explorer { margin: 18px 0; }
+.dash-dispo-buttons { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.dash-dispo-buttons button { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; min-height: 44px; }
+.dash-dispo-buttons button:hover, .dash-dispo-buttons button[aria-expanded="true"] { background: #322a49; border-color: #b29bdd; }
+.dash-dispo-explorer button:focus-visible, .dash-coaching button:focus-visible { outline: 2px solid #c3a8ed; outline-offset: 3px; }
+.dash-dispo-detail { margin-top: 12px; padding: 18px; border: 1px solid #63557d; border-radius: 12px; background: #181b2d; }
+.dash-dispo-detail header { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+.dash-dispo-detail h4 { font-size: 15px; color: #e8dffb; margin: 0 0 10px; }
+.dash-dispo-stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(135px,1fr)); gap: 10px; }
+.dash-dispo-stats > div { padding: 12px; background: #22253c; border-radius: 8px; }
+.dash-dispo-stats dt, .dash-dispo-detail small { font-size: 11px; color: #afbad2; }
+.dash-dispo-stats dd { margin: 7px 0; font-size: 22px; color: #d3bdff; }
+.dash-dispo-detail .dash-table { min-width: 480px; }
+.dash-dispo-detail .dash-table td, .dash-dispo-detail .dash-table th { padding: 10px 14px; }
+@media(max-width:600px) { .dash-dispo-buttons { grid-template-columns: repeat(2,minmax(0,1fr)); } .dash-dispo-detail { padding: 12px; } .dash-coaching-body { padding: 0 14px 14px; } .dash-pause-bars > div { grid-template-columns: 65px 1fr 120px; } }
 .dash-upload-confirm { display: flex; gap: 12px; margin: 22px 0; align-items: start; }
 .dash-upload-confirm input { margin-top: 5px; flex: none; }
 .dash-import-result { padding: 15px; border: 1px solid #4c4167; background: #26203a; border-radius: 10px; }
