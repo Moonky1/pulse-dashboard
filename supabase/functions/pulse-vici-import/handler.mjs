@@ -26,11 +26,12 @@ export function createViciImportHandler({ env, createClient, inspect = inspectMa
       if (!url || !anon || !service) return reply(503, { error: 'import_unavailable' })
       const options = { auth: { persistSession: false, autoRefreshToken: false } }
       const user = createClient(url, anon, { ...options, global: { headers: { Authorization: authorization } } })
-      const { data: verified, error: authError } = await user.auth.getUser()
+      const [authResult, scopeResult] = await Promise.all([user.auth.getUser(), user.rpc('list_vici_dashboard_scopes')])
+      const { data: verified, error: authError } = authResult
       if (authError || !verified?.user?.id) return reply(401, { error: 'sign_in_required' })
       // Authorize before reading potentially large files. Scopes come from the
       // existing protected RPC, not role claims or browser-supplied permissions.
-      const { data: scopes, error: scopeError } = await user.rpc('list_vici_dashboard_scopes')
+      const { data: scopes, error: scopeError } = scopeResult
       if (scopeError || !Array.isArray(scopes) || !scopes.some(s => s.can_import === true)) return reply(403, { error: 'import_denied' })
       const reader = request.body?.getReader()
       if (!reader) return reply(400, { error: 'invalid_upload' })
@@ -48,18 +49,19 @@ export function createViciImportHandler({ env, createClient, inspect = inspectMa
       try { form = await new Response(new Blob(chunks), { headers: { 'Content-Type': request.headers.get('content-type') } }).formData() }
       catch { return reply(400, { error: 'invalid_upload' }) }
       const fields = ['scopeId', 'reportDate', 'confirmedScope', 'performance', 'pause']
-      if ([...form.keys()].some(key => !fields.includes(key)) || fields.some(key => form.getAll(key).length !== 1) ||
+      if ([...form.keys()].some(key => !fields.includes(key)) || fields.slice(0, 3).some(key => form.getAll(key).length !== 1) ||
+        fields.slice(3).some(key => form.getAll(key).length > 1) ||
         form.get('confirmedScope') !== 'yes') return reply(400, { error: 'invalid_upload' })
       const scopeId = form.get('scopeId'), reportDate = form.get('reportDate')
       const scope = scopes.find(s => s.id === scopeId && s.can_import === true)
       if (typeof scopeId !== 'string' || !UUID.test(scopeId) || !scope) return reply(403, { error: 'import_denied' })
       if (typeof reportDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) return reply(400, { error: 'invalid_upload' })
       const files = [form.get('performance'), form.get('pause')]
-      if (files.some(f => !(f instanceof File) || !/\.csv$/i.test(f.name) || !f.size)) return reply(400, { error: 'invalid_upload' })
-      if (files.some(f => f.size > MAX_FILE_BYTES)) return reply(413, { error: 'report_too_large' })
+      if (!files.some(Boolean) || files.some(f => f !== null && (!(f instanceof File) || !/\.csv$/i.test(f.name) || !f.size))) return reply(400, { error: 'invalid_upload' })
+      if (files.some(f => f?.size > MAX_FILE_BYTES)) return reply(413, { error: 'report_too_large' })
       let prepared
       try {
-        const texts = await Promise.all(files.map(async f => new TextDecoder('utf-8', { fatal: true }).decode(await f.arrayBuffer())))
+        const texts = await Promise.all(files.map(async f => f ? new TextDecoder('utf-8', { fatal: true }).decode(await f.arrayBuffer()) : null))
         prepared = inspect({ performanceText: texts[0], pauseText: texts[1], reportDate, userGroups: scope.user_groups })
       } catch (error) { return reply(422, { error: safeErrors.has(error?.category) ? error.category : 'invalid_report' }) }
       const admin = createClient(url, service, options)
@@ -69,7 +71,15 @@ export function createViciImportHandler({ env, createClient, inspect = inspectMa
       })
       if (error) return reply(error.code === '42501' ? 403 : error.code === 'P0001' ? 429 : 409,
         { error: error.code === '42501' ? 'import_denied' : error.code === 'P0001' ? 'import_cooldown' : 'import_conflict' })
-      return reply(200, { ...data, agents: prepared.verification.performance.agents })
+      // Reuse the user's protected read: no browser round-trip after saving and
+      // no service-role read that bypasses scope or moved-group checks.
+      let report = null
+      try {
+        const result = await user.rpc('get_vici_dashboard', { requested_scope: scopeId, report_date: reportDate })
+        if (!result.error) report = result.data
+      } catch { /* The import already committed; let the browser retry the read. */ }
+      return reply(200, { ...data, agents: (prepared.verification.performance || prepared.verification.pause).agents,
+        report })
     } catch { return reply(503, { error: 'import_unavailable' }) }
   }
 }

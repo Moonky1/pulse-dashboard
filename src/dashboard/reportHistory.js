@@ -6,7 +6,7 @@ export async function loadHistory(client, scope, date, offset = 0) {
   try {
     const { data, error } = await client.rpc('list_vici_report_history', { requested_scope: scope, report_date: date, page_offset: offset })
     if (error) throw error
-    if (!Array.isArray(data) || data.length > 51 || data.some(r => !UUID.test(r.id) || !integer(r.agents) || !integer(r.calls) || !Number.isFinite(Date.parse(r.captured_at)))) throw Error('invalid_history')
+    if (!Array.isArray(data) || data.length > 51 || data.some(r => !UUID.test(r.id) || !integer(r.agents) || (r.calls !== null && !integer(r.calls)) || !Number.isFinite(Date.parse(r.captured_at)))) throw Error('invalid_history')
     return { rows: data.slice(0, 50), more: data.length > 50 }
   } catch (error) { return { error: dashboardError(error).message } }
 }
@@ -25,22 +25,26 @@ function mapDifference(a = {}, b = {}) {
 }
 export function compareSnapshots(before, after) {
   if (before.scope.id !== after.scope.id || before.date !== after.date || before.snapshot.id === after.snapshot.id) throw Error('Choose two different versions of the same scope and date.')
+  let shared = false
   for (const key of ['performance_generated_at', 'pause_generated_at']) {
     const a = before.snapshot[key]?.replace('T', ' '), b = after.snapshot[key]?.replace('T', ' ')
-    if (!a || !b || b < a) throw Error('The comparison version must not be older than the baseline in either report.')
+    if (!a || !b) continue
+    shared = true
+    if (b < a) throw Error('The comparison version must not be older than the baseline in either report.')
   }
+  if (!shared) throw Error('Choose two versions that contain the same report type.')
   const oldRows = new Map(before.performance.map(r => [r.agent_code, r]))
   const newRows = new Map(after.performance.map(r => [r.agent_code, r]))
   const oldPause = new Map(before.pause.map(r => [r.agent_code, r]))
   const newPause = new Map(after.pause.map(r => [r.agent_code, r]))
-  return [...new Set([...oldRows.keys(), ...newRows.keys()])].sort().map(code => {
+  return [...new Set([...oldRows.keys(), ...newRows.keys(), ...oldPause.keys(), ...newPause.keys()])].sort().map(code => {
     const a = oldRows.get(code), b = newRows.get(code), pa = oldPause.get(code), pb = newPause.get(code)
     const metrics = Object.fromEntries(DELTA_FIELDS.map(([key]) => [key, difference(a?.[key], b?.[key])]))
     const pauses = Object.fromEntries([['total_seconds'], ['nonpause_seconds'], ['pause_seconds'], ...PAUSE_FIELDS].map(([key]) => [key, difference(pa?.[key], pb?.[key])]))
     const dispositions = mapDifference(a?.dispositions, b?.dispositions)
     const otherPauses = mapDifference(pa?.other_pause_seconds, pb?.other_pause_seconds)
     const unnamedPauses = mapDifference(pa?.unmapped_columns, pb?.unmapped_columns)
-    return { code, name: (b || a).vici_user_name, status: !a ? 'Added' : !b ? 'Not in later report' : 'Matched',
+    return { code, name: (b || a || pb || pa).vici_user_name, status: !(a || pa) ? 'Added' : !(b || pb) ? 'Not in later report' : 'Matched',
       decreased: [...Object.values(metrics), ...Object.values(pauses), ...Object.values(dispositions), ...Object.values(otherPauses), ...Object.values(unnamedPauses)].some(v => v !== null && v < 0),
       metrics, pauses, dispositions, otherPauses, unnamedPauses }
   })

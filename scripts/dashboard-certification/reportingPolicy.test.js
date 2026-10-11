@@ -1,8 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { confirmedTargetReference, isEnglishXfer, transferLabel } from '../../src/dashboard/reportingPolicy.js'
+import { confirmedTargetReference, isEnglishXfer, teamCounts, teamLabel, transferLabel } from '../../src/dashboard/reportingPolicy.js'
 import { goalProgress } from '../../src/dashboard/performanceInsights.js'
 const scope = { id: '426ab519-b87b-4410-bd42-e255b240bea1' }
+const scopeB = { id: '2aa2efd9-9d7c-4aa6-9cda-7f3b008bf285' }
 
 test('English interpretation is confined to the exact operator-confirmed scope', () => {
   assert.equal(isEnglishXfer(scope), true)
@@ -35,5 +36,36 @@ test('no prefix, casing, agent-name, recent-group or prototype-name inference is
 })
 test('a contradictory canonical mapping withholds the goal instead of overriding team evidence', () => {
   assert.equal(confirmedTargetReference(scope, { current_user_group: 'OpenersAsia', team_name: 'Colombia' }), '')
-  assert.equal(confirmedTargetReference(scope, { current_user_group: 'OpenersAsia', team_name: 'Asia' }), 'asia')
+  assert.equal(confirmedTargetReference(scope, { current_user_group: 'OpenersAsia', team_name: 'Asia Team A' }), 'asia')
+  assert.equal(confirmedTargetReference(scope, { current_user_group: 'OpenersAsia', team_name: 'Asia Team B' }), '')
+})
+
+test('exact confirmed A and B groups stay distinct and both have 15 English goals', () => {
+  for (const [s, group, team, label] of [[scope, 'OpenersAsia', 'Asia Team A', 'Asia A'], [scopeB, 'OpenersAsia1', 'Asia Team B', 'Asia B']]) {
+    assert.equal(isEnglishXfer(s), true)
+    for (const team_name of [null, team]) {
+      const row = { current_user_group: group, team_name }
+      assert.equal(teamLabel(s, row), label)
+      assert.equal(goalProgress(12, confirmedTargetReference(s, row)).target, 15)
+    }
+  }
+  assert.equal(confirmedTargetReference(scope, { current_user_group: 'OpenersAsia1' }), '')
+  assert.equal(confirmedTargetReference(scopeB, { current_user_group: 'OpenersAsia' }), '')
+  assert.equal(teamLabel('unknown', { current_user_group: 'OpenersAsia1' }), 'OpenersAsia1')
+  assert.equal(teamLabel(scopeB, { current_user_group: 'OpenersAsia1', team_name: 'Asia Team A' }), 'OpenersAsia1')
+})
+
+test('campaign names never become team assignments or guessed goals', () => {
+  for (const group of ['Openers', 'Openers2', 'Openers3', 'Openers4', 'Openers5', 'Openers6', 'OpenersH', 'Openers ASIA 1', '__proto__']) {
+    assert.equal(teamLabel(scopeB, { current_user_group: group, vici_user_name: 'ASIA B - TEST' }), group)
+    assert.equal(confirmedTargetReference(scopeB, { current_user_group: group }), '')
+  }
+})
+
+test('team counts use distinct Agent IDs and current group without inventing missing teams', () => {
+  const rows = [{ agent_code: '0001', current_user_group: 'OpenersAsia' }, { agent_code: '0002', current_user_group: 'OpenersAsia' }]
+  assert.deepEqual(teamCounts(scope, [...rows, ...rows]), [{ group: 'OpenersAsia', label: 'Asia A', agents: 2 }])
+  assert.deepEqual(teamCounts(scopeB, rows.map(row => ({ ...row, current_user_group: 'OpenersAsia1', most_recent_user_group: 'OpenersAsia' }))), [{ group: 'OpenersAsia1', label: 'Asia B', agents: 2 }])
+  assert.deepEqual(teamCounts(scopeB, []), [])
+  assert.equal(teamCounts(scope, [{ ...rows[0], team_name: 'Asia Team B' }, rows[1]])[0].label, 'OpenersAsia')
 })

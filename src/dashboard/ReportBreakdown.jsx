@@ -8,7 +8,7 @@ const WARNINGS = {
   missing_totals: 'The source TOTALS row was missing.',
   totals_mismatch: 'One or more source totals differ from their agent rows.',
 }
-function sum(rows, key) { return rows.every(row => Number.isSafeInteger(row[key])) ? rows.reduce((total, row) => total + row[key], 0) : null }
+function sum(rows, key) { return rows.length && rows.every(row => Number.isSafeInteger(row[key])) ? rows.reduce((total, row) => total + row[key], 0) : null }
 function mapTotals(rows, key) {
   const names = [...new Set(rows.flatMap(row => Object.keys(row[key] || {})))].sort()
   return names.map(name => [name, rows.every(row => Number.isSafeInteger(row[key]?.[name])) ? rows.reduce((total, row) => total + row[key][name], 0) : null])
@@ -26,7 +26,7 @@ export function ReportBreakdown({ performance, pause, snapshot, filtered }) {
     <Values title="Additional pause codes (hh:mm:ss)" time entries={mapTotals(pause, 'other_pause_seconds')} />
     <Values title="Unlabelled pause columns (hh:mm:ss)" time entries={mapTotals(pause, 'unmapped_columns')} />
     <p className="dash-caption">Blank cells are unavailable, not zero. Performance pause and Pause Breakdown are separate source measures. Time categories may overlap; they are not summed into an invented total.</p>
-    {verification && <details><summary>Source totals & validation · complete uploaded files</summary><p>These totals cover the complete upload, regardless of the group filter above. Averages below are Vici’s TOTALS averages, never a sum of agent averages.</p>{['performance', 'pause'].map(type => <div key={type}><h3>{type === 'performance' ? 'Agent Performance Detail' : 'Pause Code Breakdown'}</h3><p>{verification[type].agents} agents · {verification[type].reconciled_fields} additive totals reconciled</p><Values title="Original source totals" entries={Object.entries(verification[type].totals).filter(([key, value]) => typeof value === 'number' && !key.endsWith('_seconds'))} /><Values title="Original source times and averages (hh:mm:ss)" time entries={Object.entries(verification[type].totals).filter(([key]) => key.endsWith('_seconds'))} /></div>)}</details>}
+    {verification && <details><summary>Source totals & validation · complete uploaded files</summary><p>These totals cover the complete upload, regardless of the group filter above. Averages below are Vici’s TOTALS averages, never a sum of agent averages.</p>{['performance', 'pause'].filter(type => verification[type]).map(type => <div key={type}><h3>{type === 'performance' ? 'Agent Performance Detail' : 'Pause Code Breakdown'}</h3><p>{verification[type].agents} agents · {verification[type].reconciled_fields} additive totals reconciled</p><Values title="Original source totals" entries={Object.entries(verification[type].totals).filter(([key, value]) => typeof value === 'number' && !key.endsWith('_seconds'))} /><Values title="Original source times and averages (hh:mm:ss)" time entries={Object.entries(verification[type].totals).filter(([key]) => key.endsWith('_seconds'))} /></div>)}</details>}
     {snapshot.warnings?.length > 0 && <aside className="dash-source-warnings"><h3>Source notes</h3><ul>{snapshot.warnings.map(code => <li key={code}>{WARNINGS[code] || 'An additional source validation note is present.'}</li>)}</ul></aside>}
   </section>
 }

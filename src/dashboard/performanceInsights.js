@@ -44,7 +44,7 @@ export function contribution(row, rows) {
 }
 export function agentDay(report, code) {
   const row = report.performance.find(value => value.agent_code === code)
-  if (!report.snapshot) return { date: report.date, status: 'no_report' }
+  if (!report.snapshot || !report.performance.length) return { date: report.date, status: 'no_report' }
   const source = { snapshot: report.snapshot, date: report.date }
   if (!row) return { ...source, status: 'absent' }
   return { ...source, status: 'observed', row, pause: report.pause.find(value => value.agent_code === code) || null,

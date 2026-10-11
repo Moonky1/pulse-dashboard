@@ -11,13 +11,13 @@ const pick = (value, keys) => Object.fromEntries(keys.map(key => [key, value[key
 export function normalizedViciPair(pair) {
   const performance = [...identities, 'calls', ...Object.values(PERFORMANCE_DURATIONS), 'xfer_count', 'dispositions', 'unmapped_columns']
   const pause = [...identities, ...Object.values(PAUSE_DURATIONS), 'other_pause_seconds', 'unmapped_columns']
-  const report = (value, fields) => ({
+  const report = (value, fields) => value ? ({
     source_generated_at: value.source_generated_at, ingested_at: value.ingested_at,
     rows: value.rows.map(row => pick(row, fields)),
-  })
+  }) : null
   return {
     performance: report(pair.performance, performance), pause: report(pair.pause, pause),
-    warning_categories: [...new Set([...pair.performance.warnings, ...pair.pause.warnings, ...pair.warnings]
+    warning_categories: [...new Set([...(pair.performance?.warnings || []), ...(pair.pause?.warnings || []), ...pair.warnings]
       .map(value => value.category).filter(value => warnings.has(value)))].sort(),
   }
 }

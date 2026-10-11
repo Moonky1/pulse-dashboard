@@ -5,8 +5,56 @@ import { createViciImportHandler } from '../../supabase/functions/pulse-vici-imp
 import { fixture } from './parserFixtures.mjs'
 import { compareSnapshots, loadSnapshot } from '../../src/dashboard/reportHistory.js'
 import { integrationState } from '../../src/dashboard/dashboardModel.js'
-import { uploadReports } from '../../src/dashboard/manualReportApi.js'
+import { csvReportDate, uploadReports } from '../../src/dashboard/manualReportApi.js'
 import { testReport, testScope } from './ui-fixtures.mjs'
+for (const type of ['performance', 'pause']) test(type + ' can be imported alone without synthetic rows', async () => {
+  const other = type === 'performance' ? 'pause' : 'performance'
+  const i = input(); i[other + 'Text'] = null
+  const parsed = inspectManualReports(i)
+  assert.equal(parsed.pair[other], null)
+  assert.equal(parsed.verification[other], null)
+  assert.equal(parsed.pair[type].rows.length, 2)
+  const h = harness(), response = await h.handler(request({ [other]: null }))
+  assert.equal(response.status, 200)
+  assert.equal(h.writes[0].pair[other], null)
+  assert.equal((await response.json()).report.scope.id, scope)
+})
+test('neither file and empty present file are rejected', async () => {
+  assert.throws(() => inspectManualReports({ ...input(), performanceText: null, pauseText: null }), e => e.category === 'missing_report')
+  assert.equal((await harness().handler(request({ performance: null, pause: null }))).status, 400)
+  assert.equal((await harness().handler(request({ performance: '', pause: null }))).status, 400)
+})
+test('committed upload remains successful if protected read throws', async () => {
+  const result = await (await harness({ readThrows: true }).handler(request())).json()
+  assert.equal(result.status, 'success'); assert.equal(result.report, null)
+})
+test('CSV date comes from full-day header, not filename or timezone', async () => {
+  assert.equal(await csvReportDate(new File([fixture('performance')], 'wrong-20200101.csv')), '2026-10-09')
+  assert.equal(await csvReportDate(new File([fixture('pause').replace('23:59:59', '12:00:00')], 'a.csv')), null)
+  assert.equal(await csvReportDate(new File(['invalid'], 'a.csv')), null)
+})
+test('single-file browser request adopts only a protected matching report', async () => {
+  let keys
+  const file = new File([fixture('performance')], 'a.csv')
+  const args = { scopeId: scope, reportDate: '2026-10-09', performance: file, pause: null }
+  const client = { functions: { invoke: async (_name, { body }) => {
+    keys = [...body.keys()]
+    return { data: { status: 'success', report_date: args.reportDate, agents: 40, report: testReport() } }
+  } } }
+  assert.equal((await uploadReports(client, args)).report.performance.length, 40)
+  assert.equal(keys.includes('pause'), false)
+  args.scopeId = '10000000-0000-4000-8000-000000000002'
+  assert.equal((await uploadReports(client, args)).report, null)
+})
+test('pause-only comparison keeps IDs and leaves call metrics unavailable', () => {
+  const { before, after } = versions()
+  for (const value of [before, after]) { value.performance = []; value.snapshot.performance_generated_at = null }
+  after.pause[0].rr_seconds += 60
+  const rows = compareSnapshots(before, after)
+  assert.equal(rows[0].metrics.calls, null); assert.equal(rows[0].pauses.rr_seconds, 60)
+  after.pause = []; after.snapshot.pause_generated_at = null; after.snapshot.performance_generated_at = '2026-10-09T11:30:00'
+  assert.throws(() => compareSnapshots(before, after), /same report type/)
+})
 
 const scope = testScope.id, origin = 'https://preview.example.test'
 const input = () => ({ performanceText: fixture('performance'), pauseText: fixture('pause'), reportDate: '2026-10-09', userGroups: ['FixtureGroup'] })
@@ -29,12 +77,13 @@ for (const [label, change, category] of [
   const i = input(); change(i)
   assert.throws(() => inspectManualReports(i), e => e.category === category)
 })
-function harness({ allowed = true, auth = true, dbError, inspect } = {}) {
+function harness({ allowed = true, auth = true, dbError, inspect, readThrows = false } = {}) {
   const writes = []; let lookups = 0
   const client = {
     auth: { getUser: async () => ({ data: auth ? { user: { id: 'verified-auth-id' } } : null }) },
     rpc: async (name, args) => {
       if (name === 'list_vici_dashboard_scopes') { lookups++; return { data: [{ id: scope, user_groups: ['FixtureGroup'], can_import: allowed }] } }
+      if (name === 'get_vici_dashboard') { if (readThrows) throw Error('private read failure'); return { data: testReport() } }
       assert.equal(name, 'import_vici_reports'); writes.push(args)
       return dbError ? { error: { code: dbError, message: 'private must not leak' } } : { data: { status: 'success', snapshot_run_id: scope, report_date: args.report_date } }
     },
@@ -45,7 +94,8 @@ function harness({ allowed = true, auth = true, dbError, inspect } = {}) {
 function request({ confirmed = 'yes', extra, token = true, requestOrigin = origin, performance = fixture('performance'), pause = fixture('pause') } = {}) {
   const body = new FormData()
   body.set('scopeId', scope); body.set('reportDate', '2026-10-09'); body.set('confirmedScope', confirmed)
-  body.set('performance', new File([performance], 'performance.csv')); body.set('pause', new File([pause], 'pause.csv'))
+  if (performance !== null) body.set('performance', new File([performance], 'performance.csv'))
+  if (pause !== null) body.set('pause', new File([pause], 'pause.csv'))
   if (extra) body.set(extra, 'attacker-controlled')
   return new Request('https://backend.example.test/import', { method: 'POST', headers: { Origin: requestOrigin, ...(token ? { Authorization: 'Bearer session' } : {}) }, body })
 }
@@ -59,7 +109,7 @@ test('verified Staff identity is server-owned, complete pair written once', asyn
 for (const [label, options, req, status] of [
   ['anonymous', {}, { token: false }, 401],
   ['invalid session', { auth: false }, {}, 401],
-  ['viewer', { allowed: false }, {}, 403],
+  ['Staff without scope access', { allowed: false }, {}, 403],
   ['hostile origin', {}, { requestOrigin: 'https://evil.example' }, 403],
   ['actor forgery', {}, { extra: 'actor_auth_id' }, 400],
   ['missing scope confirmation', {}, { confirmed: 'no' }, 400],
@@ -100,7 +150,7 @@ test('comparison subtracts counters instead of adding cumulative reports', () =>
 })
 test('comparison preserves added, missing, absent codes, and decreasing counters', () => {
   const { before, after } = versions(); after.performance[0].calls -= 5; after.performance[0].dispositions.NEWCODE = 2
-  after.performance.pop(); before.performance.splice(2, 1)
+  after.performance.pop(); after.pause.pop(); before.performance.splice(2, 1); before.pause.splice(2, 1)
   const result = compareSnapshots(before, after)
   assert.equal(result[0].metrics.calls, -5); assert.equal(result[0].decreased, true)
   assert.equal(result[0].dispositions.NEWCODE, null)

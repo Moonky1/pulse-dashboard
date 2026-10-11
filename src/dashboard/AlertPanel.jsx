@@ -102,5 +102,5 @@ function AlertWorkspace({ client, scope, data, readError }) {
 }
 export function AlertPanel(props) {
   const [open, setOpen] = useState(false)
-  return <details className="dash-panel dash-alerts" onToggle={e => setOpen(e.currentTarget.open)}><summary>Alerts & rules <span>Shared configuration · Staff only</span></summary>{open && <AlertWorkspace {...props} />}</details>
+  return <details className="dash-panel dash-alerts" onToggle={e => setOpen(e.currentTarget.open)}><summary>Alerts & rules</summary>{open && <AlertWorkspace {...props} />}</details>
 }

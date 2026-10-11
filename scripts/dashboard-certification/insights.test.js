@@ -44,7 +44,7 @@ test('missing report, missing ID, zero and pause-only are distinct', () => {
   assert.equal(agentDay(report, '1000').status, 'absent')
   assert.equal(agentDay(report, '01000').status, 'observed')
   report.performance = []
-  assert.equal(agentDay(report, '01000').status, 'absent')
+  assert.equal(agentDay(report, '01000').status, 'no_report')
   report.snapshot = null; report.pause = []
   assert.equal(agentDay(report, '01000').status, 'no_report')
 })
