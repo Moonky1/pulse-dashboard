@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadDashboardReport, loadDashboardScopes } from './dashboardApi.js'
 import { browserDate, calendarDate } from './dashboardModel.js'
+import { dashboardTimeZone } from './shiftTargets.js'
 
 export function useDashboard(client) {
   const [catalog, setCatalog] = useState({ loading: true, data: [], error: null })
@@ -17,7 +18,7 @@ export function useDashboard(client) {
     return () => { active = false }
   }, [client, retry])
   const scope = catalog.data.find(s => s.id === selectedScope) || catalog.data[0] || null
-  const date = selectedDate || calendarDate(scope?.source_time_zone) || browserDate()
+  const date = selectedDate || calendarDate(dashboardTimeZone(scope)) || browserDate()
   const key = scope ? `${scope.id}/${date}` : ''
   useEffect(() => {
     if (!scope) return

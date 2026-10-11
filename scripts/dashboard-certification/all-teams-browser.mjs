@@ -6,6 +6,8 @@ import react from '@vitejs/plugin-react'
 import { allTeamsCsv } from './all-teams-fixtures.mjs'
 import { ALL_TEAMS_GROUPS } from '../../src/dashboard/allTeamsScope.js'
 import { parseAgentPerformance } from '../../supabase/functions/_shared/viciReportParsers.mjs'
+import { confirmedTargetReference } from '../../src/dashboard/reportingPolicy.js'
+import { ALL_TEAMS_SCOPE_ID } from '../../src/dashboard/allTeamsScope.js'
 
 // Optional operator-provided CSV stays local; every external request is blocked.
 const csv = process.argv[2] ? await readFile(process.argv[2], 'utf8') : allTeamsCsv()
@@ -26,7 +28,11 @@ await context.route('**/*', route => {
 const teams = page.getByRole('region',{name:'Agents by team'})
 const agents = () => page.getByRole('region',{name:'Report overview'}).locator('.dash-metric').first().locator('strong')
 try {
+  await mkdir('review-evidence.local/dashboard-all-teams',{recursive:true})
+  await page.clock.install({time:new Date('2026-10-09T15:00:00Z')})
   await page.goto('http://127.0.0.1:53958/scripts/dashboard-certification/review.html?mode=all-teams')
+  assert.match(await page.getByLabel('Current time', {exact:true}).innerText(), /Pacific.*8:00 AM PDT/)
+  assert.match(await page.getByLabel('Current time', {exact:true}).innerText(), /Colombia.*10:00 AM/)
   assert.equal(await page.getByRole('navigation',{name:'Operation',exact:true}).getByRole('button',{name:'Openers',exact:true}).getAttribute('aria-pressed'),'true')
   assert.equal(await page.getByRole('button',{name:'Closers · awaiting CSV',exact:true}).isEnabled(),false)
   await page.locator('.dash-upload > summary').click()
@@ -41,6 +47,14 @@ try {
   assert.equal(await teams.getByRole('button').count(),groupCount+1)
   await page.getByRole('button',{name:'Rankings & goals',exact:true}).click()
   await page.getByRole('heading',{name:'Global rankings',exact:true}).waitFor()
+  const pacePanel = page.getByRole('region',{name:'Team English pace',exact:true})
+  assert.match(await pacePanel.innerText(), /Second hour · 08:00 PT/)
+  const pacedAgents = parsed.rows.filter(row => confirmedTargetReference(ALL_TEAMS_SCOPE_ID,row)).length
+  assert.equal(await pacePanel.locator('.dash-pace-values strong').nth(1).innerText(),(pacedAgents*3).toLocaleString('en-US'))
+  await pacePanel.locator('summary').click()
+  assert.equal(await pacePanel.getByRole('row').count(),10,'header, eight work hours and lunch')
+  await pacePanel.screenshot({path:'review-evidence.local/dashboard-all-teams/team-pace.png'})
+  await pacePanel.locator('summary').click()
   await page.getByText('Goal · 24 English / day · 3 per hour × 8 hours',{exact:true}).waitFor()
   await page.getByText('Commission · Philippines 20 · Asia 15 · Other teams 10 English',{exact:true}).waitFor()
   for (const metric of ['xfer','calls','conversion','spanish','total']) {
@@ -67,6 +81,33 @@ try {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
     await page.screenshot({path:`review-evidence.local/dashboard-all-teams/${process.argv[2]?'real-local':'synthetic'}-${width}.png`})
   }
+  // Re-upload the same isolated fixture for Saturday; no report or user is changed remotely.
+  await page.clock.setSystemTime(new Date('2026-10-10T19:00:00Z'))
+  await page.clock.runFor(10000)
+  assert.match(await page.getByLabel('Current time', {exact:true}).innerText(), /Pacific.*Oct 10.*12:00 PM PDT/)
+  assert.match(await page.getByLabel('Current time', {exact:true}).innerText(), /Colombia.*Oct 10.*2:00 PM/)
+  await page.setViewportSize({width:1440,height:1100})
+  if (!(await page.locator('.dash-upload').getAttribute('open') !== null)) await page.locator('.dash-upload > summary').click()
+  await page.getByLabel('Call Stats Breakdown',{exact:true}).setInputFiles({name:'saturday.csv',mimeType:'text/csv',buffer:Buffer.from(csv.replaceAll('2026-10-09','2026-10-10'))})
+  await page.getByRole('checkbox',{name:/Complete report for All teams/}).check()
+  await page.getByRole('button',{name:'Upload reports',exact:true}).click()
+  await page.waitForFunction(() => document.querySelector('input[aria-label="Report date"]')?.value === '2026-10-10')
+  await page.getByRole('button',{name:'Rankings & goals',exact:true}).click()
+  await page.getByText('Goal · 15 English / day · 3 per hour × 5 hours',{exact:true}).waitFor()
+  await page.getByText('Saturday commission · Asia, Philippines & Mexico 10 · Other teams 5 English',{exact:true}).waitFor()
+  assert.match(await pacePanel.innerText(), /Fourth hour/)
+  const saturdayDifference = parsed.rows.filter(row => confirmedTargetReference(ALL_TEAMS_SCOPE_ID,row)).reduce((sum,row) => sum + row.xfer_count,0) - pacedAgents * 9
+  assert.equal(await pacePanel.locator('.dash-pace-values strong').nth(3).innerText(), (saturdayDifference < 0 ? '−' : saturdayDifference > 0 ? '+' : '') + Math.abs(saturdayDifference).toLocaleString('en-US'))
+  await pacePanel.locator('summary').click()
+  assert.equal(await pacePanel.getByRole('row').count(),6,'Saturday has five consecutive work hours, no lunch')
+  assert.equal(await pacePanel.getByText('Lunch',{exact:true}).count(),0)
+  for (const [width,height] of [[1440,1100],[390,844]]) {
+    await page.setViewportSize({width,height})
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+    await page.evaluate(() => window.scrollTo(0,0))
+    await page.screenshot({path:`review-evidence.local/dashboard-all-teams/saturday-${width}.png`})
+    await pacePanel.screenshot({path:`review-evidence.local/dashboard-all-teams/saturday-pace-${width}.png`})
+  }
   assert.deepEqual(errors,[]); assert.deepEqual(external,[])
-  console.log(JSON.stringify({checks:12,agents:parsed.rows.length,groups:groupCount,localUploadRenderMs:elapsedMs,externalRequests:0,result:'passed'}))
+  console.log(JSON.stringify({checks:16,agents:parsed.rows.length,groups:groupCount,localUploadRenderMs:elapsedMs,externalRequests:0,result:'passed'}))
 } finally { await context.close(); await browser.close(); await server.close() }

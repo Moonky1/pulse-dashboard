@@ -1,6 +1,7 @@
 import { loadDashboardReport } from './dashboardApi.js'
 import { groupName, integer, validDate } from './dashboardModel.js'
 import { confirmedTargetReference, countedTransfers, spanishTransfers } from './reportingPolicy.js'
+import { isSaturday } from './shiftTargets.js'
 
 // Commission thresholds are separate from the universal English production goal.
 // Read-only analysis: neither creates a team mapping, access grant or payout.
@@ -10,21 +11,23 @@ export const RANK_METRICS = { xfer: 'XFER', calls: 'Calls', conversion: 'Convers
 export const percent = value => value === null || !Number.isFinite(value) ? '—' : `${value.toFixed(2)}%`
 export const ratio = (numerator, denominator) => integer(numerator) && integer(denominator) && denominator > 0 ? numerator / denominator * 100 : null
 export const medal = rank => ({ 1: '🥇', 2: '🥈', 3: '🥉' })[rank] || `#${rank}`
-export function goalProgress(xfer, reference) {
-  const target = TARGET_REFERENCES[reference]?.daily
+export const productionTarget = date => isSaturday(date) ? { hourly: 3, hours: 5, daily: 15 } : PRODUCTION_TARGET
+export function goalProgress(xfer, reference, date, group) {
+  const weekdayTarget = TARGET_REFERENCES[reference]?.daily
+  const target = weekdayTarget && isSaturday(date) ? (['asia', 'philippines'].includes(reference) || ['OpenersMXBJ', 'OpenersMXBJ1'].includes(group) ? 10 : 5) : weekdayTarget
   if (!target || !integer(xfer)) return null
   return { target, remaining: Math.max(0, target - xfer), percent: xfer / target * 100, reached: xfer >= target }
 }
-export function productionProgress(xfer, reference) {
+export function productionProgress(xfer, reference, date) {
   if (!TARGET_REFERENCES[reference] || !integer(xfer)) return null
-  const target = PRODUCTION_TARGET.daily
+  const target = productionTarget(date).daily
   return { target, remaining: Math.max(0, target - xfer), percent: xfer / target * 100, reached: xfer >= target }
 }
 export function dailyGoal(day, scope) {
-  return day?.status === 'observed' ? productionProgress(day.row.xfer_count, confirmedTargetReference(scope, day.row)) : null
+  return day?.status === 'observed' ? productionProgress(day.row.xfer_count, confirmedTargetReference(scope, day.row), day.date) : null
 }
 export function dailyCommission(day, scope) {
-  return day?.status === 'observed' ? goalProgress(day.row.xfer_count, confirmedTargetReference(scope, day.row)) : null
+  return day?.status === 'observed' ? goalProgress(day.row.xfer_count, confirmedTargetReference(scope, day.row), day.date, day.row.current_user_group) : null
 }
 export function historyDayLabel(date) {
   if (!validDate(date)) return '—'

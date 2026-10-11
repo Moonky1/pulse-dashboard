@@ -219,6 +219,19 @@
 .dash-operation-tabs button { padding: 11px 24px; border: 1px solid #554664; border-radius: 10px; background: #211c31; color: #f1e8ff; font: inherit; }
 .dash-operation-tabs button[aria-pressed="true"] { border-color: #b499d9; background: #322740; }
 .dash-operation-tabs button:disabled { opacity: .5; cursor: not-allowed; }
+.dash-team-pace { margin: 20px 0; padding: 20px; background: #14182a; border: 1px solid #39324f; border-radius: 14px; }
+.dash-team-pace header { display: flex; gap: 15px; justify-content: space-between; flex-wrap: wrap; align-items: center; }
+.dash-team-pace h3 { margin: 0; font-size: 16px; }
+.dash-team-pace header > span { color: #ceb1fa; font-size: 12px; }
+.dash-pace-values { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 15px; margin: 20px 0; }
+.dash-pace-values span { display: block; font-size: 12px; }
+.dash-pace-values strong { display: block; font-size: 26px; margin-top: 8px; }
+.dash-team-pace summary { cursor: pointer; font-size: 12px; }
+.dash-team-pace small, .dash-team-pace p { display: block; margin: 12px 0 0; color: #9ca9c0; font-size: 11px; }
+.dash-pace-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
+.dash-pace-table td, .dash-pace-table th { padding: 9px 5px; text-align: left; border-bottom: 1px solid #303149; }
+.dash-pace-active { background: #302744; }
+@media(max-width:600px) { .dash-pace-values { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 .dash-pixel-medal, .dash-goal img { object-fit: contain; image-rendering: pixelated; vertical-align: middle; flex-shrink: 0; }
 .dash-journey { border-block: 1px solid #3c3a52; margin: 24px 0; padding: 8px 0 24px; }
 .dash-journey .dash-insights-heading h3 { margin: 0; font-size: 20px; color: #eee4fb; }
@@ -354,3 +367,4 @@
   .dash-history-selected .dash-panel-heading, .dash-history-selected .dash-full-breakdown { padding: 10px; }
   .dash-history-selected .dash-metric strong { font-size: 20px; }
 }
+.dash-world-clocks { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 12px; color: var(--dash-muted, #b5bdd6); font-size: 13px; font-variant-numeric: tabular-nums; }

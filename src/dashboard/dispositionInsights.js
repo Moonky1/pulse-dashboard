@@ -1,4 +1,5 @@
 import { integer } from './dashboardModel.js'
+import { isSaturday } from './shiftTargets.js'
 
 const rate = (value, total) => integer(value) && integer(total) && total > 0 ? value / total * 100 : null
 const total = values => values.length && values.every(integer) ? values.reduce((a, b) => a + b, 0) : null
@@ -32,8 +33,9 @@ export function dispositionSummary(rows, code, agent = null) {
 // Operator-confirmed daily review policy, 2026-10-11. These are UI observations,
 // not permission checks, payroll deductions, or automatic disciplinary actions.
 export const DAILY_PAUSE_LIMITS = Object.freeze({ break_seconds: 25 * 60, lunch_seconds: 60 * 60, rr_seconds: 20 * 60 })
-export function pauseOverage(field, value) {
-  const limit = DAILY_PAUSE_LIMITS[field]
+export const pauseLimits = date => isSaturday(date) ? { ...DAILY_PAUSE_LIMITS, break_seconds: 0, lunch_seconds: 0 } : DAILY_PAUSE_LIMITS
+export function pauseOverage(field, value, date) {
+  const limit = pauseLimits(date)[field]
   return integer(limit) && integer(value) && value > limit ? value - limit : null
 }
 // Batch comparisons stay linear in report size; no per-agent scan/sort of the team.
@@ -96,8 +98,8 @@ export function coachingAgents(report) {
   }
   for (const row of report.pause) {
     for (const [field, label] of [['break_seconds', 'Break'], ['lunch_seconds', 'Lunch'], ['rr_seconds', 'RR']]) {
-      const over = pauseOverage(field, row[field])
-      if (over !== null) add(row, { kind: 'pause', code: label, value: row[field], limit: DAILY_PAUSE_LIMITS[field], over })
+      const over = pauseOverage(field, row[field], report.date)
+      if (over !== null) add(row, { kind: 'pause', code: label, value: row[field], limit: pauseLimits(report.date)[field], over })
     }
   }
   for (const code of ['NI', 'DAIR']) {
