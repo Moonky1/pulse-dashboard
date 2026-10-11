@@ -1,10 +1,10 @@
 import { loadDashboardReport } from './dashboardApi.js'
 import { groupName, integer, validDate } from './dashboardModel.js'
-import { confirmedTargetReference } from './reportingPolicy.js'
+import { confirmedTargetReference, countedTransfers, spanishTransfers } from './reportingPolicy.js'
 
 // Read-only analysis. A reference target is not a team mapping or an access grant.
-export const TARGET_REFERENCES = { asia: { label: 'Asia', daily: 15 }, other: { label: 'Other teams', daily: 10 } }
-export const RANK_METRICS = { xfer: 'XFER', calls: 'Calls', conversion: 'Conversion %' }
+export const TARGET_REFERENCES = { asia: { label: 'Asia', daily: 15 }, philippines: { label: 'Philippines', daily: 20 }, other: { label: 'Other teams', daily: 10 } }
+export const RANK_METRICS = { xfer: 'XFER', calls: 'Calls', conversion: 'Conversion %', spanish: 'Spanish XFER', total: 'Total XFER' }
 export const percent = value => value === null || !Number.isFinite(value) ? '—' : `${value.toFixed(2)}%`
 export const ratio = (numerator, denominator) => integer(numerator) && integer(denominator) && denominator > 0 ? numerator / denominator * 100 : null
 export const medal = rank => ({ 1: '🥇', 2: '🥈', 3: '🥉' })[rank] || `#${rank}`
@@ -30,9 +30,9 @@ export function historyDates(end, count) {
   if (![7, 30].includes(count)) throw Error('Choose 7 or 30 calendar days')
   return Array.from({ length: count }, (_, i) => previousDate(end, i))
 }
-export function rankAgents(rows, metric = 'xfer', ascending = false) {
+export function rankAgents(rows, metric = 'xfer', ascending = false, scope = null) {
   if (!(metric in RANK_METRICS)) throw Error('Unsupported ranking metric')
-  const value = row => metric === 'conversion' ? ratio(row.xfer_count, row.calls) : row[metric === 'calls' ? 'calls' : 'xfer_count']
+  const value = row => metric === 'conversion' ? ratio(row.xfer_count, row.calls) : metric === 'spanish' ? spanishTransfers(row) : metric === 'total' ? countedTransfers(scope, row) : row[metric === 'calls' ? 'calls' : 'xfer_count']
   const sorted = rows.map(row => ({ ...row, value: value(row) }))
     .filter(row => Number.isFinite(row.value) && row.value >= 0)
     .sort((a, b) => (ascending ? a.value - b.value : b.value - a.value) || a.agent_code.localeCompare(b.agent_code))

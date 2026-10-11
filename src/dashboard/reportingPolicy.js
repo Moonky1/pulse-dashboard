@@ -1,7 +1,14 @@
+import { ALL_TEAMS_SCOPE_ID, ALL_TEAMS_GROUPS, isAllTeamsScope } from './allTeamsScope.js'
+import { integer } from './dashboardModel.js'
+
 // Analytics-only interpretation confirmed by the operator on 2026-10-11.
 // Scoped explicitly: a similarly named group in another source is NOT confirmation.
 // This registry does not create team membership, identity links or access grants.
 const CONFIRMED_POLICIES = Object.freeze({
+  [ALL_TEAMS_SCOPE_ID]: Object.freeze({
+    xferLanguage: 'English',
+    groups: Object.freeze({ OpenersAsia: 'Asia Team A', OpenersAsia1: 'Asia Team B', OpenersPH: 'Philippines', OpenersMXBJ: 'Mexico Baja', OpenersMXBJ1: 'Mexico Baja B', OpenersCO: 'Colombia', OpenersVZ: 'Venezuela', OpenersCA: 'Central', OpenersNIC: 'Nicaragua' }),
+  }),
   '426ab519-b87b-4410-bd42-e255b240bea1': Object.freeze({
     xferLanguage: 'English',
     groups: Object.freeze({ OpenersAsia: 'Asia Team A' }),
@@ -17,6 +24,7 @@ const policyFor = scope => {
 }
 export const isEnglishXfer = scope => policyFor(scope)?.xferLanguage === 'English'
 export const transferLabel = scope => isEnglishXfer(scope) ? 'English XFER' : 'XFER'
+export const COUNTED_TRANSFER_NOTE = 'English only for Asia, Philippines and Mexico Baja; English + SPXFER for other teams. Goals always use English only.'
 
 function resolvedTeam(scope, row) {
   const policy = policyFor(scope)
@@ -34,9 +42,32 @@ export function teamLabel(scope, row) {
 }
 
 export function confirmedTargetReference(scope, row) {
-  if (!policyFor(scope)) return ''
+  if (!isEnglishXfer(scope)) return ''
+  if (isAllTeamsScope(scope)) {
+    const group = row?.current_user_group
+    if (!ALL_TEAMS_GROUPS.includes(group) || group === 'OpenersTraining') return ''
+    return ['OpenersAsia', 'OpenersAsia1'].includes(group) ? 'asia' : group === 'OpenersPH' ? 'philippines' : 'other'
+  }
   const team = resolvedTeam(scope, row)
-  return !team ? '' : ['Asia', 'Asia Team A', 'Asia Team B'].includes(team) ? 'asia' : 'other'
+  return !team ? '' : ['Asia', 'Asia Team A', 'Asia Team B'].includes(team) ? 'asia' : team === 'Philippines' ? 'philippines' : 'other'
+}
+
+export function spanishTransfers(row) {
+  const value = row?.dispositions?.SPXFER
+  return integer(value) ? value : null
+}
+// Commission progress always uses xfer_count; SPXFER is never folded into it.
+export function countedTransfers(scope, row) {
+  if (!isEnglishXfer(scope) || !integer(row?.xfer_count)) return null
+  const group = row.current_user_group
+  if (['OpenersAsia', 'OpenersAsia1', 'OpenersPH', 'OpenersMXBJ', 'OpenersMXBJ1'].includes(group)) return row.xfer_count
+  if (!isAllTeamsScope(scope) || !ALL_TEAMS_GROUPS.includes(group)) return null
+  const spanish = spanishTransfers(row)
+  return spanish === null ? null : row.xfer_count + spanish
+}
+export function sumTransfers(rows, value) {
+  const values = rows.map(value)
+  return values.length && values.every(integer) ? values.reduce((a, b) => a + b, 0) : null
 }
 
 // Count one report side at a time; Call Stats and Pause are not two agents.

@@ -2,7 +2,7 @@ import { normalizeReport } from './dashboardApi.js'
 
 const messages = {
   report_date_mismatch: 'Use reports for the same full day: 00:00:00–23:59:59.',
-  report_group_mismatch: 'A file contains a user group outside the selected reporting scope.',
+  report_group_mismatch: 'This CSV contains other teams. Select All teams for a general report, or export only the selected team.',
   report_agent_sets_differ: 'The two files contain different Agent IDs. Export both reports again using the same filters.',
   missing_totals: 'A report is missing its TOTALS row. Upload the complete original CSV export.',
   totals_mismatch: 'A report’s totals do not match its agent rows. Nothing was saved.',

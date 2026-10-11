@@ -6,6 +6,7 @@ import { testReport, testScope } from './ui-fixtures.mjs'
 import { retentionFixture } from './retention-fixtures.mjs'
 import { alertFixture } from './alert-fixtures.mjs'
 import { inspectManualReports } from '../../supabase/functions/_shared/viciManualImport.mjs'
+import { allTeamsScope } from './all-teams-fixtures.mjs'
 
 if (!['127.0.0.1', 'localhost'].includes(location.hostname)) throw Error('Local synthetic review only')
 let mode = new URLSearchParams(location.search).get('mode') || 'populated'
@@ -18,6 +19,7 @@ const asiaScopes = [
 const alertConfigs = new Map(), alertHistory = new Map()
 const independentReports = new Map()
 const client = { async rpc(name, args) {
+  if (mode === 'all-teams' && name === 'list_vici_dashboard_scopes') return { data: [allTeamsScope, ...asiaScopes] }
   if (mode === 'asia-teams' && name === 'list_vici_dashboard_scopes') return { data: asiaScopes }
   if (['get_vici_alert_rules', 'save_vici_alert_rules', 'list_vici_alert_rule_history'].includes(name)) {
     if (mode === 'denied') return { error: { code: '42501' } }
@@ -58,6 +60,10 @@ const client = { async rpc(name, args) {
   if (mode === 'denied') return { error: { code: '42501' } }
   if (mode === 'failure') return { error: { code: 'NETWORK' } }
   const data = testReport(args.report_date)
+  if (mode === 'all-teams') {
+    if (independentReports.has(args.report_date)) return { data: independentReports.get(args.report_date) }
+    return { data: { ...data, scope: allTeamsScope, snapshot: null, performance: [], pause: [] } }
+  }
   if (mode === 'coaching') {
     data.performance.forEach((row, i) => {
       row.current_user_group = 'ReviewGroupA'; row.calls = 300
@@ -100,11 +106,12 @@ const client = { async rpc(name, args) {
   return { data }
 }, functions: { async invoke(name, { body }) {
   if (name !== 'pulse-vici-import') throw Error('Unexpected function')
-  if (mode === 'staff-upload') {
+  if (mode === 'staff-upload' || mode === 'all-teams') {
     const date = body.get('reportDate'), prior = independentReports.get(date)
     const prepared = inspectManualReports({ performanceText: await body.get('performance')?.text(), pauseText: await body.get('pause')?.text(),
-      reportDate: date, userGroups: ['FixtureGroup'] })
+      reportDate: date, userGroups: mode === 'all-teams' ? allTeamsScope.user_groups : ['FixtureGroup'] })
     const report = prior ? structuredClone(prior) : testReport(date)
+    if (mode === 'all-teams') report.scope = allTeamsScope
     report.performance = prepared.pair.performance?.rows || prior?.performance || []
     report.pause = prepared.pair.pause?.rows || prior?.pause || []
     report.snapshot.ingestion_method = 'manual'
@@ -113,7 +120,7 @@ const client = { async rpc(name, args) {
     report.snapshot.validation_summary = { performance: prepared.verification.performance || prior?.snapshot.validation_summary.performance,
       pause: prepared.verification.pause || prior?.snapshot.validation_summary.pause }
     independentReports.set(date, report)
-    return { data: { status: 'success', agents: 2, report_date: date, report } }
+    return { data: { status: 'success', agents: (prepared.pair.performance || prepared.pair.pause).rows.length, report_date: date, report } }
   }
   if (body.get('pause') && (await body.get('pause').text()).includes('invalid')) return { error: { context: new Response('{"error":"invalid_report"}') } }
   uploaded = true

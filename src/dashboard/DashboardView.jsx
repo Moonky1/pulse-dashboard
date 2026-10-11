@@ -10,7 +10,8 @@ import { AlertPanel } from './AlertPanel.jsx'
 import { RankingPanel, Goal } from './RankingPanel.jsx'
 import { AgentJourney } from './AgentJourney.jsx'
 import { contribution, percent, ratio } from './performanceInsights.js'
-import { confirmedTargetReference, isEnglishXfer, teamCounts, teamLabel, transferLabel } from './reportingPolicy.js'
+import { confirmedTargetReference, countedTransfers, COUNTED_TRANSFER_NOTE, isEnglishXfer, spanishTransfers, sumTransfers, teamCounts, teamLabel, transferLabel } from './reportingPolicy.js'
+import { isAllTeamsScope } from './allTeamsScope.js'
 import { PERFORMANCE_COLUMNS } from './dashboardModel.js'
 import { RankMedal } from './RankMedal.jsx'
 import { DispositionExplorer } from './DispositionExplorer.jsx'
@@ -23,8 +24,8 @@ const TIMES = PERFORMANCE_COLUMNS
 function Mark({ kind = 'chart' }) {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{kind === 'refresh' ? <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1" /></> : <><path d="M4 20h16M7 16v-5m5 5V4m5 12V8" /></>}</svg>
 }
-function Metric({ label, value, accent }) {
-  return <article className={`dash-metric${accent ? ' dash-metric--accent' : ''}`}><span>{label}</span><strong>{value}</strong></article>
+function Metric({ label, value, accent, title }) {
+  return <article className={`dash-metric${accent ? ' dash-metric--accent' : ''}`} title={title}><span>{label}</span><strong>{value}</strong></article>
 }
 function Metrics({ rows, pauseRows, available, scope }) {
   const totals = available && rows.length ? aggregate(rows) : null
@@ -34,6 +35,7 @@ function Metrics({ rows, pauseRows, available, scope }) {
     <Metric label="Agents" value={number(agents)} />
     <Metric label="Calls" value={totals ? number(totals.calls) : '—'} />
     <Metric label={transferLabel(scope)} value={totals ? number(totals.xfer) : '—'} accent />
+    {isAllTeamsScope(scope) && <><Metric label="Spanish XFER" value={number(totals ? sumTransfers(rows, spanishTransfers) : null)} /><Metric label="Total XFER" title={COUNTED_TRANSFER_NOTE} value={number(totals ? sumTransfers(rows, row => countedTransfers(scope, row)) : null)} /></>}
     <Metric label="Talk time" value={totals ? duration(totals.talk) : '—'} />
     <Metric label="Customer time" value={totals ? duration(totals.customer) : '—'} />
     <Metric label="Pause time" value={duration(pause)} />
@@ -93,7 +95,7 @@ function AgentDetail({ code, data, onClose, client, reference }) {
       {client && <AgentJourney key={data.scope.id + '/' + data.date + '/' + code} client={client} scope={data.scope.id} date={data.date} code={code} onDenied={() => setHistoryDenied(true)} />}
       <h3>Call performance</h3>
       <p className="dash-caption">Current group: {row.current_user_group || 'Unavailable'} · Most recent group: {row.most_recent_user_group || 'Unavailable'}. All averages are reported by Vici.</p>
-      {performance ? <dl className="dash-detail-grid">{[['calls', 'Calls'], ['xfer_count', xferLabel], ...TIMES].map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key.endsWith('seconds') ? duration(performance[key]) : number(performance[key])}</dd></div>)}</dl> : <p>There is no performance observation for this agent in this snapshot.</p>}
+      {performance ? <dl className="dash-detail-grid">{[['calls', 'Calls'], ['xfer_count', xferLabel], ['spanish', 'Spanish XFER'], ['counted', 'Total XFER'], ...TIMES].map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key.endsWith('seconds') ? duration(performance[key]) : number(key === 'spanish' ? spanishTransfers(performance) : key === 'counted' ? countedTransfers(data.scope, performance) : performance[key])}</dd></div>)}</dl> : <p>There is no performance observation for this agent in this snapshot.</p>}
       <h3>Time &amp; Pause</h3>
       {pause ? <><dl className="dash-detail-grid dash-detail-grid--three">{[['total_seconds', 'Logged'], ['nonpause_seconds', 'Nonpause'], ['pause_seconds', 'Total pause']].map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{duration(pause[key])}</dd></div>)}</dl><div className="dash-pause-bars">{pauseValues.map(item => <div key={item.key} className={pauseOverage(item.key, item.value) !== null ? 'dash-over-limit' : undefined}><span>{item.label}</span><div aria-hidden="true"><i style={{ width: `${100 * (item.value || 0) / maximum}%` }} /></div><strong>{duration(item.value)}{DAILY_PAUSE_LIMITS[item.key] && <small> / {duration(DAILY_PAUSE_LIMITS[item.key])}</small>}{pauseOverage(item.key, item.value) !== null && <small> +{duration(pauseOverage(item.key, item.value))} over</small>}</strong></div>)}</div></> : <p>No pause observation is available for this agent.</p>}
       <h3>Dispositions</h3>
@@ -131,7 +133,7 @@ function ReportContent({ data, loading, error, client }) {
   return <>
     {hasData && !denied && <CoachingPanel key={data.snapshot.id} data={data} readError={error} onOpen={setAgent} />}
     <Metrics rows={scopedRows} pauseRows={scopedPause} available={hasData && !denied} scope={data?.scope} />
-    {hasData && !denied && teams.length > 0 && <section className="dash-team-counts" aria-label="Agents by team">{teams.map(team => <button key={team.group} aria-pressed={selectedGroup === team.group} onClick={() => { setGroup(selectedGroup === team.group ? '' : team.group); setReference(''); setPage(0) }}><strong>{team.label}</strong><span>{number(team.agents)} agents</span>{team.label !== team.group && <small>{team.group}</small>}</button>)}</section>}
+    {hasData && !denied && teams.length > 0 && <section className="dash-team-counts" aria-label="Agents by team">{teams.length > 1 && <button aria-pressed={!selectedGroup} onClick={() => { setGroup(''); setReference(''); setPage(0) }}><strong>All teams</strong><span>{number(teams.reduce((sum, team) => sum + team.agents, 0))} agents</span></button>}{teams.map(team => <button key={team.group} aria-pressed={selectedGroup === team.group} onClick={() => { setGroup(selectedGroup === team.group ? '' : team.group); setReference(''); setPage(0) }}><strong>{team.label}</strong><span>{number(team.agents)} agents</span>{team.label !== team.group && <small>{team.group}</small>}</button>)}</section>}
     <div className="dash-workspace-bar"><nav aria-label="Dashboard views">{[['overview', 'Overview'], ['rankings', 'Rankings & goals'], ['agents', 'Agents'], ['pause', 'Time & Pause']].map(([key, label]) => <button key={key} aria-pressed={view === key} onClick={() => { setView(key); setPage(0); setSort({ key: key === 'pause' ? 'pause_seconds' : 'calls', descending: true }) }}>{label}{key === 'agents' && hasData && <span>{scopedRows.length}</span>}</button>)}</nav><label className="dash-group-filter"><span className="dash-sr">VICIdial user group</span><select aria-label="VICIdial user group" value={selectedGroup} onChange={e => { setGroup(e.target.value); setReference(''); setPage(0) }}><option value="">All user groups</option>{groups.map(name => <option key={name}>{name}</option>)}</select></label></div>
     {denied ? <section className="dash-panel"><Blank title="This report is restricted">Your Staff account needs access to this reporting scope. No data is shown.</Blank></section> : !hasData ? <section className="dash-panel"><header className="dash-panel-heading"><div><p className="dash-eyebrow">{view === 'pause' ? 'PAUSE CODE BREAKDOWN' : 'AGENT PERFORMANCE'}</p><h2>{view === 'pause' ? 'Time & Pause' : 'Your operation, in one place'}</h2></div><span>VICIdial reports</span></header><Blank loading={loading} title={loading ? 'Loading report…' : 'No report for this date'}>{loading ? '' : 'Upload a CSV to get started.'}</Blank></section> : <>
       {view === 'rankings' ? error ? <p role="status">Refresh this report successfully before reviewing rankings.</p> : <RankingPanel key={selectedGroup} rows={scopedRows} allRows={allPerformance} onOpen={setAgent} reference={reference} setReference={setReference} scope={data.scope} /> : view === 'overview' ? <Overview rows={scopedRows} scope={data.scope} onGroup={name => { setGroup(name); setView('agents'); setPage(0) }} /> : <section className="dash-panel">
