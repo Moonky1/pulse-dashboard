@@ -35,7 +35,8 @@
     "pulse:release-check": "npm run pulse:check && git diff --check",
     "test:dashboard:manual-browser": "node scripts/dashboard-certification/manual-browser.mjs",
     "test:dashboard:retention-browser": "node scripts/dashboard-certification/retention-browser.mjs",
-    "test:dashboard:alerts-browser": "node scripts/dashboard-certification/alerts-browser.mjs"
+    "test:dashboard:alerts-browser": "node scripts/dashboard-certification/alerts-browser.mjs",
+    "test:dashboard:insights-browser": "node scripts/dashboard-certification/insights-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",

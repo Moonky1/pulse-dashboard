@@ -93,6 +93,56 @@ activate sample rules. The preparation script's `--alert-rules` flag generates
 only this migration transaction for authorized Preview publication; it never
 connects or performs a broad remote database push. Production remains separate.
 
+## Rankings and agent daily history
+
+The Rankings & goals view reuses the selected authorized report. XFER, Calls and
+XFER / Calls conversion can be ordered highest or lowest, with group/activity
+filters and exact-ID search. Competition ranks preserve ties (1, 1, 3); Agent ID
+only breaks display-order ties. Summary cards show at most three rows. Zero calls
+has no conversion rank. Rankings describe observed output, not employee ability;
+different shifts and sample sizes are explicitly noted. Search never changes the
+group-share denominator. SPANIS is not counted as Spanish transfers or added to
+XFER. No language or sales outcome is inferred.
+
+The user requested daily English targets of 15 for Asia and 10 for other teams.
+These are offered as **view-only reference choices**, initially unassigned, with
+an explicit source-semantics warning. They do not modify shared alert rules,
+assign source groups to Pulse teams, or establish that XFER means English.
+Switching scope/date/group resets the reference. Automatic target assignment is
+pending an explicit group mapping and confirmation of the English source metric.
+Goal progress preserves values above 100%; its bar is capped at the target.
+
+The agent dialog adds source-group XFER position, conversion, XFER share and call
+share. Its on-demand 7/30-calendar-day history reuses `get_vici_dashboard` for
+each explicit date, at most three concurrent reads with a bounded wait. This RPC
+already selects one latest successful full-day-range snapshot per source date
+(performance clock, pause clock, completion order). Intraday cumulative versions
+are never added. No new backend, raw-table reads, schema migration, auto-polling,
+source-server calls or persistent browser cache is introduced. The retained UI
+model contains only the selected exact VICIdial ID, its source metrics and group
+totals/rank, not all agents' reports. Requests are discarded after unmount and
+queued reads stop after failure; any failed or denied day hides all partial totals.
+The history is a sequence of saved daily cuts, not one atomic cross-day snapshot.
+
+The daily story distinguishes the previous calendar day from the previous
+observed day. No report, ID absent and an observed zero are separate states. Best
+and lowest days consider days with calls, retain tied dates, include genuine zero
+XFER, and are limited to the selected window—not lifetime or certified final
+shift results. Summary conversion is total XFER / total calls; weighted group
+contribution is agent XFER / the sum of that day's source-group XFER across the
+same observed dates. Historical groups come from each saved CURRENT USER GROUP,
+not inferred current Pulse membership. A comparison shows count differences and
+conversion percentage points, with a warning if the source group changed. Native
+dialog dismissal, a keyboard-accessible timeline and daily records expose saved
+performance, pause codes and dispositions. Data absence is not an attendance claim.
+
+Validation: `npm run test:dashboard` includes model/transport tests, and
+`npm run test:dashboard:insights-browser` exercises the actual components at
+desktop, tablet and mobile widths using local synthetic data and blocked external
+requests. The existing browser suites remain regression gates. Historical records
+remain protected by the existing server authorization; no new account linking is
+performed. Production stays outside this checkpoint.
+
 ## Separate live-data gate
 
 This UI does not resolve the previously recorded Preview-to-Vici connection

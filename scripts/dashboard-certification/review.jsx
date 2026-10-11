@@ -51,6 +51,12 @@ const client = { async rpc(name, args) {
   if (mode === 'denied') return { error: { code: '42501' } }
   if (mode === 'failure') return { error: { code: 'NETWORK' } }
   const data = testReport(args.report_date)
+  if (mode === 'insights') {
+    const day = Number(args.report_date.slice(-2))
+    data.performance.forEach((row, i) => { row.xfer_count = (i + day) % 20; row.dispositions.XFER = row.xfer_count; row.calls = i === 4 ? 0 : 100 + i * 10 })
+    if (day === 7) { data.performance = data.performance.filter(row => row.agent_code !== '01000'); data.pause = data.pause.filter(row => row.agent_code !== '01000') }
+    if (day === 6) { data.snapshot = null; data.performance = []; data.pause = [] }
+  }
   if (mode === 'manual' && uploaded) { data.snapshot.ingestion_method = 'manual'; data.snapshot.uploaded_by = 'Synthetic administrator' }
   data.scope = { ...testScope, id: args.requested_scope }
   if (args.requested_scope.endsWith('2')) data.performance.forEach(r => { r.vici_user_name = 'Other scope ' + r.agent_code })
@@ -65,4 +71,4 @@ const client = { async rpc(name, args) {
   uploaded = true
   return { data: { status: 'success', agents: 40, report_date: body.get('reportDate') } }
 } } }
-createRoot(document.getElementById('root')).render(<BrowserRouter><div className="pulse-product-surface"><div style={{ padding: '12px 20px', font: '12px system-ui', color: '#eed4a5', background: '#332626' }}>LOCAL UI REVIEW · SYNTHETIC DATA · NOT LIVE <label>Test state <select aria-label="Test state" defaultValue={mode} onChange={e => { mode = e.target.value }}><option>populated</option><option>manual</option><option>failure</option><option>denied</option><option>empty</option><option>slow</option><option>conflict</option></select></label><button onClick={() => { document.querySelector('[data-request-count]').textContent = String(calls) }}>Check requests</button><output data-request-count="">0</output></div><DashboardView client={client} /></div></BrowserRouter>)
+createRoot(document.getElementById('root')).render(<BrowserRouter><div className="pulse-product-surface"><div style={{ padding: '12px 20px', font: '12px system-ui', color: '#eed4a5', background: '#332626' }}>LOCAL UI REVIEW · SYNTHETIC DATA · NOT LIVE <label>Test state <select aria-label="Test state" defaultValue={mode} onChange={e => { mode = e.target.value }}><option>populated</option><option>manual</option><option>failure</option><option>denied</option><option>empty</option><option>slow</option><option>conflict</option><option>insights</option></select></label><button onClick={() => { document.querySelector('[data-request-count]').textContent = String(calls) }}>Check requests</button><output data-request-count="">0</output></div><DashboardView client={client} /></div></BrowserRouter>)

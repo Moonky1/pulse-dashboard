@@ -171,6 +171,61 @@
 }
 @media (prefers-reduced-motion: reduce) { .dash-blank--loading .dash-blank__mark { animation: none; } }
 .dash-upload, .dash-history, .dash-full-breakdown { margin: 20px 0; }
+.dash-insights-heading { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin: 24px 0; }
+.dash-insights-heading h2 { font-size: clamp(23px,3vw,34px); margin: 8px 0; letter-spacing: -.04em; color: #eee8fb; }
+.dash-insights-heading p { color: #aeb9d1; font-size: 13px; }
+.dash-rank-symbol { font-size: 44px; }
+.dash-rankings, .dash-journey { color: #b7c2dc; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.dash-rankings { background: linear-gradient(135deg,#1c1c30,#111627 75%); border: 1px solid #3c3856; padding: 24px; border-radius: 18px; }
+.dash-rankings button, .dash-rankings select, .dash-rankings input, .dash-journey button, .dash-journey select { background: #201e34; color: #e8e1f5; border: 1px solid #4b4566; padding: 9px 12px; border-radius: 8px; font: inherit; max-width: 100%; }
+.dash-rankings button, .dash-journey button { cursor: pointer; }
+.dash-rankings button:disabled, .dash-journey button:disabled { cursor: default; opacity: .5; }
+.dash-goal-reference { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; padding: 16px 20px; border: 1px solid #4c405a; border-radius: 12px; background: #211c31; }
+.dash-goal-reference label { display: grid; gap: 7px; min-width: 0; }
+.dash-goal-reference p { flex: 1 1 280px; font-size: 12px; margin: 0; color: #bfb3d1; }
+.dash-insight-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 22px 0; }
+.dash-insight-metrics > div { padding: 16px; border: 1px solid #343850; border-radius: 12px; background: #181d30; min-width: 0; }
+.dash-insight-metrics dt { color: #acb6d0; font-size: 11px; }
+.dash-insight-metrics dd { margin: 10px 0 4px; color: #e0c3ff; font-size: clamp(18px,2vw,28px); line-height: 1.25; font-weight: 650; }
+.dash-insight-metrics small { display: block; color: #9cabc8; font-size: 10px; }
+.dash-rank-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; margin: 24px 0; }
+.dash-rank-filters label { display: grid; gap: 8px; flex: 1 1 155px; min-width: 0; font-size: 12px; }
+.dash-rank-filters select, .dash-rank-filters input { min-width: 0; width: 100%; }
+.dash-rank-cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 24px 0 16px; }
+.dash-rank-card { min-width: 0; padding: 18px; border: 1px solid #45405b; border-radius: 14px; background: #202037; }
+.dash-rank-card--review { border-color: #5c4855; background: #292030; }
+.dash-rank-card h3 { margin: 0 0 14px; font-size: 14px; color: #e5ddf7; }
+.dash-rank-card ol { list-style: none; padding: 0; margin: 0; }
+.dash-rank-card li + li { border-top: 1px solid #3b354b; }
+.dash-rank-card button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 0; border: 0; border-radius: 0; background: transparent; text-align: left; }
+.dash-rank-card button:hover { color: #fff; background: #ffffff06; }
+.dash-rank-card strong { display: block; font-size: 12px; }
+.dash-rank-card small { display: block; font-size: 10px; color: #a4abc4; }
+.dash-rank-card b { margin-left: auto; color: #c9affe; white-space: nowrap; }
+.dash-rank-medal { font-size: 21px; min-width: 27px; }
+.dash-insight-agent { text-align: left; }
+.dash-insight-agent small { color: #aaaeca; }
+.dash-goal { display: grid; gap: 5px; color: #e7bf91; font-size: 11px; min-width: 135px; }
+.dash-goal--reached { color: #8de0c0; }
+.dash-goal progress { width: 100%; max-width: 160px; height: 5px; accent-color: #b49be6; }
+.dash-goal--reached progress { accent-color: #75c8ab; }
+.dash-journey { border-block: 1px solid #3c3a52; margin: 24px 0; padding: 8px 0 24px; }
+.dash-journey .dash-insights-heading h3 { margin: 0; font-size: 20px; color: #eee4fb; }
+.dash-journey-extremes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.dash-journey-extremes > div { display: grid; gap: 6px; padding: 16px; border: 1px solid #41415d; border-radius: 10px; }
+.dash-journey-extremes strong { font-size: 24px; color: #c4b2f5; }
+.dash-journey-extremes small { color: #a8b1cc; }
+.dash-journey-timeline { display: flex; overflow-x: auto; max-width: 100%; gap: 8px; padding: 14px 0; margin: 24px 0; }
+.dash-journey-timeline button { flex: 0 0 68px; padding: 8px; background: #171b2c; display: grid; gap: 5px; font-size: 11px; }
+.dash-journey-timeline button:disabled { opacity: .7; }
+.dash-journey-bar { height: 86px; display: flex; align-items: end; background: #0d1120; border-radius: 4px; overflow: hidden; }
+.dash-journey-bar i { display: block; width: 100%; background: linear-gradient(#bba0ef,#6f76ba); }
+.dash-journey-bar--missing { border: 1px dashed #48506a; }
+.dash-journey-comparison { padding: 14px; border-left: 2px solid #b899e8; background: #232035; }
+.dash-journey-daily { padding-top: 20px; }
+.dash-workspace-bar nav { flex-wrap: wrap; }
+@media (max-width:1100px) { .dash-rank-cards { grid-template-columns: 1fr; } .dash-rank-card ol { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; } .dash-rank-card li + li { border-top: 0; } .dash-insight-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width:600px) { .dash-rankings { padding: 16px; } .dash-rank-card ol { grid-template-columns: 1fr; gap: 0; } .dash-rank-card li + li { border-top: 1px solid #3b354b; } .dash-insight-metrics > div { padding: 12px; } .dash-journey-extremes { grid-template-columns: 1fr; } .dash-goal-reference { padding: 14px; } }
 .dash-retention { margin: 20px 0; }
 .dash-alerts { margin: 20px 0; color: #c4cbdd; }
 .dash-alerts summary { cursor: pointer; padding: 18px 20px; color: #e8dcfb; }
