@@ -34,7 +34,7 @@ const client = { async rpc(name, args) {
     if (mode === 'failure') return { error: { code: 'NETWORK' } }
     return { data: retentionFixture(args.as_of_date, args.page_offset) }
   }
-  if (name === 'list_vici_dashboard_scopes') return mode === 'no-scopes' ? { data: [] } : { data: [{ ...testScope, can_import: mode === 'manual', campaigns: ['SyntheticCampaign'] }, { ...testScope, id: '10000000-0000-4000-8000-000000000002', label: 'Other synthetic scope' }] }
+  if (name === 'list_vici_dashboard_scopes') return mode === 'no-scopes' ? { data: [] } : { data: [{ ...testScope, ...(mode === 'confirmed-targets' ? { id: '426ab519-b87b-4410-bd42-e255b240bea1', user_groups: ['OpenersAsia', 'MappedGroup', 'UnknownGroup'] } : {}), can_import: mode === 'manual', campaigns: ['SyntheticCampaign'] }, { ...testScope, id: '10000000-0000-4000-8000-000000000002', label: 'Other synthetic scope' }] }
   if (name === 'list_vici_report_history') return { data: [2, 1].map(version => ({ id: '20000000-0000-4000-8000-00000000000' + version, performance_generated_at: args.report_date + (version === 1 ? 'T10:00:00' : 'T10:30:00'), pause_generated_at: args.report_date + (version === 1 ? 'T10:00:05' : 'T10:30:05'), captured_at: '2026-10-09T18:00:00Z', ingestion_method: 'manual', uploaded_by: 'Synthetic administrator', agents: 40, calls: version === 1 ? 4000 : 4200 })) }
   if (name === 'get_vici_dashboard_snapshot') {
     const data = testReport(), first = args.requested_snapshot.endsWith('1')
@@ -59,6 +59,9 @@ const client = { async rpc(name, args) {
   }
   if (mode === 'manual' && uploaded) { data.snapshot.ingestion_method = 'manual'; data.snapshot.uploaded_by = 'Synthetic administrator' }
   data.scope = { ...testScope, id: args.requested_scope }
+  if (mode === 'confirmed-targets') {
+    data.performance.forEach((row, i) => { row.current_user_group = ['OpenersAsia', 'MappedGroup', 'UnknownGroup'][i % 3]; row.team_name = i % 3 === 1 ? 'Colombia' : null; if (i < 3) { row.xfer_count = [7, 9, 20][i]; row.dispositions.XFER = row.xfer_count } })
+  }
   if (args.requested_scope.endsWith('2')) data.performance.forEach(r => { r.vici_user_name = 'Other scope ' + r.agent_code })
   if (mode === 'empty' || args.report_date === '2026-10-01') {
     data.snapshot = null; data.performance = []; data.pause = []

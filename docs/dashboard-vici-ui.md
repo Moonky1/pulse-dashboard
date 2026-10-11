@@ -104,12 +104,23 @@ different shifts and sample sizes are explicitly noted. Search never changes the
 group-share denominator. SPANIS is not counted as Spanish transfers or added to
 XFER. No language or sales outcome is inferred.
 
-The user requested daily English targets of 15 for Asia and 10 for other teams.
-These are offered as **view-only reference choices**, initially unassigned, with
-an explicit source-semantics warning. They do not modify shared alert rules,
-assign source groups to Pulse teams, or establish that XFER means English.
-Switching scope/date/group resets the reference. Automatic target assignment is
-pending an explicit group mapping and confirmation of the English source metric.
+On 2026-10-10 the operator explicitly confirmed XFER = English transfers and
+OpenersAsia = Asia for the existing Preview report scope. `reportingPolicy.js`
+records this interpretation for that exact scope ID; a matching group name in a
+different scope does not inherit it. OpenersAsia receives 15 English XFER/day
+automatically. Other groups require an explicit team name from the protected
+server response: Asia receives 15, other mapped teams 10. Unknown groups and
+conflicting mappings get no automatic goal, never an implicit 10. No inference
+uses agent name, ID prefix or MOST RECENT USER GROUP.
+
+The confirmed scope uses per-agent goals in the ranking and agent dialog, with
+eligible/unknown counts and nearest-goal order by remaining transfers. A single
+view-wide reference cannot override those goals. Current targets applied to saved
+reports are clearly labelled, not claimed as a historical target-policy record.
+English labels are presentation of the unchanged XFER field; SPANIS is still
+separate. Other unconfirmed scopes retain their manual view-only reference
+choices, initially unassigned. This is analytics policy only: it neither modifies
+RBAC/team membership/agent linking nor writes reporting tables or shared alerts.
 Goal progress preserves values above 100%; its bar is capped at the target.
 
 The agent dialog adds source-group XFER position, conversion, XFER share and call

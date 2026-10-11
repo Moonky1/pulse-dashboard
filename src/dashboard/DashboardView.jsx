@@ -10,6 +10,7 @@ import { AlertPanel } from './AlertPanel.jsx'
 import { RankingPanel, Goal } from './RankingPanel.jsx'
 import { AgentJourney } from './AgentJourney.jsx'
 import { contribution, medal, percent, ratio } from './performanceInsights.js'
+import { confirmedTargetReference, isEnglishXfer, transferLabel } from './reportingPolicy.js'
 import { PERFORMANCE_COLUMNS } from './dashboardModel.js'
 import './dashboard.css'
 
@@ -21,12 +22,12 @@ function Mark({ kind = 'chart' }) {
 function Metric({ label, value, note, accent }) {
   return <article className={`dash-metric${accent ? ' dash-metric--accent' : ''}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></article>
 }
-function Metrics({ rows, available }) {
+function Metrics({ rows, available, scope }) {
   const totals = available ? aggregate(rows) : null
   return <section className="dash-metrics" aria-label="Report overview">
     <Metric label="Agents" value={totals ? number(totals.agents) : '—'} note="In this report" />
     <Metric label="Calls" value={totals ? number(totals.calls) : '—'} note="Reported by VICIdial" />
-    <Metric label="XFER" value={totals ? number(totals.xfer) : '—'} note="Canonical transfer count" accent />
+    <Metric label={transferLabel(scope)} value={totals ? number(totals.xfer) : '—'} note={isEnglishXfer(scope) ? 'Confirmed source code: XFER' : 'Canonical transfer count'} accent />
     <Metric label="Talk time" value={totals ? duration(totals.talk) : '—'} note="Total across agents" />
     <Metric label="Customer time" value={totals ? duration(totals.customer) : '—'} note="VICIdial customer total" />
     <Metric label="Pause time" value={totals ? duration(totals.pause) : '—'} note="Performance report total" />
@@ -41,13 +42,13 @@ function AgentName({ row, onOpen }) {
 function SortHead({ name, label, sort, setSort }) {
   return <th scope="col" aria-sort={sort.key === name ? sort.descending ? 'descending' : 'ascending' : 'none'}><button onClick={() => setSort({ key: name, descending: sort.key === name ? !sort.descending : name !== 'vici_user_name' })}>{label}<span aria-hidden="true">{sort.key === name ? sort.descending ? ' ↓' : ' ↑' : ' ↕'}</span></button></th>
 }
-function AgentTable({ rows, view, onOpen, sort, setSort }) {
+function AgentTable({ rows, view, onOpen, sort, setSort, xferLabel }) {
   const pause = view === 'pause'
   const columns = pause ? [['total_seconds', 'Logged'], ['nonpause_seconds', 'Nonpause'], ['pause_seconds', 'Pause'], ...PAUSE_FIELDS] : TIMES
   return <div className="dash-table-scroll" tabIndex={0} aria-label={pause ? 'Pause breakdown table, scroll horizontally for more columns' : 'Agent performance table, scroll horizontally for more columns'}>
     <table className="dash-table"><caption className="dash-sr">{pause ? 'Pause Code Breakdown' : 'Agent Performance Detail'} · time values are hours:minutes:seconds</caption><thead><tr>
       <SortHead name="vici_user_name" label="Agent / ID" sort={sort} setSort={setSort} /><th scope="col">User group</th>
-      {!pause && <><SortHead name="calls" label="Calls" sort={sort} setSort={setSort} /><SortHead name="xfer_count" label="XFER" sort={sort} setSort={setSort} /></>}
+      {!pause && <><SortHead name="calls" label="Calls" sort={sort} setSort={setSort} /><SortHead name="xfer_count" label={xferLabel} sort={sort} setSort={setSort} /></>}
       {columns.map(([key, label]) => <SortHead key={key} name={key} label={label} sort={sort} setSort={setSort} />)}
     </tr></thead><tbody>{rows.map(row => <tr key={row.agent_code} onClick={() => onOpen(row.agent_code)}>
       <td><AgentName row={row} onOpen={onOpen} /></td><td><span className="dash-group-name">{groupName(row)}</span>{row.team_name && <small className="dash-team-name">{row.team_name}</small>}</td>
@@ -56,8 +57,8 @@ function AgentTable({ rows, view, onOpen, sort, setSort }) {
     </tr>)}</tbody></table>
   </div>
 }
-function MobileAgents({ rows, pause, onOpen }) {
-  return <div className="dash-mobile-agents">{rows.map(row => <article className="dash-mobile-agent" key={row.agent_code}><AgentName row={row} onOpen={onOpen} /><p>{groupName(row)}</p><dl>{(pause ? [['total_seconds', 'Logged'], ['nonpause_seconds', 'Nonpause'], ['pause_seconds', 'Pause']] : [['calls', 'Calls'], ['xfer_count', 'XFER'], ['talk_seconds', 'Talk']]).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key.endsWith('seconds') ? duration(row[key]) : number(row[key])}</dd></div>)}</dl><button className="dash-text-button" onClick={() => onOpen(row.agent_code)}>View full breakdown <span aria-hidden="true">↗</span></button></article>)}</div>
+function MobileAgents({ rows, pause, onOpen, xferLabel }) {
+  return <div className="dash-mobile-agents">{rows.map(row => <article className="dash-mobile-agent" key={row.agent_code}><AgentName row={row} onOpen={onOpen} /><p>{groupName(row)}</p><dl>{(pause ? [['total_seconds', 'Logged'], ['nonpause_seconds', 'Nonpause'], ['pause_seconds', 'Pause']] : [['calls', 'Calls'], ['xfer_count', xferLabel], ['talk_seconds', 'Talk']]).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key.endsWith('seconds') ? duration(row[key]) : number(row[key])}</dd></div>)}</dl><button className="dash-text-button" onClick={() => onOpen(row.agent_code)}>View full breakdown <span aria-hidden="true">↗</span></button></article>)}</div>
 }
 function AgentDetail({ code, data, onClose, client, reference }) {
   const dialogRef = useRef(null)
@@ -73,6 +74,8 @@ function AgentDetail({ code, data, onClose, client, reference }) {
   if (!row) return null
   const profile = profilePath(performance)
   const share = performance ? contribution(performance, data.performance) : null
+  const automatic = isEnglishXfer(data.scope), xferLabel = transferLabel(data.scope)
+  const targetReference = automatic ? confirmedTargetReference(data.scope, performance) : reference
   const sourceFields = [...PAUSE_FIELDS, ...Object.keys(pause?.other_pause_seconds || {}).map(key => [`other:${key}`, key || 'Unlabelled pause']), ...Object.keys(pause?.unmapped_columns || {}).map(key => [`unmapped:${key}`, `Unlabelled ${key}`])]
   const pauseValues = sourceFields.map(([key, label]) => ({ key, label, value: key.startsWith('other:') ? pause?.other_pause_seconds[key.slice(6)] : key.startsWith('unmapped:') ? pause?.unmapped_columns[key.slice(9)] : pause?.[key] }))
   const maximum = Math.max(1, ...pauseValues.map(p => p.value || 0))
@@ -80,11 +83,11 @@ function AgentDetail({ code, data, onClose, client, reference }) {
     <header><div><p className="dash-eyebrow">AGENT DETAIL · {data.date}</p><h2 id="dash-agent-title">{row.vici_user_name}</h2><p>ID {row.agent_code} <span aria-hidden="true">/</span> {groupName(row)}</p></div><button className="dash-close" aria-label="Close agent detail" onClick={onClose}>×</button></header>
     <div className="dash-detail__body">{historyDenied ? <p role="alert">Report access needs review. Close this detail and refresh the Dashboard before continuing.</p> : <>
       <div className="dash-identity-note">{profile ? <Link to={profile}>Open Pulse Agent profile ↗</Link> : <span>VICIdial identity{performance?.linked ? ' · Profile unavailable' : ' · Not linked to a Pulse Agent'}</span>}</div>
-      {share && <><dl className="dash-insight-metrics"><div><dt>Group XFER position</dt><dd>{medal(share.rank)}</dd><small>of {share.agents} reported agents · ties share position</small></div><div><dt>Conversion</dt><dd>{percent(ratio(performance.xfer_count, performance.calls))}</dd><small>Group: {percent(share.groupConversion)}</small></div><div><dt>Group XFER contribution</dt><dd>{percent(share.xferShare)}</dd><small>{number(performance.xfer_count)} of {number(share.groupXfer)} XFER</small></div><div><dt>Group call contribution</dt><dd>{percent(share.callShare)}</dd><small>{number(performance.calls)} of {number(share.groupCalls)} calls</small></div></dl>{reference && <p>Selected target reference: <Goal count={performance.xfer_count} reference={reference} /></p>}</>}
+      {share && <><dl className="dash-insight-metrics"><div><dt>Group {xferLabel} position</dt><dd>{medal(share.rank)}</dd><small>of {share.agents} reported agents · ties share position</small></div><div><dt>Conversion</dt><dd>{percent(ratio(performance.xfer_count, performance.calls))}</dd><small>Group: {percent(share.groupConversion)}</small></div><div><dt>Group {xferLabel} contribution</dt><dd>{percent(share.xferShare)}</dd><small>{number(performance.xfer_count)} of {number(share.groupXfer)} {xferLabel}</small></div><div><dt>Group call contribution</dt><dd>{percent(share.callShare)}</dd><small>{number(performance.calls)} of {number(share.groupCalls)} calls</small></div></dl>{(automatic || reference) && <div className="dash-goal-reference"><span>{automatic ? 'Current daily English goal' : 'Selected target reference'}:</span><Goal count={performance.xfer_count} reference={targetReference} automatic={automatic} />{automatic && <small>Current target applied to this saved report, not a historical target record.</small>}</div>}</>}
       {client && <AgentJourney key={data.scope.id + '/' + data.date + '/' + code} client={client} scope={data.scope.id} date={data.date} code={code} onDenied={() => setHistoryDenied(true)} />}
       <h3>Call performance</h3>
       <p className="dash-caption">Current group: {row.current_user_group || 'Unavailable'} · Most recent group: {row.most_recent_user_group || 'Unavailable'}. All averages are reported by Vici.</p>
-      {performance ? <dl className="dash-detail-grid">{[['calls', 'Calls'], ['xfer_count', 'XFER'], ...TIMES].map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key.endsWith('seconds') ? duration(performance[key]) : number(performance[key])}</dd></div>)}</dl> : <p>There is no performance observation for this agent in this snapshot.</p>}
+      {performance ? <dl className="dash-detail-grid">{[['calls', 'Calls'], ['xfer_count', xferLabel], ...TIMES].map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key.endsWith('seconds') ? duration(performance[key]) : number(performance[key])}</dd></div>)}</dl> : <p>There is no performance observation for this agent in this snapshot.</p>}
       <h3>Time &amp; Pause</h3>
       {pause ? <><dl className="dash-detail-grid dash-detail-grid--three">{[['total_seconds', 'Logged'], ['nonpause_seconds', 'Nonpause'], ['pause_seconds', 'Total pause']].map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{duration(pause[key])}</dd></div>)}</dl><div className="dash-pause-bars">{pauseValues.map(item => <div key={item.key}><span>{item.label}</span><div aria-hidden="true"><i style={{ width: `${100 * item.value / maximum}%` }} /></div><strong>{duration(item.value)}</strong></div>)}</div><p className="dash-caption">Pause totals come from Pause Code Breakdown and may differ from the call-performance report.</p></> : <p>No pause observation is available for this agent.</p>}
       <h3>Dispositions</h3><p className="dash-caption">Original VICIdial codes. SPANIS is not counted as Spanish XFER.</p>
@@ -92,11 +95,11 @@ function AgentDetail({ code, data, onClose, client, reference }) {
     </>}</div>
   </dialog>
 }
-function Overview({ rows, onGroup }) {
+function Overview({ rows, onGroup, scope }) {
   const groups = groupSummaries(rows)
   const maxCalls = Math.max(1, ...groups.map(g => g.calls))
   const totals = aggregate(rows)
-  return <div className="dash-overview-grid"><section className="dash-panel"><header className="dash-panel-heading"><div><p className="dash-eyebrow">AT A GLANCE</p><h2>User groups</h2></div><span>{groups.length} groups</span></header><div className="dash-group-list">{groups.map((group, index) => <button className="dash-group" key={group.name} onClick={() => onGroup(group.name)}><div className="dash-group__top"><span className="dash-group__number">{String(index + 1).padStart(2, '0')}</span><span><strong>{group.name}</strong><small>{group.team || 'VICIdial user group · Pulse team not mapped'}</small></span><span className="dash-group__calls"><strong>{number(group.calls)}</strong><small>calls</small></span></div><div className="dash-group__bar" aria-hidden="true"><i style={{ width: `${100 * group.calls / maxCalls}%` }} /></div><div className="dash-group__bottom"><span>{number(group.agents)} agents</span><span>{number(group.xfer)} XFER</span><span>Pause {duration(group.pause)}</span><span aria-hidden="true">↗</span></div></button>)}</div></section>
+  return <div className="dash-overview-grid"><section className="dash-panel"><header className="dash-panel-heading"><div><p className="dash-eyebrow">AT A GLANCE</p><h2>User groups</h2></div><span>{groups.length} groups</span></header><div className="dash-group-list">{groups.map((group, index) => <button className="dash-group" key={group.name} onClick={() => onGroup(group.name)}><div className="dash-group__top"><span className="dash-group__number">{String(index + 1).padStart(2, '0')}</span><span><strong>{group.name}</strong><small>{group.team || (confirmedTargetReference(scope, { current_user_group: group.name }) === 'asia' ? 'Asia · confirmed reporting group' : 'VICIdial user group · Pulse team not mapped')}</small></span><span className="dash-group__calls"><strong>{number(group.calls)}</strong><small>calls</small></span></div><div className="dash-group__bar" aria-hidden="true"><i style={{ width: `${100 * group.calls / maxCalls}%` }} /></div><div className="dash-group__bottom"><span>{number(group.agents)} agents</span><span>{number(group.xfer)} {transferLabel(scope)}</span><span>Pause {duration(group.pause)}</span><span aria-hidden="true">↗</span></div></button>)}</div></section>
     <section className="dash-panel dash-time-summary"><header className="dash-panel-heading"><div><p className="dash-eyebrow">TIME IN FOCUS</p><h2>Report totals</h2></div><Mark /></header><dl>{[['talk', 'Talk'], ['wait', 'Wait'], ['pause', 'Pause'], ['customer', 'Customer']].map(([key, label]) => <div key={key}><dt><i aria-hidden="true" />{label}</dt><dd>{duration(totals[key])}</dd></div>)}</dl><p className="dash-caption">Cumulative values for the selected report date. These categories are not an exclusive time split; averages remain available per agent as reported by Vici.</p></section></div>
 }
 function ReportContent({ data, loading, error, client }) {
@@ -118,12 +121,12 @@ function ReportContent({ data, loading, error, client }) {
   const hasData = Boolean(data?.snapshot)
   const denied = error?.code === 'access_denied'
   return <>
-    <Metrics rows={scopedRows} available={hasData && !denied} />
+    <Metrics rows={scopedRows} available={hasData && !denied} scope={data?.scope} />
     <div className="dash-workspace-bar"><nav aria-label="Dashboard views">{[['overview', 'Overview'], ['rankings', 'Rankings & goals'], ['agents', 'Agents'], ['pause', 'Time & Pause']].map(([key, label]) => <button key={key} aria-pressed={view === key} onClick={() => { setView(key); setPage(0); setSort({ key: key === 'pause' ? 'pause_seconds' : 'calls', descending: true }) }}>{label}{key === 'agents' && hasData && <span>{scopedRows.length}</span>}</button>)}</nav><label className="dash-group-filter"><span className="dash-sr">VICIdial user group</span><select aria-label="VICIdial user group" value={selectedGroup} onChange={e => { setGroup(e.target.value); setReference(''); setPage(0) }}><option value="">All user groups</option>{groups.map(name => <option key={name}>{name}</option>)}</select></label></div>
     {denied ? <section className="dash-panel"><Blank title="This report is restricted">Your Staff account needs access to this reporting scope. No data is shown.</Blank></section> : !hasData ? <section className="dash-panel"><header className="dash-panel-heading"><div><p className="dash-eyebrow">{view === 'pause' ? 'PAUSE CODE BREAKDOWN' : 'AGENT PERFORMANCE'}</p><h2>{view === 'pause' ? 'Time & Pause' : 'Your operation, in one place'}</h2></div><span>VICIdial reports</span></header><Blank loading={loading} title={loading ? 'Loading report…' : 'No snapshot for this date yet'}>{loading ? 'Reading the latest stored report from Pulse.' : 'Choose another report date or check the connection status above. Agents and figures will appear here after a successful sync — missing data is never displayed as zero.'}</Blank></section> : <>
-      {view === 'rankings' ? error ? <p role="status">Refresh this report successfully before reviewing rankings.</p> : <RankingPanel key={selectedGroup} rows={scopedRows} allRows={allPerformance} onOpen={setAgent} reference={reference} setReference={setReference} /> : view === 'overview' ? <Overview rows={scopedRows} onGroup={name => { setGroup(name); setView('agents'); setPage(0) }} /> : <section className="dash-panel">
+      {view === 'rankings' ? error ? <p role="status">Refresh this report successfully before reviewing rankings.</p> : <RankingPanel key={selectedGroup} rows={scopedRows} allRows={allPerformance} onOpen={setAgent} reference={reference} setReference={setReference} scope={data.scope} /> : view === 'overview' ? <Overview rows={scopedRows} scope={data.scope} onGroup={name => { setGroup(name); setView('agents'); setPage(0) }} /> : <section className="dash-panel">
         <header className="dash-panel-heading"><div><h2>{view === 'pause' ? 'Time & Pause' : 'Agents'}</h2><p>{rows.length} agents · {data.date} · hh:mm:ss</p></div><label className="dash-search"><span className="dash-sr">Search agents</span><input type="search" aria-label="Search agents" placeholder="Search name or Agent ID" value={search} onChange={e => { setSearch(e.target.value); setPage(0) }} /></label></header>
-        {rows.length ? <><AgentTable rows={visibleRows} view={view} sort={sort} setSort={next => { setSort(next); setPage(0) }} onOpen={setAgent} /><MobileAgents rows={visibleRows} pause={view === 'pause'} onOpen={setAgent} /><footer className="dash-table-footer"><span>{currentPage * 25 + 1}–{Math.min((currentPage + 1) * 25, rows.length)} of {rows.length} agents</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button><span>{currentPage + 1} / {pages}</span><button disabled={currentPage + 1 === pages} onClick={() => setPage(currentPage + 1)}>Next</button></div></footer></> : <Blank title="No agents match these filters">Try another name, Agent ID or user group.</Blank>}
+        {rows.length ? <><AgentTable rows={visibleRows} view={view} sort={sort} setSort={next => { setSort(next); setPage(0) }} onOpen={setAgent} xferLabel={transferLabel(data.scope)} /><MobileAgents rows={visibleRows} pause={view === 'pause'} onOpen={setAgent} xferLabel={transferLabel(data.scope)} /><footer className="dash-table-footer"><span>{currentPage * 25 + 1}–{Math.min((currentPage + 1) * 25, rows.length)} of {rows.length} agents</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button><span>{currentPage + 1} / {pages}</span><button disabled={currentPage + 1 === pages} onClick={() => setPage(currentPage + 1)}>Next</button></div></footer></> : <Blank title="No agents match these filters">Try another name, Agent ID or user group.</Blank>}
       </section>}
       {agent && [...allPerformance, ...allPause].some(row => row.agent_code === agent) && <AgentDetail key={agent} code={agent} data={data} client={!error ? client : null} reference={reference} onClose={() => setAgent(null)} />}
       <ReportBreakdown performance={scopedRows} pause={scopedPause} snapshot={data.snapshot} filtered={Boolean(selectedGroup)} />
