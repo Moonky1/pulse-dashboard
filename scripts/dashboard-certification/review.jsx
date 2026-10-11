@@ -3,12 +3,19 @@ import { BrowserRouter } from 'react-router-dom'
 import { DashboardView } from '../../src/dashboard/DashboardView.jsx'
 import '../../src/design/globals.css'
 import { testReport, testScope } from './ui-fixtures.mjs'
+import { retentionFixture } from './retention-fixtures.mjs'
 
 if (!['127.0.0.1', 'localhost'].includes(location.hostname)) throw Error('Local synthetic review only')
 let mode = new URLSearchParams(location.search).get('mode') || 'populated'
 let calls = 0
 let uploaded = false
 const client = { async rpc(name, args) {
+  if (name === 'preview_vici_retention') {
+    if (mode === 'denied') return { error: { code: '42501' } }
+    if (mode === 'slow') await new Promise(resolve => setTimeout(resolve, 500))
+    if (mode === 'failure') return { error: { code: 'NETWORK' } }
+    return { data: retentionFixture(args.as_of_date, args.page_offset) }
+  }
   if (name === 'list_vici_dashboard_scopes') return mode === 'no-scopes' ? { data: [] } : { data: [{ ...testScope, can_import: mode === 'manual', campaigns: ['SyntheticCampaign'] }, { ...testScope, id: '10000000-0000-4000-8000-000000000002', label: 'Other synthetic scope' }] }
   if (name === 'list_vici_report_history') return { data: [2, 1].map(version => ({ id: '20000000-0000-4000-8000-00000000000' + version, performance_generated_at: args.report_date + (version === 1 ? 'T10:00:00' : 'T10:30:00'), pause_generated_at: args.report_date + (version === 1 ? 'T10:00:05' : 'T10:30:05'), captured_at: '2026-10-09T18:00:00Z', ingestion_method: 'manual', uploaded_by: 'Synthetic administrator', agents: 40, calls: version === 1 ? 4000 : 4200 })) }
   if (name === 'get_vici_dashboard_snapshot') {

@@ -15,7 +15,7 @@
 - Source times remain VICIdial local wall-clock values. The server timezone is not confirmed; Pulse does not invent a timezone or label a manual upload Live.
 - Identical exports are idempotent: the existing snapshot is reused and a duplicate attempt is recorded. The current dashboard selects the newest source version, not simply the last uploaded file.
 - Comparisons subtract cumulative counters. They never sum uploads or subtract averages to invent interval averages. Added/missing agents and missing columns are not zero; decreased counters are identified as revision/reset signals.
-- Historical versions remain stored; this checkpoint adds no deletion or scheduled retention. A retention policy and original-file archive would require a separate storage/access checkpoint.
+- Historical versions remain stored. The subsequent [retention preview](dashboard-vici-retention.md) simulates the approved 7/90 policy without deletion or scheduling. An executor and original-file archive remain separate checkpoints.
 - Missing SPXFER is reported as missing, not inferred from SPANIS. Screenshot thresholds, labor costs, sales attribution, and guessed team membership are not new business rules.
 
 ## Security and deployment
