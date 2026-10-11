@@ -1,0 +1,98 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { mkdir } from 'node:fs/promises'
+import { createServer } from 'vite'
+import react from '@vitejs/plugin-react'
+
+const root = process.env.PULSE_PLAYWRIGHT_ROOT || 'C:/Users/simon/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+const { chromium } = createRequire(root + '/package.json')('playwright')
+const server = await createServer({ configFile: false, plugins: [react()], server: { host: '127.0.0.1', port: 53952, strictPort: true } })
+await server.listen()
+const browser = await chromium.launch({ channel: 'chrome', headless: true })
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'block' })
+const page = await context.newPage(), errors = [], unexpected = [], checks = []
+page.on('pageerror', e => errors.push(e.message))
+await context.route('**/*', route => {
+  if (new URL(route.request().url()).origin !== 'http://127.0.0.1:53952') { unexpected.push(new URL(route.request().url()).origin); return route.abort() }
+  return route.continue()
+})
+const url = 'http://127.0.0.1:53952/scripts/dashboard-certification/review.html'
+const evidence = 'review-evidence.local/dashboard-alerts'
+await mkdir(evidence, { recursive: true })
+const pass = label => { checks.push(label); console.log('PASS ' + label) }
+const open = async () => { await page.locator('.dash-alerts > summary').click(); await page.getByText('No alert rules are enabled.', {exact:false}).waitFor() }
+const save = page.getByRole('button',{name:'Save shared rules',exact:true})
+try {
+  await page.goto(url); await open()
+  await page.getByText('View shared rules (read only)',{exact:true}).click()
+  assert.equal(await save.count(),0)
+  pass('ordinary Staff sees disabled rules without mutation controls')
+  await page.goto(url+'?mode=manual'); await open()
+  await page.getByText('Configure shared rules',{exact:true}).click()
+  assert.equal(await page.getByRole('checkbox',{checked:true}).count(),0)
+  await page.getByLabel('Enable Talk Avg',{exact:true}).check()
+  assert.equal(await save.isEnabled(),false)
+  await page.getByLabel('Talk Avg threshold seconds',{exact:true}).fill('127')
+  assert.equal(await save.isEnabled(),true)
+  assert.equal(await page.getByRole('region',{name:'Agent alert results'}).count(),0)
+  await save.click(); await page.getByText('Shared rules saved as revision 1.',{exact:true}).waitFor()
+  assert.match(await page.getByRole('region',{name:'Agent alert results'}).innerText(),/40 agents match/)
+  pass('limits required before activation; drafts are not used until saved')
+  await page.locator('.dash-alert-agent > summary').first().click()
+  assert.match(await page.locator('.dash-alert-agent').first().innerText(),/Observed 0:02:06 · rule below 0:02:07/)
+  await page.getByLabel('Search alert agents',{exact:true}).fill('01000')
+  assert.equal(await page.locator('.dash-alert-agent').count(),1)
+  await page.getByLabel('Search alert agents',{exact:true}).fill('')
+  await page.getByRole('button',{name:'Next agents',exact:true}).click()
+  assert.equal(await page.locator('.dash-alert-agent').count(),15)
+  await page.getByLabel('Alert user group',{exact:true}).selectOption('ReviewGroupA')
+  assert.equal(await page.locator('.dash-alert-agent').count(),20)
+  pass('agent explanations, leading-zero search, group filter and pagination')
+  await page.getByLabel('Alert user group',{exact:true}).selectOption('')
+  for (const [width,height] of [[1440,1000],[1180,820],[820,1180],[390,844]]) {
+    await page.setViewportSize({width,height})
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),true)
+    await page.locator('.dash-alert-config > summary').scrollIntoViewIfNeeded()
+    await page.screenshot({path:evidence+'/rules-'+width+'.png'})
+    pass('rule controls fit '+width)
+  }
+  await page.getByRole('button',{name:'View rule change history',exact:true}).click()
+  await page.getByRole('region',{name:'Alert rule change history'}).waitFor()
+  assert.match(await page.getByRole('region',{name:'Alert rule change history'}).innerText(),/Revision 1 · Synthetic administrator/)
+  pass('saved configuration has attributed version history')
+  await page.getByLabel('Test state',{exact:true}).selectOption('conflict')
+  await page.getByLabel('Talk Avg threshold seconds',{exact:true}).fill('128'); await save.click()
+  await page.getByRole('alert').filter({hasText:'Another administrator'}).waitFor()
+  assert.equal(await page.getByRole('region',{name:'Agent alert results'}).count(),0)
+  assert.equal(await save.count(),0)
+  await page.getByLabel('Test state',{exact:true}).selectOption('manual')
+  await page.getByRole('button',{name:'Reload rules',exact:true}).click()
+  await page.getByText('Configure shared rules',{exact:true}).click()
+  assert.equal(await page.getByLabel('Talk Avg threshold seconds',{exact:true}).inputValue(), '127')
+  pass('conflict blocks overwrite and reload restores canonical version')
+  await page.getByLabel('Test state',{exact:true}).selectOption('failure')
+  await page.getByRole('button',{name:'Reload rules',exact:true}).click()
+  await page.getByRole('alert').filter({hasText:'could not be verified'}).waitFor()
+  assert.equal(await page.getByRole('region',{name:'Agent alert results'}).count(),0)
+  pass('failed configuration read clears results')
+  await page.getByLabel('Test state',{exact:true}).selectOption('manual')
+  await page.getByRole('button',{name:'Reload rules',exact:true}).click()
+  await page.getByRole('region',{name:'Agent alert results'}).waitFor()
+  await page.getByLabel('Report date',{exact:true}).fill('2026-10-01')
+  await page.getByText('Select a date with a saved report to evaluate alerts.',{exact:true}).waitFor()
+  assert.equal(await page.getByRole('region',{name:'Agent alert results'}).count(),0)
+  pass('empty report date never inherits another snapshot results')
+  await page.getByLabel('Test state',{exact:true}).selectOption('denied')
+  await page.getByRole('button',{name:'View rule change history',exact:true}).click()
+  await page.getByRole('alert').filter({hasText:'cannot access or change'}).waitFor()
+  assert.equal(await save.count(),0)
+  pass('revoked access clears configuration as well as history')
+  await page.getByLabel('Test state',{exact:true}).selectOption('slow')
+  await page.getByRole('button',{name:'Reload rules',exact:true}).click()
+  await page.getByLabel('Reporting scope',{exact:true}).selectOption('10000000-0000-4000-8000-000000000002')
+  await page.waitForTimeout(750)
+  assert.equal(await page.getByRole('region',{name:'Agent alert results'}).count(),0)
+  pass('scope switch discards an obsolete config response')
+  assert.deepEqual(errors,[]); assert.deepEqual(unexpected,[])
+  console.log(JSON.stringify({checks:checks.length,browserErrors:errors.length,externalRequests:unexpected.length,evidence}))
+} finally { await context.close(); await browser.close(); await server.close() }

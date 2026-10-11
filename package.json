@@ -34,7 +34,8 @@
     "pulse:check": "npm run lint:pulse && npm run test:auth && npm run test:admin && npm run test:admin:edge && npm run test:training && npm run test:go && npm run test:agent && npm run test:studio && npm run test:profile && npm run test:operator && npm run test:sim && npm run test:pet && npm run test:dashboard && npm run build",
     "pulse:release-check": "npm run pulse:check && git diff --check",
     "test:dashboard:manual-browser": "node scripts/dashboard-certification/manual-browser.mjs",
-    "test:dashboard:retention-browser": "node scripts/dashboard-certification/retention-browser.mjs"
+    "test:dashboard:retention-browser": "node scripts/dashboard-certification/retention-browser.mjs",
+    "test:dashboard:alerts-browser": "node scripts/dashboard-certification/alerts-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",

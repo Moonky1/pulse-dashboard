@@ -54,6 +54,45 @@ and retains both source generation clocks and UTC ingestion times in provenance.
   permission revocation, failed refresh, empty dates, scope switching and polling.
 - Screenshots are local ignored artifacts under `review-evidence.local/dashboard-ui`.
 
+## Shared alert rules in Preview
+
+The Alerts & rules panel loads shared configuration only when opened. Eight rules
+are supported: Talk Avg (strictly below), Dead Avg and Dispo Avg (strictly above),
+and cumulative Break, Callback, Lunch, RR and Tech seconds (strictly above).
+Equality does not match. No rule or numeric threshold is activated by default.
+Limits are whole seconds from 0 through 31,536,000; this validation bound is not
+an operational recommendation. Enabled rules require a limit.
+
+Migration `20261010000300_vici_alert_rules` adds an RLS-protected append-only
+version table. Browser and service roles have no direct table access. Protected
+read/history RPCs require active Staff, enabled scope and canonical scope read
+permission. Save additionally requires the existing global Admin/Super Admin
+Dashboard capability; identity is derived server-side. Scoped-only Staff cannot
+edit. The scope row lock serializes saves; an expected revision rejects stale
+writes with a conflict. Identical saves are no-ops. Every changed configuration
+retains its full rule set, verified Staff author and timestamp. History uses
+exclusive revision cursors and pages of 20, without any deletion endpoint.
+
+The frontend evaluates only the authorized selected snapshot using the displayed
+saved rule revision. Drafts never affect results. Reload fetches other admins'
+changes; saved historical reports use current rules and are labelled accordingly,
+not presented as historical verdicts. Average checks with zero calls, missing
+metrics and missing report sides are non-evaluable, never passing zeroes. Group
+summaries use the performance identity (pause identity when performance is absent);
+each check also names its own source group. No Pulse team mapping is inferred.
+Matches are review indicators, not judgments, notifications or automatic actions.
+
+Scope/date changes, access revocation, failed configuration reads and unconfirmed
+saves do not reuse misleading results. Server scope authorization remains decisive;
+frontend evaluation and editor visibility do not grant report or write access.
+
+Validate with the existing Dashboard tests and disposable SQL suite, plus
+`npm run test:dashboard:alerts-browser` for editor, attribution, filters, paging,
+conflicts, failure/revocation and responsive checks. Only synthetic local tests
+activate sample rules. The preparation script's `--alert-rules` flag generates
+only this migration transaction for authorized Preview publication; it never
+connects or performs a broad remote database push. Production remains separate.
+
 ## Separate live-data gate
 
 This UI does not resolve the previously recorded Preview-to-Vici connection

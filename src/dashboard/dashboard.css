@@ -172,6 +172,33 @@
 @media (prefers-reduced-motion: reduce) { .dash-blank--loading .dash-blank__mark { animation: none; } }
 .dash-upload, .dash-history, .dash-full-breakdown { margin: 20px 0; }
 .dash-retention { margin: 20px 0; }
+.dash-alerts { margin: 20px 0; color: #c4cbdd; }
+.dash-alerts summary { cursor: pointer; padding: 18px 20px; color: #e8dcfb; }
+.dash-alerts > summary { font-weight: 650; }
+.dash-alerts summary span { display: inline-block; margin-left: 12px; color: #a6abc2; font-size: 12px; }
+.dash-alert-body { padding: 0 22px 22px; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.dash-alert-body .dash-panel-heading { padding-left: 0; padding-right: 0; flex-wrap: wrap; }
+.dash-alerts button, .dash-alerts input, .dash-alerts select { background: #201d31; color: #e8e1f5; border: 1px solid #48415f; padding: 9px 12px; border-radius: 8px; max-width: 100%; }
+.dash-alerts button { cursor: pointer; }
+.dash-alerts button:disabled { opacity: .45; cursor: default; }
+.dash-alert-edit-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+.dash-alert-edit-grid fieldset { min-width: 0; border: 1px solid #34374f; border-radius: 10px; padding: 12px; }
+.dash-alert-edit-grid legend { color: #eadffb; padding: 0 6px; }
+.dash-alert-edit-grid label, .dash-alert-filters label { display: flex; flex-direction: column; gap: 8px; }
+.dash-alert-edit-grid .dash-alert-enable { flex-direction: row; align-items: center; margin-bottom: 12px; }
+.dash-alert-edit-grid small { display: block; color: #a6abc2; margin-top: 10px; }
+.dash-alert-config { margin-bottom: 18px; }
+.dash-rule-list, .dash-alert-agent ul { padding: 0; list-style: none; }
+.dash-rule-list li, .dash-alert-agent li { display: flex; flex-direction: column; padding: 12px; border-bottom: 1px solid #303348; }
+.dash-alert-agent { border: 1px solid #303348; border-radius: 10px; margin: 10px 0; }
+.dash-alert-agent summary span { display: block; margin-left: 0; }
+.dash-alert-groups { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+.dash-alert-groups button { text-align: left; flex: 1 1 200px; }
+.dash-alert-groups span, .dash-alert-groups small { display: block; }
+.dash-alert-filters { display: flex; flex-wrap: wrap; gap: 14px; margin: 18px 0; }
+.dash-alert-filters label { min-width: 0; flex: 1 1 180px; }
+@media(max-width:1000px) { .dash-alert-edit-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .dash-alert-body { padding: 0 14px 14px; } .dash-alert-edit-grid { grid-template-columns: 1fr; } }
 .dash-retention > summary { padding: 20px; cursor: pointer; color: #e8dcfb; font-weight: 650; }
 .dash-retention > summary span { color: #a6abc2; font-size: 12px; margin-left: 12px; }
 .dash-retention-body { padding: 22px; color: #c4cbdd; font-size: 13px; line-height: 1.65; }

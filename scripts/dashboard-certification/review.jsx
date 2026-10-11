@@ -4,12 +4,30 @@ import { DashboardView } from '../../src/dashboard/DashboardView.jsx'
 import '../../src/design/globals.css'
 import { testReport, testScope } from './ui-fixtures.mjs'
 import { retentionFixture } from './retention-fixtures.mjs'
+import { alertFixture } from './alert-fixtures.mjs'
 
 if (!['127.0.0.1', 'localhost'].includes(location.hostname)) throw Error('Local synthetic review only')
 let mode = new URLSearchParams(location.search).get('mode') || 'populated'
 let calls = 0
 let uploaded = false
+const alertConfigs = new Map(), alertHistory = new Map()
 const client = { async rpc(name, args) {
+  if (['get_vici_alert_rules', 'save_vici_alert_rules', 'list_vici_alert_rule_history'].includes(name)) {
+    if (mode === 'denied') return { error: { code: '42501' } }
+    if (mode === 'slow') await new Promise(resolve => setTimeout(resolve, 500))
+    if (mode === 'failure') return { error: { code: 'NETWORK' } }
+    const prior = alertConfigs.get(args.requested_scope) || alertFixture(args.requested_scope, mode === 'manual')
+    if (name === 'save_vici_alert_rules') {
+      if (mode === 'conflict') return { error: { code: '40001' } }
+      if (mode !== 'manual') return { error: { code: '42501' } }
+      const saved = { ...prior, revision: prior.revision + 1, rules: args.requested_rules, changed_at: '2026-10-10T18:00:00Z', changed_by_name: 'Synthetic administrator' }
+      alertConfigs.set(args.requested_scope, saved)
+      alertHistory.set(args.requested_scope, [saved, ...(alertHistory.get(args.requested_scope) || [])])
+      return { data: saved }
+    }
+    if (name === 'list_vici_alert_rule_history') return { data: (alertHistory.get(args.requested_scope) || []).filter(v => !args.before_revision || v.revision < args.before_revision).slice(0, 20) }
+    return { data: prior }
+  }
   if (name === 'preview_vici_retention') {
     if (mode === 'denied') return { error: { code: '42501' } }
     if (mode === 'slow') await new Promise(resolve => setTimeout(resolve, 500))
@@ -47,4 +65,4 @@ const client = { async rpc(name, args) {
   uploaded = true
   return { data: { status: 'success', agents: 40, report_date: body.get('reportDate') } }
 } } }
-createRoot(document.getElementById('root')).render(<BrowserRouter><div className="pulse-product-surface"><div style={{ padding: '12px 20px', font: '12px system-ui', color: '#eed4a5', background: '#332626' }}>LOCAL UI REVIEW · SYNTHETIC DATA · NOT LIVE <label>Test state <select aria-label="Test state" defaultValue={mode} onChange={e => { mode = e.target.value }}><option>populated</option><option>failure</option><option>denied</option><option>empty</option><option>slow</option></select></label><button onClick={() => { document.querySelector('[data-request-count]').textContent = String(calls) }}>Check requests</button><output data-request-count="">0</output></div><DashboardView client={client} /></div></BrowserRouter>)
+createRoot(document.getElementById('root')).render(<BrowserRouter><div className="pulse-product-surface"><div style={{ padding: '12px 20px', font: '12px system-ui', color: '#eed4a5', background: '#332626' }}>LOCAL UI REVIEW · SYNTHETIC DATA · NOT LIVE <label>Test state <select aria-label="Test state" defaultValue={mode} onChange={e => { mode = e.target.value }}><option>populated</option><option>manual</option><option>failure</option><option>denied</option><option>empty</option><option>slow</option><option>conflict</option></select></label><button onClick={() => { document.querySelector('[data-request-count]').textContent = String(calls) }}>Check requests</button><output data-request-count="">0</output></div><DashboardView client={client} /></div></BrowserRouter>)
