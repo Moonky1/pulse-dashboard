@@ -213,6 +213,12 @@
 .dash-insight-agent small { color: #aaaeca; }
 .dash-goal { display: inline-flex; align-items: center; justify-content: center; gap: 9px; color: #e7bf91; font-size: 14px; white-space: nowrap; }
 .dash-goal--reached { color: #8de0c0; }
+.dash-targets { display: inline-grid; gap: 5px; }
+.dash-commission { display: block; color: #b5bfd4; font-size: 11px; white-space: nowrap; }
+.dash-operation-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+.dash-operation-tabs button { padding: 11px 24px; border: 1px solid #554664; border-radius: 10px; background: #211c31; color: #f1e8ff; font: inherit; }
+.dash-operation-tabs button[aria-pressed="true"] { border-color: #b499d9; background: #322740; }
+.dash-operation-tabs button:disabled { opacity: .5; cursor: not-allowed; }
 .dash-pixel-medal, .dash-goal img { object-fit: contain; image-rendering: pixelated; vertical-align: middle; flex-shrink: 0; }
 .dash-journey { border-block: 1px solid #3c3a52; margin: 24px 0; padding: 8px 0 24px; }
 .dash-journey .dash-insights-heading h3 { margin: 0; font-size: 20px; color: #eee4fb; }

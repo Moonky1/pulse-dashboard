@@ -27,6 +27,8 @@ const teams = page.getByRole('region',{name:'Agents by team'})
 const agents = () => page.getByRole('region',{name:'Report overview'}).locator('.dash-metric').first().locator('strong')
 try {
   await page.goto('http://127.0.0.1:53958/scripts/dashboard-certification/review.html?mode=all-teams')
+  assert.equal(await page.getByRole('navigation',{name:'Operation',exact:true}).getByRole('button',{name:'Openers',exact:true}).getAttribute('aria-pressed'),'true')
+  assert.equal(await page.getByRole('button',{name:'Closers · awaiting CSV',exact:true}).isEnabled(),false)
   await page.locator('.dash-upload > summary').click()
   await page.getByLabel('Call Stats Breakdown',{exact:true}).setInputFiles({name:'general.csv',mimeType:'text/csv',buffer:Buffer.from(csv)})
   await page.getByRole('checkbox',{name:/Complete report for All teams/}).check()
@@ -39,6 +41,8 @@ try {
   assert.equal(await teams.getByRole('button').count(),groupCount+1)
   await page.getByRole('button',{name:'Rankings & goals',exact:true}).click()
   await page.getByRole('heading',{name:'Global rankings',exact:true}).waitFor()
+  await page.getByText('Goal · 24 English / day · 3 per hour × 8 hours',{exact:true}).waitFor()
+  await page.getByText('Commission · Philippines 20 · Asia 15 · Other teams 10 English',{exact:true}).waitFor()
   for (const metric of ['xfer','calls','conversion','spanish','total']) {
     await page.getByLabel('Rank by',{exact:true}).selectOption(metric)
     assert.ok(await page.locator('.dash-rankings').innerText())

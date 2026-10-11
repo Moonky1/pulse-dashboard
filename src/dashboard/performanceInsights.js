@@ -2,8 +2,10 @@ import { loadDashboardReport } from './dashboardApi.js'
 import { groupName, integer, validDate } from './dashboardModel.js'
 import { confirmedTargetReference, countedTransfers, spanishTransfers } from './reportingPolicy.js'
 
-// Read-only analysis. A reference target is not a team mapping or an access grant.
+// Commission thresholds are separate from the universal English production goal.
+// Read-only analysis: neither creates a team mapping, access grant or payout.
 export const TARGET_REFERENCES = { asia: { label: 'Asia', daily: 15 }, philippines: { label: 'Philippines', daily: 20 }, other: { label: 'Other teams', daily: 10 } }
+export const PRODUCTION_TARGET = Object.freeze({ hourly: 3, hours: 8, daily: 24 })
 export const RANK_METRICS = { xfer: 'XFER', calls: 'Calls', conversion: 'Conversion %', spanish: 'Spanish XFER', total: 'Total XFER' }
 export const percent = value => value === null || !Number.isFinite(value) ? '—' : `${value.toFixed(2)}%`
 export const ratio = (numerator, denominator) => integer(numerator) && integer(denominator) && denominator > 0 ? numerator / denominator * 100 : null
@@ -13,7 +15,15 @@ export function goalProgress(xfer, reference) {
   if (!target || !integer(xfer)) return null
   return { target, remaining: Math.max(0, target - xfer), percent: xfer / target * 100, reached: xfer >= target }
 }
+export function productionProgress(xfer, reference) {
+  if (!TARGET_REFERENCES[reference] || !integer(xfer)) return null
+  const target = PRODUCTION_TARGET.daily
+  return { target, remaining: Math.max(0, target - xfer), percent: xfer / target * 100, reached: xfer >= target }
+}
 export function dailyGoal(day, scope) {
+  return day?.status === 'observed' ? productionProgress(day.row.xfer_count, confirmedTargetReference(scope, day.row)) : null
+}
+export function dailyCommission(day, scope) {
   return day?.status === 'observed' ? goalProgress(day.row.xfer_count, confirmedTargetReference(scope, day.row)) : null
 }
 export function historyDayLabel(date) {

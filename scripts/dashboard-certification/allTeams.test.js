@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { ALL_TEAMS_GROUPS, ALL_TEAMS_SCOPE_ID, isAllTeamsScope } from '../../src/dashboard/allTeamsScope.js'
 import { teamCounts, teamLabel, confirmedTargetReference, countedTransfers, spanishTransfers, sumTransfers } from '../../src/dashboard/reportingPolicy.js'
-import { rankAgents, goalProgress } from '../../src/dashboard/performanceInsights.js'
+import { rankAgents, goalProgress, productionProgress, dailyGoal, dailyCommission } from '../../src/dashboard/performanceInsights.js'
 import { filterAgents } from '../../src/dashboard/dashboardModel.js'
 import { inspectManualReports } from '../../supabase/functions/_shared/viciManualImport.mjs'
 import { allTeamsCsv } from './all-teams-fixtures.mjs'
@@ -59,6 +59,21 @@ test('commission goals use English only: Philippines 20, Asia 15, others 10', ()
     assert.equal(goalProgress(target, reference).reached, true)
   }
   for (const group of ['OpenersTraining', 'UnknownGroup']) assert.equal(confirmedTargetReference(ALL_TEAMS_SCOPE_ID, { current_user_group: group }), '')
+})
+
+test('24 English production goal is distinct from commission and ignores Spanish for every team', () => {
+  for (const group of ALL_TEAMS_GROUPS.filter(g => g !== 'OpenersTraining')) {
+    const day = { status: 'observed', row: { current_user_group: group, xfer_count: 23, dispositions: { SPXFER: 100, SPANIS: 999 } } }
+    assert.equal(dailyGoal(day, ALL_TEAMS_SCOPE_ID).target, 24)
+    assert.equal(dailyGoal(day, ALL_TEAMS_SCOPE_ID).reached, false)
+    assert.equal(dailyCommission(day, ALL_TEAMS_SCOPE_ID).reached, true)
+    day.row.xfer_count = 24
+    assert.equal(dailyGoal(day, ALL_TEAMS_SCOPE_ID).reached, true)
+  }
+  assert.equal(productionProgress(24, ''), null)
+  assert.equal(productionProgress(null, 'asia'), null)
+  assert.equal(productionProgress(48, 'philippines').percent, 200)
+  assert.equal(dailyCommission({ status: 'absent' }, ALL_TEAMS_SCOPE_ID), null)
 })
 
 test('Spanish stays visible but only eligible teams include SPXFER in operational totals', () => {

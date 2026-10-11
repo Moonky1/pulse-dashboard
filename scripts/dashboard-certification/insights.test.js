@@ -30,9 +30,9 @@ test('target references are 15 / 10 English, no inferred default and uncapped nu
 })
 test('daily timeline uses each saved group and target, preserving missing days and exact equality', () => {
   const scope = '426ab519-b87b-4410-bd42-e255b240bea1'
-  const day = { status: 'observed', row: agent('001', 300, 15, 'OpenersAsia') }
+  const day = { status: 'observed', row: agent('001', 300, 24, 'OpenersAsia') }
   assert.equal(dailyGoal(day, scope).reached, true)
-  assert.equal(dailyGoal({ ...day, row: { ...day.row, xfer_count: 14 } }, scope).reached, false)
+  assert.equal(dailyGoal({ ...day, row: { ...day.row, xfer_count: 23 } }, scope).reached, false)
   assert.equal(dailyGoal({ status: 'no_report' }, scope), null)
   assert.equal(dailyGoal({ status: 'absent' }, scope), null)
   assert.equal(dailyGoal(day, testScope.id), null)

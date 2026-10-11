@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { duration, number, PAUSE_FIELDS, PERFORMANCE_COLUMNS } from './dashboardModel.js'
-import { compareAgentDays, dailyGoal, historyDayLabel, loadAgentJourney, percent, previousDate, summarizeJourney } from './performanceInsights.js'
+import { compareAgentDays, dailyGoal, dailyCommission, historyDayLabel, loadAgentJourney, percent, previousDate, summarizeJourney } from './performanceInsights.js'
 import { isEnglishXfer, transferLabel } from './reportingPolicy.js'
 
 import { RankMedal } from './RankMedal.jsx'
 
 function DayGoal({ day, scope }) {
   const goal = dailyGoal(day, scope)
-  return goal ? <span className={goal.reached ? 'dash-day-goal--met' : 'dash-day-goal--below'} aria-label={goal.reached ? 'Goal met' : 'Below goal at saved cut'}>{goal.reached ? '✓' : '↓'} {day.row.xfer_count} / {goal.target}</span> : <span>—</span>
+  const commission = dailyCommission(day, scope)
+  return goal ? <span className="dash-targets"><span className={goal.reached ? 'dash-day-goal--met' : 'dash-day-goal--below'} aria-label={goal.reached ? 'Goal met' : 'Below goal at saved cut'}>{goal.reached ? '✓' : '↓'} {day.row.xfer_count} / {goal.target}</span><small className="dash-commission">Commission {commission.reached ? '✓' : '·'} {day.row.xfer_count} / {commission.target}</small></span> : <span>—</span>
 }
 const clock = value => value?.replace('T', ' ') || 'Unavailable'
 const signed = (value, points = false) => value === null ? '—' : `${value > 0 ? '+' : ''}${points ? value.toFixed(2) + ' pp' : value.toLocaleString('en-US')}`
@@ -44,7 +45,7 @@ export function AgentJourney({ client, scope, date, code, onDenied }) {
       <dl className="dash-insight-metrics"><DaySummary title="Selected date · latest" day={current} /><DaySummary title="Previous calendar day" day={yesterday} /><DaySummary title="Previous observed day" day={previous} /><div><dt>🏆 Top 3 / 🥇 #1 days</dt><dd>{summary.topThree} / {summary.first}</dd><small>Within that day’s source group, by XFER · active days</small></div></dl>
       <div className="dash-journey-extremes">{[['🏆 Best active day', summary.best], ['🔎 Lowest active day', summary.lowest]].map(([label, matches]) => <div key={label}><span>{label}</span><strong>{matches.length ? `${number(matches[0].row.xfer_count)} XFER` : 'Not available'}</strong><small>{matches.map(day => day.date).join(' · ') || 'No days with calls in this window'}</small></div>)}</div>
       <p className="dash-caption">{summary.noReport} dates without a report · {summary.absent} reports without this ID · {summary.zeroDays} active days with zero XFER. None of these missing observations is counted as a zero day or absence from work. Historical groups use each report’s CURRENT USER GROUP; no team membership is guessed.</p>
-      {isEnglishXfer(scope) && <p className="dash-history-legend"><span className="dash-day-goal--met">● Goal met</span><span className="dash-day-goal--below">● Below goal</span><span>Current target · saved report</span></p>}
+      {isEnglishXfer(scope) && <p className="dash-history-legend"><span className="dash-day-goal--met">● Goal met</span><span className="dash-day-goal--below">● Below goal</span><span>24 English · current target · saved report</span></p>}
       <div className="dash-journey-timeline" tabIndex={0} aria-label="Daily XFER timeline">{[...days].reverse().map(day => {
         const goal = dailyGoal(day, scope)
         const tone = goal ? goal.reached ? ' dash-journey-bar--met' : ' dash-journey-bar--below' : ''
