@@ -20,6 +20,7 @@ import { ReportTeamBadge } from './AgentIdentity.jsx'
 import { reportTeamStyle } from './teamIdentity.js'
 import { PerformanceCharts } from './PerformanceCharts.jsx'
 import { TeamPace } from './TeamPace.jsx'
+import { TopScrollTable } from './TopScrollTable.jsx'
 import { dashboardTimeZone, displayClock, SHIFT_TIME_ZONE, COLOMBIA_TIME_ZONE } from './shiftTargets.js'
 import { pauseOverage, pauseLimits } from './dispositionInsights.js'
 import './dashboard.css'
@@ -58,7 +59,7 @@ function SortHead({ name, label, sort, setSort }) {
 function AgentTable({ rows, view, onOpen, sort, setSort, xferLabel, scope, date }) {
   const pause = view === 'pause'
   const columns = pause ? [['total_seconds', 'Logged'], ['nonpause_seconds', 'Nonpause'], ['pause_seconds', 'Pause'], ...PAUSE_FIELDS] : TIMES
-  return <div className="dash-table-scroll" tabIndex={0} aria-label={pause ? 'Pause breakdown table, scroll horizontally for more columns' : 'Agent performance table, scroll horizontally for more columns'}>
+  return <TopScrollTable label={pause ? 'Pause breakdown table, scroll horizontally for more columns' : 'Agent performance table, scroll horizontally for more columns'}>
     <table className="dash-table"><caption className="dash-sr">{pause ? 'Pause Code Breakdown' : 'Agent Performance Detail'} · time values are hours:minutes:seconds</caption><thead><tr>
       <SortHead name="vici_user_name" label="Agent / ID" sort={sort} setSort={setSort} /><th scope="col">User group</th>
       {!pause && <><SortHead name="calls" label="Calls" sort={sort} setSort={setSort} /><SortHead name="xfer_count" label={xferLabel} sort={sort} setSort={setSort} /></>}
@@ -68,7 +69,7 @@ function AgentTable({ rows, view, onOpen, sort, setSort, xferLabel, scope, date 
       {!pause && <><td>{number(row.calls)}</td><td className="dash-xfer">{number(row.xfer_count)}</td></>}
       {columns.map(([key]) => <td key={key} className={pause && pauseOverage(key, row[key], date) !== null ? 'dash-over-limit' : undefined}>{duration(row[key])}{pause && pauseOverage(key, row[key], date) !== null && <small>+{duration(pauseOverage(key, row[key], date))} over</small>}</td>)}
     </tr>)}</tbody></table>
-  </div>
+  </TopScrollTable>
 }
 function MobileAgents({ rows, pause, onOpen, xferLabel }) {
   return <div className="dash-mobile-agents">{rows.map(row => <article className="dash-mobile-agent" key={row.agent_code}><AgentName row={row} onOpen={onOpen} /><p>{groupName(row)}</p><dl>{(pause ? [['total_seconds', 'Logged'], ['nonpause_seconds', 'Nonpause'], ['pause_seconds', 'Pause']] : [['calls', 'Calls'], ['xfer_count', xferLabel], ['talk_seconds', 'Talk']]).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{key.endsWith('seconds') ? duration(row[key]) : number(row[key])}</dd></div>)}</dl><button className="dash-text-button" onClick={() => onOpen(row.agent_code)}>View full breakdown <span aria-hidden="true">↗</span></button></article>)}</div>
@@ -155,13 +156,22 @@ export function DashboardView({ client }) {
   const { catalog, scope, date, setScope, setDate, refresh, imported, report } = useDashboard(client)
   const [now, setNow] = useState(() => Date.now())
   const [revision, setRevision] = useState(0)
+  const [closersNotice, setClosersNotice] = useState(false)
+  const closersTimer = useRef(null)
+  useEffect(() => () => clearTimeout(closersTimer.current), [])
+  function showClosersNotice() {
+    setClosersNotice(true)
+    window.dispatchEvent(new Event('pulse:closers-unavailable'))
+    clearTimeout(closersTimer.current)
+    closersTimer.current = setTimeout(() => setClosersNotice(false), 2400)
+  }
   useEffect(() => { const interval = setInterval(() => setNow(Date.now()), 10000); return () => clearInterval(interval) }, [])
   const { data, error, loading } = report
   const state = integrationState(data, error || catalog.error, now)
   const sourceToday = calendarDate(dashboardTimeZone(scope))
   const manual = data?.snapshot?.ingestion_method === 'manual'
   return <main className="dash-main">
-    <nav className="dash-operation-tabs" aria-label="Operation"><button type="button" aria-pressed="true">Openers</button><button type="button" disabled title="Awaiting the Closers CSV and separate Vici source configuration" aria-label="Closers · awaiting CSV">Closers</button></nav>
+    <nav className="dash-operation-tabs" aria-label="Operation"><button type="button" aria-pressed="true">Openers</button><button type="button" aria-pressed="false" onClick={showClosersNotice}>Closers</button>{closersNotice && <span className="dash-closers-notice" role="status">Not available yet ✋</span>}</nav>
     <header className="dash-heading"><div><h1>Auto Warranty Garrett</h1><div className="dash-world-clocks" aria-label="Current time"><span>Pacific · {displayClock(now, SHIFT_TIME_ZONE)}</span><span>Colombia · {displayClock(now, COLOMBIA_TIME_ZONE)}</span></div></div><div className="dash-heading__status"><span className={`dash-status dash-status--${state.tone}`}><i />{manual ? 'Manual upload' : data?.snapshot ? state.label : 'No report'}</span><span>{manual ? 'Uploaded ' + new Date(data.snapshot.captured_at).toLocaleString() : ''}</span></div></header>
     <section className="dash-controls" aria-label="Report filters"><label>Reporting scope<select aria-label="Reporting scope" value={scope?.id || ''} disabled={!catalog.data.length} onChange={event => setScope(event.target.value)}>{!catalog.data.length && <option value="">{catalog.loading ? 'Loading scopes…' : 'No available scopes'}</option>}{catalog.data.map(s => <option value={s.id} key={s.id}>{s.label}</option>)}</select></label><label>Report date<input type="date" aria-label="Report date" value={date} onChange={event => { if (event.target.value) setDate(event.target.value) }} /></label>{sourceToday && <button className="dash-today" onClick={() => setDate(sourceToday)}>Today</button>}<button className="dash-refresh" onClick={refresh} disabled={loading || catalog.loading}><Mark kind="refresh" />{loading ? 'Refreshing…' : 'Refresh'}</button></section>
     {scope?.can_import && !catalog.error && error?.code !== 'access_denied' && <ManualReportUpload key={'upload/' + report.key} client={client} scope={scope} date={date} onImported={outcome => { imported(outcome); setRevision(v => v + 1) }} />}
@@ -172,6 +182,5 @@ export function DashboardView({ client }) {
     {scope && !catalog.error && error?.code !== 'access_denied' && <ReportHistory key={'history/' + report.key} client={client} scope={scope} date={date} revision={revision} SnapshotView={ReportContent} />}
     {scope?.can_manage_reports && !catalog.error && error?.code !== 'access_denied' && <RetentionPreview key={'retention/' + scope.id + '/' + revision} client={client} scope={scope} />}
     {scope && !catalog.error && error?.code !== 'access_denied' && <AlertPanel key={'alerts/' + scope.id} client={client} scope={scope} data={data} readError={error} />}
-    <footer className="dash-provenance"><span><Mark /> VICIdial</span>{data?.snapshot ? <details><summary>Report details · {data.date}</summary><p>Performance generated: {data.snapshot.performance_generated_at?.replace('T', ' ')}<br />Pause generated: {data.snapshot.pause_generated_at?.replace('T', ' ')}<br />Performance ingested: {data.snapshot.performance_ingested_at ? new Date(data.snapshot.performance_ingested_at).toLocaleString() : 'Not available'}<br />Pause ingested: {data.snapshot.pause_ingested_at ? new Date(data.snapshot.pause_ingested_at).toLocaleString() : 'Not available'}</p>{Boolean(data.snapshot.warnings?.length) && <p>{data.snapshot.warnings.length} source validation warning(s). Values are shown as reported; report totals may differ.</p>}</details> : <span>No report snapshot loaded</span>}</footer>
   </main>
 }

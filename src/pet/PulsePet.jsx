@@ -58,6 +58,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   const [dragging, setDragging] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const [assetFailed, setAssetFailed] = useState(false)
+  const [unavailable, setUnavailable] = useState(false)
   const root = useRef(null), trigger = useRef(null)
   const position = useRef({ x: 0, y: 0 }), drag = useRef(null), suppressClick = useRef(false)
   const pointer = useRef(null)
@@ -68,7 +69,18 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   const footprint = useMemo(() => petFootprint(size, compact), [size, compact])
   const open = panel.open && panel.pathname === pathname && !compact && actions.length > 0
   const paused = hidden || reducedMotion || compact || assetFailed
-  const working = !compact && !hovered && !open && !dragging
+  const working = !compact && !hovered && !open && !dragging && !unavailable
+
+  useEffect(() => {
+    let timer
+    const react = () => {
+      setUnavailable(true)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setUnavailable(false), 2400)
+    }
+    window.addEventListener('pulse:closers-unavailable', react)
+    return () => { window.clearTimeout(timer); window.removeEventListener('pulse:closers-unavailable', react) }
+  }, [])
 
   function engage(event) {
     if (event?.type === 'pointerenter') cursorInside.current = true
@@ -155,7 +167,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
     element.style.setProperty('--pet-blink', '1')
     if (paused) return
     let frame, blinkTimer, reopenTimer, previous = performance.now()
-    let look = { x: 0, y: 0 }, idleLook = { x: 0, y: 0 }, idleAt = previous + 4500
+    let look = { x: 0, y: 0 }
     const track = event => {
       if (event.pointerType !== 'touch') pointer.current = { x: event.clientX, y: event.clientY, at: performance.now() }
     }
@@ -163,13 +175,9 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
     const animate = now => {
       const elapsed = now - previous
       previous = now
-      if (now >= idleAt) {
-        idleLook = { x: (Math.random() - 0.5) * 2.8, y: (Math.random() - 0.5) * 1.2 }
-        idleAt = now + 6500 + Math.random() * 5000
-      }
       const cursor = pointer.current
       const target = drag.current ? { x: 0, y: 0 }
-        : cursor && now - cursor.at < 7000 ? gazeTarget(cursor, position.current, size.scale) : idleLook
+        : cursor && now - cursor.at < 1500 ? gazeTarget(cursor, position.current, size.scale) : { x: 0, y: 0 }
       look = smoothGaze(look, target, elapsed)
       element.style.setProperty('--pet-eye-x', look.x.toFixed(2) + 'px')
       element.style.setProperty('--pet-eye-y', look.y.toFixed(2) + 'px')
@@ -260,8 +268,8 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   }
 
   if (assetFailed) return null
-  const expression = compact ? 'sleep' : dragging ? 'curious' : hovered || open ? 'happy' : 'neutral'
-  return <aside ref={root} className={`pulse-pet${compact ? ' pulse-pet--compact' : ''}${dragging ? ' pulse-pet--dragging' : ''}${hovered || open ? ' pulse-pet--engaged' : ''}${paused ? ' pulse-pet--still' : ''}`}
+  const expression = compact ? 'sleep' : dragging || unavailable ? 'curious' : hovered || open ? 'happy' : 'neutral'
+  return <aside ref={root} className={`pulse-pet${unavailable ? ' pulse-pet--nope' : ''}${compact ? ' pulse-pet--compact' : ''}${dragging ? ' pulse-pet--dragging' : ''}${hovered || open ? ' pulse-pet--engaged' : ''}${paused ? ' pulse-pet--still' : ''}`}
     aria-label="Pulse Pet" data-expression={expression} data-mode={mode} data-pose={working ? 'working' : 'standing'}
     style={{ width: footprint.width, height: footprint.height, '--pet-scale': size.scale, '--pet-body-height': size.height + 'px' }}>
     <button ref={trigger} className="pulse-pet__trigger" type="button" style={{ height: size.height }} aria-label={preferences.asleep && mode !== 'quiet' ? 'Wake Pulse Pet' : mode === 'quiet' ? 'Pulse Pet' : 'Pulse Pet · Open shortcuts'}
@@ -274,6 +282,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
           <span className="pulse-pet__pose pulse-pet__standing">
             <span className="pulse-pet__body pulse-pet__part"><img src={robot} alt="" draggable="false" onError={() => setAssetFailed(true)} /></span>
             <span className="pulse-pet__arm pulse-pet__part"><img src={robot} alt="" draggable="false" /></span>
+            {unavailable && <svg className="pulse-pet__nope-hand" viewBox="0 0 32 48" shapeRendering="crispEdges"><path d="M12 4h8v20h8v16h-4v6H8v-6H4V26h8Z" fill="#edf0f5" stroke="#26313c" strokeWidth="3"/><path d="M12 4h8v9h-8Z" fill="#ffac19"/><path d="M9 31h15v9H9Z" fill="#a5b4c6"/></svg>}
           </span>
           <span className="pulse-pet__pose pulse-pet__working">
             <span className="pulse-pet__working-body pulse-pet__part"><img src={workingRobot} alt="" draggable="false" onError={() => setAssetFailed(true)} /></span>
@@ -286,6 +295,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
         {compact && <span className="pulse-pet__zzz">z<span>z</span></span>}
       </span>
     </button>
+    {unavailable && <span className="pulse-pet__speech" aria-hidden="true">Not yet! ☝</span>}
     <span id="pulse-pet-instructions" className="pulse-sr-only">Click for shortcuts. Drag to move, or use arrow keys while focused. Shift and arrow keys move farther.</span>
     <span className="pulse-sr-only" role="status" aria-live="polite">{announcement}</span>
     {open && mode === 'normal' && <nav id="pulse-pet-shortcuts" className="pulse-pet__toolbar" aria-label="Pulse Pet shortcuts"

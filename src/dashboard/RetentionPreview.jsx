@@ -19,12 +19,11 @@ export function RetentionPreview({ client, scope }) {
     if (id !== request.current) return
     setBusy(false); setResult(response.data || null); setError(response.error || '')
   }
-  return <details className="dash-retention dash-panel"><summary>Storage & retention <span>Preview only · no deletion</span></summary>
+  return <details className="dash-retention dash-panel"><summary>Saved reports</summary>
     <div className="dash-retention-body">
-      <h2>See what the 7 / 90 day policy would keep</h2>
-      <p>All cuts for the most recent 7 source dates, including the reference date. From day 8 through day 90, keep the latest valid report pair per date and reporting scope.</p>
-      <p>Safety exceptions: running/leased records, future-dated or incomplete reports, the latest successful pair for a scope, and versions referenced by duplicate records remain protected. Failed/duplicate audit metadata is not purged here.</p>
-      <p className="dash-retention-notice"><strong>Simulation only. Nothing is deleted or scheduled.</strong> The reference date is hypothetical, not VICIdial’s confirmed Today. The initial value uses your browser calendar. {scope.source_time_zone ? `Configured source timezone: ${scope.source_time_zone}.` : 'Source timezone is still unconfirmed; automatic cleanup cannot be activated yet.'}</p>
+      <h2>Report storage</h2>
+      <p>7 days of uploads · one daily report up to 90 days.</p>
+      <p className="dash-retention-notice">Preview only. Nothing is deleted.</p>
       <div className="dash-compare-controls"><label>Simulation reference date<input aria-label="Simulation reference date" type="date" min="1900-01-01" max="2200-12-31" value={date} onChange={e => changeDate(e.target.value)} /></label><button className="dash-refresh" disabled={busy || !validDate(date)} onClick={() => simulate()}>{busy ? 'Calculating…' : 'Preview retention'}</button></div>
       {error && <p role="alert">{error}</p>}
       {result && <section aria-label="Retention simulation results">

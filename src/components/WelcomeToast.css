@@ -1,7 +1,7 @@
-.pulse-welcome-toast { position:fixed; z-index:1000; top:92px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:16px; width:max-content; max-width:calc(100vw - 32px); padding:18px 26px; border:1px solid #b39bea80; border-radius:18px; background:linear-gradient(120deg,#25213ff5,#111e30f5); box-shadow:0 16px 60px #0008,0 0 35px #ac85ff22; backdrop-filter:blur(16px); color:#f5f1ff; pointer-events:none; animation:pulse-welcome 2s both; }
-.pulse-welcome-toast > div { display:grid; gap:4px; min-width:0; }
-.pulse-welcome-toast div > span { font-size:9px; letter-spacing:.18em; color:#bcafe0; }
-.pulse-welcome-toast strong { font-size:23px; line-height:1.2; overflow-wrap:anywhere; }
-.pulse-welcome-spark { color:#edcd84; font-size:25px; }
-@keyframes pulse-welcome { 0% { opacity:0; transform:translate(-50%,-12px) scale(.97); } 13%,80% { opacity:1; transform:translate(-50%,0) scale(1); } 100% { opacity:0; transform:translate(-50%,-7px); } }
+.pulse-welcome-toast { position:fixed; z-index:1000; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:18px; width:min(680px,calc(100vw - 32px)); box-sizing:border-box; padding:44px 24px; text-align:center; border:1px solid #d0c3ee35; border-radius:28px; background:radial-gradient(ellipse at 50% 0,#78669d40,transparent 70%),linear-gradient(135deg,#191828ed,#10131eed); box-shadow:0 28px 100px #0009,0 0 90px #ac85ff18,inset 0 1px #ffffff20; backdrop-filter:blur(18px); color:#fff; pointer-events:none; animation:pulse-welcome 2s both; }
+.pulse-welcome-toast > div { display:grid; gap:14px; min-width:0; }
+.pulse-welcome-toast div > span { font-size:clamp(18px,3vw,32px); font-weight:750; letter-spacing:.12em; color:#eee8fc; }
+.pulse-welcome-toast strong { font-size:clamp(32px,5.5vw,64px); line-height:1.08; letter-spacing:-.04em; overflow-wrap:anywhere; text-shadow:0 2px 28px #bfa5ed30; }
+.pulse-welcome-spark { color:#e0cfae; font-size:25px; }
+@keyframes pulse-welcome { 0% { opacity:0; transform:translate(-50%,-50%) scale(.88); filter:blur(6px); } 16%,80% { opacity:1; transform:translate(-50%,-50%) scale(1); filter:blur(0); } 100% { opacity:0; transform:translate(-50%,-53%) scale(1.03); } }
 @media(prefers-reduced-motion:reduce) { .pulse-welcome-toast { animation:none; } }

@@ -54,6 +54,14 @@
 .pulse-pet--still .pulse-pet__rig, .pulse-pet.pulse-pet--still .pulse-pet__arm, .pulse-pet.pulse-pet--still .pulse-pet__standing, .pulse-pet.pulse-pet--still .pulse-pet__head { animation: none; }
 .pulse-pet--still .pulse-pet__arm, .pulse-pet--still .pulse-pet__eyes { transition: none; }
 .pulse-pet--still .pulse-pet__pose { transition: none; }
+.pulse-pet__speech { position:absolute; top:0; left:50%; transform:translate(-50%,-100%); padding:9px 12px; border:1px solid #d7c6a944; border-radius:14px; white-space:nowrap; background:#181822f5; box-shadow:0 6px 24px #0005; font-size:12px; font-weight:650; }
+.pulse-pet__nope-hand { position:absolute; left:0; top:57px; width:30px; height:45px; transform-origin:50% 90%; animation:pet-nope 550ms ease-in-out 4; }
+.pulse-pet--nope .pulse-pet__arm { opacity:0; }
+.pulse-pet--compact .pulse-pet__nope-hand { display:none; }
+.pulse-pet--nope .pulse-pet__head { animation:pet-nope-head 550ms ease-in-out 4; }
+.pulse-pet--still .pulse-pet__nope-hand { animation:none; }
+@keyframes pet-nope { 0%,100% { rotate:-15deg; } 50% { rotate:18deg; } }
+@keyframes pet-nope-head { 0%,100% { translate:-2px 0; } 50% { translate:2px 0; } }
 @keyframes pet-breathe { 0%, 100% { translate: 0 0; rotate: -.5deg; } 42% { translate: 0 -2px; rotate: .45deg; } 72% { translate: 0 -.6px; rotate: 0deg; } }
 @keyframes pet-stand { 0% { transform: translate(0, 8px); } 35% { transform: translate(4px, 5px); } 72% { transform: translate(2px, -1px); } 100% { transform: none; } }
 @keyframes pet-head-rise { 0% { translate: 0 0; rotate: 0deg; } 35% { translate: 4px 4px; rotate: 2.5deg; } 72% { translate: 2px -1px; rotate: -.5deg; } 100% { translate: 0 0; rotate: 0deg; } }

@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { PulsePet } from '../../src/pet/PulsePet.jsx'
 import { DashboardView } from '../../src/dashboard/DashboardView.jsx'
 import '../../src/design/globals.css'
 import { testReport, testScope } from './ui-fixtures.mjs'
@@ -128,4 +129,4 @@ const client = { async rpc(name, args) {
   report.snapshot.ingestion_method = 'manual'
   return { data: { status: 'success', agents: 40, report_date: body.get('reportDate'), report } }
 } } }
-createRoot(document.getElementById('root')).render(<BrowserRouter><div className="pulse-product-surface"><div style={{ padding: '12px 20px', font: '12px system-ui', color: '#eed4a5', background: '#332626' }}>LOCAL UI REVIEW · SYNTHETIC DATA · NOT LIVE <label>Test state <select aria-label="Test state" defaultValue={mode} onChange={e => { mode = e.target.value }}><option>populated</option><option>manual</option><option>failure</option><option>denied</option><option>empty</option><option>slow</option><option>conflict</option><option>insights</option></select></label><button onClick={() => { document.querySelector('[data-request-count]').textContent = String(calls) }}>Check requests</button><output data-request-count="">0</output></div><DashboardView client={client} /></div></BrowserRouter>)
+createRoot(document.getElementById('root')).render(<BrowserRouter><div className="pulse-product-surface"><div style={{ padding: '12px 20px', font: '12px system-ui', color: '#eed4a5', background: '#332626' }}>LOCAL UI REVIEW · SYNTHETIC DATA · NOT LIVE <label>Test state <select aria-label="Test state" defaultValue={mode} onChange={e => { mode = e.target.value }}><option>populated</option><option>manual</option><option>failure</option><option>denied</option><option>empty</option><option>slow</option><option>conflict</option><option>insights</option></select></label><button onClick={() => { document.querySelector('[data-request-count]').textContent = String(calls) }}>Check requests</button><output data-request-count="">0</output></div><DashboardView client={client} />{new URLSearchParams(location.search).has('pet') && <PulsePet actions={[]} pathname="/dashboard"/>}</div></BrowserRouter>)

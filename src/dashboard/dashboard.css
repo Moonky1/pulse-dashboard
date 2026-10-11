@@ -366,11 +366,20 @@
   .dash-history-selected .dash-metric strong { font-size: 20px; }
 }
 .dash-world-clocks { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 12px; color: var(--dash-muted, #b5bdd6); font-size: 13px; font-variant-numeric: tabular-nums; }
-.dash-metric { --metric-color:#8cbfff; border-top-color:var(--metric-color); }
-.dash-metric--violet { --metric-color:#cfacff; }
-.dash-metric--teal { --metric-color:#65ddc5; }
-.dash-metric--gold { --metric-color:#f2c777; }
-.dash-metric strong { color:var(--metric-color); }
+.dash-metric { transition:transform 220ms ease,border-color 220ms ease,box-shadow 220ms ease; }
+.dash-metric strong { color:#f5f5fa; }
+.dash-metric::after { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg,transparent 20%,#ffffff08 48%,transparent 76%); opacity:0; transition:opacity 220ms ease; }
+@media(hover:hover) { .dash-metric:hover { transform:translateY(-3px); border-color:#88819f70; box-shadow:0 14px 32px #0004,inset 0 1px #ffffff14; } .dash-metric:hover::after { opacity:1; } }
+.dash-table-top-scroll { overflow-x:auto; overflow-y:hidden; scrollbar-color:#777088 #171827; background:#171827; }
+.dash-table-top-scroll > div { height:16px; }
+.dash-table-top-scroll::-webkit-scrollbar { height:12px; }
+.dash-table-top-scroll::-webkit-scrollbar-track { background:#171827; }
+.dash-table-top-scroll::-webkit-scrollbar-thumb { background:#777088; border:3px solid #171827; border-radius:10px; }
+.dash-top-table > .dash-table-scroll { scrollbar-width:none; }
+.dash-top-table > .dash-table-scroll::-webkit-scrollbar { height:0; }
+.dash-closers-notice { align-self:center; color:#e6dfef; font-size:13px; }
+@media(max-width:600px) { .dash-top-table { display:none; } }
+@media(prefers-reduced-motion:reduce) { .dash-metric,.dash-metric::after { transition:none; } .dash-metric:hover { transform:none; } }
 .dash-team-badge { display:inline-flex; max-width:100%; padding:5px 9px; border:1px solid #55617b; border-radius:99px; font-size:12px; font-weight:700; line-height:1.3; background:#283246; color:#f0f5ff; }
 .dash-main .dash-agent-id { display:inline-block; font-size:12px; font-weight:750; color:#e1eaff; letter-spacing:.025em; padding:3px 6px; background:#253149; border-radius:5px; }
 .dash-compact-identity { display:grid; gap:7px; }

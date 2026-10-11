@@ -75,12 +75,10 @@ function AlertWorkspace({ client, scope, data, readError }) {
     if (response.code === 'access_denied') { request.current++; setConfig(null); setDraft(null); setError(response.error); setBusy(false) }
   }
   return <div className="dash-alert-body">
-    <div className="dash-panel-heading"><div><h2>Additional checks</h2><p>{scope.label}</p></div><button disabled={busy} onClick={reload}>Reload rules{dirty ? ' · discard draft' : ''}</button></div>
-    <p className="dash-caption">Optional checks, in addition to the daily limits shown in Coaching & support.</p>
+    <div className="dash-panel-heading"><div><h2>Rules</h2></div><button disabled={busy} onClick={reload}>Reload rules{dirty ? ' · discard draft' : ''}</button></div>
     {busy && <p role="status">{config ? 'Saving shared rules…' : 'Loading shared rules…'}</p>}
     {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
     {config && <>
-      <p className="dash-caption">Revision {config.revision}{config.changed_at ? ` · saved by ${config.changed_by_name} · ${new Date(config.changed_at).toLocaleString()}` : ' · no configuration saved yet'}. Reload to get changes from other administrators.</p>
       <details className="dash-alert-config"><summary>{config.can_manage ? 'Configure shared rules' : 'View shared rules (read only)'}</summary>
         {config.can_manage ? <form onSubmit={save}>
           <div className="dash-alert-edit-grid">{ALERT_METRICS.map(metric => {
@@ -102,5 +100,5 @@ function AlertWorkspace({ client, scope, data, readError }) {
 }
 export function AlertPanel(props) {
   const [open, setOpen] = useState(false)
-  return <details className="dash-panel dash-alerts" onToggle={e => setOpen(e.currentTarget.open)}><summary>Additional review rules</summary>{open && <AlertWorkspace {...props} />}</details>
+  return <details className="dash-panel dash-alerts" onToggle={e => setOpen(e.currentTarget.open)}><summary>Rules</summary>{open && <AlertWorkspace {...props} />}</details>
 }
