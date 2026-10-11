@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { agentDay, compareAgentDays, contribution, goalProgress, historyDates, loadAgentJourney, medal, percent, previousDate, rankAgents, ratio, summarizeJourney } from '../../src/dashboard/performanceInsights.js'
+import { agentDay, compareAgentDays, contribution, dailyGoal, goalProgress, historyDayLabel, historyDates, loadAgentJourney, medal, percent, previousDate, rankAgents, ratio, summarizeJourney } from '../../src/dashboard/performanceInsights.js'
 import { testReport, testScope } from './ui-fixtures.mjs'
 
 const agent = (code, calls, xfer, group = 'A') => ({ agent_code: code, vici_user_name: code, calls, xfer_count: xfer, current_user_group: group, dispositions: { XFER: xfer, SPANIS: 1000 } })
@@ -27,6 +27,18 @@ test('target references are 15 / 10 English, no inferred default and uncapped nu
   assert.equal(goalProgress(10, 'other').remaining, 0)
   assert.equal(goalProgress(30, 'asia').percent, 200)
   assert.equal(goalProgress(null, 'asia'), null)
+})
+test('daily timeline uses each saved group and target, preserving missing days and exact equality', () => {
+  const scope = '426ab519-b87b-4410-bd42-e255b240bea1'
+  const day = { status: 'observed', row: agent('001', 300, 15, 'OpenersAsia') }
+  assert.equal(dailyGoal(day, scope).reached, true)
+  assert.equal(dailyGoal({ ...day, row: { ...day.row, xfer_count: 14 } }, scope).reached, false)
+  assert.equal(dailyGoal({ status: 'no_report' }, scope), null)
+  assert.equal(dailyGoal({ status: 'absent' }, scope), null)
+  assert.equal(dailyGoal(day, testScope.id), null)
+  assert.equal(dailyGoal({ ...day, row: { ...day.row, current_user_group: 'unknown' } }, scope), null)
+  assert.equal(historyDayLabel('2026-10-05'), 'Mon 10-05')
+  assert.equal(historyDayLabel('2026-10-09'), 'Fri 10-09')
 })
 test('share is within source group; sums not average percentages; SPANIS is irrelevant', () => {
   const rows = [agent('1', 100, 10), agent('2', 900, 90), agent('3', 100, 100, 'B')]

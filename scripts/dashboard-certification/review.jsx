@@ -90,7 +90,7 @@ const client = { async rpc(name, args) {
     if (args.report_date === '2026-10-08') data.performance = []
   }
   if (mode === 'confirmed-targets') {
-    data.performance.forEach((row, i) => { row.current_user_group = ['OpenersAsia', 'MappedGroup', 'UnknownGroup'][i % 3]; row.team_name = i % 3 === 1 ? 'Colombia' : null; if (i < 3) { row.xfer_count = [7, 9, 20][i]; row.dispositions.XFER = row.xfer_count } })
+    data.performance.forEach((row, i) => { row.current_user_group = ['OpenersAsia', 'MappedGroup', 'UnknownGroup'][i % 3]; row.team_name = i % 3 === 1 ? 'Colombia' : null; if (i < 3) { row.xfer_count = [args.report_date.endsWith('08') ? 15 : args.report_date.endsWith('05') ? 26 : 7, 9, 20][i]; row.dispositions.XFER = row.xfer_count } })
   }
   if (args.requested_scope.endsWith('2')) data.performance.forEach(r => { r.vici_user_name = 'Other scope ' + r.agent_code })
   if (mode === 'empty' || args.report_date === '2026-10-01') {

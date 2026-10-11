@@ -1,5 +1,6 @@
 import { loadDashboardReport } from './dashboardApi.js'
 import { groupName, integer, validDate } from './dashboardModel.js'
+import { confirmedTargetReference } from './reportingPolicy.js'
 
 // Read-only analysis. A reference target is not a team mapping or an access grant.
 export const TARGET_REFERENCES = { asia: { label: 'Asia', daily: 15 }, other: { label: 'Other teams', daily: 10 } }
@@ -11,6 +12,13 @@ export function goalProgress(xfer, reference) {
   const target = TARGET_REFERENCES[reference]?.daily
   if (!target || !integer(xfer)) return null
   return { target, remaining: Math.max(0, target - xfer), percent: xfer / target * 100, reached: xfer >= target }
+}
+export function dailyGoal(day, scope) {
+  return day?.status === 'observed' ? goalProgress(day.row.xfer_count, confirmedTargetReference(scope, day.row)) : null
+}
+export function historyDayLabel(date) {
+  if (!validDate(date)) return '—'
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'UTC' }).format(new Date(date + 'T00:00:00Z')) + ' ' + date.slice(5)
 }
 export function previousDate(date, days = 1) {
   if (!validDate(date) || !Number.isInteger(days) || days < 0 || days > 365) throw Error('Invalid calendar date')
