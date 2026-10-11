@@ -341,8 +341,6 @@
 .dash-dispo-detail .dash-table { min-width: 480px; }
 .dash-dispo-detail .dash-table td, .dash-dispo-detail .dash-table th { padding: 10px 14px; }
 @media(max-width:600px) { .dash-dispo-buttons { grid-template-columns: repeat(2,minmax(0,1fr)); } .dash-dispo-detail { padding: 12px; } .dash-coaching-body { padding: 0 14px 14px; } .dash-pause-bars > div { grid-template-columns: 65px 1fr 120px; } }
-.dash-upload-confirm { display: flex; gap: 12px; margin: 22px 0; align-items: start; }
-.dash-upload-confirm input { margin-top: 5px; flex: none; }
 .dash-import-result { padding: 15px; border: 1px solid #4c4167; background: #26203a; border-radius: 10px; }
 .dash-status--manual { color: #e1c399; border-color: #725b3f; background: #2b241a; }
 .dash-status--manual i { background: #e1c399; }

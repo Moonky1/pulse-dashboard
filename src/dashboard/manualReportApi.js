@@ -9,7 +9,7 @@ const messages = {
   report_too_large: 'Each CSV must be 5 MiB or smaller.',
   import_denied: 'Your active Staff account needs Dashboard access to this team.',
   sign_in_required: 'Your session must be renewed before uploading.',
-  invalid_upload: 'Choose at least one CSV and confirm the report filters.',
+  invalid_upload: 'Choose at least one original VICIdial CSV report.',
   invalid_report: 'The report format could not be verified. Use the original VICIdial CSV exports without editing them.',
   import_cooldown: 'Please wait a few seconds before another upload.',
   import_conflict: 'This upload conflicts with a stored version or the scope changed. No data was replaced.',
