@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { supabase } from '../utils/supabase.js'
 import { loadOwnProfile, refreshOwnGoogleAvatar, resolveOwnStaffProfile, signInWithGoogle, signInWithPassword, signOutSession, signUpWithPassword } from './pulseAuthService.js'
 import { deriveAuthState } from './authState.js'
+import { markWelcome, clearWelcome } from './welcomeNotice.js'
 
 const AuthContext = createContext(null)
 const RECOVERY_MARKER = 'pulse_auth_recovery'
@@ -93,17 +94,28 @@ export function AuthProvider({ children, client = supabase }) {
   const signIn = useCallback(async (credentials) => {
     setProfileError(null)
     setInvitationNotice(null)
-    return signInWithPassword(client, credentials)
+    markWelcome()
+    try {
+      const result = await signInWithPassword(client, credentials)
+      if (result.error) clearWelcome()
+      return result
+    } catch (error) { clearWelcome(); throw error }
   }, [client])
 
   const signInGoogle = useCallback(async (options) => {
     setProfileError(null)
     setInvitationNotice(null)
-    return signInWithGoogle(client, options)
+    markWelcome()
+    try {
+      const result = await signInWithGoogle(client, options)
+      if (result.error) clearWelcome()
+      return result
+    } catch (error) { clearWelcome(); throw error }
   }, [client])
 
   const register = useCallback((registration) => signUpWithPassword(client, registration), [client])
   const signOut = useCallback(async () => {
+    clearWelcome()
     requestId.current += 1
     const result = await signOutSession(client)
     recoveryStorage()?.removeItem(RECOVERY_MARKER)

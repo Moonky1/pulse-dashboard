@@ -6,6 +6,8 @@ import { useAuth } from '../auth/AuthProvider.jsx'
 import { PROFILE_PRESENCE_OPTIONS, updateOwnStaffProfile } from '../profile/staffProfileService.js'
 import { supabase } from '../utils/supabase.js'
 import { StaffAvatar } from './StaffAvatar.jsx'
+import { WelcomeToast } from './WelcomeToast.jsx'
+import { AUTH_STATES } from '../auth/authState.js'
 import { Button } from './ui/Button.jsx'
 import { PulseOrb } from './ui/PulseOrb.jsx'
 import { PetVisibilityButton } from '../pet/PetVisibilityButton.jsx'
@@ -19,7 +21,7 @@ const links = [
 ]
 
 export function ProductHeader({ confirmLeave = () => true }) {
-  const { authUser, profile, refreshProfile, signOut } = useAuth()
+  const { authUser, profile, refreshProfile, signOut, authState } = useAuth()
   const [savingStatus, setSavingStatus] = useState(false)
   const [statusError, setStatusError] = useState(false)
   const adminAccess = useAdminAccess()
@@ -64,6 +66,7 @@ export function ProductHeader({ confirmLeave = () => true }) {
   }
 
   return <header className="pulse-product-header">
+    {authState === AUTH_STATES.ACTIVE && <WelcomeToast key={authUser.id} name={fullName}/>}
     <nav className="pulse-product-header__inner" aria-label="Pulse products">
       <div className="pulse-product-header__links pulse-product-header__links--left">{links.slice(0, 2).map(productLink)}</div>
       <Link className="pulse-product-header__brand" to="/workspace" onClick={guardNavigation} aria-label="Pulse Workspace"><PulseOrb size="sm" active /><span>Pulse</span></Link>

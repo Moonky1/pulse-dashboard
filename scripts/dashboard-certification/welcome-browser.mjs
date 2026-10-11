@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { mkdir } from 'node:fs/promises'
+import { createServer } from 'vite'
+import react from '@vitejs/plugin-react'
+const root = process.env.PULSE_PLAYWRIGHT_ROOT || 'C:/Users/simon/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+const {chromium} = createRequire(root+'/package.json')('playwright')
+const server = await createServer({configFile:false,publicDir:false,plugins:[react()],server:{host:'127.0.0.1',port:53959,strictPort:true}})
+await server.listen()
+const browser = await chromium.launch({channel:'chrome',headless:true})
+const context = await browser.newContext({viewport:{width:1200,height:800},serviceWorkers:'block'})
+const page = await context.newPage(), errors=[], external=[]
+page.on('pageerror',e=>errors.push(e.message))
+await context.route('**/*',route=>{if(new URL(route.request().url()).origin!=='http://127.0.0.1:53959'){external.push(route.request().url());return route.abort()}return route.continue()})
+try {
+  await mkdir('review-evidence.local/dashboard-welcome',{recursive:true})
+  await page.clock.install({time:new Date('2026-10-11T18:00:00Z')})
+  await page.clock.pauseAt(new Date('2026-10-11T18:00:01Z'))
+  await page.goto('http://127.0.0.1:53959/scripts/dashboard-certification/welcome-review.html')
+  assert.equal(await page.getByRole('status').count(),0)
+  await page.getByRole('button',{name:'Simulate successful sign-in'}).click()
+  await page.getByText('Welcome, Simon',{exact:true}).waitFor()
+  assert.equal(await page.locator('.pulse-welcome-toast').evaluate(e=>getComputedStyle(e).pointerEvents),'none')
+  await page.getByRole('button',{name:'Page stays usable'}).click()
+  await page.clock.runFor(400)
+  await page.screenshot({path:'review-evidence.local/dashboard-welcome/welcome.png'})
+  await page.clock.runFor(1500)
+  assert.equal(await page.getByRole('status').count(),1)
+  await page.clock.runFor(101)
+  assert.equal(await page.getByRole('status').count(),0)
+  await page.getByRole('button',{name:'Simulate navigation'}).click()
+  assert.equal(await page.getByRole('status').count(),0)
+  await page.setViewportSize({width:390,height:844})
+  await page.emulateMedia({reducedMotion:'reduce'})
+  await page.getByLabel('Welcome name').fill('Maria Example')
+  await page.getByRole('button',{name:'Simulate successful sign-in'}).click()
+  await page.getByText('Welcome, Maria',{exact:true}).waitFor()
+  assert.equal(await page.locator('.pulse-welcome-toast').evaluate(e=>getComputedStyle(e).animationName),'none')
+  const box=await page.locator('.pulse-welcome-toast').boundingBox()
+  assert.ok(box.x>=0 && box.x+box.width<=390)
+  await page.screenshot({path:'review-evidence.local/dashboard-welcome/welcome-mobile.png'})
+  await page.clock.runFor(2001)
+  assert.equal(await page.getByRole('status').count(),0)
+  await page.reload()
+  assert.equal(await page.getByRole('status').count(),0)
+  assert.deepEqual(errors,[]);assert.deepEqual(external,[])
+  console.log('PASS personalized welcome, 2-second dismissal, StrictMode, no navigation/reload replay, reduced motion, mobile fit, no external requests')
+} finally {await context.close();await browser.close();await server.close()}
