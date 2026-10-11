@@ -1,7 +1,13 @@
 // Presentation rules only. Staff authorization and scope filtering belong to the RPCs.
 export const PERFORMANCE_FIELDS = ['time_seconds', 'talk_seconds', 'talk_avg_seconds', 'wait_seconds', 'wait_avg_seconds', 'dead_seconds', 'dead_avg_seconds', 'dispo_seconds', 'pause_seconds', 'customer_seconds']
+export const PERFORMANCE_COLUMNS = [['time_seconds', 'Time'], ['talk_seconds', 'Talk'], ['talk_avg_seconds', 'Talk avg'], ['wait_seconds', 'Wait'], ['wait_avg_seconds', 'Wait avg'], ['dead_seconds', 'Dead'], ['dead_avg_seconds', 'Dead avg'], ['dispo_seconds', 'Dispo'], ['dispo_avg_seconds', 'Dispo avg'], ['pause_seconds', 'Pause'], ['pause_avg_seconds', 'Pause avg'], ['customer_seconds', 'Customer'], ['customer_avg_seconds', 'Customer avg']]
 export const PAUSE_FIELDS = [['break_seconds', 'Break'], ['cb_seconds', 'Callback'], ['lunch_seconds', 'Lunch'], ['manage_seconds', 'Manage'], ['rr_seconds', 'RR'], ['tech_seconds', 'Tech'], ['login_seconds', 'Login'], ['lagged_seconds', 'Lagged'], ['dcmx_seconds', 'DCMX'], ['dismx_seconds', 'DISMX']]
 export const integer = value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+export function metricLabel(key) {
+  return ({ total_seconds: 'Logged', nonpause_seconds: 'Nonpause', agent_count: 'Agents', calls: 'Calls', xfer_count: 'XFER' })[key]
+    || [...PERFORMANCE_COLUMNS, ...PAUSE_FIELDS].find(([field]) => field === key)?.[1]
+    || (key.startsWith('column_') ? 'Unlabelled column ' + key.slice(7) : key)
+}
 export function validDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '') || value.startsWith('0000')) return false
   const parsed = new Date(`${value}T00:00:00Z`)
@@ -33,6 +39,7 @@ export function ageLabel(value, now = Date.now()) {
 }
 export function integrationState(data, readError, now = Date.now()) {
   if (readError) return { tone: 'issue', label: 'Connection issue' }
+  if (data?.snapshot?.ingestion_method === 'manual') return { tone: 'manual', label: 'Manual upload' }
   const h = data?.health
   if (!h) return { tone: 'waiting', label: 'Awaiting data' }
   const failed = h.last_failed_sync && (!h.last_successful_sync || Date.parse(h.last_failed_sync) >= Date.parse(h.last_successful_sync))

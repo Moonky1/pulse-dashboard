@@ -8,3 +8,6 @@ dist-ui-preview
 node_modules
 logs
 *.log
+review-evidence.local
+*.local
+supabase/.temp

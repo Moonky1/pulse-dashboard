@@ -7,7 +7,7 @@ export function testReport(date = '2026-10-09') {
     team_name: null, linked: i === 0, profile_agent_code: i === 0 ? '01000' : null,
     calls: 100 + i, xfer_count: 3 + i, time_seconds: 28800, talk_seconds: 12600, talk_avg_seconds: 126,
     wait_seconds: 1800, wait_avg_seconds: 18, dead_seconds: 600, dead_avg_seconds: 6,
-    dispo_seconds: 1200, pause_seconds: 7200, customer_seconds: 12000,
+    dispo_seconds: 1200, dispo_avg_seconds: 12, pause_seconds: 7200, pause_avg_seconds: 72, customer_seconds: 12000, customer_avg_seconds: 120,
     dispositions: { A: 10, CALLBK: 2, DAIR: 4, DNC: 5, LANG: 1, NI: 8, SPANIS: 7, WRGNUM: 1, WRGVEH: 2, XFER: 3 + i },
   }))
   return { scope: testScope, date, health: { connected: false, last_successful_sync: '2026-10-09T18:00:00Z', last_failed_sync: null, last_error_category: null, requires_ip_validation: false, halted: false },

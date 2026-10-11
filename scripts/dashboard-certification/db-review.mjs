@@ -29,9 +29,11 @@ if (!process.argv.includes('--tests-only')) {
     '-t', 'public.roles', '-t', 'public.permissions', '-t', 'public.role_permissions', '-t', 'public.role_scopes', '-t', 'public.role_grant_rules']))
   sql('create extension if not exists pgcrypto with schema extensions; create extension if not exists pgtap with schema extensions;')
   sql(readFileSync('supabase/migrations/20261009000100_vici_dashboard_storage.sql', 'utf8'))
+  sql(readFileSync('supabase/migrations/20261010000100_vici_manual_reports.sql', 'utf8'))
 }
 sql('grant usage on schema extensions to authenticated,service_role;', 'supabase_admin')
-const output = sql(readFileSync('supabase/tests/20261009000100_vici_dashboard_storage_test.sql', 'utf8'))
+const output = sql(readFileSync('supabase/tests/20261009000100_vici_dashboard_storage_test.sql', 'utf8')) +
+  sql(readFileSync('supabase/tests/20261010000100_vici_manual_reports_test.sql', 'utf8'))
 if (/not ok|Looks like you failed/i.test(output)) throw new Error(output)
 const assertions = (output.match(/\bok \d+ -/g) || []).length
 if (!assertions) throw new Error('Dashboard SQL assertions required')

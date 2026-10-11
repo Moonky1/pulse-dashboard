@@ -6,8 +6,10 @@ role gate and canonical server permission checks are unchanged.
 
 ## Read contract
 
-- Only `list_vici_dashboard_scopes` and `get_vici_dashboard` are called. The browser
-  does not contact VICIdial, read raw tables or trigger the collector.
+- The baseline reads `list_vici_dashboard_scopes` and `get_vici_dashboard`. The
+  manual-report checkpoint adds protected history/snapshot RPCs and the upload
+  function described in [dashboard-vici-manual.md](dashboard-vici-manual.md).
+  The browser does not contact VICIdial, read raw tables or trigger the collector.
 - A visible page reads the selected stored report at most once per 60 seconds
   automatically. Manual Refresh can read it immediately; neither starts a sync.
 - Failed reads preserve only the last snapshot for the exact same scope/date.

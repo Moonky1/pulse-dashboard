@@ -170,3 +170,37 @@
   .dash-pause-bars > div { grid-template-columns: 72px 1fr 66px; gap: 8px; font-size: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .dash-blank--loading .dash-blank__mark { animation: none; } }
+.dash-upload, .dash-history, .dash-full-breakdown { margin: 20px 0; }
+.dash-upload > summary, .dash-history > summary { padding: 20px; cursor: pointer; color: #e8dcfb; font-weight: 650; }
+.dash-upload summary span, .dash-history summary span { color: #a6abc2; font-size: 12px; margin-left: 12px; }
+.dash-upload form, .dash-history-body, .dash-full-breakdown { padding: 22px; color: #c4cbdd; font-size: 13px; line-height: 1.65; }
+.dash-upload-files, .dash-compare-controls { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0; align-items: end; }
+.dash-upload-files label { flex: 1; min-width: min(250px, 100%); }
+.dash-upload-files input { display: block; margin: 10px 0; width: 100%; }
+.dash-upload-files small { color: #9daac4; }
+.dash-upload-confirm { display: flex; gap: 12px; margin: 22px 0; align-items: start; }
+.dash-upload-confirm input { margin-top: 5px; flex: none; }
+.dash-import-result { padding: 15px; border: 1px solid #4c4167; background: #26203a; border-radius: 10px; }
+.dash-status--manual { color: #e1c399; border-color: #725b3f; background: #2b241a; }
+.dash-status--manual i { background: #e1c399; }
+.dash-full-breakdown h3 { margin-top: 28px; color: #e7eafa; font-size: 14px; }
+.dash-full-breakdown > h2, .dash-history-selected > h2, .dash-comparison > h2 { font-size: 20px; }
+.dash-source-warnings { padding: 12px 20px; border-left: 2px solid #ae8a51; background: #251f18; }
+.dash-history-scroll { max-width: 100%; overflow: auto; border: 1px solid #303149; border-radius: 10px; }
+.dash-history-scroll small { display: block; }
+.dash-history button, .dash-compare-controls select, .dash-comparison input { background: #201d31; color: #e8e1f5; border: 1px solid #48415f; padding: 9px 12px; border-radius: 8px; }
+.dash-history button:disabled { opacity: .45; cursor: default; }
+.dash-compare-controls label { display: grid; gap: 8px; max-width: 100%; flex: 1; min-width: min(250px, 100%); }
+.dash-compare-controls select { width: 100%; min-width: 0; }
+.dash-history-selected { margin-top: 28px; padding-top: 18px; border-top: 1px solid #41435b; }
+.dash-delta-agent { border-bottom: 1px solid #39344b; margin-top: 10px; padding: 14px 0; }
+.dash-delta-agent summary { cursor: pointer; font-weight: 600; }
+.dash-delta-agent summary span { display: block; color: #a5adc7; font-size: 12px; margin-top: 4px; }
+.dash-history p, .dash-upload p, .dash-dispositions dt { overflow-wrap: anywhere; }
+@media(max-width:600px) {
+  .dash-upload form, .dash-history-body, .dash-full-breakdown { padding: 14px; }
+  .dash-upload-files { display: block; } .dash-upload-files label { display: block; margin-bottom: 18px; }
+  .dash-comparison input { width: 100%; }
+  .dash-history-selected .dash-panel-heading, .dash-history-selected .dash-full-breakdown { padding: 10px; }
+  .dash-history-selected .dash-metric strong { font-size: 20px; }
+}

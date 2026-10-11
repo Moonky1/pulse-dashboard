@@ -12,7 +12,7 @@ export function dashboardError(error) {
 }
 export function normalizeScopes(value) {
   if (!Array.isArray(value) || !value.every(s => record(s) && UUID.test(s.id) && typeof s.label === 'string' && Array.isArray(s.user_groups) && s.user_groups.every(g => typeof g === 'string'))) throw invalid
-  return value.map(s => ({ id: s.id, label: s.label, user_groups: s.user_groups, source_time_zone: typeof s.source_time_zone === 'string' ? s.source_time_zone : null }))
+  return value.map(s => ({ id: s.id, label: s.label, user_groups: s.user_groups, campaigns: Array.isArray(s.campaigns) ? s.campaigns.filter(v => typeof v === 'string') : [], can_import: s.can_import === true, source_time_zone: typeof s.source_time_zone === 'string' ? s.source_time_zone : null }))
 }
 export function normalizeReport(value, scope, date) {
   if (!record(value) || value.scope?.id !== scope || value.date !== date || !record(value.health) || !Array.isArray(value.performance) || !Array.isArray(value.pause)) throw invalid
