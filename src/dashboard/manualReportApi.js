@@ -31,7 +31,7 @@ export async function uploadReports(client, { scopeId, reportDate, performance, 
     if (error) {
       let code
       try { code = (await error.context?.json())?.error } catch { /* Never show raw response text. */ }
-      return { error: messages[code] || messages.import_unavailable }
+      return { error: messages[code] || messages.import_unavailable, code }
     }
     if (!['success', 'duplicate'].includes(data?.status) || data.report_date !== reportDate || !Number.isSafeInteger(data.agents)) return { error: messages.import_unavailable }
     // A confirmed save stays successful even if its follow-up read fails.

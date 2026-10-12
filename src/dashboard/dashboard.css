@@ -372,6 +372,14 @@
 @media(hover:hover) { .dash-metric:hover { transform:translateY(-3px); border-color:#88819f70; box-shadow:0 14px 32px #0004,inset 0 1px #ffffff14; } .dash-metric:hover::after { opacity:1; } }
 .dash-table-top-scroll { overflow-x:auto; overflow-y:hidden; scrollbar-color:#777088 #171827; background:#171827; }
 .dash-table-top-scroll > div { height:16px; }
+.dash-zero-alert { width:24px; height:24px; vertical-align:middle; margin-right:7px; image-rendering:pixelated; }
+.dash-upload-mode,.dash-batch-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:18px 22px 0; }
+.dash-upload-mode button,.dash-batch-actions button { background:#1d1d2e; color:#eeeaf7; border:1px solid #464156; padding:10px 14px; border-radius:10px; }
+.dash-upload-mode button[aria-pressed=true] { border-color:#b39adb; background:#30273f; }
+.dash-batch-actions { padding:0; margin:18px 0; }
+.dash-batch-list { list-style:none; margin:16px 0 0; padding:0; max-height:300px; overflow:auto; }
+.dash-batch-list li { display:flex; gap:16px; justify-content:space-between; border-top:1px solid #353144; padding:12px 0; font-size:12px; overflow-wrap:anywhere; }
+.dash-batch-list li > div { display:grid; gap:5px; min-width:0; }
 .dash-table-top-scroll::-webkit-scrollbar { height:12px; }
 .dash-table-top-scroll::-webkit-scrollbar-track { background:#171827; }
 .dash-table-top-scroll::-webkit-scrollbar-thumb { background:#777088; border:3px solid #171827; border-radius:10px; }
