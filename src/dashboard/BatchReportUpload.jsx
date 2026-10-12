@@ -42,7 +42,8 @@ export function BatchReportUpload({ client, scope, onImported, onBusy, actionsTa
   return <form ref={form} onSubmit={submit} className="dash-batch-upload">
     <p>Choose multiple dates or cuts · up to 20 CSV files.</p>
     <div className="dash-upload-files">{[['performance','Call Stats CSV files'],['pause','Pause Code CSV files']].map(([type,label])=><label key={type}>{label}<input type="file" multiple accept=".csv,text/csv" disabled={busy} onChange={e=>select(type,e.target.files)}/></label>)}</div>
-    <div className="dash-batch-actions">{actionsTarget ? createPortal(saveButton,actionsTarget) : saveButton}{busy && <button type="button" onClick={()=>{stopped.current=true}}>Stop after current file</button>}<span role="status">{busy || jobs ? `${Object.values(results).filter(r=>!r.error).length} / ${jobs?.length || 0} reports saved` : `${count} files selected`}</span></div>
+    {actionsTarget && createPortal(saveButton,actionsTarget)}
+    <div className="dash-batch-actions"><button type="submit" className="dash-refresh" disabled={busy || !count || complete}>{busy ? 'Uploading…' : complete ? 'Reports uploaded ✓' : next || Object.keys(results).length ? 'Continue upload' : 'Upload reports'}</button>{busy && <button type="button" onClick={()=>{stopped.current=true}}>Stop after current file</button>}<span role="status">{busy || jobs ? `${Object.values(results).filter(r=>!r.error).length} / ${jobs?.length || 0} reports saved` : `${count} files selected`}</span></div>
     {error && <p role="alert">{error}</p>}
     {jobs && <ol className="dash-batch-list" aria-label="Upload results">{jobs.map((job,index)=><li key={index}><div><strong>{job.reportDate}</strong><span>{job.files.join(' + ')}</span></div><span className={results[index]?.error ? 'dash-over-limit' : ''}>{results[index]?.error || (results[index] ? results[index].status==='duplicate' ? 'Already saved' : 'Saved ✓' : 'Waiting')}</span></li>)}</ol>}
   </form>

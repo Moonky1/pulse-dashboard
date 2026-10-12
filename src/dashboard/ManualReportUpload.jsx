@@ -52,10 +52,11 @@ export function ManualReportUpload({ client, scope, date, onImported, actionsTar
     <nav className="dash-upload-mode" aria-label="Upload mode"><button type="button" disabled={busy} aria-pressed={!batch} onClick={()=>changeMode(false)}>One report</button><button type="button" disabled={busy} aria-pressed={batch} onClick={()=>changeMode(true)}>Multiple CSVs</button></nav>
     {batch ? <BatchReportUpload client={client} scope={scope} onImported={onImported} onBusy={setBusy} actionsTarget={actionsTarget} onOpen={()=>setOpen(true)}/> :
     <form ref={form} onSubmit={submit}>
-      <p>Upload either report or both. Saved to Pulse cloud.{ready && !mismatch && <> Date: <strong>{reportDate}</strong>.</>}</p>
+      <p>Choose a file, then click Upload reports.{ready && !mismatch && <> Date: <strong>{reportDate}</strong>.</>}</p>
       <div className="dash-upload-files">{[['performance', 'Call Stats Breakdown'], ['pause', 'Pause Code Breakdown']].map(([key, label]) => <label key={key}>{label}<input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => void select(key, e.target.files?.[0] || null)} /></label>)}</div>
       {mismatch && <p role="alert">The reports must be from the same date.</p>}
-      {actionsTarget ? createPortal(saveButton,actionsTarget) : saveButton}
+      {actionsTarget && createPortal(saveButton,actionsTarget)}
+      <button type="submit" className="dash-refresh" disabled={busy || !ready || mismatch}>{busy ? 'Uploading…' : 'Upload reports'}</button>
       {result && <p role={result.error ? 'alert' : 'status'} className="dash-import-result">{result.error || (result.status === 'duplicate' ? 'Already saved.' : `Saved ${result.agents} agents · ${result.report_date}`)}</p>}
     </form>}
   </details>
