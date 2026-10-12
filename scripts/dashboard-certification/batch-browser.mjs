@@ -26,7 +26,7 @@ try {
   await page.getByLabel('Call Stats Breakdown',{exact:true}).setInputFiles(csv('performance','2026-10-09'))
   await page.getByRole('button',{name:'Multiple CSVs',exact:true}).click()
   await page.getByRole('button',{name:'One report',exact:true}).click()
-  assert.equal(await page.getByRole('button',{name:'Upload reports',exact:true}).isEnabled(),false)
+  assert.equal(await page.getByRole('button',{name:'Upload CSVs',exact:true}).isEnabled(),true)
   await page.getByRole('button',{name:'Multiple CSVs',exact:true}).click()
   await page.getByLabel('Call Stats CSV files',{exact:true}).setInputFiles([
     csv('performance','2026-10-08'),

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { prepareReportBatch, runReportBatch } from './batchReports.js'
+import { createPortal } from 'react-dom'
 
-export function BatchReportUpload({ client, scope, onImported, onBusy }) {
+export function BatchReportUpload({ client, scope, onImported, onBusy, actionsTarget, onOpen }) {
+  const form = useRef(null)
   const [selection, setSelection] = useState({performance:[],pause:[]})
   const [jobs, setJobs] = useState(null), [results,setResults] = useState({})
   const [busy,setBusy] = useState(false), [error,setError] = useState('')
@@ -36,10 +38,11 @@ export function BatchReportUpload({ client, scope, onImported, onBusy }) {
   }
   const count=selection.performance.length+selection.pause.length
   const complete=jobs && next===jobs.length
-  return <form onSubmit={submit} className="dash-batch-upload">
+  const saveButton = <button type="button" className="dash-refresh" disabled={busy || (!actionsTarget && !count) || complete} onClick={()=>{onOpen?.();if(count) form.current.requestSubmit()}}>{busy ? 'Saving to cloud…' : complete ? 'Saved to cloud ✓' : next || Object.keys(results).length ? 'Continue upload' : count ? 'Save to cloud' : 'Upload CSVs'}</button>
+  return <form ref={form} onSubmit={submit} className="dash-batch-upload">
     <p>Choose multiple dates or cuts · up to 20 CSV files.</p>
     <div className="dash-upload-files">{[['performance','Call Stats CSV files'],['pause','Pause Code CSV files']].map(([type,label])=><label key={type}>{label}<input type="file" multiple accept=".csv,text/csv" disabled={busy} onChange={e=>select(type,e.target.files)}/></label>)}</div>
-    <div className="dash-batch-actions"><button className="dash-refresh" disabled={busy || !count || complete}>{busy ? 'Saving to cloud…' : complete ? 'Saved to cloud ✓' : next || Object.keys(results).length ? 'Continue upload' : 'Save to cloud'}</button>{busy && <button type="button" onClick={()=>{stopped.current=true}}>Stop after current file</button>}<span role="status">{busy || jobs ? `${Object.values(results).filter(r=>!r.error).length} / ${jobs?.length || 0} reports saved` : `${count} files selected`}</span></div>
+    <div className="dash-batch-actions">{actionsTarget ? createPortal(saveButton,actionsTarget) : saveButton}{busy && <button type="button" onClick={()=>{stopped.current=true}}>Stop after current file</button>}<span role="status">{busy || jobs ? `${Object.values(results).filter(r=>!r.error).length} / ${jobs?.length || 0} reports saved` : `${count} files selected`}</span></div>
     {error && <p role="alert">{error}</p>}
     {jobs && <ol className="dash-batch-list" aria-label="Upload results">{jobs.map((job,index)=><li key={index}><div><strong>{job.reportDate}</strong><span>{job.files.join(' + ')}</span></div><span className={results[index]?.error ? 'dash-over-limit' : ''}>{results[index]?.error || (results[index] ? results[index].status==='duplicate' ? 'Already saved' : 'Saved ✓' : 'Waiting')}</span></li>)}</ol>}
   </form>

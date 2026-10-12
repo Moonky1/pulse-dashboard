@@ -1,3 +1,4 @@
+import { agentDisplayName } from './agentPresentation.js'
 import { useId, useState } from 'react'
 import { number, groupName } from './dashboardModel.js'
 import { percent } from './performanceInsights.js'
@@ -30,7 +31,7 @@ export function DispositionExplorer({ rows, agent = null, onOpen }) {
         {agent && <div><dt>Vs rest of team</dt><dd>{signed(summary.points)} pp</dd><small>{signed(summary.aboveAverage)}% vs average count · {decimal(summary.peerAverage)}</small></div>}
       </dl>
       {summary.available < summary.agents && <p>Team totals unavailable: some agents have no {active} value.</p>}
-      {!agent && <><h4>Top 10 · {active}</h4><div className="dash-history-scroll"><table className="dash-table"><thead><tr><th>Agent</th><th>Count</th><th>% calls</th><th>Team share</th></tr></thead><tbody>{summary.top.map(item => <tr key={item.row.agent_code}><td>{onOpen ? <button type="button" onClick={() => onOpen(item.row.agent_code)}>{item.row.vici_user_name}</button> : item.row.vici_user_name}<small>{item.row.agent_code}</small></td><td>{number(item.count)}</td><td>{percent(item.rate)}</td><td>{percent(item.share)}</td></tr>)}</tbody></table></div>{!summary.top.length && <p>No recorded uses.</p>}</>}
+      {!agent && <><h4>Top 10 · {active}</h4><div className="dash-history-scroll"><table className="dash-table"><thead><tr><th>Agent</th><th>Count</th><th>% calls</th><th>Team share</th></tr></thead><tbody>{summary.top.map(item => <tr key={item.row.agent_code}><td>{onOpen ? <button type="button" onClick={() => onOpen(item.row.agent_code)}>{agentDisplayName(item.row)}</button> : agentDisplayName(item.row)}<small>{item.row.agent_code}</small></td><td>{number(item.count)}</td><td>{percent(item.rate)}</td><td>{percent(item.share)}</td></tr>)}</tbody></table></div>{!summary.top.length && <p>No recorded uses.</p>}</>}
     </section>}
   </section>
 }

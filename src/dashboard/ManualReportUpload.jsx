@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { csvReportDate, uploadReports } from './manualReportApi.js'
 import { BatchReportUpload } from './BatchReportUpload.jsx'
+import { createPortal } from 'react-dom'
 
-export function ManualReportUpload({ client, scope, date, onImported }) {
+export function ManualReportUpload({ client, scope, date, onImported, actionsTarget }) {
+  const [open, setOpen] = useState(false)
   const [files, setFiles] = useState({ performance: null, pause: null })
   const [dates, setDates] = useState({})
   const reads = useRef({})
@@ -45,14 +47,15 @@ export function ManualReportUpload({ client, scope, date, onImported }) {
       onImported(outcome)
     }
   }
-  return <details className="dash-upload dash-panel"><summary>Upload CSV reports</summary>
+  const saveButton = <button type="button" className="dash-refresh" disabled={busy || mismatch || (!actionsTarget && !ready)} onClick={() => { setOpen(true); if (ready) form.current.requestSubmit() }}>{busy ? 'Saving…' : actionsTarget ? ready ? 'Save to cloud' : 'Upload CSVs' : 'Upload reports'}</button>
+  return <details className="dash-upload dash-panel" open={open} onToggle={e=>setOpen(e.currentTarget.open)}><summary>Upload CSV reports</summary>
     <nav className="dash-upload-mode" aria-label="Upload mode"><button type="button" disabled={busy} aria-pressed={!batch} onClick={()=>changeMode(false)}>One report</button><button type="button" disabled={busy} aria-pressed={batch} onClick={()=>changeMode(true)}>Multiple CSVs</button></nav>
-    {batch ? <BatchReportUpload client={client} scope={scope} onImported={onImported} onBusy={setBusy}/> :
+    {batch ? <BatchReportUpload client={client} scope={scope} onImported={onImported} onBusy={setBusy} actionsTarget={actionsTarget} onOpen={()=>setOpen(true)}/> :
     <form ref={form} onSubmit={submit}>
       <p>Upload either report or both. Saved to Pulse cloud.{ready && !mismatch && <> Date: <strong>{reportDate}</strong>.</>}</p>
       <div className="dash-upload-files">{[['performance', 'Call Stats Breakdown'], ['pause', 'Pause Code Breakdown']].map(([key, label]) => <label key={key}>{label}<input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => void select(key, e.target.files?.[0] || null)} /></label>)}</div>
       {mismatch && <p role="alert">The reports must be from the same date.</p>}
-      <button className="dash-refresh" disabled={busy || !ready || mismatch}>{busy ? 'Saving…' : 'Upload reports'}</button>
+      {actionsTarget ? createPortal(saveButton,actionsTarget) : saveButton}
       {result && <p role={result.error ? 'alert' : 'status'} className="dash-import-result">{result.error || (result.status === 'duplicate' ? 'Already saved.' : `Saved ${result.agents} agents · ${result.report_date}`)}</p>}
     </form>}
   </details>
