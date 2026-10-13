@@ -82,6 +82,7 @@ export function ProductHeader({ confirmLeave = () => true }) {
         <nav className="pulse-product-account__items" aria-label="Account menu">
           <Link to="/settings/profile" onClick={guardNavigation}>Profile <span aria-hidden="true">↗</span></Link>
           <Link to="/settings" onClick={guardNavigation}>Settings <span aria-hidden="true">↗</span></Link>
+          <Link to="/schedule" onClick={guardNavigation}>Schedule <span aria-hidden="true">↗</span></Link>
           {adminAccess.state === 'allowed' && <Link to="/admin/users" onClick={guardNavigation}>Administration <span aria-hidden="true">↗</span></Link>}
           <PetVisibilityButton />
         </nav>

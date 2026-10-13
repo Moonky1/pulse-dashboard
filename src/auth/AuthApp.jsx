@@ -7,6 +7,8 @@ import { useAuth } from './AuthProvider.jsx'
 import { PageLoadBoundary } from './components/PageLoadBoundary.jsx'
 import { SearchMetadata } from './components/SearchMetadata.jsx'
 import { useGoIdentity } from '../go-product/useGoIdentity.js'
+import {PulseAlertsProvider} from '../alerts/PulseAlertsProvider.jsx'
+const SchedulePage=lazy(()=>import('../alerts/SchedulePage.jsx').then(m=>({default:m.SchedulePage})))
 const AccountStatePage = lazy(() => import('./screens/AccountStatePage.jsx').then((module) => ({ default: module.AccountStatePage })))
 const AccountSettingsPage = lazy(() => import('./screens/AccountSettingsPage.jsx').then((module) => ({ default: module.AccountSettingsPage })))
 const AdminArea = lazy(() => import('../admin/AdminArea.jsx').then((module) => ({ default: module.AdminArea })))
@@ -65,6 +67,7 @@ function GoPlayerGate({ children }) {
 export function AuthApp() {
   return (
     <BrowserRouter>
+      <PulseAlertsProvider>
       <SearchMetadata />
       <Suspense fallback={null}><PulsePetLayer /></Suspense>
       <PageLoadBoundary><Suspense fallback={<AccountStatePage kind="loading" />}><Routes>
@@ -76,6 +79,7 @@ export function AuthApp() {
         <Route path={STAFF_FORGOT_PASSWORD_PATH} element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
         <Route path={AGENT_SIGN_IN_PATH} element={<AgentSignInPage />} />
         <Route path="/agent/settings" element={<GoPlayerGate><AgentSettingsPage /></GoPlayerGate>} />
+        <Route path="/schedule" element={<GoPlayerGate><SchedulePage /></GoPlayerGate>} />
         <Route path="/staff/signin" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
         <Route path="/staff/register" element={<Navigate to={STAFF_REGISTER_PATH} replace />} />
         <Route path="/staff/forgot-password" element={<Navigate to={STAFF_FORGOT_PASSWORD_PATH} replace />} />
@@ -113,6 +117,7 @@ export function AuthApp() {
         <Route path="/account-error" element={<RouteGate allow={[AUTH_STATES.ERROR, AUTH_STATES.MISSING_PROFILE]}><AccountStatePage kind="error" /></RouteGate>} />
         <Route path="*" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
       </Routes></Suspense></PageLoadBoundary>
+      </PulseAlertsProvider>
     </BrowserRouter>
   )
 }

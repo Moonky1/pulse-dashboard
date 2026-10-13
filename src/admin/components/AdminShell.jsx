@@ -25,6 +25,7 @@ export function AdminShell() {
             {usersAccess && <NavLink to="/admin/pending">Approvals</NavLink>}
             {invitationsAccess && <NavLink to="/admin/invitations">Invitations</NavLink>}
             {agentsAccess && <NavLink to="/admin/agents">Agents</NavLink>}
+            {(permissionKeys.includes('alerts.manage')||permissionKeys.includes('alerts.view')) && <NavLink to="/admin/alerts">Alerts &amp; Schedule</NavLink>}
             {organizationAccess && <NavLink to="/admin/organization">Organization</NavLink>}
             {campaignsAccess && <NavLink to="/admin/campaigns">Campaigns</NavLink>}
             {positionsAccess && <NavLink to="/admin/positions">Positions</NavLink>}

@@ -53,3 +53,4 @@ export const supabase = createClient(
 )
 
 export default supabase
+export const pulsePublicConfig = {url:supabaseUrl,key:supabaseKey || 'local-dev-placeholder-key'}

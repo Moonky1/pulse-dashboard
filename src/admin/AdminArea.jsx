@@ -19,6 +19,8 @@ const AdminInvitationsPage = lazy(() => import('./pages/AdminInvitationsPage.jsx
 const AdminStaffTreePage = lazy(() => import('./pages/AdminStaffTreePage.jsx').then((module) => ({ default: module.AdminStaffTreePage })))
 const AdminTeamProfilePage = lazy(() => import('./pages/AdminTeamProfilePage.jsx').then((module) => ({ default: module.AdminTeamProfilePage })))
 const AdminAgentsPage = lazy(() => import('./pages/AdminAgentsPage.jsx').then((module) => ({ default: module.AdminAgentsPage })))
+const AdminAlertsPage=lazy(()=>import('../alerts/AdminAlertsPage.jsx').then(m=>({default:m.AdminAlertsPage})))
+function AlertsRoute({children}){const {permissionKeys}=useAdminPermissions();return permissionKeys.includes('alerts.manage')||permissionKeys.includes('alerts.view')?children:<AdminLanding/>}
 
 function AdminLanding() {
   const { permissionKeys } = useAdminPermissions()
@@ -34,7 +36,7 @@ function AdminLanding() {
           ? 'campaigns'
           : canViewPositions(permissionKeys)
             ? 'positions'
-            : 'agents'
+            : canManageAgents(permissionKeys) ? 'agents' : 'alerts'
   return <Navigate to={destination} replace />
 }
 
@@ -92,6 +94,7 @@ export function AdminArea() {
             <Route path="positions" element={<PositionsRoute><AdminPositionsPage /></PositionsRoute>} />
             <Route path="invitations" element={<InvitationsRoute><AdminInvitationsPage /></InvitationsRoute>} />
             <Route path="agents" element={<AgentsRoute><AdminAgentsPage /></AgentsRoute>} />
+            <Route path="alerts" element={<AlertsRoute><AdminAlertsPage/></AlertsRoute>} />
             <Route path="*" element={<AdminLanding />} />
           </Route>
         </Routes>

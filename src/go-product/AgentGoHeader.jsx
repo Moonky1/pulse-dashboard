@@ -40,6 +40,7 @@ export function AgentGoHeader({ entry = false }) {
         <nav className="pulse-product-account__items" aria-label="Account menu">
           <Link to={`/profile/${agent.agent_code}`}>Profile <span aria-hidden="true">↗</span></Link>
           <Link to="/agent/settings">Settings <span aria-hidden="true">↗</span></Link>
+          <Link to="/schedule">Schedule <span aria-hidden="true">↗</span></Link>
           <PetVisibilityButton />
         </nav>
         {logoutError && <p role="alert" className="pulse-product-account__error">Couldn’t sign out. Try again.</p>}

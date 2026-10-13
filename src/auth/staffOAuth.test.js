@@ -18,6 +18,7 @@ test('accepts only known internal protected Pulse destinations', () => {
   assert.equal(normalizeStaffReturnPath('/admin/users'), '/admin/users')
   assert.equal(normalizeStaffReturnPath('/workspace'), '/workspace')
   assert.equal(normalizeStaffReturnPath('/settings/profile'), '/settings/profile')
+  assert.equal(normalizeStaffReturnPath('/schedule'), '/schedule')
   assert.equal(normalizeStaffReturnPath('/staff/123'), '/staff/123')
   assert.equal(normalizeStaffReturnPath('https://evil.example/studio'), null)
   assert.equal(normalizeStaffReturnPath('//evil.example/studio'), null)

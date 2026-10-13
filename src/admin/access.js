@@ -107,6 +107,8 @@ export function hasAnyAdminSurfaceAccess(permissionKeys = []) {
     || canViewPositions(permissionKeys)
     || canInviteStaff(permissionKeys)
     || canManageAgents(permissionKeys)
+    || hasEvery(permissionKeys,['admin.access','alerts.manage'])
+    || hasEvery(permissionKeys,['admin.access','alerts.view'])
 }
 
 export function resolveAdminAccess({ loading = false, error = null, permissionKeys = [] } = {}) {
