@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import process from 'node:process'
 
 import { createClient } from '@supabase/supabase-js'
+import { signAlertsToken } from './alertsToken.js'
 
 const COOKIE = '__Host-pulse_agent'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -50,6 +51,13 @@ function requestArgs(action, args = {}) {
   const uuid = value => typeof value === 'string' && UUID.test(value)
   const ids = value => Array.isArray(value) && value.length <= 100 && value.every(uuid)
   switch (action) {
+    case 'schedule': return ['agent_get_pulse_schedule', {}]
+    case 'alertPending': return uuid(args.leaseId) ? ['agent_pending_pulse_alerts', { requested_lease_id: args.leaseId }] : null
+    case 'alertClose': return uuid(args.leaseId) ? ['agent_close_pulse_alert_connection', { requested_lease_id: args.leaseId }] : null
+    case 'alertClaim': return uuid(args.leaseId) && uuid(args.occurrenceId) && uuid(args.requestId)
+      ? ['agent_claim_pulse_alert', { requested_lease_id:args.leaseId, requested_occurrence_id:args.occurrenceId, requested_request_id:args.requestId }] : null
+    case 'alertReceipt': return uuid(args.leaseId) && uuid(args.occurrenceId) && ['visual_displayed','sound_started','audio_blocked'].includes(args.state)
+      ? ['agent_record_pulse_alert_receipt', { requested_lease_id:args.leaseId, requested_occurrence_id:args.occurrenceId, requested_state:args.state }] : null
     case 'ranking': return PERIODS.has(args.period) ? ['agent_get_go_global_ranking', { requested_period: args.period }] : null
     case 'progress': return ['agent_get_go_progress', {}]
     case 'catalog': return (args.language === null || ['en', 'es'].includes(args.language)) && Number.isInteger(args.limit) && args.limit >= 1 && args.limit <= 100 && Number.isInteger(args.offset) && args.offset >= 0
@@ -121,7 +129,7 @@ async function parsedBody(request) {
   return JSON.parse(raw)
 }
 
-export function createAgentHandler(makeClient = serviceClient) {
+export function createAgentHandler(makeClient = serviceClient, alertSigning = () => ({ secret:process.env.PULSE_ALERTS_JWT_SECRET,url:process.env.PULSE_AGENT_SUPABASE_URL })) {
   return async function agentHandler(request, response) {
     if (request.method !== 'GET' && request.method !== 'POST') return fail(response, 405, 'Method not allowed.', 'method_not_allowed', { Allow: 'GET, POST' })
     if (request.method === 'POST' && (!sameOrigin(request) || request.headers['content-type']?.split(';')[0] !== 'application/json')) {
@@ -193,6 +201,15 @@ export function createAgentHandler(makeClient = serviceClient) {
       })
     }
     if (action === 'profile') return send(response, 200, { data: profile, error: null })
+    if (action === 'alertConnect') {
+      const connectionId=body.args?.connectionId, config=alertSigning()
+      if (typeof connectionId!=='string' || !UUID.test(connectionId)) return fail(response,400,'Connection unavailable.','invalid_request')
+      if (!config?.secret || config.secret.length<32 || !config.url) return fail(response,503,'Pulse Alerts are not configured here.','not_configured')
+      const {data:lease,error:leaseError}=await client.rpc('agent_open_pulse_alert_connection',{requested_session_hash:hash(token),requested_connection_id:connectionId})
+      if (leaseError) { const [status,message,code]=publicRpcError(leaseError); return fail(response,status,message,code) }
+      try { return send(response,200,{data:{...lease,token:signAlertsToken(lease,config.secret,config.url)},error:null}) }
+      catch { return fail(response,503,'Pulse Alerts are not configured here.','not_configured') }
+    }
     if (action === 'simulationScreen' || action === 'simulationAudio') {
       const audio=action==='simulationAudio'
       const args = body.args
@@ -211,7 +228,8 @@ export function createAgentHandler(makeClient = serviceClient) {
     const operation = requestArgs(action, body.args)
     if (!operation) return fail(response, 400, 'Check the details and try again.', 'invalid_request')
     const [name, args] = operation
-    const { data, error } = await client.rpc(name, { requested_agent_id: profile.agent_id, ...args })
+    const alertOperation=['alertClose','alertClaim','alertReceipt','alertPending'].includes(action)
+    const { data, error } = await client.rpc(name, { ...(alertOperation ? {requested_session_hash:hash(token)} : {requested_agent_id:profile.agent_id}), ...args })
     if (error) {
       const [status, message, publicCode] = publicRpcError(error)
       return fail(response, status, message, publicCode)
