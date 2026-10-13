@@ -16,6 +16,18 @@
 .pulse-pet__trigger:focus-visible { outline: 2px solid #ffc37a; outline-offset: 5px; }
 .pulse-pet--dragging .pulse-pet__trigger { cursor: grabbing; }
 .pulse-pet__scene { position: absolute; top: 0; left: 0; width: 112px; height: 148px; transform: scale(var(--pet-scale)); transform-origin: top left; pointer-events: none; }
+.pulse-pet--alarm,.pulse-pet--schedule { left:auto!important; top:auto!important; right:max(22px,env(safe-area-inset-right)); bottom:max(22px,env(safe-area-inset-bottom)); }
+.pulse-pet__alarm-instrument { position:absolute; inset:0; width:112px; height:148px; overflow:visible; }
+.pulse-pet--alarm .pulse-pet__rig { animation:pet-alarm-bounce .65s ease-in-out infinite; }
+.pulse-pet__stick-left { transform-origin:24px 85px; animation:pet-drum-left .45s ease-in-out infinite alternate; }
+.pulse-pet__stick-right { transform-origin:88px 85px; animation:pet-drum-left .45s .2s ease-in-out infinite alternate-reverse; }
+.pulse-pet__drum { animation:pet-instrument-drum 4s steps(1) infinite; }.pulse-pet__trumpet { animation:pet-instrument-trumpet 4s steps(1) infinite; }
+@keyframes pet-alarm-bounce { 50% { transform:translateY(-3px); } }
+@keyframes pet-drum-left { to { transform:rotate(-17deg); } }
+@keyframes pet-instrument-drum { 0%,49% {opacity:1;} 50%,100% {opacity:0;} }
+@keyframes pet-instrument-trumpet { 0%,49% {opacity:0;} 50%,100% {opacity:1;} }
+@media(max-width:700px) { .pulse-pet--alarm,.pulse-pet--schedule { width:70px!important; height:92px!important; --pet-scale:.62!important; right:max(18px,env(safe-area-inset-right)); bottom:max(14px,env(safe-area-inset-bottom)); } }
+@media(prefers-reduced-motion:reduce) { .pulse-pet__alarm-instrument * { animation:none!important; }.pulse-pet__trumpet { opacity:0; } }
 .pulse-pet__rig, .pulse-pet__part, .pulse-pet__head, .pulse-pet__pose { position: absolute; inset: 0; }
 .pulse-pet__rig { animation: pet-breathe 4.8s ease-in-out infinite; transform-origin: 50% 94%; }
 .pulse-pet__pose { transform-origin: 50% 98%; transition: opacity 360ms ease, transform 640ms cubic-bezier(.22,.75,.24,1); }
@@ -70,4 +82,9 @@
 @media (prefers-reduced-motion: reduce) {
   .pulse-pet *, .pulse-pet *::before, .pulse-pet *::after { animation: none !important; transition: none !important; }
   .pulse-pet__head, .pulse-pet__face { transform: none; }
+}
+.pulse-pet--finishing:not(.pulse-pet--still) .pulse-pet__rig { animation: pulse-pet-finish .5s ease-out; }
+@keyframes pulse-pet-finish { 35% { transform: translateY(-4px) rotate(-3deg); } 70% { transform: rotate(2deg); } }
+@media(max-width:600px) {
+ .pulse-pet--alarm .pulse-pet__trigger,.pulse-pet--schedule .pulse-pet__trigger { height:100% !important; }
 }

@@ -96,8 +96,8 @@ export function savePetVisibility(storage, visible) {
 
 export function petRouteMode(pathname, identity) {
   if (!['staff', 'agent'].includes(identity)) return null
-  const shared = /^\/(go|academy)(\/|$)/.test(pathname) || /^\/profile\/[^/]+$/.test(pathname) || pathname === '/agent/settings'
-  const staffOnly = /^\/(workspace|dashboard|settings|studio|staff)(\/|$)/.test(pathname)
+  const shared = /^\/(go|academy)(\/|$)/.test(pathname) || /^\/profile\/[^/]+$/.test(pathname) || pathname === '/agent/settings' || pathname === '/schedule'
+  const staffOnly = /^\/(workspace|dashboard|settings|studio|staff)(\/|$)/.test(pathname) || pathname === '/admin/alerts'
   if (!shared && !(identity === 'staff' && staffOnly)) return null
   // No navigation shortcuts while writing a draft or taking part in a call/game.
   if (/^\/go\/(host|room|practice)\/[^/]+/.test(pathname)

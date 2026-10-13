@@ -6,6 +6,7 @@ import { useGoIdentity } from '../go-product/useGoIdentity.js'
 import { PulsePet } from './PulsePet.jsx'
 import { petActions, petRouteMode } from './petModel.js'
 import { usePetVisibility } from './usePetVisibility.js'
+import {usePulseAlerts} from '../alerts/alertsContext.js'
 
 class PetBoundary extends Component {
   state = { failed: false }
@@ -18,9 +19,10 @@ function AccountPet() {
   const access = useGoAccess()
   const { pathname } = useLocation()
   const [visible] = usePetVisibility()
+  const {alert}=usePulseAlerts()
   const mode = petRouteMode(pathname, identity.kind)
   if (identity.loading || !mode || !visible) return null
-  return <PulsePet key={identity.kind} actions={petActions(identity.kind, access.capabilities)} mode={mode} pathname={pathname} />
+  return <PulsePet key={identity.kind} actions={petActions(identity.kind, access.capabilities)} mode={mode} pathname={pathname} alarm={alert}/>
 }
 
 export function PulsePetLayer() {

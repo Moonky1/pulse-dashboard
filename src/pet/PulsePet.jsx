@@ -43,7 +43,7 @@ function RobotEyes() {
   </svg>
 }
 
-export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverride }) {
+export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverride, alarm=null }) {
   const [preferences, setPreferences] = useState(() => readPetPreferences(preferencesStorage()))
   const [viewport, setViewport] = useState(viewportSize)
   // Snapshot synchronization also covers a tab becoming visible between render
@@ -59,17 +59,27 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   const [announcement, setAnnouncement] = useState('')
   const [assetFailed, setAssetFailed] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
+  const [finishing, setFinishing] = useState(false)
+  const previousAlarm = useRef(null)
+  useEffect(() => {
+    const ended = previousAlarm.current && !alarm
+    previousAlarm.current = alarm
+    if (!ended) return
+    const start = setTimeout(() => setFinishing(true), 0)
+    const end = setTimeout(() => setFinishing(false), 550)
+    return () => { clearTimeout(start); clearTimeout(end) }
+  }, [alarm])
   const root = useRef(null), trigger = useRef(null)
   const position = useRef({ x: 0, y: 0 }), drag = useRef(null), suppressClick = useRef(false)
   const pointer = useRef(null)
   const settleTimer = useRef(null)
   const cursorInside = useRef(false), keyboardFocus = useRef(false)
-  const compact = preferences.asleep || mode === 'quiet'
+  const compact = !alarm && (preferences.asleep || mode === 'quiet')
   const size = useMemo(() => petSize(viewport.width, compact), [viewport.width, compact])
   const footprint = useMemo(() => petFootprint(size, compact), [size, compact])
   const open = panel.open && panel.pathname === pathname && !compact && actions.length > 0
   const paused = hidden || reducedMotion || compact || assetFailed
-  const working = !compact && !hovered && !open && !dragging && !unavailable
+  const working = !alarm && !compact && !hovered && !open && !dragging && !unavailable
 
   useEffect(() => {
     let timer
@@ -123,7 +133,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
     position.current = positionFromAnchor(preferences.position, viewport, footprint)
     root.current?.style.setProperty('left', position.current.x + 'px')
     root.current?.style.setProperty('top', position.current.y + 'px')
-  }, [preferences.position, viewport, footprint])
+  }, [preferences.position, viewport, footprint, alarm, pathname])
 
   useEffect(() => {
     const resize = () => setViewport(viewportSize())
@@ -169,6 +179,10 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
     let frame, blinkTimer, reopenTimer, previous = performance.now()
     let look = { x: 0, y: 0 }
     const track = event => {
+      if (alarm || pathname === '/schedule') {
+        const bounds = element.getBoundingClientRect()
+        position.current = { x: bounds.left, y: bounds.top }
+      }
       if (event.pointerType !== 'touch') pointer.current = { x: event.clientX, y: event.clientY, at: performance.now() }
     }
     const leave = () => { pointer.current = null }
@@ -204,7 +218,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
       window.removeEventListener('pointermove', track)
       document.removeEventListener('pointerleave', leave)
     }
-  }, [paused, size.scale])
+  }, [paused, size.scale, alarm, pathname])
 
   function pointerDown(event) {
     if (event.button !== 0 || !event.isPrimary) return
@@ -269,7 +283,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
 
   if (assetFailed) return null
   const expression = compact ? 'sleep' : dragging || unavailable ? 'curious' : hovered || open ? 'happy' : 'neutral'
-  return <aside ref={root} className={`pulse-pet${unavailable ? ' pulse-pet--nope' : ''}${compact ? ' pulse-pet--compact' : ''}${dragging ? ' pulse-pet--dragging' : ''}${hovered || open ? ' pulse-pet--engaged' : ''}${paused ? ' pulse-pet--still' : ''}`}
+  return <aside ref={root} className={`pulse-pet${alarm?' pulse-pet--alarm':''}${finishing?' pulse-pet--finishing':''}${pathname==='/schedule'?' pulse-pet--schedule':''}${unavailable ? ' pulse-pet--nope' : ''}${compact ? ' pulse-pet--compact' : ''}${dragging ? ' pulse-pet--dragging' : ''}${hovered || open ? ' pulse-pet--engaged' : ''}${paused ? ' pulse-pet--still' : ''}`}
     aria-label="Pulse Pet" data-expression={expression} data-mode={mode} data-pose={working ? 'working' : 'standing'}
     style={{ width: footprint.width, height: footprint.height, '--pet-scale': size.scale, '--pet-body-height': size.height + 'px' }}>
     <button ref={trigger} className="pulse-pet__trigger" type="button" style={{ height: size.height }} aria-label={preferences.asleep && mode !== 'quiet' ? 'Wake Pulse Pet' : mode === 'quiet' ? 'Pulse Pet' : 'Pulse Pet · Open shortcuts'}
@@ -292,6 +306,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
             <span className="pulse-pet__face"><RobotEyes /></span>
           </span>
         </span>
+        {alarm && <svg className="pulse-pet__alarm-instrument" viewBox="0 0 112 148" shapeRendering="crispEdges"><g className="pulse-pet__drum"><path d="M34 98h44v26H34z" fill="#9b647b" stroke="#242633" strokeWidth="3"/><path d="M34 98h44v6H34zM34 119h44v5H34z" fill="#f0c885"/><path d="M42 105l7 13 7-13 7 13 7-13" fill="none" stroke="#ebc9db" strokeWidth="2"/><path className="pulse-pet__stick-left" d="M24 85l25 13" stroke="#f1d1a2" strokeWidth="4"/><path className="pulse-pet__stick-right" d="M88 85L63 98" stroke="#f1d1a2" strokeWidth="4"/></g><g className="pulse-pet__trumpet"><path d="M48 72h22l14-8v26l-14-8H48z" fill="#edb953" stroke="#272936" strokeWidth="3"/><path d="M53 82v14h18V81M56 71v-7m9 7v-7" fill="none" stroke="#edb953" strokeWidth="4"/></g></svg>}
         {compact && <span className="pulse-pet__zzz">z<span>z</span></span>}
       </span>
     </button>

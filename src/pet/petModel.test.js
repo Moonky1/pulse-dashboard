@@ -201,7 +201,7 @@ test('both account menus share the visibility control and hiding unmounts all ma
 test('idle laptop pose stands on pointer or keyboard engagement, then settles with cleaned-up timer', async () => {
   const component = await read('PulsePet.jsx'), css = await read('pulsePet.css')
   assert.match(component, /workingRobot from '.\/assets\/pulse-pet-working-v1.png'/)
-  assert.match(component, /const working = !compact && !hovered && !open && !dragging/)
+  assert.match(component, /const working = !alarm && !compact && !hovered && !open && !dragging/)
   assert.match(component, /onPointerEnter=\{engage\}/)
   assert.match(component, /onFocus=\{engage\}/)
   assert.match(component, /onPointerLeave=\{settle\}/)
