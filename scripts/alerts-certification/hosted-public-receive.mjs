@@ -7,7 +7,7 @@ if(process.argv[2]!==project)throw Error('Only isolated Preview allowed for the 
 const {chromium}=createRequire('C:/Users/simon/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/package.json')('playwright')
 const browser=await chromium.launch({channel:'chrome',headless:true}),context=await browser.newContext(),page=await context.newPage(),id=randomUUID()
 let joinedResolve,joinTimer;const joined=new Promise((resolve,reject)=>{joinedResolve=resolve;joinTimer=setTimeout(()=>reject(Error('Anonymous channel join timeout')),20000)})
-page.on('websocket',socket=>socket.on('framereceived',({payload})=>{try{const frame=JSON.parse(String(payload));if(frame[2]==='realtime:pulse-schedule-notices-v1' && frame[3]==='phx_reply' && frame[4]?.status==='ok'){clearTimeout(joinTimer);joinedResolve()}}catch{/* Other frames are irrelevant. */}}))
+page.on('websocket',socket=>socket.on('framereceived',({payload})=>{try{const frame=JSON.parse(String(payload)),topic=Array.isArray(frame)?frame[2]:frame.topic,event=Array.isArray(frame)?frame[3]:frame.event,data=Array.isArray(frame)?frame[4]:frame.payload;if(topic==='realtime:pulse-schedule-notices-v1' && event==='phx_reply' && data?.status==='ok'){clearTimeout(joinTimer);joinedResolve()}}catch{/* Other frames are irrelevant. */}}))
 try{
  // Only this disposable browser substitutes ONE nonce-specific RPC projection.
  // The server has no matching notice: every ordinary client ignores this test ID.
