@@ -20,11 +20,14 @@ if(!process.argv.includes('--tests-only')){
  sql(readFileSync('supabase/migrations/20261012000100_pulse_operational_alerts.sql','utf8'))
  sql(readFileSync('supabase/migrations/20261012000200_pulse_alert_reconnect.sql','utf8'))
  sql(readFileSync('supabase/migrations/20261012000300_pulse_alert_activation_safeupdate.sql','utf8'))
+ sql(readFileSync('supabase/migrations/20261012000400_public_schedule_admin_notices.sql','utf8'))
 }
-sql('grant usage on schema extensions to authenticated,service_role;', 'supabase_admin')
-sql('grant usage on schema realtime to authenticated; grant select,insert on realtime.messages to authenticated;', 'supabase_admin')
+sql('grant usage on schema extensions to authenticated,service_role,anon;', 'supabase_admin')
+sql('grant usage on schema realtime to authenticated,anon; grant select,insert on realtime.messages to authenticated,anon;', 'supabase_admin')
 const result=sql(readFileSync('supabase/tests/20261012000100_pulse_operational_alerts_test.sql','utf8'))
 if(/not ok|Looks like you failed/i.test(result))throw Error(result)
 const assertions=(result.match(/\bok \d+ -/g)||[]).length
 if(!assertions)throw Error('Database assertions required')
-console.log(JSON.stringify({database,assertions,result:'passed',leftovers:sql("select json_build_object('staff',(select count(*) from public.users),'agents',(select count(*) from public.agents),'occurrences',(select count(*) from public.pulse_alert_occurrences),'leases',(select count(*) from pulse_private.pulse_alert_leases),'dispatch_enabled',(select enabled from public.pulse_alert_settings));").trim()}))
+const publicResult=sql(readFileSync('supabase/tests/20261012000400_public_schedule_test.sql','utf8'))
+if(/not ok|Looks like you failed/i.test(publicResult))throw Error(publicResult)
+console.log(JSON.stringify({database,assertions,publicAssertions:(publicResult.match(/\bok \d+ -/g)||[]).length,result:'passed',leftovers:sql("select json_build_object('staff',(select count(*) from public.users),'agents',(select count(*) from public.agents),'occurrences',(select count(*) from public.pulse_alert_occurrences),'leases',(select count(*) from pulse_private.pulse_alert_leases),'dispatch_enabled',(select enabled from public.pulse_alert_settings));").trim()}))

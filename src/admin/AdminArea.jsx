@@ -19,7 +19,7 @@ const AdminInvitationsPage = lazy(() => import('./pages/AdminInvitationsPage.jsx
 const AdminStaffTreePage = lazy(() => import('./pages/AdminStaffTreePage.jsx').then((module) => ({ default: module.AdminStaffTreePage })))
 const AdminTeamProfilePage = lazy(() => import('./pages/AdminTeamProfilePage.jsx').then((module) => ({ default: module.AdminTeamProfilePage })))
 const AdminAgentsPage = lazy(() => import('./pages/AdminAgentsPage.jsx').then((module) => ({ default: module.AdminAgentsPage })))
-const AdminAlertsPage=lazy(()=>import('../alerts/AdminAlertsPage.jsx').then(m=>({default:m.AdminAlertsPage})))
+const AdminAlertsPage=lazy(()=>import('../alerts/PublicScheduleAdmin.jsx').then(m=>({default:m.PublicScheduleAdminPage})))
 function AlertsRoute({children}){const {permissionKeys}=useAdminPermissions();return permissionKeys.includes('alerts.manage')||permissionKeys.includes('alerts.view')?children:<AdminLanding/>}
 
 function AdminLanding() {

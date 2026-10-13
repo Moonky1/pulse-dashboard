@@ -22,7 +22,7 @@ export function AdminAlertsContent({client=supabase,permissionKeys}){
   {editing && <EventEditor event={editing} client={client} preview={preview} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);void load();void reloadSchedule()}}/>}
  </main>
 }
-function EventEditor({event,client,preview,onClose,onSaved}){
+export function EventEditor({event,client,preview,onClose,onSaved}){
  const dialog=useRef(null),[config,setConfig]=useState({...event.config}),[busy,setBusy]=useState(false),[error,setError]=useState('')
  useEffect(()=>{dialog.current.showModal();const node=dialog.current;return()=>node.close()},[])
  const change=(key,value)=>setConfig(previous=>({...previous,[key]:value}))

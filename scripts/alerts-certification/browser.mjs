@@ -12,7 +12,7 @@ const evidence='review-evidence.local/alerts-1';await mkdir(evidence,{recursive:
 async function emit(phase='start',id){return page.evaluate(({phase,id})=>window.alertReview.emit(phase,id),{phase,id})}
 async function flush(){await page.waitForFunction(()=>window.alertReview.checks.receipts.some(r=>r.state==='sound_started'||r.state==='audio_blocked'))}
 try{
- await page.clock.install({time:new Date('2026-10-12T15:40:00Z')});await page.goto(origin+'/scripts/alerts-certification/review.html');await page.getByRole('link',{name:'Schedule',exact:true}).click();await page.locator('.pulse-timeline article').nth(3).waitFor()
+ await page.clock.install({time:new Date('2026-10-12T15:40:00Z')});await page.goto(origin+'/scripts/alerts-certification/review.html');await page.getByRole('link',{name:'Schedule',exact:true}).click();await page.getByRole('button',{name:'Today',exact:true}).click();await page.locator('.pulse-timeline article').nth(3).waitFor()
  assert.equal(await page.getByRole('button',{name:'Edit event'}).count(),0);await page.getByRole('button',{name:'My local time',exact:true}).click();assert.match(await page.locator('.pulse-time-caption').innerText(),/Managua/);assert.match(await page.locator('.pulse-timeline').innerText(),/Pacific Time/);pass('read-only Agent schedule and Managua display toggle preserve Pacific schedule')
  for(const [width,height] of [[390,844],[430,932],[820,1180],[1180,820],[1440,1100]]){
   await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:`${evidence}/schedule-${width}.png`})

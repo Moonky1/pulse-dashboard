@@ -21,11 +21,13 @@ function AccountPet() {
   const [visible] = usePetVisibility()
   const {alert}=usePulseAlerts()
   const mode = petRouteMode(pathname, identity.kind)
-  if (identity.loading || !mode || !visible) return null
+  if (pathname==='/schedule' || identity.loading || !mode || !visible) return null
   return <PulsePet key={identity.kind} actions={petActions(identity.kind, access.capabilities)} mode={mode} pathname={pathname} alarm={alert}/>
 }
 
 export function PulsePetLayer() {
+  const {pathname}=useLocation()
+  if(pathname==='/schedule')return null
   // A failed optional mascot must never replace or interrupt a product page.
   return <PetBoundary><AccountPet /></PetBoundary>
 }

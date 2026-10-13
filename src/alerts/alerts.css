@@ -29,3 +29,12 @@
 @media(max-width:700px) { .pulse-schedule-shell { grid-template-rows:auto minmax(0,1fr) calc(118px + env(safe-area-inset-bottom)); }.pulse-schedule-shell .pulse-schedule { padding-bottom:28px; } }
 .pulse-alert-surface { padding-bottom:110px; }
 @media(max-width:700px) { .pulse-alert-surface { padding-bottom:110px; } }
+.pulse-public-schedule-header { display:flex; align-items:center; gap:12px; padding:20px 28px; }
+.pulse-public-schedule-header span:last-child { margin-left:auto; font-size:12px; color:#b6b1c7; }
+.pulse-weekly-schedule { border:1px solid #3b3b50; border-radius:20px; background:#131622; overflow:hidden; }
+.pulse-weekly-schedule article { display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px 22px; padding:22px 26px; }
+.pulse-weekly-schedule article+article { border-top:1px solid #383749; }
+.pulse-weekly-schedule h2 { font-size:18px; margin:6px 0; }.pulse-weekly-schedule small { color:#a6a9c2; font-size:11px; }
+.pulse-weekly-schedule strong { font-size:20px; }.pulse-weekly-schedule article>small { grid-column:2; }
+.pulse-public-send-history { margin-top:28px; border-top:1px solid #343447; padding-top:20px; color:#c5c0d2; }.pulse-public-send-history p { font-size:13px; }
+@media(max-width:700px) { .pulse-public-schedule-header {padding:18px 16px;}.pulse-weekly-schedule article { grid-template-columns:1fr; padding:18px; }.pulse-weekly-schedule article>small {grid-column:1;}.pulse-weekly-schedule strong {font-size:18px;} }

@@ -79,7 +79,7 @@ export function AuthApp() {
         <Route path={STAFF_FORGOT_PASSWORD_PATH} element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
         <Route path={AGENT_SIGN_IN_PATH} element={<AgentSignInPage />} />
         <Route path="/agent/settings" element={<GoPlayerGate><AgentSettingsPage /></GoPlayerGate>} />
-        <Route path="/schedule" element={<GoPlayerGate><SchedulePage /></GoPlayerGate>} />
+        <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/staff/signin" element={<Navigate to={AUTH_ENTRY_PATH} replace />} />
         <Route path="/staff/register" element={<Navigate to={STAFF_REGISTER_PATH} replace />} />
         <Route path="/staff/forgot-password" element={<Navigate to={STAFF_FORGOT_PASSWORD_PATH} replace />} />

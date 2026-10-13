@@ -1,5 +1,11 @@
 # PULSE ALERTS-1 — Preview implementation and certification
 
+**Superseded product scope:** the user clarified that Schedule must be public,
+with no Agent login or tracking, and that Admin manually sends alerts to anyone
+with that tab open. See [the public-page correction](pulse-public-schedule.md).
+The authenticated delivery/scheduler report below is retained as historical
+evidence, not the current user-facing workflow.
+
 Date: 2026-10-12, America/Bogota. Status: implemented in isolated Preview; **Production NO-GO until Master review**.
 
 ## Delivery and Git
