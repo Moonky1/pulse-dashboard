@@ -3,7 +3,10 @@
 Date: 2026-10-12 (America/Bogota).
 Base: `5013dc74d6022ac0d2b3083a0dd2dccf87e6ccbe`, fetched current `origin/main`.
 Branch: `pulse/alerts-1-schedule-pet`.
-Status: backend/security contract gap. This document is not a completed Alerts release.
+Historical audit status: backend/security contract gap at initial inspection.
+The user subsequently authorized implementing that contract. See
+[the implementation and certification report](pulse-alerts-1-report.md) for current status.
+This audit is retained as evidence of the original stop, not a current release claim.
 
 ## Why implementation stopped
 
