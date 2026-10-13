@@ -20,6 +20,7 @@ const asiaScopes = [
 const alertConfigs = new Map(), alertHistory = new Map()
 const independentReports = new Map()
 const client = { async rpc(name, args) {
+  if (mode === 'cloud-reload') return (await fetch('/__cloud-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, args }) })).json()
   if (mode === 'all-teams' && name === 'list_vici_dashboard_scopes') return { data: [allTeamsScope, ...asiaScopes] }
   if (mode === 'asia-teams' && name === 'list_vici_dashboard_scopes') return { data: asiaScopes }
   if (['get_vici_alert_rules', 'save_vici_alert_rules', 'list_vici_alert_rule_history'].includes(name)) {
@@ -106,6 +107,7 @@ const client = { async rpc(name, args) {
   }
   return { data }
 }, functions: { async invoke(name, { body }) {
+  if (mode === 'cloud-reload') return (await fetch('/__cloud-review-upload', { method: 'POST', body })).json()
   if (name !== 'pulse-vici-import') throw Error('Unexpected function')
   if (mode === 'staff-upload' || mode === 'all-teams') {
     const date = body.get('reportDate'), prior = independentReports.get(date)

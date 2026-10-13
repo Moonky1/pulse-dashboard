@@ -1,4 +1,4 @@
-import { ALL_TEAMS_SCOPE_ID, ALL_TEAMS_GROUPS, isAllTeamsScope } from './allTeamsScope.js'
+import { ALL_TEAMS_SCOPE_ID, ALL_TEAMS_GROUPS, LEGACY_ALL_TEAMS_SCOPE_ID, isAllTeamsScope } from './allTeamsScope.js'
 import { integer } from './dashboardModel.js'
 
 // Analytics-only interpretation confirmed by the operator on 2026-10-11.
@@ -19,7 +19,8 @@ const CONFIRMED_POLICIES = Object.freeze({
   }),
 })
 const policyFor = scope => {
-  const id = typeof scope === 'string' ? scope : scope?.id
+  const sourceId = typeof scope === 'string' ? scope : scope?.id
+  const id = sourceId === LEGACY_ALL_TEAMS_SCOPE_ID ? ALL_TEAMS_SCOPE_ID : sourceId
   return Object.hasOwn(CONFIRMED_POLICIES, id) ? CONFIRMED_POLICIES[id] : null
 }
 export const isEnglishXfer = scope => policyFor(scope)?.xferLanguage === 'English'
@@ -45,7 +46,8 @@ export function confirmedTargetReference(scope, row) {
   if (!isEnglishXfer(scope)) return ''
   if (isAllTeamsScope(scope)) {
     const group = row?.current_user_group
-    if (!ALL_TEAMS_GROUPS.includes(group) || group === 'OpenersTraining') return ''
+    // A CSV source group (including ADMIN) is not a confirmed sales team.
+    if (!Object.hasOwn(policyFor(scope).groups, group || '')) return ''
     return ['OpenersAsia', 'OpenersAsia1'].includes(group) ? 'asia' : group === 'OpenersPH' ? 'philippines' : 'other'
   }
   const team = resolvedTeam(scope, row)

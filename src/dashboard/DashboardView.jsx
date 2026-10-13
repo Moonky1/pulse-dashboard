@@ -165,6 +165,7 @@ export function DashboardView({ client }) {
   const state = integrationState(data, error || catalog.error, now)
   const sourceToday = calendarDate(dashboardTimeZone(scope))
   const manual = data?.snapshot?.ingestion_method === 'manual'
+  const savedScope = catalog.data.find(item => item.id === data?.scope.id) || scope
   return <main className="dash-main">
     <nav className="dash-operation-tabs" aria-label="Operation"><button type="button" aria-pressed="true">Openers</button><button type="button" aria-pressed="false" onClick={showClosersNotice}>Closers</button>{closersNotice && <span className="dash-closers-notice" role="status">Not available yet ✋</span>}</nav>
     <header className="dash-heading"><div><h1>Auto Warranty Garrett</h1><div className="dash-world-clocks" aria-label="Current time"><span>Pacific · {displayClock(now, SHIFT_TIME_ZONE)}</span><span>Colombia · {displayClock(now, COLOMBIA_TIME_ZONE)}</span></div></div><div className="dash-heading__status"><span className={`dash-status dash-status--${state.tone}`}><i />{manual ? 'Manual upload' : data?.snapshot ? state.label : 'No report'}</span><span>{manual ? 'Uploaded ' + new Date(data.snapshot.captured_at).toLocaleString() : ''}</span></div></header>
@@ -174,8 +175,8 @@ export function DashboardView({ client }) {
     {!catalog.loading && !catalog.error && !catalog.data.length && <div className="dash-notice"><strong>No reporting scopes available</strong><p>Your account has no accessible reporting scope. Ask your Pulse administrator to review configuration and access.</p></div>}
 
     <ReportContent key={report.key || 'no-scope'} data={data} client={client} loading={catalog.loading || loading} error={error || catalog.error} />
-    {scope && !catalog.error && error?.code !== 'access_denied' && <ReportHistory key={'history/' + report.key} client={client} scope={scope} date={date} revision={revision} SnapshotView={ReportContent} />}
+    {savedScope && !catalog.error && error?.code !== 'access_denied' && <ReportHistory key={'history/' + savedScope.id + '/' + date} client={client} scope={savedScope} date={date} revision={revision} SnapshotView={ReportContent} />}
     {scope?.can_manage_reports && !catalog.error && error?.code !== 'access_denied' && <RetentionPreview key={'retention/' + scope.id + '/' + revision} client={client} scope={scope} />}
-    {scope && !catalog.error && error?.code !== 'access_denied' && <AlertPanel key={'alerts/' + scope.id} client={client} scope={scope} data={data} readError={error} />}
+    {savedScope && !catalog.error && error?.code !== 'access_denied' && <AlertPanel key={'alerts/' + savedScope.id} client={client} scope={savedScope} data={data} readError={error} />}
   </main>
 }

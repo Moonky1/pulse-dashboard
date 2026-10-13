@@ -9,6 +9,8 @@ test('Schedule route and page contain no Agent login gate or account menu',async
  assert.doesNotMatch(page,/This week|Shift complete|open to everyone|Enable sound|pulse-audio-settings|Your timeline/)
  assert.match(page,/<h1>Today<\/h1>/)
  assert.match(page,/pulse-schedule-grid/);assert.match(page,/pulse-next-event/);assert.match(page,/pulse-timeline/);assert.match(page,/Don't forget your daily team meeting/)
+ const css=await readFile('src/alerts/alerts.css','utf8')
+ assert.doesNotMatch(css,/pulse-schedule-shell::after|grid-template-rows:auto minmax\(0,1fr\)|overflow-y:auto/)
 })
 test('anonymous display dedup stores only expiring notice IDs, never identities',async()=>{
  let value='{}';const storage={getItem:()=>value,setItem:(key,v)=>{assert.equal(key,'pulse_public_notices_v1');value=v}},expiry=new Date(Date.now()+90000).toISOString()

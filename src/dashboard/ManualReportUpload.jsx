@@ -32,7 +32,7 @@ export function ManualReportUpload({ client, scope, date, onImported, actionsTar
       const value = await csvReportDate(file)
       if (!active.current || reads.current[key] !== token) return
       setDates(previous => ({ ...previous, [key]: value }))
-      if (!value) setResult({ error: 'Use an original full-day VICIdial CSV.' })
+      if (!value) setResult({ error: 'Use an original full-day VICIdial CSV. Export one date, from 00:00:00 to 23:59:59.' })
     } catch { if (active.current && reads.current[key] === token) setResult({ error: 'Could not read this file.' }) }
   }
   async function submit(event) {
@@ -52,12 +52,12 @@ export function ManualReportUpload({ client, scope, date, onImported, actionsTar
     <nav className="dash-upload-mode" aria-label="Upload mode"><button type="button" disabled={busy} aria-pressed={!batch} onClick={()=>changeMode(false)}>One report</button><button type="button" disabled={busy} aria-pressed={batch} onClick={()=>changeMode(true)}>Multiple CSVs</button></nav>
     {batch ? <BatchReportUpload client={client} scope={scope} onImported={onImported} onBusy={setBusy} actionsTarget={actionsTarget} onOpen={()=>setOpen(true)}/> :
     <form ref={form} onSubmit={submit}>
-      <p>Choose a file, then click Upload reports.{ready && !mismatch && <> Date: <strong>{reportDate}</strong>.</>}</p>
+      <p>Upload reports saves to the cloud. Refresh loads the selected date.{ready && !mismatch && <> Save for: <strong>{reportDate}</strong>.</>}</p>
       <div className="dash-upload-files">{[['performance', 'Call Stats Breakdown'], ['pause', 'Pause Code Breakdown']].map(([key, label]) => <label key={key}>{label}<input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => void select(key, e.target.files?.[0] || null)} /></label>)}</div>
       {mismatch && <p role="alert">The reports must be from the same date.</p>}
       {actionsTarget && createPortal(saveButton,actionsTarget)}
       <button type="submit" className="dash-refresh" disabled={busy || !ready || mismatch}>{busy ? 'Uploading…' : 'Upload reports'}</button>
-      {result && <p role={result.error ? 'alert' : 'status'} className="dash-import-result">{result.error || (result.status === 'duplicate' ? 'Already saved.' : `Saved ${result.agents} agents · ${result.report_date}`)}</p>}
+      {result && <p role={result.error ? 'alert' : 'status'} className="dash-import-result">{result.error || (result.status === 'duplicate' ? `Already saved in cloud · ${result.report_date}` : `Saved ${result.agents} agents to cloud · ${result.report_date}`)}</p>}
     </form>}
   </details>
 }

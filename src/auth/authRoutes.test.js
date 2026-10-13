@@ -56,6 +56,8 @@ test('staff and agent surfaces have no chooser or cross-link', () => {
   assert.equal(signInSource.match(/auth-trace-action/g)?.length, 2)
   assert.equal(registerSource.match(/auth-trace-action/g)?.length, 2)
   assert.match(workspaceSource, /pulse-launcher-app/)
+  assert.doesNotMatch(workspaceSource, /Welcome back|firstName/)
+  assert.match(workspaceSource, /<h1 className="pulse-sr-only">Pulse workspace<\/h1>/)
   assert.match(workspaceSource, /Administration/)
   assert.match(workspaceSource, /to="\/academy"/)
   assert.match(workspaceSource, /to="\/dashboard".*status="PREVIEW"/)

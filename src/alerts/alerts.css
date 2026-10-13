@@ -23,9 +23,9 @@
 @keyframes pulse-alarm-enter { from { opacity:0; } to {opacity:1;} }
 @media(max-width:700px) { .pulse-schedule,.pulse-alert-admin { padding:28px 16px calc(130px + env(safe-area-inset-bottom)); }.pulse-schedule-grid { grid-template-columns:1fr; gap:16px; }.pulse-next-event { position:relative; top:0; padding:26px; }.pulse-timeline { padding:24px; }.pulse-next-event h2 { font-size:24px; }.pulse-admin-event-grid { grid-template-columns:1fr; }.pulse-delivery-counts { grid-template-columns:repeat(2,minmax(0,1fr)); }.pulse-alert-surface { padding:24px 18px; }.pulse-audio-settings { padding:20px; } }
 @media(prefers-reduced-motion:reduce) { .pulse-alert-surface { animation:none; } }
-.pulse-schedule-shell { display:grid; grid-template-rows:auto minmax(0,1fr) 150px; height:100dvh; min-height:0; overflow:hidden; }
-.pulse-schedule-shell::after { content:''; background:linear-gradient(180deg,#080b1300,#080b13); border-top:1px solid #a9b6d00a; }
-.pulse-schedule-shell .pulse-schedule { width:100%; height:100%; min-height:0; overflow-y:auto; padding-bottom:30px; }
+.pulse-schedule-shell { min-height:100dvh; }
+/* One normal page scroll; no clipped inner panel or reserved bottom strip. */
+.pulse-schedule-shell .pulse-schedule { width:100%; padding-bottom:calc(48px + env(safe-area-inset-bottom)); }
 .pulse-schedule-shell .pulse-schedule { padding-top:28px; }
 .pulse-schedule-shell .pulse-schedule-heading { margin-bottom:18px; }
 .pulse-schedule-shell .pulse-schedule-heading h1 { font-size:clamp(30px,3.5vw,42px); margin:8px 0; }
@@ -33,7 +33,6 @@
 .pulse-schedule-shell .pulse-timeline article:last-child { padding-bottom:0; }
 .pulse-schedule-shell .pulse-timeline h2 { margin-bottom:18px; }
 .pulse-schedule-shell .pulse-next-event { top:16px; padding:26px; }
-@media(max-width:700px) { .pulse-schedule-shell { grid-template-rows:auto minmax(0,1fr) calc(118px + env(safe-area-inset-bottom)); }.pulse-schedule-shell .pulse-schedule { padding-bottom:28px; } }
 .pulse-alert-surface { padding-bottom:110px; }
 @media(max-width:700px) { .pulse-alert-surface { padding-bottom:110px; } }
 .pulse-public-schedule-header { display:flex; align-items:center; gap:12px; padding:20px 28px; }

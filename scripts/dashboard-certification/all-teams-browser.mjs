@@ -4,7 +4,6 @@ import { mkdir, readFile } from 'node:fs/promises'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import { allTeamsCsv } from './all-teams-fixtures.mjs'
-import { ALL_TEAMS_GROUPS } from '../../src/dashboard/allTeamsScope.js'
 import { parseAgentPerformance } from '../../supabase/functions/_shared/viciReportParsers.mjs'
 import { confirmedTargetReference } from '../../src/dashboard/reportingPolicy.js'
 import { ALL_TEAMS_SCOPE_ID } from '../../src/dashboard/allTeamsScope.js'
@@ -12,6 +11,8 @@ import { ALL_TEAMS_SCOPE_ID } from '../../src/dashboard/allTeamsScope.js'
 // Optional operator-provided CSV stays local; every external request is blocked.
 const csv = process.argv[2] ? await readFile(process.argv[2], 'utf8') : allTeamsCsv()
 const parsed = parseAgentPerformance(csv)
+const sourceDate = parsed.source_range.from.slice(0,10)
+const sourceGroups = [...new Set(parsed.rows.map(r => r.current_user_group))]
 const groupCount = new Set(parsed.rows.map(r => r.current_user_group)).size
 const dependencyRoot = process.env.PULSE_PLAYWRIGHT_ROOT || 'C:/Users/simon/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
 const { chromium } = createRequire(dependencyRoot + '/package.json')('playwright')
@@ -29,7 +30,7 @@ const teams = page.getByRole('region',{name:'Agents by team'})
 const agents = () => page.getByRole('region',{name:'Report overview'}).locator('.dash-metric').first().locator('strong')
 try {
   await mkdir('review-evidence.local/dashboard-all-teams',{recursive:true})
-  await page.clock.install({time:new Date('2026-10-09T15:00:00Z')})
+  await page.clock.install({time:new Date(sourceDate + 'T15:00:00Z')})
   await page.goto('http://127.0.0.1:53958/scripts/dashboard-certification/review.html?mode=all-teams')
   assert.match(await page.getByLabel('Current time', {exact:true}).innerText(), /Pacific.*8:00 AM PDT/)
   assert.match(await page.getByLabel('Current time', {exact:true}).innerText(), /Colombia.*10:00 AM/)
@@ -45,7 +46,7 @@ try {
   await page.waitForFunction(count => document.querySelector('.dash-metric strong')?.textContent === String(count),parsed.rows.length)
   const elapsedMs = Math.round(performance.now()-started)
   assert.equal(await agents().innerText(),String(parsed.rows.length))
-  assert.equal(await page.getByLabel('Report date',{exact:true}).inputValue(),'2026-10-09')
+  assert.equal(await page.getByLabel('Report date',{exact:true}).inputValue(),sourceDate)
   assert.equal(await teams.getByRole('button').count(),groupCount+1)
   await page.getByRole('button',{name:'Rankings & goals',exact:true}).click()
   await page.getByRole('heading',{name:'Global rankings',exact:true}).waitFor()
@@ -68,7 +69,7 @@ try {
   await page.getByLabel('Ranking order').selectOption('highest')
   await page.getByRole('button',{name:'Check requests',exact:true}).click()
   const reads = await page.locator('[data-request-count]').innerText()
-  for (const group of ALL_TEAMS_GROUPS) {
+  for (const group of sourceGroups) {
     await page.getByLabel('VICIdial user group',{exact:true}).selectOption(group)
     assert.equal(await agents().innerText(),String(parsed.rows.filter(r=>r.current_user_group===group).length))
   }
@@ -90,7 +91,7 @@ try {
   assert.match(await page.getByLabel('Current time', {exact:true}).innerText(), /Colombia.*Oct 10.*2:00 PM/)
   await page.setViewportSize({width:1440,height:1100})
   if (!(await page.locator('.dash-upload').getAttribute('open') !== null)) await page.locator('.dash-upload > summary').click()
-  await page.getByLabel('Call Stats Breakdown',{exact:true}).setInputFiles({name:'saturday.csv',mimeType:'text/csv',buffer:Buffer.from(csv.replaceAll('2026-10-09','2026-10-10'))})
+  await page.getByLabel('Call Stats Breakdown',{exact:true}).setInputFiles({name:'saturday.csv',mimeType:'text/csv',buffer:Buffer.from(csv.replaceAll(sourceDate,'2026-10-10'))})
   assert.equal(await page.locator('.dash-upload input[type=checkbox]').count(),0)
   await page.getByRole('button',{name:'Save to cloud',exact:true}).click()
   await page.waitForFunction(() => document.querySelector('input[aria-label="Report date"]')?.value === '2026-10-10')

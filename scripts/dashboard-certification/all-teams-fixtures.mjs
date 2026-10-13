@@ -14,12 +14,12 @@ export function allTeamsCsv(type = 'performance') {
       agents.push(row)
     }
     for (let i = 0; i < summary.length; i++) {
-      if (summary[i] === 'AGENTS:2') summary[i] = 'AGENTS:20'
+      if (summary[i] === 'AGENTS:2') summary[i] = `AGENTS:${agents.length}`
       else if (headers[i].endsWith('AVG')) continue
       else if (/^0:00:\d+$/.test(summary[i])) {
-        const seconds = Number(summary[i].slice(-2)) * 10
+        const seconds = Number(summary[i].slice(-2)) * ALL_TEAMS_GROUPS.length
         summary[i] = `0:${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
-      } else if (/^\d+$/.test(summary[i])) summary[i] = String(Number(summary[i]) * 10)
+      } else if (/^\d+$/.test(summary[i])) summary[i] = String(Number(summary[i]) * ALL_TEAMS_GROUPS.length)
     }
   } })
 }

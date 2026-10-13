@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { loadDashboardReport, loadDashboardScopes } from './dashboardApi.js'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { loadSelectedReport, loadDashboardScopes } from './dashboardApi.js'
 import { browserDate, calendarDate } from './dashboardModel.js'
 import { dashboardTimeZone } from './shiftTargets.js'
-import { isAllTeamsScope } from './allTeamsScope.js'
+import { selectedDashboardScope } from './allTeamsScope.js'
+import { reportSelection, selectReport } from './reportSelection.js'
 
 export function useDashboard(client) {
   const [catalog, setCatalog] = useState({ loading: true, data: [], error: null })
-  const [selectedScope, setSelectedScope] = useState('')
-  const [selectedDate, setSelectedDate] = useState('')
+  const [params, setParams] = useSearchParams()
+  const { scope: selectedScope, date: selectedDate } = reportSelection(params)
+  const setSelectedScope = value => setParams(previous => selectReport(previous, { scope: value }), { replace: true })
   const [retry, setRetry] = useState(0)
   const [report, setReport] = useState({ key: '', data: null, error: null, loading: false })
   const refreshRef = useRef(() => {})
@@ -18,7 +21,9 @@ export function useDashboard(client) {
     void loadDashboardScopes(client).then(result => { if (active) setCatalog({ loading: false, data: result.data || [], error: result.error }) })
     return () => { active = false }
   }, [client, retry])
-  const scope = catalog.data.find(s => s.id === selectedScope) || catalog.data.find(isAllTeamsScope) || catalog.data[0] || null
+  const scope = selectedDashboardScope(catalog.data, selectedScope)
+  const scopeId = scope?.id
+  const setSelectedDate = value => setParams(previous => selectReport(previous, { date: value, scope: scopeId }), { replace: true })
   const date = selectedDate || calendarDate(dashboardTimeZone(scope)) || browserDate()
   const key = scope ? `${scope.id}/${date}` : ''
   useEffect(() => {
@@ -31,7 +36,7 @@ export function useDashboard(client) {
       inFlight = true
       lastStarted = Date.now()
       setReport(previous => ({ key, data: previous.key === key ? previous.data : null, error: null, loading: true }))
-      const result = await loadDashboardReport(client, scope.id, date)
+      const result = await loadSelectedReport(client, scope.id, date, catalog.data)
       inFlight = false
       if (!active) return
       if (queued) { queued = false; void read(true); return }
@@ -46,9 +51,9 @@ export function useDashboard(client) {
     const onVisible = () => { if (document.visibilityState === 'visible') void read() }
     document.addEventListener('visibilitychange', onVisible)
     return () => { active = false; refreshRef.current = () => {}; clearInterval(interval); document.removeEventListener('visibilitychange', onVisible) }
-  }, [client, scope, date, key])
-  const refresh = useCallback(() => { if (!catalog.data.length) setRetry(value => value + 1); else refreshRef.current() }, [catalog.data.length])
-  const imported = useCallback(outcome => {
+  }, [client, scope, date, key, catalog.data])
+  const refresh = () => { if (!catalog.data.length) setRetry(value => value + 1); else refreshRef.current() }
+  const imported = outcome => {
     setSelectedDate(outcome.report_date)
     if (outcome.report) {
       generation.current++
@@ -56,6 +61,6 @@ export function useDashboard(client) {
       accepted.current = importedKey === key ? null : importedKey
       setReport({ key: importedKey, data: outcome.report, error: null, loading: false })
     } else refreshRef.current()
-  }, [key])
+  }
   return { catalog, scope, date, setScope: setSelectedScope, setDate: setSelectedDate, refresh, imported, report: key && report.key === key ? report : { key, data: null, error: null, loading: Boolean(scope) } }
 }

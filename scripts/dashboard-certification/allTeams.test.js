@@ -13,9 +13,9 @@ test('general call and pause CSVs are independent and retain all exact groups', 
     const input = Object.fromEntries(sides.map(type => [type + 'Text', allTeamsCsv(type)]))
     const { pair } = inspectManualReports({ ...input, reportDate: '2026-10-09', userGroups: ALL_TEAMS_GROUPS })
     for (const side of sides) {
-      assert.equal(pair[side].rows.length, 20)
+      assert.equal(pair[side].rows.length, ALL_TEAMS_GROUPS.length * 2)
       assert.deepEqual([...new Set(pair[side].rows.map(r => r.current_user_group))].sort(), [...ALL_TEAMS_GROUPS].sort())
-      assert.equal(teamCounts(ALL_TEAMS_SCOPE_ID, pair[side].rows).reduce((sum, g) => sum + g.agents, 0), 20)
+      assert.equal(teamCounts(ALL_TEAMS_SCOPE_ID, pair[side].rows).reduce((sum, g) => sum + g.agents, 0), ALL_TEAMS_GROUPS.length * 2)
     }
     for (const missing of ['performance', 'pause'].filter(v => !sides.includes(v))) assert.equal(pair[missing], null)
   }
@@ -44,13 +44,13 @@ test('All teams is exact and labels do not invent canonical team membership', ()
   assert.equal(teamLabel(ALL_TEAMS_SCOPE_ID, { current_user_group: 'OpenersAsia1' }), 'Asia B')
   assert.equal(teamLabel(ALL_TEAMS_SCOPE_ID, { current_user_group: 'OpenersCA' }), 'Central')
   assert.equal(teamLabel(ALL_TEAMS_SCOPE_ID, { current_user_group: 'OpenersNIC' }), 'Nicaragua')
-  const sql = readFileSync('scripts/dashboard-certification/configure-all-teams.sql', 'utf8')
+  const sql = readFileSync('scripts/dashboard-certification/configure-all-teams-current.sql', 'utf8')
   assert.ok(sql.includes(ALL_TEAMS_SCOPE_ID))
   assert.ok(sql.includes('array[' + ALL_TEAMS_GROUPS.map(v => `'${v}'`).join(',') + ']'))
 })
 
 test('commission goals use English only: Philippines 20, Asia 15, others 10', () => {
-  for (const group of ALL_TEAMS_GROUPS.filter(g => g !== 'OpenersTraining')) {
+  for (const group of ALL_TEAMS_GROUPS.filter(g => !['OpenersTraining', 'ADMIN'].includes(g))) {
     const target = group === 'OpenersPH' ? 20 : ['OpenersAsia', 'OpenersAsia1'].includes(group) ? 15 : 10
     const row = { current_user_group: group, xfer_count: target - 1, dispositions: { SPXFER: 100, SPANIS: 999 } }
     const reference = confirmedTargetReference(ALL_TEAMS_SCOPE_ID, row)
@@ -58,11 +58,11 @@ test('commission goals use English only: Philippines 20, Asia 15, others 10', ()
     assert.equal(goalProgress(row.xfer_count, reference).reached, false)
     assert.equal(goalProgress(target, reference).reached, true)
   }
-  for (const group of ['OpenersTraining', 'UnknownGroup']) assert.equal(confirmedTargetReference(ALL_TEAMS_SCOPE_ID, { current_user_group: group }), '')
+  for (const group of ['OpenersTraining', 'ADMIN', 'UnknownGroup']) assert.equal(confirmedTargetReference(ALL_TEAMS_SCOPE_ID, { current_user_group: group }), '')
 })
 
 test('24 English production goal is distinct from commission and ignores Spanish for every team', () => {
-  for (const group of ALL_TEAMS_GROUPS.filter(g => g !== 'OpenersTraining')) {
+  for (const group of ALL_TEAMS_GROUPS.filter(g => !['OpenersTraining', 'ADMIN'].includes(g))) {
     const day = { status: 'observed', row: { current_user_group: group, xfer_count: 23, dispositions: { SPXFER: 100, SPANIS: 999 } } }
     assert.equal(dailyGoal(day, ALL_TEAMS_SCOPE_ID).target, 24)
     assert.equal(dailyGoal(day, ALL_TEAMS_SCOPE_ID).reached, false)

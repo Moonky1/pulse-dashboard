@@ -1,4 +1,5 @@
 import { integer, PERFORMANCE_FIELDS, PAUSE_FIELDS, validDate } from './dashboardModel.js'
+import { ALL_TEAMS_SCOPE_ID, LEGACY_ALL_TEAMS_SCOPE_ID } from './allTeamsScope.js'
 
 const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i
 const invalid = { code: 'invalid_response', message: 'The report could not be verified. No figures have been replaced.' }
@@ -36,4 +37,14 @@ export async function loadDashboardReport(client, scope, date) {
     if (error) return { data: null, error: dashboardError(error) }
     return { data: normalizeReport(data, scope, date), error: null }
   } catch (error) { return { data: null, error: error === invalid ? invalid : dashboardError(error) } }
+}
+// Source definitions are immutable. Read the earlier general report only when
+// this date is absent in the current definition AND both are in the caller's
+// protected catalog. Never merge different source definitions, bypass a denial,
+// change returned provenance, or sum snapshots from multiple scopes.
+export async function loadSelectedReport(client, scope, date, catalog) {
+  const current = await loadDashboardReport(client, scope, date)
+  if (current.error || current.data?.snapshot !== null || scope !== ALL_TEAMS_SCOPE_ID || !catalog.some(s => s.id === LEGACY_ALL_TEAMS_SCOPE_ID)) return current
+  const earlier = await loadDashboardReport(client, LEGACY_ALL_TEAMS_SCOPE_ID, date)
+  return earlier.error || earlier.data?.snapshot ? earlier : current
 }

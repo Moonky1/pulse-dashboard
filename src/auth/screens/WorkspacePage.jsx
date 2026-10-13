@@ -8,7 +8,6 @@ import { GO_ART } from '../../go-product/goVisualAssets.js'
 import { useGoAccess } from '../../go-product/useGoAccess.js'
 import { canCreateStudioContent } from '../../studio/studioAccess.js'
 import { useStudioAccess } from '../../studio/hooks/useStudioAccess.js'
-import { useAuth } from '../AuthProvider.jsx'
 import './WorkspacePage.css'
 
 function DashboardIcon() {
@@ -28,7 +27,6 @@ function WorkspaceApp({ className = '', to, eyebrow, title, description, image, 
 }
 
 export function WorkspacePage() {
-  const { profile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [adminAccessNotice] = useState(() => location.state?.adminAccess ?? null)
@@ -37,8 +35,6 @@ export function WorkspacePage() {
   const goAccess = useGoAccess()
   const studioAccess = useStudioAccess()
   const accessLoading = [adminAccess, goAccess, studioAccess].some(access => access.state === 'loading')
-  const fullName = profile?.display_name || profile?.full_name || 'there'
-  const firstName = fullName.trim().split(/\s+/)[0]
 
   useEffect(() => {
     if (location.state?.adminAccess || location.state?.invitationAccepted) navigate(location.pathname, { replace: true, state: null })
@@ -50,7 +46,7 @@ export function WorkspacePage() {
 
       <section className="pulse-launcher__welcome">
         <p className="pulse-launcher__eyebrow">KAMPAIGN KINGS <span aria-hidden="true">·</span> PULSE</p>
-        <h1>Welcome back, {firstName}</h1>
+        <h1 className="pulse-sr-only">Pulse workspace</h1>
       </section>
 
       {invitationAccepted && <p className="auth-workspace-notice auth-workspace-notice--success" role="status">Invitation accepted. Welcome to Pulse.</p>}

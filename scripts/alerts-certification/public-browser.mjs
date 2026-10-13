@@ -11,7 +11,16 @@ await context.addInitScript(()=>{localStorage.setItem('pulse_pet_visible_v1','fa
 try{
  await page.clock.install({time:new Date('2026-10-12T19:00:00Z')});await page.goto(origin+'/scripts/alerts-certification/public-review.html');await page.getByRole('link',{name:'Public tab'}).click();await page.locator('.pulse-timeline article').nth(4).waitFor();assert.equal(await page.getByRole('textbox').count(),0)
  assert.equal(await page.getByRole('heading',{name:'Today',exact:true}).count(),1);assert.equal(await page.getByRole('button',{name:'Enable sound',exact:true}).count(),0);assert.equal(await page.getByText(/This week|Shift complete|Schedule · open to everyone|Your timeline|Your day is complete/).count(),0)
- for(const [width,height] of [[390,844],[430,932],[820,1180],[1180,820],[1440,1000]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:`review-evidence.local/alerts-public/schedule-${width}.png`})}
+ for(const [width,height] of [[390,844],[430,932],[820,1180],[1180,820],[1440,1000]]){
+  await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+  assert.equal(await page.locator('.pulse-schedule').evaluate(e=>getComputedStyle(e).overflowY),'visible')
+  assert.equal(await page.locator('.pulse-schedule-shell').evaluate(e=>getComputedStyle(e,'::after').content),'none')
+  await page.locator('.pulse-timeline article').last().scrollIntoViewIfNeeded()
+  assert.ok(await page.locator('.pulse-timeline article').last().evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight))
+  await page.screenshot({path:`review-evidence.local/alerts-public/scroll-bottom-${width}.png`})
+  await page.evaluate(()=>window.scrollTo(0,0));assert.equal(await page.evaluate(()=>scrollY),0)
+  await page.screenshot({path:`review-evidence.local/alerts-public/schedule-${width}.png`})
+ }
  const pet=page.getByRole('complementary',{name:'Pulse Pet',exact:true});await pet.waitFor();assert.equal(await pet.getAttribute('data-activity'),'lunch');assert.equal(await page.locator('.pulse-pet__lunch-food').count(),1)
  await page.mouse.move(100,100);await page.clock.runFor(350);assert.ok(await pet.evaluate(e=>parseFloat(e.style.getPropertyValue('--pet-eye-x')))<0);await page.mouse.move(1420,100);await page.clock.runFor(350);assert.ok(await pet.evaluate(e=>parseFloat(e.style.getPropertyValue('--pet-eye-x')))>0)
  await page.getByRole('button',{name:'Say hello to Pulse Pet'}).click();assert.match(await pet.getAttribute('class'),/pulse-pet--playful/);await page.clock.runFor(1900)
