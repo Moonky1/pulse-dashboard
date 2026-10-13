@@ -17,13 +17,22 @@ if(!process.argv.includes('--tests-only')){
  sql(policies,'supabase_admin')
  sql(docker(['exec',container,'pg_dump','-U','postgres','-d',baseline,'--data-only','--column-inserts','--no-owner','--no-acl','-t','public.roles','-t','public.permissions','-t','public.role_permissions','-t','public.role_scopes','-t','public.role_grant_rules']))
  sql('create extension if not exists pgcrypto with schema extensions; create extension if not exists pgtap with schema extensions;')
- sql(readFileSync('supabase/migrations/20261012000100_pulse_operational_alerts.sql','utf8'))
- sql(readFileSync('supabase/migrations/20261012000200_pulse_alert_reconnect.sql','utf8'))
- sql(readFileSync('supabase/migrations/20261012000300_pulse_alert_activation_safeupdate.sql','utf8'))
- sql(readFileSync('supabase/migrations/20261012000400_public_schedule_admin_notices.sql','utf8'))
+ if(process.argv.includes('--production-bundle')){
+  sql('create schema supabase_migrations;create table supabase_migrations.schema_migrations(version text primary key,name text,statements text[]);')
+  sql(readFileSync('review-evidence.local/alerts-production/release.sql','utf8'))
+ }else{
+  sql(readFileSync('supabase/migrations/20261012000100_pulse_operational_alerts.sql','utf8'))
+  sql(readFileSync('supabase/migrations/20261012000200_pulse_alert_reconnect.sql','utf8'))
+  sql(readFileSync('supabase/migrations/20261012000300_pulse_alert_activation_safeupdate.sql','utf8'))
+  sql(readFileSync('supabase/migrations/20261012000400_public_schedule_admin_notices.sql','utf8'))
+ }
 }
 sql('grant usage on schema extensions to authenticated,service_role,anon;', 'supabase_admin')
 sql('grant usage on schema realtime to authenticated,anon; grant select,insert on realtime.messages to authenticated,anon;', 'supabase_admin')
+if(process.argv.includes('--production-bundle')){
+ for(const file of ['20261012000400_public_schedule_test.sql','20261012000600_sound_options_test.sql']){const result=sql(readFileSync('supabase/tests/'+file,'utf8'));if(/not ok|Looks like you failed/i.test(result))throw Error(result)}
+ console.log(JSON.stringify({database,productionBundle:'passed locally',migrations:sql('select count(*) from supabase_migrations.schema_migrations;').trim(),state:sql("select json_build_object('staff',(select count(*) from public.users),'agents',(select count(*) from public.agents),'notices',(select count(*) from public.pulse_schedule_notices),'dispatch_enabled',(select enabled from public.pulse_alert_settings));").trim()}));process.exit(0)
+}
 const result=sql(readFileSync('supabase/tests/20261012000100_pulse_operational_alerts_test.sql','utf8'))
 if(/not ok|Looks like you failed/i.test(result))throw Error(result)
 const assertions=(result.match(/\bok \d+ -/g)||[]).length
@@ -36,5 +45,11 @@ if(process.argv.includes('--schedule-correction')){
  const corrected=sql(readFileSync('supabase/tests/20261012000500_schedule_correction_test.sql','utf8'))
  if(/not ok|Looks like you failed/i.test(corrected))throw Error(corrected)
  console.log(JSON.stringify({scheduleCorrectionAssertions:(corrected.match(/\bok \d+ -/g)||[]).length,result:'passed'}))
+}
+if(process.argv.includes('--sound-options')){
+ sql(readFileSync('supabase/migrations/20261012000600_schedule_sound_options.sql','utf8'))
+ const sounds=sql(readFileSync('supabase/tests/20261012000600_sound_options_test.sql','utf8'))
+ if(/not ok|Looks like you failed/i.test(sounds))throw Error(sounds)
+ console.log(JSON.stringify({soundOptionsAssertions:(sounds.match(/\bok \d+ -/g)||[]).length,result:'passed'}))
 }
 console.log(JSON.stringify({database,assertions,publicAssertions:(publicResult.match(/\bok \d+ -/g)||[]).length,result:'passed',leftovers:sql("select json_build_object('staff',(select count(*) from public.users),'agents',(select count(*) from public.agents),'occurrences',(select count(*) from public.pulse_alert_occurrences),'leases',(select count(*) from pulse_private.pulse_alert_leases),'dispatch_enabled',(select enabled from public.pulse_alert_settings));").trim()}))

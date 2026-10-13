@@ -42,6 +42,16 @@
 .pulse-schedule-clock strong { display:block; margin-top:6px; font-size:20px; color:#f5f4fa; font-variant-numeric:tabular-nums; }
 .pulse-meeting-reminder { display:flex; flex-wrap:wrap; gap:8px 18px; margin-bottom:24px; padding:17px 20px; border:1px solid #514361; border-radius:14px; background:#231b332e; font-size:14px; }
 .pulse-meeting-reminder span { color:#b8bfd2; font-size:13px; }
+.pulse-timeline-track {position:relative;}
+.pulse-timeline-fill {position:absolute;left:5px;top:6px;width:2px;height:calc(var(--timeline-marker-y,6px) - 6px);background:linear-gradient(#927bc1,#bba0e7);transition:height 1s linear;z-index:1;}
+.pulse-timeline-marker {position:absolute;left:-1px;top:calc(var(--timeline-marker-y,6px) - 7px);width:14px;height:14px;border-radius:50%;background:#d9b7ff;box-shadow:0 0 0 4px #c39dea1b,0 0 14px #c39dea55;transition:top 1s linear;z-index:3;}
+.pulse-timeline article[data-state="active"] h3 {color:#dfc6ff;}
+.pulse-timeline article[data-state="active"] .pulse-event-dot {background:#c6a7ec;box-shadow:0 0 12px #b092d95a;}
+.pulse-timeline article[data-state="soon"] .pulse-event-dot {border-color:#e3c388;background:#e3c38833;box-shadow:0 0 14px #e3c38833;}
+.pulse-timeline article[data-state="past"] .pulse-event-dot {background:#675879;}
+.pulse-timeline .pulse-row-soon {margin-left:10px;font-size:10px;color:#e3c388;}
+.pulse-next-event .pulse-next-date {font-size:15px;color:#e0d0f0;}
+@media(prefers-reduced-motion:reduce){.pulse-timeline-fill,.pulse-timeline-marker{transition:none;}}
 .pulse-today-schedule { border:1px solid #36384c; border-radius:20px; background:linear-gradient(135deg,#191a2a,#111420); overflow:hidden; }
 .pulse-today-schedule article { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:26px; }
 .pulse-today-schedule article+article { border-top:1px solid #333548; }

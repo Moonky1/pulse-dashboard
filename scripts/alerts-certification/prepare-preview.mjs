@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {createHash} from 'node:crypto'
-const project='sgshbawggqapuyqzkyhs',version=process.argv.includes('--schedule-correction')?'20261012000500':process.argv.includes('--public')?'20261012000400':process.argv.includes('--safeupdate')?'20261012000300':process.argv.includes('--reconnect')?'20261012000200':'20261012000100'
-const name=version==='20261012000500'?'schedule_times_loud_siren':version==='20261012000400'?'public_schedule_admin_notices':version==='20261012000300'?'pulse_alert_activation_safeupdate':version==='20261012000200'?'pulse_alert_reconnect':'pulse_operational_alerts'
+const project='sgshbawggqapuyqzkyhs',version=process.argv.includes('--sound-options')?'20261012000600':process.argv.includes('--schedule-correction')?'20261012000500':process.argv.includes('--public')?'20261012000400':process.argv.includes('--safeupdate')?'20261012000300':process.argv.includes('--reconnect')?'20261012000200':'20261012000100'
+const name=version==='20261012000600'?'schedule_sound_options':version==='20261012000500'?'schedule_times_loud_siren':version==='20261012000400'?'public_schedule_admin_notices':version==='20261012000300'?'pulse_alert_activation_safeupdate':version==='20261012000200'?'pulse_alert_reconnect':'pulse_operational_alerts'
 if(process.argv[2]!==project)throw Error('Only isolated Pulse Preview is accepted')
 const source=readFileSync('supabase/migrations/'+version+'_'+name+'.sql','utf8')
 const body=source.replace(/^begin;\s*$/m,'').replace(/^commit;\s*$/m,'')

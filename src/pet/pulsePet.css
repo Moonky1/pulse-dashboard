@@ -16,7 +16,7 @@
 .pulse-pet__trigger:focus-visible { outline: 2px solid #ffc37a; outline-offset: 5px; }
 .pulse-pet--dragging .pulse-pet__trigger { cursor: grabbing; }
 .pulse-pet__scene { position: absolute; top: 0; left: 0; width: 112px; height: 148px; transform: scale(var(--pet-scale)); transform-origin: top left; pointer-events: none; }
-.pulse-pet--alarm,.pulse-pet--schedule { left:auto!important; top:auto!important; right:max(22px,env(safe-area-inset-right)); bottom:max(22px,env(safe-area-inset-bottom)); }
+.pulse-pet--alarm { left:auto!important; top:auto!important; right:max(22px,env(safe-area-inset-right)); bottom:max(22px,env(safe-area-inset-bottom)); }
 .pulse-pet__alarm-instrument { position:absolute; inset:0; width:112px; height:148px; overflow:visible; }
 .pulse-pet--alarm .pulse-pet__rig { animation:pet-alarm-bounce .65s ease-in-out infinite; }
 .pulse-pet__stick-left { transform-box:view-box; transform-origin:29px 72px; animation:pet-drum-left .36s ease-in-out infinite; }
@@ -26,7 +26,7 @@
 @keyframes pet-drum-left { 0%,100% { transform:rotate(-22deg); } 50% { transform:rotate(3deg); } }
 @keyframes pet-drum-right { 0%,100% { transform:rotate(22deg); } 50% { transform:rotate(-3deg); } }
 @keyframes pet-drum-hit { 50% {transform:scaleY(.96);} }
-@media(max-width:700px) { .pulse-pet--alarm,.pulse-pet--schedule { width:70px!important; height:92px!important; --pet-scale:.62!important; right:max(18px,env(safe-area-inset-right)); bottom:max(14px,env(safe-area-inset-bottom)); } }
+@media(max-width:700px) { .pulse-pet--alarm { width:70px!important; height:92px!important; --pet-scale:.62!important; right:max(18px,env(safe-area-inset-right)); bottom:max(14px,env(safe-area-inset-bottom)); } }
 @media(prefers-reduced-motion:reduce) { .pulse-pet__alarm-instrument * { animation:none!important; }.pulse-pet__trumpet { opacity:0; } }
 .pulse-pet__rig, .pulse-pet__part, .pulse-pet__head, .pulse-pet__pose { position: absolute; inset: 0; }
 .pulse-pet__rig { animation: pet-breathe 4.8s ease-in-out infinite; transform-origin: 50% 94%; }
@@ -90,7 +90,8 @@
 }
 .pulse-pet--alarm { left:var(--pulse-alarm-pet-x,calc(100vw - 90px))!important; top:var(--pulse-alarm-pet-y,calc(100dvh - 110px))!important; right:auto!important; bottom:auto!important; width:70px!important; height:92px!important; --pet-scale:.62!important; z-index:91; }
 .pulse-pet--alarm .pulse-pet__trigger { height:100%!important; pointer-events:none; }
-.pulse-pet--schedule .pulse-pet__trigger { cursor:pointer; }
+.pulse-pet--schedule .pulse-pet__trigger { cursor:grab; }
+.pulse-pet--schedule.pulse-pet--dragging .pulse-pet__trigger { cursor:grabbing; }
 .pulse-pet--schedule.pulse-pet--alarm .pulse-pet__trigger { pointer-events:auto; }
 .pulse-pet__break-cup,.pulse-pet__lunch-food { position:absolute; left:10px; top:84px; width:30px; height:36px; }
 .pulse-pet__break-cup { animation:pet-sip 5s ease-in-out infinite; }
@@ -100,7 +101,11 @@
 .pulse-pet[data-activity="lunch"]:not(.pulse-pet--playful) .pulse-pet__arm {animation:pet-eat-arm 3.8s ease-in-out infinite;}
 .pulse-pet--sleeping .pulse-pet__rig { animation:pet-sleep-breathe 6s ease-in-out infinite; }
 .pulse-pet--sleeping .pulse-pet__zzz { animation:pet-steam 3.5s ease-in-out infinite; }
-.pulse-pet--schedule[data-expression="sleep"] .pulse-pet__face {background:#080f18;border-radius:3px;}
+.pulse-pet--schedule .pulse-pet__face {background:#080f18;border-radius:3px;transform:none;}
+.pulse-pet--schedule .pulse-pet__eyes {transform:translate(var(--pet-eye-x),var(--pet-eye-y)) scaleY(var(--pet-blink));}
+.pulse-pet--schedule .pulse-pet__zzz {left:80px;top:-8px;font-size:22px;}
+.pulse-pet--schedule .pulse-pet__zzz span {font-size:17px;translate:3px -12px;}
+.pulse-pet--schedule .pulse-pet__zzz span+span {font-size:12px;translate:6px -22px;}
 .pulse-pet--sleeping.pulse-pet--engaged .pulse-pet__head,.pulse-pet--sleeping.pulse-pet--engaged .pulse-pet__arm,.pulse-pet--sleeping.pulse-pet--engaged .pulse-pet__standing {animation:none;}
 .pulse-pet--playful:not(.pulse-pet--alarm) .pulse-pet__rig {animation:pet-click-bounce .6s ease-in-out 3;}
 .pulse-pet--playful .pulse-pet__arm {animation:pet-wave .9s ease-in-out 2;}

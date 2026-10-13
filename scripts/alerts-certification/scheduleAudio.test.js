@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {todaySchedule,scheduleFocus,schedulePetActivity,pacificInstant,clockLabel,dateInZone,countdown,alertTitle,alertAction,PACIFIC} from '../../src/alerts/scheduleModel.js'
+import {todaySchedule,scheduleFocus,schedulePetActivity,nextShift,timelineRows,timelinePosition,pacificInstant,clockLabel,dateInZone,countdown,alertTitle,alertAction,PACIFIC} from '../../src/alerts/scheduleModel.js'
+import {SOUND_FILES} from '../../src/alerts/soundFiles.js'
 import {PulseAlarmAudio,SOUNDS} from '../../src/alerts/alarmAudio.js'
 const event=(name,type,start,end,days=[1,2,3,4,5])=>({id:name,config:{name,type,start,end,days,enabled:true}})
 const schedule={events:[event('Shift','shift','07:00','17:00'),event('Break 1','break','09:00','09:15'),event('Lunch','lunch','12:00','13:00'),event('Break 2','break','14:30','14:40'),event('Saturday','shift','09:00','14:00',[6])]}
@@ -28,7 +29,7 @@ test('pre/start/return text is human readable',()=>{
 })
 test('left countdown covers 6:55 login, 7:00 dial, 8:55 Saturday login and break/lunch returns',()=>{
  for(const [date,time,title,target] of [['2026-10-12','06:50','Log in','06:55'],['2026-10-12','06:55','Ready to dial','07:00'],['2026-10-12','09:05','Go active','09:15'],['2026-10-12','12:30','Go active','13:00'],['2026-10-17','08:50','Log in','08:55'],['2026-10-17','08:55','Ready to dial','09:00']]){const focus=scheduleFocus(schedule,pacificInstant(date,time));assert.equal(focus.title,title);assert.equal(focus.at,pacificInstant(date,target))}
- assert.equal(scheduleFocus(schedule,pacificInstant('2026-10-12','17:01')).title,'See you next shift')
+ assert.equal(scheduleFocus(schedule,pacificInstant('2026-10-12','17:01')).title,'Next shift');assert.equal(nextShift(schedule,pacificInstant('2026-10-12','17:01')).start,pacificInstant('2026-10-13','07:00'))
  const p={event:{type:'shift'},phase:'pre',start_at:'2026-10-12T14:00:00Z'};assert.equal(alertTitle(p),'Log in · ready to dial');assert.match(alertAction(p),/ready to dial at 7:00 AM/);assert.equal(alertAction({event:{type:'break'},phase:'end'}),'Return to dial now')
 })
 test('Schedule Pet follows Pacific shift, break, lunch and sleep without identity/preferences',()=>{
@@ -39,9 +40,20 @@ function context(){const c={state:'suspended',currentTime:0,destination:{},gains
 test('original library respects Pulse gain, finite duration, one audio context and cleanup',async()=>{
  const ctx=context(),audio=new PulseAlarmAudio(()=>ctx),config={sound:'double_alert',volume:50,duration_seconds:4,repeat:2}
  assert.equal(audio.play(config),false);assert.equal(await audio.arm(),true)
- for(const [sound] of SOUNDS){assert.equal(audio.play({...config,sound}),true);assert.ok(ctx.oscillators.every(o=>o.end<=8));assert.ok(ctx.gains.every(g=>g>=0 && g<=.11))}
+ for(const [sound] of SOUNDS.filter(([key])=>!SOUND_FILES[key])){assert.equal(audio.play({...config,sound}),true);assert.ok(ctx.oscillators.every(o=>o.end<=8));assert.ok(ctx.gains.every(g=>g>=0 && g<=.11))}
  audio.play({...config,duration_seconds:100,repeat:100});assert.ok(ctx.oscillators.every(o=>o.end<=30));audio.stop();assert.equal(audio.nodes.length,0);assert.ok(ctx.oscillators.every(o=>o.disconnected))
  assert.equal(audio.play({...config,volume:0}),false);ctx.state='suspended';assert.equal(audio.play(config),false)
+})
+test('next shift skips Sunday; timeline moves towards lunch and highlights five-minute approach',()=>{
+ assert.equal(nextShift(schedule,pacificInstant('2026-10-16','17:01')).start,pacificInstant('2026-10-17','09:00'));assert.equal(nextShift(schedule,pacificInstant('2026-10-17','14:01')).start,pacificInstant('2026-10-19','07:00'))
+ const before=pacificInstant('2026-10-12','11:30'),near=pacificInstant('2026-10-12','11:56'),at=pacificInstant('2026-10-12','12:00'),rows=timelineRows(schedule,before)
+ assert.ok(timelinePosition(rows,near)>timelinePosition(rows,before));assert.equal(timelineRows(schedule,near).find(row=>row.name==='Lunch').state,'soon');assert.equal(timelineRows(schedule,at).find(row=>row.name==='Lunch').state,'active')
+})
+test('provided MP3s decode/cache once, play at bounded gain and stop pending async playback',async()=>{
+ const ctx=context();let loads=0;ctx.decodeAudioData=async()=>({duration:9});ctx.createBufferSource=()=>({connect(){},disconnect(){},start(){},stop(at){this.end=at}})
+ const audio=new PulseAlarmAudio(()=>ctx,async()=>{loads++;return {ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}});await audio.arm();await audio.prepare(Object.keys(SOUND_FILES));assert.equal(loads,3)
+ for(const sound of Object.keys(SOUND_FILES)){assert.equal(await audio.playAsync({sound,volume:70,duration_seconds:8,repeat:1}),true);assert.equal(audio.nodes[0].end,8);assert.equal(audio.nodes[0].loop,true)}assert.equal(loads,3);assert.ok(ctx.gains.every(value=>value>=0 && value<=.7))
+ const pending=audio.playAsync({sound:'iphone_radar',volume:70,duration_seconds:8,repeat:1});audio.stop();assert.equal(await pending,false)
 })
 test('browser refusing audio is a normal fallback, never retried on play',async()=>{
  let attempts=0;const audio=new PulseAlarmAudio(()=>{attempts++;throw Error('blocked')})

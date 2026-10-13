@@ -6,7 +6,7 @@ import {createAlertsTransport} from './alertsTransport.js'
 import {PulseAlarmAudio} from './alarmAudio.js'
 import {PACIFIC,alertTitle,alertAction,clockLabel} from './scheduleModel.js'
 import './alerts.css'
-import {claimPublicNotice} from './publicNoticeClaim.js'
+import {claimPublicNotice,claimPublicVisual} from './publicNoticeClaim.js'
 const readPref=(key,fallback)=>{try{return localStorage.getItem(key)||fallback}catch{return fallback}}
 const savePref=(key,value)=>{try{localStorage.setItem(key,value)}catch{/* Optional device preference. */}}
 export function PulseAlertsProvider({children}){
@@ -18,7 +18,7 @@ export function PulseAlertsProvider({children}){
 export function PulseAlertsRuntime({children,identity,transport,audioOverride}){
  const [schedule,setSchedule]=useState(null),[error,setError]=useState(null),[alert,setAlert]=useState(null)
  const [armed,setArmed]=useState(false),[timezone,setTimezone]=useState(()=>{const zone=readPref('pulse_alert_zone_v1',PACIFIC);try{new Intl.DateTimeFormat('en-US',{timeZone:zone});return zone}catch{return PACIFIC}})
- const [now,setNow]=useState(Date.now),offset=useRef(0),lease=useRef(null),seen=useRef(new Set()),queue=useRef([]),playing=useRef(false)
+ const [now,setNow]=useState(Date.now),offset=useRef(0),lease=useRef(null),seen=useRef(new Set()),queue=useRef([]),playing=useRef(false),currentNotice=useRef(null)
  const audio=useRef(audioOverride||new PulseAlarmAudio()),active=useRef(true),endTimer=useRef(null),endsAt=useRef(0),alertSurface=useRef(null),{pathname}=useLocation()
  useLayoutEffect(()=>{
   if(!alert || !alertSurface.current)return
@@ -39,15 +39,17 @@ export function PulseAlertsRuntime({children,identity,transport,audioOverride}){
   active.current=true
   if(!['agent','staff','public'].includes(identity.kind))return
   let alive=true,connectionId=crypto.randomUUID(),currentLease,renewing=false
-  const seenIds=seen.current,player=audio.current
-  async function refreshSchedule(){try{const result=await transport.schedule();if(alive && !result.error && result.data){setSchedule(result.data);const at=Date.parse(result.data.server_now);if(Number.isFinite(at))offset.current=at-Date.now()}else if(alive)setError(result.error?.message||'Schedule unavailable.')}catch{if(alive)setError('Schedule unavailable.')}}
+  const seenIds=seen.current,player=audio.current,inFlight=new Set()
+  async function refreshSchedule(){try{const result=await transport.schedule();if(alive && !result.error && result.data){setSchedule(result.data);void player.prepare?.((result.data.events||[]).map(e=>e.config.sound));const at=Date.parse(result.data.server_now);if(Number.isFinite(at))offset.current=at-Date.now()}else if(alive)setError(result.error?.message||'Schedule unavailable.')}catch{if(alive)setError('Schedule unavailable.')}}
   async function receive(signal){
    if(!alive || !signal?.occurrence_id || !(Date.parse(signal.expires_at)>Date.now()+offset.current) || seenIds.has(signal.occurrence_id))return
-   seenIds.add(signal.occurrence_id);if(seenIds.size>200)seenIds.delete(seenIds.values().next().value)
    if(identity.kind==='public'){
-    try{const result=await transport.notice(signal.occurrence_id);if(alive && result.data && await claimPublicNotice(result.data.id,result.data.expires_at)){queue.current.push({...result.data,publicNotice:true});startNext()}}catch{/* Public signals never supply trusted message text. */}
+    if(inFlight.has(signal.occurrence_id))return
+    inFlight.add(signal.occurrence_id)
+    try{const result=await transport.notice(signal.occurrence_id);if(alive && !result.error && result.data?.id===signal.occurrence_id && Date.parse(result.data.expires_at)>Date.now()+offset.current && queue.current.length<10){seenIds.add(signal.occurrence_id);if(seenIds.size>200)seenIds.delete(seenIds.values().next().value);if(claimPublicVisual(result.data.id,result.data.expires_at)){queue.current.push({...result.data,publicNotice:true});startNext()}}}catch{/* Failed reads can retry; signals never supply trusted text. */}finally{inFlight.delete(signal.occurrence_id)}
     return
    }
+   seenIds.add(signal.occurrence_id);if(seenIds.size>200)seenIds.delete(seenIds.values().next().value)
    const leaseId=currentLease.lease_id,requestId=crypto.randomUUID()
    let claim
    // One idempotent retry can recover a lost HTTP response without replaying sound.
@@ -63,10 +65,10 @@ export function PulseAlertsRuntime({children,identity,transport,audioOverride}){
    const pending=await transport.pending(currentLease.lease_id);if(alive && !pending.error)for(const signal of pending.data||[])void receive(signal)
   }catch{if(alive)setError('Sound alerts are temporarily unavailable. Your schedule is still available.')}finally{renewing=false}}
   function startNext(){if(playing.current || !alive)return;let item;while(queue.current.length){item=queue.current.shift();if(Date.parse(item.expires_at)>Date.now()+offset.current)break;item=null}if(!item)return
-   playing.current=true;setAlert(item)
+   playing.current=true;currentNotice.current=item.id;setAlert(item)
    const duration=Math.min(30,item.payload.event.duration_seconds*item.payload.event.repeat)*1000
    endsAt.current=Date.now()+duration
-   if(item.publicNotice)audio.current.play(item.payload.event)
+   if(item.publicNotice){if(!player.context || player.context.state==='running')void claimPublicNotice(item.id,item.expires_at).then(claimed=>{if(claimed && alive && currentNotice.current===item.id && Date.now()<endsAt.current)void (player.playAsync?player.playAsync(item.payload.event):player.play(item.payload.event))})}
    else void transport.receipt(item.leaseId,item.id,'visual_displayed').then(async outcome=>{
     if(!alive || outcome.error || Date.now()>=endsAt.current)return
     const started=audio.current.play(item.payload.event)
@@ -74,13 +76,14 @@ export function PulseAlertsRuntime({children,identity,transport,audioOverride}){
    }).catch(()=>{/* No forged receipt on failed delivery. */})
    endTimer.current=setTimeout(finish,duration)
   }
-  function finish(){clearTimeout(endTimer.current);player.stop();setAlert(null);playing.current=false;endsAt.current=0;startNext()}
+  function finish(){clearTimeout(endTimer.current);player.stop();currentNotice.current=null;setAlert(null);playing.current=false;endsAt.current=0;startNext()}
   void refreshSchedule();void renew()
-  if(identity.kind==='public')void transport.subscribePublic(receive,()=>void refreshSchedule())
-  const timer=identity.kind==='agent'?setInterval(()=>void renew(),120000):null,resume=()=>{if(document.visibilityState==='visible'){if(endsAt.current && Date.now()>=endsAt.current)finish();void refreshSchedule();void renew()}}
+  async function recoverPublic(){if(identity.kind!=='public' || !alive)return;try{const result=await transport.publicPending();if(alive && !result.error)for(const signal of result.data||[])void receive(signal)}catch{/* A reconnect/next recovery can retry. */}}
+  if(identity.kind==='public'){void transport.subscribePublic(receive,()=>void refreshSchedule());void recoverPublic()}
+  const timer=identity.kind==='agent'?setInterval(()=>void renew(),120000):identity.kind==='public'?setInterval(()=>void recoverPublic(),20000):null,resume=()=>{if(document.visibilityState==='visible'){if(endsAt.current && Date.now()>=endsAt.current)finish();void refreshSchedule();void renew();void recoverPublic()}}
   document.addEventListener('visibilitychange',resume)
   window.addEventListener('pageshow',resume)
-  return()=>{alive=false;active.current=false;clearInterval(timer);clearTimeout(endTimer.current);endsAt.current=0;playing.current=false;queue.current=[];seenIds.clear();player.stop();document.removeEventListener('visibilitychange',resume);window.removeEventListener('pageshow',resume);transport.destroy();if(currentLease)void transport.close(currentLease.lease_id);lease.current=null}
+  return()=>{alive=false;active.current=false;clearInterval(timer);clearTimeout(endTimer.current);endsAt.current=0;playing.current=false;currentNotice.current=null;queue.current=[];seenIds.clear();player.stop();document.removeEventListener('visibilitychange',resume);window.removeEventListener('pageshow',resume);transport.destroy();if(currentLease)void transport.close(currentLease.lease_id);lease.current=null}
  },[identity.kind,identity.agent?.agent_id,transport])
  useEffect(()=>{
   if(!alert)return
@@ -89,7 +92,7 @@ export function PulseAlertsRuntime({children,identity,transport,audioOverride}){
   if(document.hidden && typeof Notification!=='undefined' && Notification.permission==='granted')try{notification=new Notification(alertTitle(alert.payload),{body:clockLabel(Date.parse(alert.payload.start_at))+' Pacific Time',tag:'pulse-'+alert.id})}catch{/* Visual alert remains available. */}
   return()=>{document.title=title;notification?.close()}
  },[alert,pathname])
- const preview=async config=>{if(playing.current)return;await arm();audio.current.play(config);const duration=Math.min(30,Math.max(1,config.duration_seconds*config.repeat))*1000;endsAt.current=Date.now()+duration;setAlert({id:'local-preview',payload:{event:config,phase:'start',start_at:new Date().toISOString(),end_at:new Date(Date.now()+duration).toISOString()}});clearTimeout(endTimer.current);endTimer.current=setTimeout(()=>{audio.current.stop();endsAt.current=0;if(active.current)setAlert(null)},duration)}
+ const preview=async config=>{if(playing.current)return;await arm();await audio.current.prepare?.([config.sound]);if(!active.current)return;audio.current.play(config);const duration=Math.min(30,Math.max(1,config.duration_seconds*config.repeat))*1000;endsAt.current=Date.now()+duration;setAlert({id:'local-preview',payload:{event:config,phase:'start',start_at:new Date().toISOString(),end_at:new Date(Date.now()+duration).toISOString()}});clearTimeout(endTimer.current);endTimer.current=setTimeout(()=>{audio.current.stop();endsAt.current=0;if(active.current)setAlert(null)},duration)}
  const value={schedule,alert,error,armed,arm,timezone,setTimezone:changeZone,now,preview,reloadSchedule}
  return <PulseAlertsContext.Provider value={value}>{children}{alert && <aside ref={alertSurface} className="pulse-alert-surface" role="alert"><span className="pulse-alert-kicker">PULSE</span><h2>{alertTitle(alert.payload)}</h2><p>{clockLabel(Date.parse(alert.payload.phase==='end'?alert.payload.end_at:alert.payload.start_at),timezone)}</p><strong>{alertAction(alert.payload,timezone)}</strong>{timezone!==PACIFIC && <small>Pacific Time · {clockLabel(Date.parse(alert.payload.phase==='end'?alert.payload.end_at:alert.payload.start_at))}</small>}</aside>}</PulseAlertsContext.Provider>
 }
