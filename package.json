@@ -28,7 +28,7 @@
     "test:pet": "node --test src/pet/*.test.js",
     "test:dashboard": "node --test scripts/dashboard-certification/*.test.js",
     "test:alerts": "node --test scripts/alerts-certification/*.test.js",
-    "lint:alerts": "eslint src/alerts scripts/alerts-certification",
+    "lint:alerts": "eslint server src/alerts scripts/alerts-certification",
     "test:alerts:browser": "node scripts/alerts-certification/browser.mjs",
     "test:alerts:db": "node scripts/alerts-certification/db-review.mjs",
     "test:dashboard:browser": "node scripts/dashboard-certification/browser.mjs",

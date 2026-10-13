@@ -19,6 +19,7 @@ if(!process.argv.includes('--tests-only')){
  sql('create extension if not exists pgcrypto with schema extensions; create extension if not exists pgtap with schema extensions;')
  sql(readFileSync('supabase/migrations/20261012000100_pulse_operational_alerts.sql','utf8'))
  sql(readFileSync('supabase/migrations/20261012000200_pulse_alert_reconnect.sql','utf8'))
+ sql(readFileSync('supabase/migrations/20261012000300_pulse_alert_activation_safeupdate.sql','utf8'))
 }
 sql('grant usage on schema extensions to authenticated,service_role;', 'supabase_admin')
 sql('grant usage on schema realtime to authenticated; grant select,insert on realtime.messages to authenticated;', 'supabase_admin')

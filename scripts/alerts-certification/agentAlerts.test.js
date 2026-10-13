@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {createHash,createHmac} from 'node:crypto'
 import {Buffer} from 'node:buffer'
 import {createAgentHandler} from '../../api/agent.js'
-import {signAlertsToken} from '../../api/alertsToken.js'
+import {signAlertsToken} from '../../server/alertsToken.js'
 const agentId='11111111-1111-4111-8111-111111111111',leaseId='22222222-2222-4222-8222-222222222222',occurrence='33333333-3333-4333-8333-333333333333'
 const token='a'.repeat(64),secret='local-synthetic-jwt-secret-only-123456'
 function setup(config={secret,url:'http://127.0.0.1:54321'},profile={agent_id:agentId}){

@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
+import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react'
 import {useLocation} from 'react-router-dom'
 import {useGoIdentity} from '../go-product/useGoIdentity.js'
 import {PulseAlertsContext} from './alertsContext.js'
@@ -17,8 +17,16 @@ export function PulseAlertsRuntime({children,identity,transport,audioOverride}){
  const [schedule,setSchedule]=useState(null),[error,setError]=useState(null),[alert,setAlert]=useState(null)
  const [armed,setArmed]=useState(()=>readPref('pulse_alert_audio_v1','')==='armed'),[timezone,setTimezone]=useState(()=>{const zone=readPref('pulse_alert_zone_v1',PACIFIC);try{new Intl.DateTimeFormat('en-US',{timeZone:zone});return zone}catch{return PACIFIC}})
  const [now,setNow]=useState(Date.now),offset=useRef(0),lease=useRef(null),seen=useRef(new Set()),queue=useRef([]),playing=useRef(false)
- const audio=useRef(audioOverride||new PulseAlarmAudio()),active=useRef(true),endTimer=useRef(null),endsAt=useRef(0),{pathname}=useLocation()
+ const audio=useRef(audioOverride||new PulseAlarmAudio()),active=useRef(true),endTimer=useRef(null),endsAt=useRef(0),alertSurface=useRef(null),{pathname}=useLocation()
+ useLayoutEffect(()=>{
+  if(!alert || !alertSurface.current)return
+  const element=alertSurface.current,style=document.documentElement.style
+  const place=()=>{const bounds=element.getBoundingClientRect();style.setProperty('--pulse-alarm-pet-x',bounds.right-90+'px');style.setProperty('--pulse-alarm-pet-y',bounds.bottom-100+'px')}
+  place();const observer=new ResizeObserver(place);observer.observe(element);window.addEventListener('resize',place)
+  return()=>{observer.disconnect();window.removeEventListener('resize',place);style.removeProperty('--pulse-alarm-pet-x');style.removeProperty('--pulse-alarm-pet-y')}
+ },[alert])
  const arm=useCallback(async()=>{const ok=await audio.current.arm();if(ok){setArmed(true);savePref('pulse_alert_audio_v1','armed')}return ok},[])
+ const reloadSchedule=useCallback(async()=>{try{const result=await transport.schedule();if(active.current && !result.error && result.data)setSchedule(result.data)}catch{/* Existing schedule stays readable on a transient reload failure. */}},[transport])
  const changeZone=zone=>{try{new Intl.DateTimeFormat('en-US',{timeZone:zone});setTimezone(zone);savePref('pulse_alert_zone_v1',zone)}catch{/* Invalid stored zone. */}}
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()+offset.current),1000);return ()=>clearInterval(timer)},[])
  useEffect(()=>{if(!['agent','staff'].includes(identity.kind))return;const gesture=e=>{if(e.isTrusted)void arm()};window.addEventListener('pointerdown',gesture,{once:true});window.addEventListener('keydown',gesture,{once:true});return()=>{window.removeEventListener('pointerdown',gesture);window.removeEventListener('keydown',gesture)}},[identity.kind,arm])
@@ -71,6 +79,6 @@ export function PulseAlertsRuntime({children,identity,transport,audioOverride}){
   return()=>{document.title=title;notification?.close()}
  },[alert,pathname])
  const preview=async config=>{if(playing.current)return;await arm();audio.current.play(config);const duration=Math.min(30,Math.max(1,config.duration_seconds*config.repeat))*1000;endsAt.current=Date.now()+duration;setAlert({id:'local-preview',payload:{event:config,phase:'start',start_at:new Date().toISOString(),end_at:new Date(Date.now()+duration).toISOString()}});clearTimeout(endTimer.current);endTimer.current=setTimeout(()=>{audio.current.stop();endsAt.current=0;if(active.current)setAlert(null)},duration)}
- const value={schedule,alert,error,armed,arm,timezone,setTimezone:changeZone,now,preview}
- return <PulseAlertsContext.Provider value={value}>{children}{alert && <aside className="pulse-alert-surface" role="alert"><span className="pulse-alert-kicker">PULSE · {alert.id==='local-preview'?'ON THIS DEVICE':'SCHEDULE'}</span><h2>{alertTitle(alert.payload)}</h2><p>{clockLabel(Date.parse(alert.payload.start_at),timezone)}–{clockLabel(Date.parse(alert.payload.end_at),timezone)}</p><strong>{alert.payload.phase==='end'?'Time to get back':`Return at ${clockLabel(Date.parse(alert.payload.end_at),timezone)}`}</strong><small>Pacific Time · {clockLabel(Date.parse(alert.payload.start_at))}–{clockLabel(Date.parse(alert.payload.end_at))}</small></aside>}</PulseAlertsContext.Provider>
+ const value={schedule,alert,error,armed,arm,timezone,setTimezone:changeZone,now,preview,reloadSchedule}
+ return <PulseAlertsContext.Provider value={value}>{children}{alert && <aside ref={alertSurface} className="pulse-alert-surface" role="alert"><span className="pulse-alert-kicker">PULSE · {alert.id==='local-preview'?'ON THIS DEVICE':'SCHEDULE'}</span><h2>{alertTitle(alert.payload)}</h2><p>{clockLabel(Date.parse(alert.payload.start_at),timezone)}–{clockLabel(Date.parse(alert.payload.end_at),timezone)}</p><strong>{alert.payload.phase==='end'?'Time to get back':`Return at ${clockLabel(Date.parse(alert.payload.end_at),timezone)}`}</strong><small>Pacific Time · {clockLabel(Date.parse(alert.payload.start_at))}–{clockLabel(Date.parse(alert.payload.end_at))}</small></aside>}</PulseAlertsContext.Provider>
 }

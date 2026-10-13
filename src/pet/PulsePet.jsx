@@ -77,7 +77,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   const compact = !alarm && (preferences.asleep || mode === 'quiet')
   const size = useMemo(() => petSize(viewport.width, compact), [viewport.width, compact])
   const footprint = useMemo(() => petFootprint(size, compact), [size, compact])
-  const open = panel.open && panel.pathname === pathname && !compact && actions.length > 0
+  const open = panel.open && panel.pathname === pathname && !compact && !alarm && actions.length > 0
   const paused = hidden || reducedMotion || compact || assetFailed
   const working = !alarm && !compact && !hovered && !open && !dragging && !unavailable
 
@@ -286,7 +286,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   return <aside ref={root} className={`pulse-pet${alarm?' pulse-pet--alarm':''}${finishing?' pulse-pet--finishing':''}${pathname==='/schedule'?' pulse-pet--schedule':''}${unavailable ? ' pulse-pet--nope' : ''}${compact ? ' pulse-pet--compact' : ''}${dragging ? ' pulse-pet--dragging' : ''}${hovered || open ? ' pulse-pet--engaged' : ''}${paused ? ' pulse-pet--still' : ''}`}
     aria-label="Pulse Pet" data-expression={expression} data-mode={mode} data-pose={working ? 'working' : 'standing'}
     style={{ width: footprint.width, height: footprint.height, '--pet-scale': size.scale, '--pet-body-height': size.height + 'px' }}>
-    <button ref={trigger} className="pulse-pet__trigger" type="button" style={{ height: size.height }} aria-label={preferences.asleep && mode !== 'quiet' ? 'Wake Pulse Pet' : mode === 'quiet' ? 'Pulse Pet' : 'Pulse Pet · Open shortcuts'}
+    <button ref={trigger} className="pulse-pet__trigger" type="button" disabled={!!alarm} style={{ height: size.height }} aria-label={alarm ? 'Pulse schedule reminder' : preferences.asleep && mode !== 'quiet' ? 'Wake Pulse Pet' : mode === 'quiet' ? 'Pulse Pet' : 'Pulse Pet · Open shortcuts'}
       aria-expanded={open} aria-controls={open ? 'pulse-pet-shortcuts' : undefined} aria-describedby="pulse-pet-instructions"
       onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={event => finishDrag(event)} onPointerCancel={event => finishDrag(event, true)} onLostPointerCapture={event => finishDrag(event, true)}
       onPointerEnter={engage} onPointerLeave={settle} onFocus={engage} onBlur={settle} onClick={activate} onKeyDown={moveByKeyboard}>

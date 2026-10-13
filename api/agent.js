@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import process from 'node:process'
 
 import { createClient } from '@supabase/supabase-js'
-import { signAlertsToken } from './alertsToken.js'
+import { signAlertsToken } from '../server/alertsToken.js'
 
 const COOKIE = '__Host-pulse_agent'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

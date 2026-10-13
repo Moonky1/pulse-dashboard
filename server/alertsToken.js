@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto'
 import { Buffer } from 'node:buffer'
 
-// Minimal, short-lived Realtime capability. No Staff identity, cookie or service key.
+// Server-only utility (outside api routes). No Staff identity, cookie or service key.
 export function signAlertsToken(lease, secret, supabaseUrl, now=Date.now()) {
   if (typeof secret !== 'string' || secret.length<32) throw new Error('Alerts signing is not configured')
   if (!/^[0-9a-f-]{36}$/i.test(lease?.lease_id || '')) throw new Error('Invalid alert lease')

@@ -88,3 +88,5 @@
 @media(max-width:600px) {
  .pulse-pet--alarm .pulse-pet__trigger,.pulse-pet--schedule .pulse-pet__trigger { height:100% !important; }
 }
+.pulse-pet--alarm { left:var(--pulse-alarm-pet-x,calc(100vw - 90px))!important; top:var(--pulse-alarm-pet-y,calc(100dvh - 110px))!important; right:auto!important; bottom:auto!important; width:70px!important; height:92px!important; --pet-scale:.62!important; z-index:91; }
+.pulse-pet--alarm .pulse-pet__trigger { height:100%!important; pointer-events:none; }
