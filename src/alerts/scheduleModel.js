@@ -29,5 +29,6 @@ export function scheduleFocus(schedule,now){
  if(today.next)return {title:today.next.event.config.type==='shift'?'End of shift':today.next.event.config.name,at:today.next.at,hint:'Up next'}
  return {title:'See you next shift',hint:'Log in five minutes before your next shift.'}
 }
+export function schedulePetActivity(schedule,now){if(!schedule)return 'idle';const today=todaySchedule(schedule,now),shift=today.events.find(e=>e.config.type==='shift');if(!shift || now>=shift.end)return 'sleep';if(['break','lunch'].includes(today.active?.config.type))return today.active.config.type;return now>=shift.start?'working':'idle'}
 export function alertTitle(payload){const c=payload.event;if(payload.phase==='pre')return c.type==='shift'?'Log in · ready to dial':`${c.name} in ${c.pre_minutes} minutes`;if(payload.phase==='end')return c.type==='shift'?'End of shift':'Go active';return c.type==='lunch'?'Lunch time':c.type==='break'?'Break time':c.type==='shift'?'Start dialing':c.name}
 export function alertAction(payload,zone=PACIFIC){if(payload.phase==='end')return payload.event.type==='shift'?'See you next shift':'Return to dial now';if(payload.event.type==='shift')return payload.phase==='pre'?`Be in Manage and ready to dial at ${clockLabel(Date.parse(payload.start_at),zone)}`:'Join your daily team meeting';return `Return at ${clockLabel(Date.parse(payload.end_at),zone)}`}

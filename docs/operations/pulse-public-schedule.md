@@ -14,6 +14,11 @@ manually sent by authorized Pulse Admin. No Agent account, ID or PIN is required
   confirmed `end` notice. It sends a reminder, never changes VICIdial state.
 - Five task-owned rows use the bounded eight-second Loud siren, at least 90% Pulse
   gain, preserving existing higher volume and all unrelated Admin settings.
+- Schedule always mounts the existing Pet independently of account Hide Pet/sleep
+  preferences: work, coffee break, lunch, full-body sleep after shift/no shift.
+  Alerts wake it and animate alternating hands/drumsticks; normal cursor gaze and
+  a temporary click/keyboard greeting remain interactive. System reduced motion
+  and hidden-tab animation pause are respected. No new bitmap assets or identity state.
 - Public read RPCs expose only operational schedule/current notice content, never
   Staff/Agent identities, private reports or raw tables.
 - An anonymously readable Realtime channel is read-only for browser roles. Signals
@@ -36,7 +41,7 @@ manually sent by authorized Pulse Admin. No Agent account, ID or PIN is required
   protection settings, deployments, database or broadcasts are changed.
 
 Validation: 81 legacy database assertions plus the public schedule/security suite,
-17 Alerts unit tests, full Pulse release checks, responsive public-browser tests
+18 Alerts unit tests, full Pulse release checks, responsive public-browser tests
 at five widths, and a real anonymous Preview Realtime connection. Anonymous send,
 Admin-history and private-delivery reads are denied. The public browser fixture
 tests manual-send confirmation, notice audio, payload verification and zero Agent

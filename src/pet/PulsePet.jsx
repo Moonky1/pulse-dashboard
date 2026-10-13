@@ -39,11 +39,11 @@ function RobotEyes() {
   return <svg className="pulse-pet__eyes" viewBox="0 0 80 44" aria-hidden="true" shapeRendering="crispEdges">
     <g className="pulse-pet__eyes-open"><path d="M14 11h14v24H14V11Zm38 0h14v24H52V11Z" fill="#ffac19" /><path d="M14 11h4v24h-4Zm38 0h4v24h-4Z" fill="#ff7900" /><path d="M18 11h7v5h-7Zm38 0h7v5h-7Z" fill="#fff0ac" /></g>
     <g className="pulse-pet__eyes-happy" fill="#ffac19"><path d="M10 27v-8h5v-6h12v6h5v8h-6v-7H16v7h-6Zm38 0v-8h5v-6h12v6h5v8h-6v-7H54v7h-6Z" /></g>
-    <g className="pulse-pet__eyes-sleep" fill="#ffac19"><path d="M10 22h6v4h10v-4h6v8H10v-8Zm38 0h6v4h10v-4h6v8H48v-8Z" /></g>
+    <g className="pulse-pet__eyes-sleep" fill="#ffac19"><path d="M12 24h20v4H12v-4Zm36 0h20v4H48v-4Z" /></g>
   </svg>
 }
 
-export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverride, alarm=null }) {
+export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverride, alarm=null, activity=null }) {
   const [preferences, setPreferences] = useState(() => readPetPreferences(preferencesStorage()))
   const [viewport, setViewport] = useState(viewportSize)
   // Snapshot synchronization also covers a tab becoming visible between render
@@ -60,6 +60,9 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   const [assetFailed, setAssetFailed] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
   const [finishing, setFinishing] = useState(false)
+  const [playful,setPlayful]=useState(false),playTimer=useRef(null)
+  const isSchedule=pathname==='/schedule',sleeping=!alarm && activity==='sleep' && !playful
+  useEffect(()=>()=>window.clearTimeout(playTimer.current),[])
   const previousAlarm = useRef(null)
   useEffect(() => {
     const ended = previousAlarm.current && !alarm
@@ -74,12 +77,12 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   const pointer = useRef(null)
   const settleTimer = useRef(null)
   const cursorInside = useRef(false), keyboardFocus = useRef(false)
-  const compact = !alarm && (preferences.asleep || mode === 'quiet')
+  const compact = !isSchedule && !alarm && (preferences.asleep || mode === 'quiet')
   const size = useMemo(() => petSize(viewport.width, compact), [viewport.width, compact])
   const footprint = useMemo(() => petFootprint(size, compact), [size, compact])
   const open = panel.open && panel.pathname === pathname && !compact && !alarm && actions.length > 0
   const paused = hidden || reducedMotion || compact || assetFailed
-  const working = !alarm && !compact && !hovered && !open && !dragging && !unavailable
+  const working = !alarm && !compact && !hovered && !open && !dragging && !unavailable && !playful && (!isSchedule || activity==='working')
 
   useEffect(() => {
     let timer
@@ -176,12 +179,14 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
     element.style.setProperty('--pet-head-turn', '0deg')
     element.style.setProperty('--pet-blink', '1')
     if (paused) return
+    if (sleeping) return
     let frame, blinkTimer, reopenTimer, previous = performance.now()
-    let look = { x: 0, y: 0 }
+    let look = { x: 0, y: 0 },gazeScale=size.scale
     const track = event => {
       if (alarm || pathname === '/schedule') {
         const bounds = element.getBoundingClientRect()
         position.current = { x: bounds.left, y: bounds.top }
+        gazeScale=parseFloat(getComputedStyle(element).getPropertyValue('--pet-scale'))||size.scale
       }
       if (event.pointerType !== 'touch') pointer.current = { x: event.clientX, y: event.clientY, at: performance.now() }
     }
@@ -191,7 +196,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
       previous = now
       const cursor = pointer.current
       const target = drag.current ? { x: 0, y: 0 }
-        : cursor && now - cursor.at < 1500 ? gazeTarget(cursor, position.current, size.scale) : { x: 0, y: 0 }
+        : cursor && now - cursor.at < 1500 ? gazeTarget(cursor, position.current, gazeScale) : { x: 0, y: 0 }
       look = smoothGaze(look, target, elapsed)
       element.style.setProperty('--pet-eye-x', look.x.toFixed(2) + 'px')
       element.style.setProperty('--pet-eye-y', look.y.toFixed(2) + 'px')
@@ -218,9 +223,10 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
       window.removeEventListener('pointermove', track)
       document.removeEventListener('pointerleave', leave)
     }
-  }, [paused, size.scale, alarm, pathname])
+  }, [paused, size.scale, alarm, pathname, sleeping])
 
   function pointerDown(event) {
+    if(isSchedule)return
     if (event.button !== 0 || !event.isPrimary) return
     keyboardFocus.current = false
     drag.current = { id: event.pointerId, start: { x: event.clientX, y: event.clientY }, origin: { ...position.current }, moved: false }
@@ -259,6 +265,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
 
   function activate(event) {
     if (suppressClick.current && event.detail !== 0) { suppressClick.current = false; event.preventDefault(); return }
+    if(isSchedule){setPlayful(true);window.clearTimeout(playTimer.current);playTimer.current=window.setTimeout(()=>setPlayful(false),1800);setAnnouncement(sleeping?'Pulse Pet wakes up to say hello.':'Pulse Pet says hello.');return}
     if (preferences.asleep && mode !== 'quiet') {
       save({ ...preferences, asleep: false })
       setAnnouncement('Pulse Pet is awake.')
@@ -268,6 +275,7 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   }
 
   function moveByKeyboard(event) {
+    if(isSchedule)return
     const offsets = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
     const offset = offsets[event.key]
     if (!offset) return
@@ -282,11 +290,11 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
   }
 
   if (assetFailed) return null
-  const expression = compact ? 'sleep' : dragging || unavailable ? 'curious' : hovered || open ? 'happy' : 'neutral'
-  return <aside ref={root} className={`pulse-pet${alarm?' pulse-pet--alarm':''}${finishing?' pulse-pet--finishing':''}${pathname==='/schedule'?' pulse-pet--schedule':''}${unavailable ? ' pulse-pet--nope' : ''}${compact ? ' pulse-pet--compact' : ''}${dragging ? ' pulse-pet--dragging' : ''}${hovered || open ? ' pulse-pet--engaged' : ''}${paused ? ' pulse-pet--still' : ''}`}
-    aria-label="Pulse Pet" data-expression={expression} data-mode={mode} data-pose={working ? 'working' : 'standing'}
+  const expression = compact || sleeping ? 'sleep' : dragging || unavailable ? 'curious' : hovered || open || playful ? 'happy' : 'neutral'
+  return <aside ref={root} className={`pulse-pet${alarm?' pulse-pet--alarm':''}${finishing?' pulse-pet--finishing':''}${isSchedule?' pulse-pet--schedule':''}${sleeping?' pulse-pet--sleeping':''}${playful?' pulse-pet--playful':''}${unavailable ? ' pulse-pet--nope' : ''}${compact ? ' pulse-pet--compact' : ''}${dragging ? ' pulse-pet--dragging' : ''}${hovered || open ? ' pulse-pet--engaged' : ''}${paused ? ' pulse-pet--still' : ''}`}
+    aria-label="Pulse Pet" data-expression={expression} data-mode={mode} data-pose={working ? 'working' : 'standing'} data-activity={alarm?'alarm':activity||'normal'}
     style={{ width: footprint.width, height: footprint.height, '--pet-scale': size.scale, '--pet-body-height': size.height + 'px' }}>
-    <button ref={trigger} className="pulse-pet__trigger" type="button" disabled={!!alarm} style={{ height: size.height }} aria-label={alarm ? 'Pulse schedule reminder' : preferences.asleep && mode !== 'quiet' ? 'Wake Pulse Pet' : mode === 'quiet' ? 'Pulse Pet' : 'Pulse Pet · Open shortcuts'}
+    <button ref={trigger} className="pulse-pet__trigger" type="button" disabled={!!alarm && !isSchedule} style={{ height: size.height }} aria-label={isSchedule?'Say hello to Pulse Pet':alarm ? 'Pulse schedule reminder' : preferences.asleep && mode !== 'quiet' ? 'Wake Pulse Pet' : mode === 'quiet' ? 'Pulse Pet' : 'Pulse Pet · Open shortcuts'}
       aria-expanded={open} aria-controls={open ? 'pulse-pet-shortcuts' : undefined} aria-describedby="pulse-pet-instructions"
       onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={event => finishDrag(event)} onPointerCancel={event => finishDrag(event, true)} onLostPointerCapture={event => finishDrag(event, true)}
       onPointerEnter={engage} onPointerLeave={settle} onFocus={engage} onBlur={settle} onClick={activate} onKeyDown={moveByKeyboard}>
@@ -306,12 +314,14 @@ export function PulsePet({ actions, mode = 'normal', pathname = '', motionOverri
             <span className="pulse-pet__face"><RobotEyes /></span>
           </span>
         </span>
-        {alarm && <svg className="pulse-pet__alarm-instrument" viewBox="0 0 112 148" shapeRendering="crispEdges"><g className="pulse-pet__drum"><path d="M34 98h44v26H34z" fill="#9b647b" stroke="#242633" strokeWidth="3"/><path d="M34 98h44v6H34zM34 119h44v5H34z" fill="#f0c885"/><path d="M42 105l7 13 7-13 7 13 7-13" fill="none" stroke="#ebc9db" strokeWidth="2"/><path className="pulse-pet__stick-left" d="M24 85l25 13" stroke="#f1d1a2" strokeWidth="4"/><path className="pulse-pet__stick-right" d="M88 85L63 98" stroke="#f1d1a2" strokeWidth="4"/></g><g className="pulse-pet__trumpet"><path d="M48 72h22l14-8v26l-14-8H48z" fill="#edb953" stroke="#272936" strokeWidth="3"/><path d="M53 82v14h18V81M56 71v-7m9 7v-7" fill="none" stroke="#edb953" strokeWidth="4"/></g></svg>}
-        {compact && <span className="pulse-pet__zzz">z<span>z</span></span>}
+        {alarm && <svg className="pulse-pet__alarm-instrument" viewBox="0 0 112 148" shapeRendering="crispEdges"><g className="pulse-pet__drum"><path className="pulse-pet__drum-shell" d="M34 98h44v26H34z" fill="#9b647b" stroke="#242633" strokeWidth="3"/><path d="M34 98h44v6H34zM34 119h44v5H34z" fill="#f0c885"/><path d="M42 105l7 13 7-13 7 13 7-13" fill="none" stroke="#ebc9db" strokeWidth="2"/><g className="pulse-pet__stick-left"><path d="M29 72L24 85" stroke="#ced8e4" strokeWidth="6"/><path d="M24 85l25 13" stroke="#f1d1a2" strokeWidth="4"/><path d="M21 82h7v7h-7z" fill="#f7f2df"/></g><g className="pulse-pet__stick-right"><path d="M83 72l5 13" stroke="#ced8e4" strokeWidth="6"/><path d="M88 85L63 98" stroke="#f1d1a2" strokeWidth="4"/><path d="M84 82h7v7h-7z" fill="#f7f2df"/></g></g></svg>}
+        {!alarm && activity==='break' && <svg className="pulse-pet__break-cup" viewBox="0 0 36 44" shapeRendering="crispEdges"><path d="M8 21h19v17H8z" fill="#edc98a" stroke="#343441" strokeWidth="2"/><path d="M27 24h7v10h-7" fill="none" stroke="#edc98a" strokeWidth="3"/><g className="pulse-pet__steam" fill="none" stroke="#dce7f2" strokeWidth="2"><path d="M13 17V8m8 9V4"/></g></svg>}
+        {!alarm && activity==='lunch' && <svg className="pulse-pet__lunch-food" viewBox="0 0 40 36" shapeRendering="crispEdges"><path d="M4 9h32v18H4z" fill="#dfab61" stroke="#343441" strokeWidth="2"/><path d="M4 14h32v5H4z" fill="#87b86a"/><path d="M4 19h32v4H4z" fill="#d98567"/><path d="M9 8V4h22v4" fill="#f0cd8c"/></svg>}
+        {(compact || sleeping) && <span className="pulse-pet__zzz">z<span>z</span></span>}
       </span>
     </button>
     {unavailable && <span className="pulse-pet__speech" aria-hidden="true">Not yet! ☝</span>}
-    <span id="pulse-pet-instructions" className="pulse-sr-only">Click for shortcuts. Drag to move, or use arrow keys while focused. Shift and arrow keys move farther.</span>
+    <span id="pulse-pet-instructions" className="pulse-sr-only">{isSchedule?'Click or press Enter to say hello.':'Click for shortcuts. Drag to move, or use arrow keys while focused. Shift and arrow keys move farther.'}</span>
     <span className="pulse-sr-only" role="status" aria-live="polite">{announcement}</span>
     {open && mode === 'normal' && <nav id="pulse-pet-shortcuts" className="pulse-pet__toolbar" aria-label="Pulse Pet shortcuts"
       onPointerEnter={engage} onPointerLeave={settle} onFocus={engage} onBlur={settle}>

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {todaySchedule,scheduleFocus,pacificInstant,clockLabel,dateInZone,countdown,alertTitle,alertAction,PACIFIC} from '../../src/alerts/scheduleModel.js'
+import {todaySchedule,scheduleFocus,schedulePetActivity,pacificInstant,clockLabel,dateInZone,countdown,alertTitle,alertAction,PACIFIC} from '../../src/alerts/scheduleModel.js'
 import {PulseAlarmAudio,SOUNDS} from '../../src/alerts/alarmAudio.js'
 const event=(name,type,start,end,days=[1,2,3,4,5])=>({id:name,config:{name,type,start,end,days,enabled:true}})
 const schedule={events:[event('Shift','shift','07:00','17:00'),event('Break 1','break','09:00','09:15'),event('Lunch','lunch','12:00','13:00'),event('Break 2','break','14:30','14:40'),event('Saturday','shift','09:00','14:00',[6])]}
@@ -30,6 +30,10 @@ test('left countdown covers 6:55 login, 7:00 dial, 8:55 Saturday login and break
  for(const [date,time,title,target] of [['2026-10-12','06:50','Log in','06:55'],['2026-10-12','06:55','Ready to dial','07:00'],['2026-10-12','09:05','Go active','09:15'],['2026-10-12','12:30','Go active','13:00'],['2026-10-17','08:50','Log in','08:55'],['2026-10-17','08:55','Ready to dial','09:00']]){const focus=scheduleFocus(schedule,pacificInstant(date,time));assert.equal(focus.title,title);assert.equal(focus.at,pacificInstant(date,target))}
  assert.equal(scheduleFocus(schedule,pacificInstant('2026-10-12','17:01')).title,'See you next shift')
  const p={event:{type:'shift'},phase:'pre',start_at:'2026-10-12T14:00:00Z'};assert.equal(alertTitle(p),'Log in · ready to dial');assert.match(alertAction(p),/ready to dial at 7:00 AM/);assert.equal(alertAction({event:{type:'break'},phase:'end'}),'Return to dial now')
+})
+test('Schedule Pet follows Pacific shift, break, lunch and sleep without identity/preferences',()=>{
+ for(const [time,state] of [['06:50','idle'],['07:00','working'],['09:05','break'],['09:15','working'],['12:30','lunch'],['13:00','working'],['17:00','sleep']])assert.equal(schedulePetActivity(schedule,pacificInstant('2026-10-12',time)),state)
+ assert.equal(schedulePetActivity(schedule,pacificInstant('2026-10-17','12:00')),'working');assert.equal(schedulePetActivity(schedule,pacificInstant('2026-10-18','12:00')),'sleep')
 })
 function context(){const c={state:'suspended',currentTime:0,destination:{},gains:[],oscillators:[],resume:async()=>{c.state='running'}};c.createOscillator=()=>{const o={frequency:{setValueAtTime(){},linearRampToValueAtTime(){}},connect(){},disconnect(){this.disconnected=true},start(){},stop(at){if(Number.isFinite(at))this.end=at}};c.oscillators.push(o);return o};c.createGain=()=>{const g={gain:{setValueAtTime(){},linearRampToValueAtTime(value){c.gains.push(value)},exponentialRampToValueAtTime(){}},connect(){},disconnect(){this.disconnected=true}};return g};return c}
 test('original library respects Pulse gain, finite duration, one audio context and cleanup',async()=>{
