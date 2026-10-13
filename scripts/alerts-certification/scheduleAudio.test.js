@@ -36,6 +36,19 @@ test('Schedule Pet follows Pacific shift, break, lunch and sleep without identit
  for(const [time,state] of [['06:50','idle'],['07:00','working'],['09:05','break'],['09:15','working'],['12:30','lunch'],['13:00','working'],['17:00','sleep']])assert.equal(schedulePetActivity(schedule,pacificInstant('2026-10-12',time)),state)
  assert.equal(schedulePetActivity(schedule,pacificInstant('2026-10-17','12:00')),'working');assert.equal(schedulePetActivity(schedule,pacificInstant('2026-10-18','12:00')),'sleep')
 })
+test('weekday OT is 4–5 PM Pacific in the timeline only; Saturday and real shift end stay unchanged',()=>{
+ const before=JSON.stringify(schedule),date='2026-10-13',now=pacificInstant(date,'16:30'),rows=timelineRows(schedule,now),ot=rows.find(row=>row.name==='OT')
+ assert.equal(ot.start,pacificInstant(date,'16:00'));assert.equal(ot.end,pacificInstant(date,'17:00'));assert.equal(ot.state,'active')
+ assert.equal(rows.find(row=>row.name==='Work hours').end,ot.start)
+ assert.equal(rows.find(row=>row.name==='End of shift').start,ot.end)
+ assert.equal(clockLabel(ot.start,'America/Bogota'),'6:00 PM');assert.equal(clockLabel(ot.end,'America/Bogota'),'7:00 PM')
+ assert.equal(todaySchedule(schedule,now).events.find(e=>e.config.type==='shift').end,ot.end)
+ assert.equal(scheduleFocus(schedule,now).title,'End of shift');assert.equal(schedulePetActivity(schedule,now),'working')
+ assert.equal(timelineRows(schedule,pacificInstant(date,'15:56')).find(row=>row.name==='OT').state,'soon')
+ assert.equal(timelineRows(schedule,pacificInstant(date,'17:00')).find(row=>row.name==='OT').state,'past')
+ assert.equal(timelineRows(schedule,pacificInstant('2026-10-17','12:00')).some(row=>row.name==='OT'),false)
+ assert.equal(JSON.stringify(schedule),before)
+})
 function context(){const c={state:'suspended',currentTime:0,destination:{},gains:[],oscillators:[],resume:async()=>{c.state='running'}};c.createOscillator=()=>{const o={frequency:{setValueAtTime(){},linearRampToValueAtTime(){}},connect(){},disconnect(){this.disconnected=true},start(){},stop(at){if(Number.isFinite(at))this.end=at}};c.oscillators.push(o);return o};c.createGain=()=>{const g={gain:{setValueAtTime(){},linearRampToValueAtTime(value){c.gains.push(value)},exponentialRampToValueAtTime(){}},connect(){},disconnect(){this.disconnected=true}};return g};return c}
 test('original library respects Pulse gain, finite duration, one audio context and cleanup',async()=>{
  const ctx=context(),audio=new PulseAlarmAudio(()=>ctx),config={sound:'double_alert',volume:50,duration_seconds:4,repeat:2}

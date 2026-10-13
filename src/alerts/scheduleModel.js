@@ -31,7 +31,15 @@ export function scheduleFocus(schedule,now){
  return upcoming()
 }
 export function nextShift(schedule,now){const date=dateInZone(now),candidates=[];for(let offset=0;offset<8;offset++){const day=new Date(date+'T12:00:00Z');day.setUTCDate(day.getUTCDate()+offset);const key=day.toISOString().slice(0,10),weekday=day.getUTCDay()||7;for(const e of schedule?.events||[])if(e.config.enabled && e.config.type==='shift' && e.config.days.includes(weekday)){const start=pacificInstant(key,e.config.start);if(start>now)candidates.push({...e,start})}}return candidates.sort((a,b)=>a.start-b.start)[0]||null}
-export function timelineRows(schedule,now){const today=todaySchedule(schedule,now),shift=today.events.find(e=>e.config.type==='shift');if(!shift)return [];return [{id:'login',name:'Log in',start:shift.start-5*60000,end:shift.start,login:true},...today.events.map(e=>({...e,name:e.config.type==='shift'?'Work hours':e.config.name})),{id:'finish',name:'End of shift',start:shift.end,end:shift.end}].sort((a,b)=>a.start-b.start).map(row=>({...row,state:row.start>now?(row.start-now<=5*60000?'soon':'upcoming'):row.end<=now?'past':today.active?.id===row.id || row.login?'active':'past'}))}
+export function timelineRows(schedule,now){
+ const today=todaySchedule(schedule,now),shift=today.events.find(e=>e.config.type==='shift');if(!shift)return []
+ const weekday=new Date(today.date+'T12:00:00Z').getUTCDay()
+ // Presentation only: the approved weekday 4–5 PM Pacific hour is OT.
+ // Keep the real shift end, alert configuration and Saturday schedule unchanged.
+ const otStart=pacificInstant(today.date,'16:00'),hasOT=weekday>=1 && weekday<=5 && shift.config.end==='17:00' && shift.start<otStart
+ const rows=[{id:'login',name:'Log in',start:shift.start-5*60000,end:shift.start,login:true},...today.events.map(e=>({...e,name:e.config.type==='shift'?'Work hours':e.config.name,end:hasOT && e.id===shift.id?otStart:e.end})),...(hasOT?[{id:'overtime',name:'OT',start:otStart,end:shift.end,range:true,overtime:true}]:[]),{id:'finish',name:'End of shift',start:shift.end,end:shift.end}]
+ return rows.sort((a,b)=>a.start-b.start).map(row=>({...row,state:row.start>now?(row.start-now<=5*60000?'soon':'upcoming'):row.end<=now?'past':today.active?.id===row.id || row.login || row.overtime && today.active?.id===shift.id?'active':'past'}))
+}
 export function timelinePosition(rows,now){if(!rows.length)return 0;const next=rows.findIndex(row=>row.start>now);if(next<0)return rows.length-1;if(next===0)return 0;const before=rows[next-1];return next-1+Math.max(0,Math.min(1,(now-before.start)/(rows[next].start-before.start)))}
 export function schedulePetActivity(schedule,now){if(!schedule)return 'idle';const today=todaySchedule(schedule,now),shift=today.events.find(e=>e.config.type==='shift');if(!shift || now>=shift.end)return 'sleep';if(['break','lunch'].includes(today.active?.config.type))return today.active.config.type;return now>=shift.start?'working':'idle'}
 export function alertTitle(payload){const c=payload.event;if(payload.phase==='pre')return c.type==='shift'?'Log in · ready to dial':`${c.name} in ${c.pre_minutes} minutes`;if(payload.phase==='end')return c.type==='shift'?'End of shift':'Go active';return c.type==='lunch'?'Lunch time':c.type==='break'?'Break time':c.type==='shift'?'Start dialing':c.name}
