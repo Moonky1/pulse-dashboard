@@ -6,6 +6,8 @@ test('Schedule route and page contain no Agent login gate or account menu',async
  const app=await readFile('src/auth/AuthApp.jsx','utf8'),page=await readFile('src/alerts/SchedulePage.jsx','utf8')
  assert.match(app,/<Route path="\/schedule" element=\{<SchedulePage \/>\} \/>/)
  assert.doesNotMatch(page,/useGoIdentity|AgentGoHeader|ProductHeader\s*\/|signIn|Agent ID|PIN/)
+ assert.doesNotMatch(page,/This week|Shift complete|open to everyone|Enable sound|pulse-audio-settings|Your timeline/)
+ assert.match(page,/<h1>Today<\/h1>/)
 })
 test('anonymous display dedup stores only expiring notice IDs, never identities',async()=>{
  let value='{}';const storage={getItem:()=>value,setItem:(key,v)=>{assert.equal(key,'pulse_public_notices_v1');value=v}},expiry=new Date(Date.now()+90000).toISOString()

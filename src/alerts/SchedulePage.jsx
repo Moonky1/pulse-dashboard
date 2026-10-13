@@ -1,23 +1,18 @@
 import {usePulseAlerts} from './alertsContext.js'
-import {todaySchedule,PACIFIC,localZone,clockLabel,dateLabel,countdown} from './scheduleModel.js'
-import {useState} from 'react'
+import {todaySchedule,PACIFIC,localZone,clockLabel,dateLabel,dateInZone} from './scheduleModel.js'
 import {PulseOrb} from '../components/ui/PulseOrb.jsx'
 import {PulsePet} from '../pet/PulsePet.jsx'
 import {usePetVisibility} from '../pet/usePetVisibility.js'
 import '../components/ProductHeader.css'
+
 export function ScheduleContent(){
- const {schedule,error,now,timezone,setTimezone,armed,arm}=usePulseAlerts(),today=todaySchedule(schedule,now),zone=localZone()
- const [view,setView]=useState('week')
- const week=schedule?.events||[]
- return <main className="pulse-schedule"><header className="pulse-schedule-heading"><div><span className="pulse-alert-kicker">AUTO WARRANTY · WEEKLY SCHEDULE</span><h1>Your schedule</h1><p>{dateLabel(now)} · Pacific Time</p></div><span className="pulse-schedule-status">{today.status}</span></header>
+ const {schedule,error,now,timezone,setTimezone}=usePulseAlerts(),today=todaySchedule(schedule,now),zone=localZone()
+ const saturday=new Date(today.date+'T12:00:00Z').getUTCDay()===6
+ const label=event=>event.config.type==='shift'?'Work hours':event.config.type==='lunch'?'Lunch':event.config.name
+ return <main className="pulse-schedule">
+  <header className="pulse-schedule-heading"><div><span className="pulse-alert-kicker">AUTO WARRANTY</span><h1>Today</h1><p>{dateLabel(now)}{saturday?' · No breaks':''}</p></div><div className="pulse-schedule-clock"><span>Pacific Time <strong>{clockLabel(now)}</strong></span>{zone!==PACIFIC && <span>Local time <strong>{clockLabel(now,zone)}</strong></span>}</div></header>
   <nav className="pulse-zone-toggle" aria-label="Time display"><button aria-pressed={timezone===PACIFIC} onClick={()=>setTimezone(PACIFIC)}>Pacific Time</button><button aria-pressed={timezone!==PACIFIC} onClick={()=>setTimezone(zone)}>My local time</button></nav>
-  {timezone!==PACIFIC && <p className="pulse-time-caption">{zone.replaceAll('_',' ')} · Pacific schedule stays the same</p>}
-  <nav className="pulse-zone-toggle" aria-label="Schedule view"><button aria-pressed={view==='week'} onClick={()=>setView('week')}>This week</button><button aria-pressed={view==='today'} onClick={()=>setView('today')}>Today</button></nav>
-  {view==='week' && schedule && <section className="pulse-weekly-schedule" aria-label="Weekly schedule">{week.map(e=><WeeklyEvent key={e.id} event={e} now={now} timezone={timezone}/>)}</section>}
-  {!schedule?<p role="status">{error||'Loading your schedule…'}</p>:view==='today' && <div className="pulse-schedule-grid"><section className="pulse-next-event"><span className="pulse-alert-kicker">{today.active?.config.type==='break'||today.active?.config.type==='lunch'?'RETURN BY':'UP NEXT'}</span><h2>{today.next?.label||'Your day is complete'}</h2>{today.next && <><strong className="pulse-countdown">{countdown(today.next.at,now)}</strong><p>{clockLabel(today.next.at,timezone)} · {timezone===PACIFIC?'Pacific Time':'Local time'}</p>{timezone!==PACIFIC && <small>{clockLabel(today.next.at)} Pacific Time</small>}</>}<span className="pulse-next-orbit" aria-hidden="true">◉</span></section>
-   <section className="pulse-timeline" aria-label="Daily schedule"><h2>Your timeline</h2>{today.events.map(event=>{const past=event.end<=now,active=event.start<=now && event.end>now;return <article key={event.id} className={past?'pulse-event--past':active?'pulse-event--active':''}><span className="pulse-event-dot"/><div><small>{event.config.type.toUpperCase()}</small><h3>{event.config.name}</h3><p>{clockLabel(event.start,timezone)}–{clockLabel(event.end,timezone)}</p>{timezone!==PACIFIC && <small>{clockLabel(event.start)}–{clockLabel(event.end)} Pacific Time · {dateLabel(event.start,timezone)}</small>}</div><span>{past?'Done':active?'Now':''}</span></article>})}{!today.events.length && <p>No scheduled shift today.</p>}</section></div>}
-  <section className="pulse-audio-settings" aria-label="Alert settings"><div><h2>Alerts</h2><p>{armed?'Sound enabled in this tab.':'One click to enable sound. No account needed.'}</p><small>Keep this page open to receive Admin alerts. Your device volume still applies.</small></div><div>{!armed && <button onClick={()=>void arm()}>Enable sound</button>}</div>{error && schedule && <p role="status">{error}</p>}</section>
+  {!schedule?<p role="status">{error?'Schedule could not load. Please refresh.':'Loading…'}</p>:<section className="pulse-today-schedule" aria-label="Today's schedule">{today.events.map(event=><article key={event.id}><h2>{label(event)}</h2><div><strong>{clockLabel(event.start,timezone)}–{clockLabel(event.end,timezone)}</strong>{dateInZone(event.start,timezone)!==today.date && <small>{dateLabel(event.start,timezone)}</small>}{dateInZone(event.end,timezone)!==dateInZone(event.start,timezone) && <small>Until {dateLabel(event.end,timezone)}</small>}</div></article>)}{!today.events.length && <p>No shift today.</p>}</section>}
  </main>
 }
-function WeeklyEvent({event,now,timezone}){const today=todaySchedule({events:[{...event,config:{...event.config,days:[1,2,3,4,5,6,7]}}]},now).events[0];return <article><div><small>{event.config.days.join(',')==='1,2,3,4,5'?'MONDAY–FRIDAY':event.config.days.join(',')==='6'?'SATURDAY · NO BREAKS':event.config.days.map(d=>['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d-1]).join(' · ')}</small><h2>{event.config.name}</h2></div><strong>{clockLabel(today.start,timezone)}–{clockLabel(today.end,timezone)}</strong>{timezone!==PACIFIC && <small>{clockLabel(today.start)}–{clockLabel(today.end)} Pacific Time</small>}</article>}
-export function SchedulePage(){const {alert}=usePulseAlerts(),[visible]=usePetVisibility();return <div className="pulse-product-surface pulse-schedule-shell"><header className="pulse-public-schedule-header"><PulseOrb size="sm" active/><strong>Pulse</strong><span>Schedule · open to everyone</span></header><ScheduleContent/>{visible && <PulsePet actions={[]} pathname="/schedule" alarm={alert}/>}</div>}
+export function SchedulePage(){const {alert}=usePulseAlerts(),[visible]=usePetVisibility();return <div className="pulse-product-surface pulse-schedule-shell"><header className="pulse-public-schedule-header"><PulseOrb size="sm" active/><strong>Pulse</strong></header><ScheduleContent/>{visible && <PulsePet actions={[]} pathname="/schedule" alarm={alert}/>}</div>}

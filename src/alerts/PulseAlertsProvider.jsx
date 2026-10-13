@@ -31,7 +31,10 @@ export function PulseAlertsRuntime({children,identity,transport,audioOverride}){
  const reloadSchedule=useCallback(async()=>{try{const result=await transport.schedule();if(active.current && !result.error && result.data)setSchedule(result.data)}catch{/* Existing schedule stays readable on a transient reload failure. */}},[transport])
  const changeZone=zone=>{try{new Intl.DateTimeFormat('en-US',{timeZone:zone});setTimezone(zone);savePref('pulse_alert_zone_v1',zone)}catch{/* Invalid stored zone. */}}
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()+offset.current),1000);return ()=>clearInterval(timer)},[])
- useEffect(()=>{if(!['agent','staff','public'].includes(identity.kind))return;const gesture=e=>{if(e.isTrusted)void arm()};window.addEventListener('pointerdown',gesture,{once:true});window.addEventListener('keydown',gesture,{once:true});return()=>{window.removeEventListener('pointerdown',gesture);window.removeEventListener('keydown',gesture)}},[identity.kind,arm])
+ useEffect(()=>{
+  if(identity.kind==='public')void arm()
+ },[identity.kind,arm])
+ useEffect(()=>{if(armed || !['agent','staff','public'].includes(identity.kind))return;const gesture=e=>{if(e.isTrusted)void arm()};window.addEventListener('pointerdown',gesture);window.addEventListener('click',gesture);window.addEventListener('keydown',gesture);return()=>{window.removeEventListener('pointerdown',gesture);window.removeEventListener('click',gesture);window.removeEventListener('keydown',gesture)}},[identity.kind,arm,armed])
  useEffect(()=>{
   active.current=true
   if(!['agent','staff','public'].includes(identity.kind))return

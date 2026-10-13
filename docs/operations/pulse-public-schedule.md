@@ -1,11 +1,12 @@
 # Public Schedule correction
 
 The user clarified the intended workflow: anyone opens `/schedule`, sees the
-weekly Pacific timetable, changes the display timezone, and receives notices
+today's Pacific timetable, changes the display timezone, and receives notices
 manually sent by authorized Pulse Admin. No Agent account, ID or PIN is required.
 
 - `/schedule` is no longer wrapped in `GoPlayerGate`; its header has no account menu.
-- The page defaults to the weekly timetable. Today/countdown remains an optional view.
+- The page shows only Today, work hours, breaks/lunch and Pacific/local clocks.
+  No weekly toggle, shift-complete card, countdown or audio-settings panel.
 - Public read RPCs expose only operational schedule/current notice content, never
   Staff/Agent identities, private reports or raw tables.
 - An anonymously readable Realtime channel is read-only for browser roles. Signals
@@ -17,9 +18,13 @@ manually sent by authorized Pulse Admin. No Agent account, ID or PIN is required
   receipts. Only expiring notice IDs are stored locally to suppress duplicate display.
 - The previous Preview Agent scheduler was disabled and its exact task-owned cron
   job removed. Other jobs and all existing identities/business data are preserved.
-- Sound needs a trusted browser interaction, not an account. The page has a simple
-  Enable sound button; normal interaction also arms it. Hardware volume and browser
-  suspension still apply.
+- Public sound attempts to arm on entry where browser autoplay permits. If blocked,
+  ordinary pointer/keyboard interaction retries until the context is running. No
+  sound button, permission prompt or account is required. Browser restrictions,
+  hardware volume and suspension still apply; visual alerts work when audio is blocked.
+- Preview Admin Google return: added only this branch's exact `flow=google` callback
+  to isolated Preview's allowed redirects, with explicit user approval. The old
+  default Site URL, existing URLs, providers, identities and Production are unchanged.
 - Preview alias publication is limited to this branch domain. No Production
   protection settings, deployments, database or broadcasts are changed.
 
