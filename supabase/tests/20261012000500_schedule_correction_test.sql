@@ -1,0 +1,14 @@
+begin;
+select plan(10);
+select is((select config->>'start' from public.pulse_schedule_events where id='a1120000-0000-4000-8000-000000000001'),'07:00','Weekdays start dialing at 7 Pacific');
+select is((select config->>'start' from public.pulse_schedule_events where id='a1120000-0000-4000-8000-000000000005'),'09:00','Saturday starts at 9 Pacific');
+select is((select config->>'end' from public.pulse_schedule_events where id='a1120000-0000-4000-8000-000000000005'),'14:00','Saturday five hours without breaks');
+select is((select count(*)::integer from public.pulse_schedule_events where config->>'sound'='critical_alarm'),5,'Loud siren for all five seeded reminders');
+select is((select count(*)::integer from public.pulse_schedule_events where (config->>'volume')::integer>=90),5,'Higher bounded volume');
+select is((select count(*)::integer from public.pulse_schedule_events where config->>'pre_minutes'='5'),5,'Five minute login reminder');
+select is((select config->>'volume' from public.pulse_schedule_events where id='a1120000-0000-4000-8000-000000000004'),'100','Preserves an Admin higher volume');
+select is((select config->>'end_enabled' from public.pulse_schedule_events where id='a1120000-0000-4000-8000-000000000004'),'false','Unrelated Admin option preserved');
+select is((select config->>'end' from public.pulse_schedule_events where id='a1120000-0000-4000-8000-000000000004'),'14:40','Break time unchanged');
+select is((select enabled from public.pulse_alert_settings),false,'No scheduler activated');
+select * from finish();
+rollback;

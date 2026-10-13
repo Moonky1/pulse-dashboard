@@ -30,4 +30,11 @@ const assertions=(result.match(/\bok \d+ -/g)||[]).length
 if(!assertions)throw Error('Database assertions required')
 const publicResult=sql(readFileSync('supabase/tests/20261012000400_public_schedule_test.sql','utf8'))
 if(/not ok|Looks like you failed/i.test(publicResult))throw Error(publicResult)
+if(process.argv.includes('--schedule-correction')){
+ sql("update public.pulse_schedule_events set config=config||jsonb_build_object('volume',100,'end_enabled',false) where id='a1120000-0000-4000-8000-000000000004';")
+ sql(readFileSync('supabase/migrations/20261012000500_schedule_times_loud_siren.sql','utf8'))
+ const corrected=sql(readFileSync('supabase/tests/20261012000500_schedule_correction_test.sql','utf8'))
+ if(/not ok|Looks like you failed/i.test(corrected))throw Error(corrected)
+ console.log(JSON.stringify({scheduleCorrectionAssertions:(corrected.match(/\bok \d+ -/g)||[]).length,result:'passed'}))
+}
 console.log(JSON.stringify({database,assertions,publicAssertions:(publicResult.match(/\bok \d+ -/g)||[]).length,result:'passed',leftovers:sql("select json_build_object('staff',(select count(*) from public.users),'agents',(select count(*) from public.agents),'occurrences',(select count(*) from public.pulse_alert_occurrences),'leases',(select count(*) from pulse_private.pulse_alert_leases),'dispatch_enabled',(select enabled from public.pulse_alert_settings));").trim()}))

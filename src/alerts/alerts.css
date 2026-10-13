@@ -23,9 +23,16 @@
 @keyframes pulse-alarm-enter { from { opacity:0; } to {opacity:1;} }
 @media(max-width:700px) { .pulse-schedule,.pulse-alert-admin { padding:28px 16px calc(130px + env(safe-area-inset-bottom)); }.pulse-schedule-grid { grid-template-columns:1fr; gap:16px; }.pulse-next-event { position:relative; top:0; padding:26px; }.pulse-timeline { padding:24px; }.pulse-next-event h2 { font-size:24px; }.pulse-admin-event-grid { grid-template-columns:1fr; }.pulse-delivery-counts { grid-template-columns:repeat(2,minmax(0,1fr)); }.pulse-alert-surface { padding:24px 18px; }.pulse-audio-settings { padding:20px; } }
 @media(prefers-reduced-motion:reduce) { .pulse-alert-surface { animation:none; } }
-.pulse-schedule-shell { display:grid; grid-template-rows:auto minmax(0,1fr) 230px; height:100dvh; min-height:0; overflow:hidden; }
+.pulse-schedule-shell { display:grid; grid-template-rows:auto minmax(0,1fr) 150px; height:100dvh; min-height:0; overflow:hidden; }
 .pulse-schedule-shell::after { content:''; background:linear-gradient(180deg,#080b1300,#080b13); border-top:1px solid #a9b6d00a; }
 .pulse-schedule-shell .pulse-schedule { width:100%; height:100%; min-height:0; overflow-y:auto; padding-bottom:30px; }
+.pulse-schedule-shell .pulse-schedule { padding-top:28px; }
+.pulse-schedule-shell .pulse-schedule-heading { margin-bottom:18px; }
+.pulse-schedule-shell .pulse-schedule-heading h1 { font-size:clamp(30px,3.5vw,42px); margin:8px 0; }
+.pulse-schedule-shell .pulse-timeline article { padding-bottom:16px; }
+.pulse-schedule-shell .pulse-timeline article:last-child { padding-bottom:0; }
+.pulse-schedule-shell .pulse-timeline h2 { margin-bottom:18px; }
+.pulse-schedule-shell .pulse-next-event { top:16px; padding:26px; }
 @media(max-width:700px) { .pulse-schedule-shell { grid-template-rows:auto minmax(0,1fr) calc(118px + env(safe-area-inset-bottom)); }.pulse-schedule-shell .pulse-schedule { padding-bottom:28px; } }
 .pulse-alert-surface { padding-bottom:110px; }
 @media(max-width:700px) { .pulse-alert-surface { padding-bottom:110px; } }
@@ -33,6 +40,8 @@
 .pulse-public-schedule-header span:last-child { margin-left:auto; font-size:12px; color:#b6b1c7; }
 .pulse-schedule-clock { display:flex; flex-wrap:wrap; gap:16px 28px; font-size:12px; color:#aeb5c9; }
 .pulse-schedule-clock strong { display:block; margin-top:6px; font-size:20px; color:#f5f4fa; font-variant-numeric:tabular-nums; }
+.pulse-meeting-reminder { display:flex; flex-wrap:wrap; gap:8px 18px; margin-bottom:24px; padding:17px 20px; border:1px solid #514361; border-radius:14px; background:#231b332e; font-size:14px; }
+.pulse-meeting-reminder span { color:#b8bfd2; font-size:13px; }
 .pulse-today-schedule { border:1px solid #36384c; border-radius:20px; background:linear-gradient(135deg,#191a2a,#111420); overflow:hidden; }
 .pulse-today-schedule article { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:26px; }
 .pulse-today-schedule article+article { border-top:1px solid #333548; }

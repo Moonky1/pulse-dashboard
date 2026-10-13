@@ -21,4 +21,13 @@ export function todaySchedule(schedule,now){
 export function clockLabel(at,zone=PACIFIC){return new Intl.DateTimeFormat('en-US',{timeZone:zone,hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(at))}
 export function dateLabel(at,zone=PACIFIC){return new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'long',month:'short',day:'numeric'}).format(new Date(at))}
 export function countdown(at,now){const seconds=Math.max(0,Math.ceil((at-now)/1000));return `${Math.floor(seconds/3600)?Math.floor(seconds/3600)+':':''}${String(Math.floor(seconds/60)%60).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`}
-export function alertTitle(payload){const c=payload.event;if(payload.phase==='pre')return `${c.name} in ${c.pre_minutes} minutes`;if(payload.phase==='end')return c.type==='shift'?'Shift complete':'Return to production';return c.type==='lunch'?'Lunch time':c.type==='break'?'Break time':c.type==='shift'?'Shift starts':c.name}
+export function scheduleFocus(schedule,now){
+ const today=todaySchedule(schedule,now),shift=today.events.find(e=>e.config.type==='shift')
+ if(!shift)return {title:'No shift today',hint:'Enjoy your day off.'}
+ if(now<shift.start){const loginAt=shift.start-5*60000;return {title:now<loginAt?'Log in':'Ready to dial',at:now<loginAt?loginAt:shift.start,hint:now<loginAt?'Log in five minutes before your shift.':'Log in now. Be in Manage and ready to dial.'}}
+ if(today.active && ['break','lunch'].includes(today.active.config.type))return {title:'Go active',at:today.active.end,hint:today.active.config.type==='lunch'?'Return from lunch and get ready to dial.':'Return from your break and get ready to dial.'}
+ if(today.next)return {title:today.next.event.config.type==='shift'?'End of shift':today.next.event.config.name,at:today.next.at,hint:'Up next'}
+ return {title:'See you next shift',hint:'Log in five minutes before your next shift.'}
+}
+export function alertTitle(payload){const c=payload.event;if(payload.phase==='pre')return c.type==='shift'?'Log in · ready to dial':`${c.name} in ${c.pre_minutes} minutes`;if(payload.phase==='end')return c.type==='shift'?'End of shift':'Go active';return c.type==='lunch'?'Lunch time':c.type==='break'?'Break time':c.type==='shift'?'Start dialing':c.name}
+export function alertAction(payload,zone=PACIFIC){if(payload.phase==='end')return payload.event.type==='shift'?'See you next shift':'Return to dial now';if(payload.event.type==='shift')return payload.phase==='pre'?`Be in Manage and ready to dial at ${clockLabel(Date.parse(payload.start_at),zone)}`:'Join your daily team meeting';return `Return at ${clockLabel(Date.parse(payload.end_at),zone)}`}

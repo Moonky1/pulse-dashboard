@@ -4,7 +4,7 @@ import {useGoIdentity} from '../go-product/useGoIdentity.js'
 import {PulseAlertsContext} from './alertsContext.js'
 import {createAlertsTransport} from './alertsTransport.js'
 import {PulseAlarmAudio} from './alarmAudio.js'
-import {PACIFIC,alertTitle,clockLabel} from './scheduleModel.js'
+import {PACIFIC,alertTitle,alertAction,clockLabel} from './scheduleModel.js'
 import './alerts.css'
 import {claimPublicNotice} from './publicNoticeClaim.js'
 const readPref=(key,fallback)=>{try{return localStorage.getItem(key)||fallback}catch{return fallback}}
@@ -91,5 +91,5 @@ export function PulseAlertsRuntime({children,identity,transport,audioOverride}){
  },[alert,pathname])
  const preview=async config=>{if(playing.current)return;await arm();audio.current.play(config);const duration=Math.min(30,Math.max(1,config.duration_seconds*config.repeat))*1000;endsAt.current=Date.now()+duration;setAlert({id:'local-preview',payload:{event:config,phase:'start',start_at:new Date().toISOString(),end_at:new Date(Date.now()+duration).toISOString()}});clearTimeout(endTimer.current);endTimer.current=setTimeout(()=>{audio.current.stop();endsAt.current=0;if(active.current)setAlert(null)},duration)}
  const value={schedule,alert,error,armed,arm,timezone,setTimezone:changeZone,now,preview,reloadSchedule}
- return <PulseAlertsContext.Provider value={value}>{children}{alert && <aside ref={alertSurface} className="pulse-alert-surface" role="alert"><span className="pulse-alert-kicker">PULSE · {alert.id==='local-preview'?'ON THIS DEVICE':'SCHEDULE'}</span><h2>{alertTitle(alert.payload)}</h2><p>{clockLabel(Date.parse(alert.payload.start_at),timezone)}–{clockLabel(Date.parse(alert.payload.end_at),timezone)}</p><strong>{alert.payload.phase==='end'?'Time to get back':`Return at ${clockLabel(Date.parse(alert.payload.end_at),timezone)}`}</strong><small>Pacific Time · {clockLabel(Date.parse(alert.payload.start_at))}–{clockLabel(Date.parse(alert.payload.end_at))}</small></aside>}</PulseAlertsContext.Provider>
+ return <PulseAlertsContext.Provider value={value}>{children}{alert && <aside ref={alertSurface} className="pulse-alert-surface" role="alert"><span className="pulse-alert-kicker">PULSE</span><h2>{alertTitle(alert.payload)}</h2><p>{clockLabel(Date.parse(alert.payload.phase==='end'?alert.payload.end_at:alert.payload.start_at),timezone)}</p><strong>{alertAction(alert.payload,timezone)}</strong>{timezone!==PACIFIC && <small>Pacific Time · {clockLabel(Date.parse(alert.payload.phase==='end'?alert.payload.end_at:alert.payload.start_at))}</small>}</aside>}</PulseAlertsContext.Provider>
 }
