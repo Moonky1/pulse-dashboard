@@ -1,5 +1,5 @@
 import { integer, PERFORMANCE_FIELDS, PAUSE_FIELDS, validDate } from './dashboardModel.js'
-import { ALL_TEAMS_SCOPE_ID, LEGACY_ALL_TEAMS_SCOPE_ID } from './allTeamsScope.js'
+import { ALL_TEAMS_SCOPE_ID, DATASET_ALL_TEAMS_SCOPE_ID, LEGACY_ALL_TEAMS_SCOPE_ID } from './allTeamsScope.js'
 
 const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i
 const invalid = { code: 'invalid_response', message: 'The report could not be verified. No figures have been replaced.' }
@@ -13,7 +13,7 @@ export function dashboardError(error) {
 }
 export function normalizeScopes(value) {
   if (!Array.isArray(value) || !value.every(s => record(s) && UUID.test(s.id) && typeof s.label === 'string' && Array.isArray(s.user_groups) && s.user_groups.every(g => typeof g === 'string'))) throw invalid
-  return value.map(s => ({ id: s.id, label: s.label, user_groups: s.user_groups, campaigns: Array.isArray(s.campaigns) ? s.campaigns.filter(v => typeof v === 'string') : [], can_import: s.can_import === true, can_manage_reports: s.can_manage_reports === true, source_time_zone: typeof s.source_time_zone === 'string' ? s.source_time_zone : null }))
+  return value.map(s => ({ id: s.id, label: s.label, user_groups: s.user_groups, campaigns: Array.isArray(s.campaigns) ? s.campaigns.filter(v => typeof v === 'string') : [], can_import: s.can_import === true, can_manage_reports: s.can_manage_reports === true, source_time_zone: typeof s.source_time_zone === 'string' ? s.source_time_zone : null, dataset_kind: ['general','run_test'].includes(s.dataset_kind) ? s.dataset_kind : null, parent_scope_id: UUID.test(s.parent_scope_id || '') ? s.parent_scope_id : null }))
 }
 export function normalizeReport(value, scope, date) {
   if (!record(value) || value.scope?.id !== scope || value.date !== date || !record(value.health) || !Array.isArray(value.performance) || !Array.isArray(value.pause)) throw invalid
@@ -44,7 +44,20 @@ export async function loadDashboardReport(client, scope, date) {
 // change returned provenance, or sum snapshots from multiple scopes.
 export async function loadSelectedReport(client, scope, date, catalog) {
   const current = await loadDashboardReport(client, scope, date)
-  if (current.error || current.data?.snapshot !== null || scope !== ALL_TEAMS_SCOPE_ID || !catalog.some(s => s.id === LEGACY_ALL_TEAMS_SCOPE_ID)) return current
+  if (current.error || current.data?.snapshot !== null) return current
+  if (scope === DATASET_ALL_TEAMS_SCOPE_ID) {
+    const source = catalog.find(s=>s.id===scope)
+    const global = catalog.find(s=>s.dataset_kind==='general' && s.parent_scope_id===scope && s.user_groups.length===source?.user_groups.length && s.campaigns.length===source?.campaigns.length)
+    if (global) {
+      const saved = await loadDashboardReport(client, global.id, date)
+      if (saved.error || saved.data?.snapshot) return saved
+    }
+  }
+  if (scope === DATASET_ALL_TEAMS_SCOPE_ID && catalog.some(s=>s.id === ALL_TEAMS_SCOPE_ID)) {
+    const previous = await loadSelectedReport(client, ALL_TEAMS_SCOPE_ID, date, catalog)
+    return previous.error || previous.data?.snapshot ? previous : current
+  }
+  if (scope !== ALL_TEAMS_SCOPE_ID || !catalog.some(s => s.id === LEGACY_ALL_TEAMS_SCOPE_ID)) return current
   const earlier = await loadDashboardReport(client, LEGACY_ALL_TEAMS_SCOPE_ID, date)
   return earlier.error || earlier.data?.snapshot ? earlier : current
 }

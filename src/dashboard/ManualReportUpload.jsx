@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { csvReportDate, uploadReports } from './manualReportApi.js'
 import { BatchReportUpload } from './BatchReportUpload.jsx'
 import { createPortal } from 'react-dom'
+import { CampaignSelection } from './CampaignSelection.jsx'
 
-export function ManualReportUpload({ client, scope, date, onImported, actionsTarget }) {
+export function ManualReportUpload({ client, scope, date, onImported, actionsTarget, kind = 'general', sources = [], onSource }) {
+  const [campaigns, setCampaigns] = useState(() => kind === 'run_test' ? ['Openers5','Openers6'] : [...scope.campaigns])
+  const [confirmed, setConfirmed] = useState(false)
+  const selection = {kind,campaigns,confirmed}
+  const validSelection = confirmed && campaigns.length > 0 && campaigns.every(c=>scope.campaigns.includes(c))
   const [open, setOpen] = useState(false)
   const [files, setFiles] = useState({ performance: null, pause: null })
   const [dates, setDates] = useState({})
@@ -37,9 +42,9 @@ export function ManualReportUpload({ client, scope, date, onImported, actionsTar
   }
   async function submit(event) {
     event.preventDefault()
-    if (busy || !ready || mismatch) return
+    if (busy || !ready || mismatch || !validSelection) return
     setBusy(true); setResult(null)
-    const outcome = await uploadReports(client, { scopeId: scope.id, reportDate, ...files })
+    const outcome = await uploadReports(client, { scopeId: scope.id, reportDate, ...files, selection })
     if (!active.current) return
     setBusy(false); setResult(outcome)
     if (!outcome.error) {
@@ -47,16 +52,18 @@ export function ManualReportUpload({ client, scope, date, onImported, actionsTar
       onImported(outcome)
     }
   }
-  const saveButton = <button type="button" className="dash-refresh" disabled={busy || mismatch || (!actionsTarget && !ready)} onClick={() => { setOpen(true); if (ready) form.current.requestSubmit() }}>{busy ? 'Saving…' : actionsTarget ? ready ? 'Save to cloud' : 'Upload CSVs' : 'Upload reports'}</button>
+  const saveButton = <button type="button" className="dash-refresh" disabled={busy || mismatch} onClick={() => { setOpen(true); if (ready && validSelection) form.current.requestSubmit() }}>{busy ? 'Saving…' : actionsTarget ? ready && validSelection ? 'Save to cloud' : 'Upload CSVs' : 'Upload reports'}</button>
   return <details className="dash-upload dash-panel" open={open} onToggle={e=>setOpen(e.currentTarget.open)}><summary>Upload CSV reports</summary>
     <nav className="dash-upload-mode" aria-label="Upload mode"><button type="button" disabled={busy} aria-pressed={!batch} onClick={()=>changeMode(false)}>One report</button><button type="button" disabled={busy} aria-pressed={batch} onClick={()=>changeMode(true)}>Multiple CSVs</button></nav>
-    {batch ? <BatchReportUpload client={client} scope={scope} onImported={onImported} onBusy={setBusy} actionsTarget={actionsTarget} onOpen={()=>setOpen(true)}/> :
+    {sources.length > 1 && <label className="dash-upload-source">Upload to<select aria-label="Upload to" value={scope.id} disabled={busy} onChange={e=>onSource(e.target.value)}>{sources.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></label>}
+    <CampaignSelection scope={scope} kind={kind} campaigns={campaigns} setCampaigns={setCampaigns} confirmed={confirmed} setConfirmed={setConfirmed} busy={busy}/>
+    {batch ? <BatchReportUpload key={JSON.stringify(selection)} selection={selection} validSelection={validSelection} client={client} scope={scope} onImported={onImported} onBusy={setBusy} actionsTarget={actionsTarget} onOpen={()=>setOpen(true)}/> :
     <form ref={form} onSubmit={submit}>
       <p>Upload reports saves to the cloud. Refresh loads the selected date.{ready && !mismatch && <> Save for: <strong>{reportDate}</strong>.</>}</p>
       <div className="dash-upload-files">{[['performance', 'Call Stats Breakdown'], ['pause', 'Pause Code Breakdown']].map(([key, label]) => <label key={key}>{label}<input type="file" accept=".csv,text/csv" disabled={busy} onChange={e => void select(key, e.target.files?.[0] || null)} /></label>)}</div>
       {mismatch && <p role="alert">The reports must be from the same date.</p>}
       {actionsTarget && createPortal(saveButton,actionsTarget)}
-      <button type="submit" className="dash-refresh" disabled={busy || !ready || mismatch}>{busy ? 'Uploading…' : 'Upload reports'}</button>
+      <button type="submit" className="dash-refresh" disabled={busy || !ready || mismatch || !validSelection}>{busy ? 'Uploading…' : 'Upload reports'}</button>
       {result && <p role={result.error ? 'alert' : 'status'} className="dash-import-result">{result.error || (result.status === 'duplicate' ? `Already saved in cloud · ${result.report_date}` : `Saved ${result.agents} agents to cloud · ${result.report_date}`)}</p>}
     </form>}
   </details>

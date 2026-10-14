@@ -19,9 +19,10 @@ const asiaScopes = [
 ]
 const alertConfigs = new Map(), alertHistory = new Map()
 const independentReports = new Map()
+const uiDatasets = new Map()
 const client = { async rpc(name, args) {
   if (mode === 'cloud-reload') return (await fetch('/__cloud-review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, args }) })).json()
-  if (mode === 'all-teams' && name === 'list_vici_dashboard_scopes') return { data: [allTeamsScope, ...asiaScopes] }
+  if (mode === 'all-teams' && name === 'list_vici_dashboard_scopes') return { data: [...uiDatasets.values(), allTeamsScope, ...asiaScopes] }
   if (mode === 'asia-teams' && name === 'list_vici_dashboard_scopes') return { data: asiaScopes }
   if (['get_vici_alert_rules', 'save_vici_alert_rules', 'list_vici_alert_rule_history'].includes(name)) {
     if (mode === 'denied') return { error: { code: '42501' } }
@@ -45,10 +46,11 @@ const client = { async rpc(name, args) {
     if (mode === 'failure') return { error: { code: 'NETWORK' } }
     return { data: retentionFixture(args.as_of_date, args.page_offset) }
   }
-  if (name === 'list_vici_dashboard_scopes') return mode === 'no-scopes' ? { data: [] } : { data: [{ ...testScope, ...(mode === 'confirmed-targets' ? { id: '426ab519-b87b-4410-bd42-e255b240bea1', user_groups: ['OpenersAsia', 'MappedGroup', 'UnknownGroup'] } : {}), can_import: mode === 'manual' || mode === 'staff-upload', can_manage_reports: mode === 'manual', campaigns: ['SyntheticCampaign'] }, { ...testScope, id: '10000000-0000-4000-8000-000000000002', label: 'Other synthetic scope' }] }
+  if (name === 'list_vici_dashboard_scopes') return mode === 'no-scopes' ? { data: [] } : { data: [...uiDatasets.values(), { ...testScope, ...(mode === 'confirmed-targets' ? { id: '426ab519-b87b-4410-bd42-e255b240bea1', user_groups: ['OpenersAsia', 'MappedGroup', 'UnknownGroup'] } : {}), can_import: mode === 'manual' || mode === 'staff-upload', can_manage_reports: mode === 'manual', campaigns: ['SyntheticCampaign'] }, { ...testScope, id: '10000000-0000-4000-8000-000000000002', label: 'Other synthetic scope' }] }
   if (name === 'list_vici_report_history') return { data: [2, 1].map(version => ({ id: '20000000-0000-4000-8000-00000000000' + version, performance_generated_at: args.report_date + (version === 1 ? 'T10:00:00' : 'T10:30:00'), pause_generated_at: args.report_date + (version === 1 ? 'T10:00:05' : 'T10:30:05'), captured_at: '2026-10-09T18:00:00Z', ingestion_method: 'manual', uploaded_by: 'Synthetic administrator', agents: 40, calls: version === 1 ? 4000 : 4200 })) }
   if (name === 'get_vici_dashboard_snapshot') {
     const data = testReport(), first = args.requested_snapshot.endsWith('1')
+    data.scope = uiDatasets.get(args.requested_scope) || {...data.scope,id:args.requested_scope}
     data.snapshot.id = args.requested_snapshot
     data.snapshot.ingestion_method = 'manual'
     data.snapshot.performance_generated_at = '2026-10-09T10:' + (first ? '00' : '30') + ':00'
@@ -106,7 +108,21 @@ const client = { async rpc(name, args) {
     data.health = { connected: false, last_successful_sync: null, last_failed_sync: '2026-10-09T18:01:00Z', last_error_category: 'source_network_error', halted: false }
   }
   return { data }
-}, functions: { async invoke(name, { body }) {
+}, functions: { async invoke(name, options) {
+  const result = await this.legacyInvoke(name, options)
+  const body = options.body
+  if (result.data && body.has('selection') && mode !== 'cloud-reload') {
+    const selection = JSON.parse(body.get('selection')), parent = body.get('scopeId')
+    let saved = [...uiDatasets.values()].find(s=>s.parent_scope_id===parent && s.dataset_kind===selection.kind && JSON.stringify(s.campaigns)===JSON.stringify(selection.campaigns))
+    if (!saved) {
+      saved = {...(mode==='all-teams' ? allTeamsScope : {...testScope,campaigns:['SyntheticCampaign'],can_import:true,can_manage_reports:mode==='manual'}),id:crypto.randomUUID(),parent_scope_id:parent,dataset_kind:selection.kind,campaigns:selection.campaigns}
+      uiDatasets.set(saved.id,saved)
+    }
+    result.data.scope_id=saved.id;result.data.parent_scope_id=parent;result.data.dataset_kind=selection.kind;result.data.scope=saved
+    if(result.data.report) result.data.report.scope=saved
+  }
+  return result
+}, async legacyInvoke(name, { body }) {
   if (mode === 'cloud-reload') return (await fetch('/__cloud-review-upload', { method: 'POST', body })).json()
   if (name !== 'pulse-vici-import') throw Error('Unexpected function')
   if (mode === 'staff-upload' || mode === 'all-teams') {

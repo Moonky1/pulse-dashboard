@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { compareSnapshots, DELTA_FIELDS, loadHistory, loadSnapshot } from './reportHistory.js'
 import { duration, number, metricLabel } from './dashboardModel.js'
+import { decorateReport } from './reportDatasets.js'
 const clock = value => value?.replace('T', ' ') || '—'
 const delta = (value, time = false) => value === null ? '—' : (value < 0 ? '−' : value > 0 ? '+' : '') + (time ? duration(Math.abs(value)) : number(Math.abs(value)))
 function DifferenceList({ title, values, time }) {
@@ -31,7 +32,7 @@ export function ReportHistory({ client, scope, date, revision, SnapshotView: sna
     if (!active.current) return
     setBusy(false)
     if (result.error) { setError(result.error); return }
-    setDetail(result.data)
+    setDetail(decorateReport(result.data, [scope]))
   }
   async function compare() {
     setBusy(true); setError(''); setDetail(null); setComparison(null)

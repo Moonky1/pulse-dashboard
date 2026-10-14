@@ -23,16 +23,16 @@ export async function prepareReportBatch(selection) {
   })
 }
 
-export async function runReportBatch({ client, scopeId, jobs, start = 0, onResult, shouldContinue = () => true,
+export async function runReportBatch({ client, scopeId, selection, jobs, start = 0, onResult, shouldContinue = () => true,
   upload = uploadReports, wait = ms => new Promise(resolve => setTimeout(resolve, ms)) }) {
   let next = start, last = null
   for (; next < jobs.length && shouldContinue(); next++) {
     if (next > start) { await wait(1100); if (!shouldContinue()) break }
-    let result = await upload(client, {scopeId, ...jobs[next]})
+    let result = await upload(client, {scopeId, selection, ...jobs[next]})
     if (result.code === 'import_cooldown' && shouldContinue()) {
       await wait(5100)
       if (!shouldContinue()) break
-      result = await upload(client, {scopeId, ...jobs[next]})
+      result = await upload(client, {scopeId, selection, ...jobs[next]})
     }
     onResult(next, result)
     if (result.error) return { next, last, failed: true }

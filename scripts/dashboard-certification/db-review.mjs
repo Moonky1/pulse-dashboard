@@ -33,6 +33,7 @@ if (!process.argv.includes('--tests-only')) {
   sql(readFileSync('supabase/migrations/20261010000200_vici_retention_preview.sql', 'utf8'))
   sql(readFileSync('supabase/migrations/20261010000300_vici_alert_rules.sql', 'utf8'))
   sql(readFileSync('supabase/migrations/20261011000100_vici_independent_reports.sql', 'utf8'))
+  sql(readFileSync('supabase/migrations/20261013000700_vici_report_datasets.sql', 'utf8'))
 }
 sql('grant usage on schema extensions to authenticated,service_role;', 'supabase_admin')
 const output = sql(readFileSync('supabase/tests/20261009000100_vici_dashboard_storage_test.sql', 'utf8')) +

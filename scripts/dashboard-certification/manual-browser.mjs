@@ -28,7 +28,7 @@ try {
   await page.getByLabel('Report date', { exact: true }).fill('2026-10-09')
   await page.locator('.dash-upload > summary').click()
   const inputs = page.locator('.dash-upload input[type=file]')
-  assert.equal(await page.locator('.dash-upload input[type=checkbox]').count(), 0)
+  await page.getByLabel(/^I exported/).check()
   assert.equal(await page.getByRole('button', {name:'Upload CSVs',exact:true}).isEnabled(), true)
   await inputs.nth(0).setInputFiles({ name: 'invalid.csv', mimeType: 'text/csv', buffer: Buffer.from('not a report') })
   await page.getByRole('alert').filter({hasText:'original full-day'}).waitFor()
@@ -88,7 +88,7 @@ try {
       const upload = page.locator('.dash-upload')
       if (!(await upload.evaluate(el => el.open))) await upload.locator(':scope > summary').click()
       await upload.locator('input[type=file]').nth(type === 'performance' ? 0 : 1).setInputFiles({ name: type + '.csv', mimeType: 'text/csv', buffer: Buffer.from(fixture(type)) })
-      assert.equal(await upload.locator('input[type=checkbox]').count(), 0)
+      await page.getByLabel(/^I exported/).check()
       const start = performance.now()
       await page.getByRole('button', { name: 'Save to cloud', exact: true }).click()
       await page.getByText('Manual upload', { exact: true }).waitFor()
@@ -116,4 +116,7 @@ try {
   assert.deepEqual(errors, [])
   assert.deepEqual(unexpected, [])
   console.log(JSON.stringify({checks:checks.length, browserErrors:errors.length, externalRequests:unexpected.length,evidence}))
+} catch (error) {
+  console.log(JSON.stringify({url:page.url(),upload:await page.locator('.dash-import-result').allTextContents(),notices:await page.locator('.dash-notice').allTextContents(),errors}))
+  throw error
 } finally { await context.close(); await browser.close(); await server.close() }

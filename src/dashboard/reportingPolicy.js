@@ -1,4 +1,4 @@
-import { ALL_TEAMS_SCOPE_ID, ALL_TEAMS_GROUPS, LEGACY_ALL_TEAMS_SCOPE_ID, isAllTeamsScope } from './allTeamsScope.js'
+import { ALL_TEAMS_SCOPE_ID, ALL_TEAMS_GROUPS, DATASET_ALL_TEAMS_SCOPE_ID, LEGACY_ALL_TEAMS_SCOPE_ID, isAllTeamsScope } from './allTeamsScope.js'
 import { integer } from './dashboardModel.js'
 
 // Analytics-only interpretation confirmed by the operator on 2026-10-11.
@@ -19,8 +19,8 @@ const CONFIRMED_POLICIES = Object.freeze({
   }),
 })
 const policyFor = scope => {
-  const sourceId = typeof scope === 'string' ? scope : scope?.id
-  const id = sourceId === LEGACY_ALL_TEAMS_SCOPE_ID ? ALL_TEAMS_SCOPE_ID : sourceId
+  const sourceId = typeof scope === 'string' ? scope : scope?.parent_scope_id || scope?.id
+  const id = [LEGACY_ALL_TEAMS_SCOPE_ID, DATASET_ALL_TEAMS_SCOPE_ID].includes(sourceId) ? ALL_TEAMS_SCOPE_ID : sourceId
   return Object.hasOwn(CONFIRMED_POLICIES, id) ? CONFIRMED_POLICIES[id] : null
 }
 export const isEnglishXfer = scope => policyFor(scope)?.xferLanguage === 'English'
@@ -43,6 +43,7 @@ export function teamLabel(scope, row) {
 }
 
 export function confirmedTargetReference(scope, row) {
+  if (scope?.dataset_kind === 'run_test') return ''
   if (!isEnglishXfer(scope)) return ''
   if (isAllTeamsScope(scope)) {
     const group = row?.current_user_group
@@ -63,7 +64,7 @@ export function countedTransfers(scope, row) {
   if (!isEnglishXfer(scope) || !integer(row?.xfer_count)) return null
   const group = row.current_user_group
   if (['OpenersAsia', 'OpenersAsia1', 'OpenersPH', 'OpenersMXBJ', 'OpenersMXBJ1'].includes(group)) return row.xfer_count
-  if (!isAllTeamsScope(scope) || !ALL_TEAMS_GROUPS.includes(group)) return null
+  if (!isAllTeamsScope(scope) || !(ALL_TEAMS_GROUPS.includes(group) || group === 'Monitors')) return null
   const spanish = spanishTransfers(row)
   return spanish === null ? null : row.xfer_count + spanish
 }

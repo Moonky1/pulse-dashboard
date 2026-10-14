@@ -5,13 +5,14 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises'
 const retention = process.argv.includes('--retention-preview')
 const alerts = process.argv.includes('--alert-rules')
 const independent = process.argv.includes('--independent-reports')
-if ([retention, alerts, independent].filter(Boolean).length > 1) throw Error('Select exactly one migration checkpoint')
-const file = independent ? '20261011000100_vici_independent_reports.sql' : alerts ? '20261010000300_vici_alert_rules.sql' : retention ? '20261010000200_vici_retention_preview.sql' : '20261010000100_vici_manual_reports.sql'
+const datasets = process.argv.includes('--report-datasets')
+if ([retention, alerts, independent, datasets].filter(Boolean).length > 1) throw Error('Select exactly one migration checkpoint')
+const file = datasets ? '20261013000700_vici_report_datasets.sql' : independent ? '20261011000100_vici_independent_reports.sql' : alerts ? '20261010000300_vici_alert_rules.sql' : retention ? '20261010000200_vici_retention_preview.sql' : '20261010000100_vici_manual_reports.sql'
 const [version, ...parts] = file.replace(/\.sql$/, '').split('_')
 const name = parts.join('_')
 const source = await readFile(new URL('../../supabase/migrations/' + file, import.meta.url), 'utf8')
 const body = source.replace(/^begin;\s*/m, '').replace(/commit;\s*$/, '')
-const output = 'review-evidence.local/dashboard-manual/' + (independent ? 'independent-reports-bundle.sql' : alerts ? 'alert-rules-bundle.sql' : retention ? 'retention-preview-bundle.sql' : 'migration-bundle.sql')
+const output = 'review-evidence.local/dashboard-manual/' + (datasets ? 'report-datasets-bundle.sql' : independent ? 'independent-reports-bundle.sql' : alerts ? 'alert-rules-bundle.sql' : retention ? 'retention-preview-bundle.sql' : 'migration-bundle.sql')
 await mkdir('review-evidence.local/dashboard-manual', { recursive: true })
 await writeFile(output, "begin;\nset local lock_timeout='5s';\nset local statement_timeout='120s';\n" + body +
   `\ninsert into supabase_migrations.schema_migrations(version,name,statements) values('${version}','${name}',array[$manual_source$` + body + `$manual_source$]);\nnotify pgrst,'reload schema';\ncommit;\nselect version,name from supabase_migrations.schema_migrations where version='${version}';\n`)

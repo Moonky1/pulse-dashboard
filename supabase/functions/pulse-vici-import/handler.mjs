@@ -1,4 +1,5 @@
 import { inspectManualReports } from '../_shared/viciManualImport.mjs'
+import { validateDatasetSelection } from '../_shared/viciDatasetSelection.mjs'
 
 export const MAX_FILE_BYTES = 5 * 1024 * 1024
 const MAX_BODY = MAX_FILE_BYTES * 2 + 65536
@@ -48,7 +49,7 @@ export function createViciImportHandler({ env, createClient, inspect = inspectMa
       let form
       try { form = await new Response(new Blob(chunks), { headers: { 'Content-Type': request.headers.get('content-type') } }).formData() }
       catch { return reply(400, { error: 'invalid_upload' }) }
-      const fields = ['scopeId', 'reportDate', 'confirmedScope', 'performance', 'pause']
+      const fields = ['scopeId', 'reportDate', 'confirmedScope', 'performance', 'pause', 'selection']
       if ([...form.keys()].some(key => !fields.includes(key)) || fields.slice(0, 3).some(key => form.getAll(key).length !== 1) ||
         fields.slice(3).some(key => form.getAll(key).length > 1) ||
         form.get('confirmedScope') !== 'yes') return reply(400, { error: 'invalid_upload' })
@@ -56,6 +57,12 @@ export function createViciImportHandler({ env, createClient, inspect = inspectMa
       const scope = scopes.find(s => s.id === scopeId && s.can_import === true)
       if (typeof scopeId !== 'string' || !UUID.test(scopeId) || !scope) return reply(403, { error: 'import_denied' })
       if (typeof reportDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) return reply(400, { error: 'invalid_upload' })
+      let selection = null
+      if (form.has('selection')) {
+        if (typeof form.get('selection') !== 'string' || form.get('selection').length > 16384) return reply(400, { error: 'invalid_selection' })
+        try { selection = validateDatasetSelection(JSON.parse(form.get('selection')), scope.campaigns || []) } catch { /* Bounded safe error. */ }
+        if (!selection || scope.parent_scope_id) return reply(400, { error: 'invalid_selection' })
+      }
       const files = [form.get('performance'), form.get('pause')]
       if (!files.some(Boolean) || files.some(f => f !== null && (!(f instanceof File) || !/\.csv$/i.test(f.name) || !f.size))) return reply(400, { error: 'invalid_upload' })
       if (files.some(f => f?.size > MAX_FILE_BYTES)) return reply(413, { error: 'report_too_large' })
@@ -65,21 +72,29 @@ export function createViciImportHandler({ env, createClient, inspect = inspectMa
         prepared = inspect({ performanceText: texts[0], pauseText: texts[1], reportDate, userGroups: scope.user_groups })
       } catch (error) { return reply(422, { error: safeErrors.has(error?.category) ? error.category : 'invalid_report' }) }
       const admin = createClient(url, service, options)
-      const { data, error } = await admin.rpc('import_vici_reports', {
+      const { data, error } = await admin.rpc(selection ? 'import_vici_dataset' : 'import_vici_reports', {
         requested_scope: scopeId, report_date: reportDate, actor_auth_id: verified.user.id,
         pair: prepared.pair, verification: prepared.verification,
+        ...(selection ? { requested_campaigns: selection.campaigns, requested_kind: selection.kind } : {}),
       })
       if (error) return reply(error.code === '42501' ? 403 : error.code === 'P0001' ? 429 : 409,
         { error: error.code === '42501' ? 'import_denied' : error.code === 'P0001' ? 'import_cooldown' : 'import_conflict' })
       // Reuse the user's protected read: no browser round-trip after saving and
       // no service-role read that bypasses scope or moved-group checks.
       let report = null
+      let savedScope = null
+      const savedId = selection ? data?.scope_id : scopeId
       try {
-        const result = await user.rpc('get_vici_dashboard', { requested_scope: scopeId, report_date: reportDate })
+        const result = await user.rpc('get_vici_dashboard', { requested_scope: savedId, report_date: reportDate })
         if (!result.error) report = result.data
+        if (selection) {
+          const catalog = await user.rpc('list_vici_dashboard_scopes')
+          if (!catalog.error) savedScope = catalog.data?.find(s => s.id === savedId) || null
+          if (report && savedScope) report.scope = { ...report.scope, dataset_kind: savedScope.dataset_kind, parent_scope_id: savedScope.parent_scope_id, campaigns: savedScope.campaigns }
+        }
       } catch { /* The import already committed; let the browser retry the read. */ }
       return reply(200, { ...data, agents: (prepared.verification.performance || prepared.verification.pause).agents,
-        report })
+        report, ...(selection ? { scope: savedScope } : {}) })
     } catch { return reply(503, { error: 'import_unavailable' }) }
   }
 }

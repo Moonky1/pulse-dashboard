@@ -439,3 +439,10 @@
 .dash-coaching-results:focus-visible { outline:2px solid #bca0ee; outline-offset:3px; }
 .dash-rankings .dash-table td:first-child, .dash-rankings .dash-table th:first-child { min-width:56px; width:56px; }
 .dash-insight-agent { display:grid; justify-items:start; gap:6px; max-width:220px; white-space:normal; }
+.dash-campaign-selection { border:1px solid #413650; border-radius:12px; padding:16px; margin:20px 22px; min-width:0; }
+.dash-campaign-selection button { padding:8px 12px; border:1px solid #51435f; border-radius:8px; color:#f2edf9; background:#282036; cursor:pointer; }
+.dash-campaign-selection legend { font-weight:700; padding:0 8px; }
+.dash-campaign-options { display:flex; flex-wrap:wrap; gap:12px 20px; margin:16px 0; }
+.dash-campaign-options label,.dash-campaign-confirm { display:flex; align-items:center; gap:8px; }
+.dash-campaign-selection input { width:18px; height:18px; flex-shrink:0; accent-color:#b591e8; }
+.dash-upload-source { display:grid; gap:8px; max-width:360px; margin:20px 22px 0; }

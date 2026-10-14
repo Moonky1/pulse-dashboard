@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { prepareReportBatch, runReportBatch } from './batchReports.js'
 import { createPortal } from 'react-dom'
 
-export function BatchReportUpload({ client, scope, onImported, onBusy, actionsTarget, onOpen }) {
+export function BatchReportUpload({ client, scope, onImported, onBusy, actionsTarget, onOpen, selection: datasetSelection, validSelection = true }) {
   const form = useRef(null)
   const [selection, setSelection] = useState({performance:[],pause:[]})
   const [jobs, setJobs] = useState(null), [results,setResults] = useState({})
@@ -16,13 +16,13 @@ export function BatchReportUpload({ client, scope, onImported, onBusy, actionsTa
   }
   async function submit(event) {
     event.preventDefault()
-    if (busy) return
+    if (busy || !validSelection) return
     setBusy(true);onBusy(true);setError('');stopped.current=false
     try {
       const queue = jobs || await prepareReportBatch(selection)
       if (!active.current) return
       setJobs(queue)
-      const outcome = await runReportBatch({client,scopeId:scope.id,jobs:queue,start:next,
+      const outcome = await runReportBatch({client,scopeId:scope.id,selection:datasetSelection,jobs:queue,start:next,
         shouldContinue:()=>active.current && !stopped.current,
         onResult:(index,result)=>{
           if (!active.current) return
